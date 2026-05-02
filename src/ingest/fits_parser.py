@@ -87,8 +87,8 @@ def _parse_obs_time(date_obs: str) -> datetime:
 def _pixscale_from_header(header: fits.Header) -> float | None:
     """Derive pixel scale in arcsec/pixel from common header keywords.
 
-    Checks PIXSCALE first, then falls back to |CDELT1| (degrees/pixel
-    converted to arcsec/pixel).
+    Checks PIXSCALE first, then |CDELT1|, then computes from PIXSZ + FOCAL
+    (the MILAN/Stellina convention: pixel size in µm and focal length in mm).
 
     Args:
         header: Full FITS header.
@@ -100,6 +100,29 @@ def _pixscale_from_header(header: fits.Header) -> float | None:
         return float(header["PIXSCALE"])
     if "CDELT1" in header:
         return abs(float(header["CDELT1"])) * 3600.0
+    # MILAN/Stellina: PIXSZ in µm, FOCAL in mm → arcsec/px = 206265 * µm / (focal_mm * 1000)
+    if "PIXSZ" in header and "FOCAL" in header:
+        pixsz_um = float(header["PIXSZ"])
+        focal_mm = float(header["FOCAL"])
+        return 206265.0 * (pixsz_um / 1000.0) / focal_mm
+    return None
+
+
+def _exptime_from_header(header: fits.Header) -> float | None:
+    """Extract exposure time in seconds from FITS header.
+
+    Checks EXPTIME (seconds) first, then EXPOSURE (milliseconds, MILAN/Stellina).
+
+    Args:
+        header: Full FITS header.
+
+    Returns:
+        Exposure time in seconds, or None if unavailable.
+    """
+    if "EXPTIME" in header:
+        return float(header["EXPTIME"])
+    if "EXPOSURE" in header:
+        return float(header["EXPOSURE"]) / 1000.0
     return None
 
 
@@ -154,8 +177,12 @@ def parse_fits(path: Path) -> FITSImage:
         dec_center = _get_optional("CRVAL2")
         pixscale_arcsec = _pixscale_from_header(header)
         if pixscale_arcsec is None:
-            logger.warning("Pixel scale (PIXSCALE/CDELT1) absent in %s", path.name)
-        exptime_sec = _get_optional("EXPTIME")
+            logger.warning(
+                "Pixel scale (PIXSCALE/CDELT1/PIXSZ+FOCAL) absent in %s", path.name
+            )
+        exptime_sec = _exptime_from_header(header)
+        if exptime_sec is None:
+            logger.warning("Exposure time (EXPTIME/EXPOSURE) absent in %s", path.name)
         sitelat = _get_optional("SITELAT")
         sitelong = _get_optional("SITELONG")
         siteelev = _get_optional("SITEELEV")
