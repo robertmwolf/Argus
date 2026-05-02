@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+type: software
+title: "ARGUS: Automated Recognition and Grading of Unidentified Streaks"
+abstract: >
+  ARGUS is an academic research pipeline for automated satellite identification
+  in FITS telescope images. It detects satellite streaks using classical image
+  processing (ASTRiDE), then identifies the satellite by matching the observed
+  trajectory against historical TLE orbital data from the US Space Force
+  Space-Track catalog using SGP4 propagation and multi-factor confidence scoring.
+authors:
+  - family-names: Wolf
+    given-names: Robert
+    affiliation: PLACEHOLDER
+    orcid: ""
+repository-code: "https://github.com/robertmwolf/Argus"
+license: AGPL-3.0-or-later
+date-released: "2026-05-02"
+version: "0.1.0"
+keywords:
+  - satellite identification
+  - streak detection
+  - FITS
+  - ASTRiDE
+  - SGP4
+  - TLE
+  - space surveillance
+references:
+  - type: software
+    title: "ASTRiDE: Automated Streak Detection for Astronomical Images"
+    authors:
+      - family-names: Kim
+        given-names: Dae-Won
+    url: "https://github.com/dwkim78/ASTRiDE"
+    notes: "Streak detection algorithm used in Phase 1 of this pipeline."
