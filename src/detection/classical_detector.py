@@ -228,13 +228,13 @@ def detect_streaks(
     """
     preprocessed = _preprocess(image.data)
 
-    with tempfile.NamedTemporaryFile(suffix=".fits", delete=True) as tmp:
+    with tempfile.NamedTemporaryFile(suffix=".fits", delete=False) as tmp:
         tmp_path = tmp.name
 
-    hdu = fits.PrimaryHDU(preprocessed)
-    hdu.writeto(tmp_path, overwrite=True)
-
     try:
+        hdu = fits.PrimaryHDU(preprocessed)
+        hdu.writeto(tmp_path, overwrite=True)
+
         streak = Streak(
             tmp_path,
             remove_bkg="constant",
