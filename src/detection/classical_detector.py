@@ -102,9 +102,9 @@ def _preprocess(data: np.ndarray) -> np.ndarray:
     Returns:
         Preprocessed uint16 array, same shape.
     """
-    work = data.astype(np.float64)
-    # sep requires C-contiguous array
-    work = np.ascontiguousarray(work)
+    # sep requires a C-contiguous array; keep float32 to avoid an
+    # unnecessary upcast that increases memory use and slows processing.
+    work = np.ascontiguousarray(data, dtype=np.float32)
     bkg = sep.Background(work)
     work -= bkg.back()
 
