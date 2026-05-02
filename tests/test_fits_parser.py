@@ -162,3 +162,25 @@ class TestOptionalFields:
         f = _write_minimal_fits(tmp_path / "both.fits", {"PIXSCALE": 2.0, "CDELT1": -0.0005})
         result = parse_fits(f)
         assert result.pixscale_arcsec == pytest.approx(2.0)
+
+    def test_pixscale_from_pixsz_and_focal(self, tmp_path):
+        # MILAN/Stellina: PIXSZ=2.4 µm, FOCAL=400 mm → 206265*0.0024/400 ≈ 1.238 arcsec/px
+        f = _write_minimal_fits(tmp_path / "stellina.fits", {"PIXSZ": 2.4, "FOCAL": 400.0})
+        result = parse_fits(f)
+        assert result.pixscale_arcsec == pytest.approx(206265.0 * 0.0024 / 400.0, rel=1e-4)
+
+    def test_pixscale_prefers_pixscale_over_pixsz_focal(self, tmp_path):
+        f = _write_minimal_fits(tmp_path / "prefer.fits", {"PIXSCALE": 1.5, "PIXSZ": 2.4, "FOCAL": 400.0})
+        result = parse_fits(f)
+        assert result.pixscale_arcsec == pytest.approx(1.5)
+
+    def test_exptime_from_exposure_milliseconds(self, tmp_path):
+        # MILAN: EXPOSURE in ms — should be converted to seconds
+        f = _write_minimal_fits(tmp_path / "milan_exp.fits", {"EXPOSURE": 10000})
+        result = parse_fits(f)
+        assert result.exptime_sec == pytest.approx(10.0)
+
+    def test_exptime_prefers_exptime_over_exposure(self, tmp_path):
+        f = _write_minimal_fits(tmp_path / "prefer_exp.fits", {"EXPTIME": 30.0, "EXPOSURE": 10000})
+        result = parse_fits(f)
+        assert result.exptime_sec == pytest.approx(30.0)
