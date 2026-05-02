@@ -172,7 +172,9 @@ Record in `results/week3_query.json`.
 - For each candidate:
   - Compute angular_sep_arcsec (observed vs predicted position)
   - Compute velocity_delta_pct (observed vs predicted speed)
-  - Compute direction_delta_deg (observed vs predicted PA)
+  - Compute direction_delta_deg (observed vs predicted PA) — **test both the stored
+    position_angle_deg and position_angle_deg + 180° (mod 360); take the smaller delta**
+    (see "Streak Direction Ambiguity" in architecture.md)
   - Compute magnitude_delta if magnitudes available
   - Score each factor using gaussian_score() (see architecture.md)
   - Apply TLE age penalty to position_score

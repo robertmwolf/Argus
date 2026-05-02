@@ -18,6 +18,7 @@ Always read the relevant agent_docs file before writing code:
 - `agent_docs/phase1_goals.md`   — week-by-week tasks and success metrics
 - `agent_docs/datasets.md`       — where to get test data, download links
 - `agent_docs/dependencies.md`   — exact packages, versions, install commands
+- `agent_docs/service_roadmap.md` — FastAPI service, Docker, Cloudflare Tunnel, scale path
 - `agent_docs/test_strategy.md`  — how to measure and record baseline accuracy
 - `agent_docs/spacetrack.md`     — Space-Track API usage, rate limits, caching rules
 

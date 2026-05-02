@@ -131,6 +131,27 @@ class CandidateMatch:
     ambiguous: bool             # True if next candidate within 0.05
 ```
 
+## Design Notes
+
+### Streak Direction Ambiguity (two-solution problem)
+ASTRiDE detects streaks as contours and assigns `x_start`/`x_end` arbitrarily — it has
+no knowledge of which end the satellite occupied first. This means `angle_deg` and
+`position_angle_deg` carry an inherent 180° ambiguity.
+
+This matters for the direction score in the matcher (weight: 25%), which compares observed
+PA against SGP4-predicted PA. Assuming the wrong end is "start" flips the comparison by
+180°, producing a near-zero direction score for the correct match.
+
+**Resolution rule (implemented in `matcher.py`):**
+For each TLE candidate, compute `direction_delta_deg` against both the stored PA and
+`PA + 180° (mod 360)`, and take the smaller of the two deltas. The SGP4-predicted
+position angle is the disambiguator — the correct direction is whichever orientation
+aligns better with the predicted trajectory. Do **not** resolve this ambiguity in
+`classical_detector.py` or `plate_solver.py`; pass through both possibilities implicitly
+by letting the matcher test both orientations.
+
+---
+
 ## Design Principles
 
 ### Classical-Only in Phase 1
@@ -202,3 +223,16 @@ weighted_score = (
 | 1 — Classical baseline | 1–4 | ASTRiDE (Hough) | SGP4 + weighted scoring |
 | 2 — YOLO-OBB integration | 5–10 | YOLO-OBB primary + ASTRiDE validator | Same |
 | 3 — Hybrid consensus | 11–14 | Consensus layer | + DINOv3 anomaly classifier |
+
+## Service Deployment Roadmap
+
+See `agent_docs/service_roadmap.md` for the full plan. Summary:
+
+| Phase | What |
+|-------|------|
+| S1 | Standalone CLI pipeline (prerequisite — complete Phases 1–3 first) |
+| S2 | FastAPI wrapper, local file storage, in-memory job tracking |
+| S3 | Frontend with canvas OBB rendering, served from FastAPI |
+| S4 | Dockerize API + frontend, `docker-compose` with volume-mounted data |
+| S5 | Cloudflare Tunnel for self-hosted public HTTPS (optional) |
+| S6 | Scale path: Redis/SQS jobs, S3/Blob storage, cloud container deploy |

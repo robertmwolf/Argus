@@ -64,6 +64,40 @@ Full architecture: [`agent_docs/architecture.md`](agent_docs/architecture.md)
 
 ---
 
+## Tech Stack
+
+The pipeline is built in phases. Phase 1 establishes a classical, deterministic baseline
+before any ML is introduced. Later phases layer in neural models whose gains can be
+measured against that baseline.
+
+**Phase 1 — Classical Baseline (Weeks 1–4)** ✓ current
+
+| Layer | Tool | Purpose |
+|-------|------|---------|
+| Runtime | Python 3.11 (conda) | Core language |
+| Astronomy I/O | [astropy](https://www.astropy.org/) | FITS parsing, WCS astrometry, coordinate transforms |
+| Streak detection | [ASTRiDE](https://github.com/dwkim78/ASTRiDE) | Classical contour-based streak detection |
+| Orbit propagation | [sgp4](https://github.com/brandon-rhodes/python-sgp4) + [skyfield](https://rhodesmill.org/skyfield/) | SGP4 TLE propagation, satellite position/velocity |
+| Catalog access | [spacetrack](https://pypi.org/project/spacetrack/) | Space-Track GP_History API client |
+| Image processing | opencv-python, scipy | Preprocessing, morphological operations |
+| Testing | pytest | Unit and integration tests |
+
+**Phase 2 — YOLO-OBB Integration (Weeks 5–10)** *(planned)*
+
+| Layer | Tool | Purpose |
+|-------|------|---------|
+| Streak detection (primary) | [StreakMind](https://github.com/StreakMind) YOLO-OBB | Neural oriented bounding-box streak detector |
+| Streak detection (validator) | ASTRiDE | Classical cross-check of YOLO detections |
+
+**Phase 3 — Hybrid Consensus (Weeks 11–14)** *(planned)*
+
+| Layer | Tool | Purpose |
+|-------|------|---------|
+| Consensus layer | custom | Merges YOLO-OBB + ASTRiDE detections |
+| Anomaly classification | DINOv3 | Flags unknown/anomalous objects not in TLE catalog |
+
+---
+
 ## Setup
 
 ```bash
