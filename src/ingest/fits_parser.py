@@ -177,7 +177,9 @@ def parse_fits(path: Path) -> FITSImage:
         dec_center = _get_optional("CRVAL2")
         pixscale_arcsec = _pixscale_from_header(header)
         if pixscale_arcsec is None:
-            logger.warning("Pixel scale (PIXSCALE/CDELT1) absent in %s", path.name)
+            logger.warning(
+                "Pixel scale (PIXSCALE/CDELT1/PIXSZ+FOCAL) absent in %s", path.name
+            )
         exptime_sec = _exptime_from_header(header)
         if exptime_sec is None:
             logger.warning("Exposure time (EXPTIME/EXPOSURE) absent in %s", path.name)
