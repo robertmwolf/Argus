@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+
+# Virtual environments / conda
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Data — never check in raw FITS or large archives
+data/milan/
+data/frigate/
+data/cache/
+*.fits
+*.fit
+*.fts
+*.zip
+
+# Keep sample placeholder
+!data/sample/.gitkeep
+
+# Results — check in JSON metrics, not raw outputs
+results/*.png
+results/*.csv
+
+# Credentials — never commit
+.env.local
+.envrc
+secrets.json
+
+# Claude Code local settings (machine-specific paths)
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Logs
+*.log
