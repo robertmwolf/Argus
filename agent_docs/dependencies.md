@@ -7,39 +7,60 @@
 conda create -n satid python=3.11 -y
 conda activate satid
 
-# Core astronomy
+# Core astronomy (Phase 0 + Phase 3)
 pip install astropy==6.1.0
 pip install photutils==1.13.0
 pip install sep==1.2.1            # fast background estimation
-pip install astride==0.3.2        # ASTRiDE streak detection
-
-# Orbital mechanics
+pip install astride==0.3.2        # ASTRiDE streak detection (Phase 0 baseline)
 pip install sgp4==2.23            # SGP4 propagation
 pip install skyfield==1.49        # high-level orbital + coordinate transforms
 pip install spacetrack==0.14.0    # Space-Track API client
 
+# ML stack (Phase 2 — Co-DINO)
+# Install PyTorch first, then MMDet dependencies in order
+pip install torch==2.2.0 torchvision==0.17.0 --index-url https://download.pytorch.org/whl/cu121
+pip install mmengine==0.10.4
+pip install mmcv==2.1.0 -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.2/index.html
+pip install mmdet==3.3.0
+pip install ultralytics==8.2.0    # YOLO11-OBB baseline
+
 # Image processing
-pip install opencv-python==4.10.0.84
-pip install scikit-image==0.24.0
+pip install opencv-python-headless==4.10.0.84
+pip install scikit-image==0.24.0  # Radon transform for angle refinement
+pip install albumentations==1.4.3 # augmentation pipeline
+pip install Pillow==10.4.0
+pip install shapely==2.0.4        # rotated IoU via polygon intersection
 
 # Data / compute
 pip install numpy==1.26.4
 pip install scipy==1.13.1
 pip install pandas==2.2.2
 
+# API + database (Phase 5)
+pip install fastapi==0.111.0
+pip install uvicorn[standard]==0.29.0
+pip install sqlalchemy[asyncio]==2.0.30
+pip install asyncpg==0.29.0       # PostgreSQL async driver
+pip install aiosqlite==0.20.0     # SQLite async driver (default for local)
+pip install pydantic==2.7.0
+pip install python-multipart==0.0.9
+pip install boto3==1.34.0         # S3 storage backend
+pip install python-dotenv==1.0.1
+
 # Utilities
 pip install python-dateutil==2.9.0
-pip install tqdm==4.66.4          # progress bars for batch processing
+pip install tqdm==4.66.4
 pip install diskcache==5.6.3      # on-disk caching for Space-Track results
-pip install click==8.1.7          # CLI for __main__ blocks
+pip install click==8.1.7
+pip install requests==2.32.0      # TLE catalog refresh
 
 # Testing
 pip install pytest==8.2.2
 pip install pytest-cov==5.0.0
+pip install httpx==0.27.0         # async test client for FastAPI
 
 # Optional but useful
-pip install matplotlib==3.9.0     # visualization in __main__ blocks
-pip install Pillow==10.4.0        # PNG saving for annotated outputs
+pip install matplotlib==3.9.0
 pip install zenodo_get==1.6.1     # Zenodo dataset downloads
 
 # Save environment
@@ -51,6 +72,32 @@ pip freeze > requirements.txt
 conda create -n satid python=3.11 -y
 conda activate satid
 pip install -r requirements.txt
+```
+
+## Separate requirements files
+
+Keep two files:
+- `requirements.txt` — full stack including torch + mmdet (for worker container)
+- `requirements-api.txt` — API-only, no torch or mmdet (for api container, faster build)
+
+`requirements-api.txt`:
+```
+astropy>=6.0.0
+sgp4>=2.22
+skyfield>=1.49
+spacetrack>=0.14.0
+opencv-python-headless>=4.9.0
+numpy>=1.26.0
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+sqlalchemy[asyncio]>=2.0.0
+asyncpg>=0.29.0
+aiosqlite>=0.20.0
+pydantic>=2.6.0
+python-multipart>=0.0.9
+boto3>=1.34.0
+python-dotenv>=1.0.0
+requests>=2.31.0
 ```
 
 ---

@@ -1,145 +1,200 @@
 # Service Deployment Roadmap
 
 ## Goal
-Wrap the ARGUS inference pipeline in a deployable service — either self-hosted
-or cloud-hosted — without changing the core pipeline code.
+A self-hostable, docker-compose deployable service on a single GPU machine,
+cloud-deployable without code changes — only config/env changes.
 
-## Phases
-
-### Phase S1 — Standalone Inference Pipeline (prerequisite)
-Complete Phases 1–3 (classical baseline through hybrid consensus).
-The pipeline must accept a FITS file path and return `CandidateMatch` results
-as plain Python with no web layer.
-
-**Done when:** `python src/pipeline.py path/to/image.fits` prints ranked matches.
+The storage and queue backends are swappable via env vars with zero changes
+to `api/main.py` or `inference/pipeline.py`.
 
 ---
 
-### Phase S2 — FastAPI Service (local)
+## Architecture: Three Containers
 
-**New files:**
-```
-src/
-├── api/
-│   ├── main.py          ← FastAPI app, routes
-│   ├── models.py        ← Pydantic request/response schemas
-│   └── jobs.py          ← In-memory job tracker (dict[str, JobState])
-```
+| Container  | Image base                            | Port | Role |
+|------------|---------------------------------------|------|------|
+| `db`       | postgres:16-alpine                    | 5432 | PostgreSQL (or SQLite for local dev) |
+| `api`      | python:3.11-slim                      | 8000 | FastAPI: upload, result, health endpoints |
+| `worker`   | pytorch/pytorch:2.2.0-cuda12.1-...   | —    | GPU inference: FITS→Co-DINO→cross-ID→DB |
+| `frontend` | nginx:alpine (multi-stage build)      | 80   | React/Vite static + OBB canvas rendering |
 
-**API surface:**
-```
-POST /jobs               → accept FITS upload, enqueue job, return job_id
-GET  /jobs/{id}          → poll status: pending | running | done | failed
-GET  /jobs/{id}/result   → return CandidateMatch list as JSON
-GET  /jobs/{id}/image    → return annotated PNG with OBB overlays
-```
-
-**Storage (local, Phase S2):**
-- Uploaded FITS files → `data/uploads/{job_id}.fits`
-- Result JSON → `data/results/{job_id}.json`
-- Annotated PNG → `data/results/{job_id}.png`
-- Job state → in-memory `dict` (lost on restart; acceptable for local dev)
-
-**Background execution:**
-Use `asyncio.create_task()` or `concurrent.futures.ThreadPoolExecutor` to run
-the blocking pipeline off the event loop. Keep it simple — no Celery, no Redis
-in this phase.
-
-**Done when:** `curl -F file=@image.fits http://localhost:8000/jobs` returns a
-job_id and polling shows results.
+For local development without Docker, use SQLite (`DATABASE_URL=sqlite+aiosqlite:///./streakmind.db`)
+and run api + worker in separate terminals.
 
 ---
 
-### Phase S3 — Frontend (canvas OBB rendering)
+## Phase S1 — Standalone CLI Pipeline (prerequisite)
 
-**Stack:** Single-page app. Vanilla JS or lightweight framework (e.g., Preact).
-No build step required for v1 — serve static files from FastAPI's `StaticFiles`.
+Complete StreakMind Phases 1–3 (data pipeline + model + cross-ID).
+The pipeline must accept a FITS file path and return detections + identifications
+as plain Python objects with no web layer.
 
-**UI features:**
-- File picker → POST to `/jobs`
-- Poll `/jobs/{id}` every 2 s until done
-- Fetch `/jobs/{id}/image` and display annotated PNG on `<canvas>`
-- Render OBB overlays client-side from `/jobs/{id}/result` JSON
-  (so users can toggle individual detections on/off)
-- Show ranked candidate table: NORAD ID, name, confidence score, ambiguity flag
-
-**Done when:** Upload FITS in browser, see annotated image with candidate list.
+**Done when:**
+```bash
+python -m streakmind.inference.pipeline path/to/image.fits
+# prints ranked detections with satellite identifications
+```
 
 ---
 
-### Phase S4 — Docker + docker-compose
+## Phase S2 — FastAPI Service (local, no Docker)
 
-**Two containers:**
+Builds `streakmind/api/`:
+- `main.py` — FastAPI routes
+- `models.py` — Pydantic request/response schemas
+- `storage.py` — `LocalStorage` / `S3Storage` behind abstract interface
+- `queue.py` — `InMemoryQueue` / `SQSQueue` behind abstract interface
 
-| Service | Image | Port |
-|---------|-------|------|
-| `api`   | `argus-api` | 8000 |
-| `frontend` | `nginx:alpine` (serves static build) | 80 |
+Run locally:
+```bash
+uvicorn streakmind.api.main:app --reload --port 8000
+```
 
-**docker-compose.yml volumes:**
-- `./data:/app/data` — persist uploads and results across restarts
-- `.env` file for `SPACETRACK_USER` / `SPACETRACK_PASS`
+Storage: `./uploads/` directory.
+Queue: `asyncio.Queue`, worker runs as a background task in the same process.
 
-**Done when:** `docker compose up` produces a working service accessible at
-`http://localhost`.
+**Done when:** `curl -F file=@image.fits http://localhost:8000/api/upload`
+returns a job_id and polling `/api/result/{job_id}` eventually shows results.
 
 ---
 
-### Phase S5 — Self-Hosted Public Access (optional)
+## Phase S3 — Frontend (React + Vite)
 
-Use **Cloudflare Tunnel** (`cloudflared`) to expose the local service without
-opening firewall ports or managing TLS certificates.
+Builds `streakmind/frontend/`:
+- `UploadZone.jsx` — drag-drop upload, status polling
+- `ResultViewer.jsx` — canvas OBB rendering
+- `DetectionTable.jsx` — detection list, row-click highlights OBB
+
+Dev server:
+```bash
+cd streakmind/frontend && npm run dev
+```
+
+**Done when:** Upload FITS in browser, see annotated image with OBBs and
+ranked candidate table.
+
+---
+
+## Phase S4 — Docker + docker-compose
+
+### `docker-compose.yml` (repo root)
+
+```yaml
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: streakmind
+      POSTGRES_USER: streakmind
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./streakmind/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+  api:
+    build:
+      context: .
+      dockerfile: streakmind/docker/Dockerfile.api
+    environment:
+      DATABASE_URL: postgresql+asyncpg://streakmind:${DB_PASSWORD}@db/streakmind
+      STORAGE_BACKEND: local
+      QUEUE_BACKEND: memory
+    volumes:
+      - ./uploads:/app/uploads
+    ports:
+      - "8000:8000"
+    depends_on: [db]
+
+  worker:
+    build:
+      context: .
+      dockerfile: streakmind/docker/Dockerfile.worker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://streakmind:${DB_PASSWORD}@db/streakmind
+      STORAGE_BACKEND: local
+      QUEUE_BACKEND: memory
+      MODEL_WEIGHTS: /app/weights/streakmind_codino.pth
+      SPACETRACK_USER: ${SPACETRACK_USER}
+      SPACETRACK_PASS: ${SPACETRACK_PASS}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./weights:/app/weights
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    depends_on: [db, api]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: streakmind/docker/Dockerfile.frontend
+    ports:
+      - "80:80"
+    depends_on: [api]
+
+volumes:
+  postgres_data:
+```
+
+**Done when:** `docker compose up` → service at `http://localhost`.
+
+---
+
+## Phase S5 — Self-Hosted Public Access (optional)
+
+Use Cloudflare Tunnel to expose the service without opening firewall ports.
 
 ```bash
-cloudflared tunnel create argus
-cloudflared tunnel route dns argus argus.yourdomain.com
-cloudflared tunnel run argus
+cloudflared tunnel create streakmind
+cloudflared tunnel route dns streakmind streakmind.yourdomain.com
+cloudflared tunnel run streakmind
 ```
 
-Add `cloudflared` as a fourth container in `docker-compose.yml` so tunnel
-starts automatically with the stack.
-
-**Done when:** `https://argus.yourdomain.com` reaches the service from the
-public internet.
+Add `cloudflared` as a fifth container in `docker-compose.yml`.
 
 ---
 
-### Phase S6 — Cloud Scale Path (if needed later)
+## Phase S6 — Cloud Scale Path
 
-Swap components one at a time — the API code does not change, only the
-backing implementations:
+Swap backends via env vars — no code changes:
 
-| Component | Local (S2–S5) | Cloud |
-|-----------|--------------|-------|
-| Job queue | `dict` in memory | Redis (self-hosted) or AWS SQS |
-| File storage | `data/uploads/` | AWS S3 or Azure Blob |
-| Workers | `ThreadPoolExecutor` | Separate worker containers (same image, `CMD=worker`) |
-| Deployment | `docker compose` | ECS Fargate / Cloud Run / Fly.io |
+| Component     | Local (S2–S5)          | Cloud                         |
+|---------------|------------------------|-------------------------------|
+| Job queue     | `asyncio.Queue`        | AWS SQS (`QUEUE_BACKEND=sqs`) |
+| File storage  | `./uploads/`           | AWS S3 (`STORAGE_BACKEND=s3`) |
+| Database      | SQLite (dev) / Postgres| Cloud Postgres (RDS, etc.)    |
+| Workers       | Background task        | Separate GPU containers       |
+| Deployment    | `docker compose`       | ECS Fargate / Cloud Run       |
 
-**Design constraint:** write `jobs.py` and storage calls behind thin interfaces
-from the start so the swap is a config change, not a rewrite.
+### `docker-compose.cloud.yml` (override file)
 
----
+```yaml
+services:
+  api:
+    environment:
+      STORAGE_BACKEND: s3
+      QUEUE_BACKEND: sqs
+      S3_BUCKET: ${S3_BUCKET}
+      AWS_REGION: ${AWS_REGION}
+  worker:
+    environment:
+      STORAGE_BACKEND: s3
+      QUEUE_BACKEND: sqs
+```
 
-## Dependency Notes
-
-### New packages (Phase S2+)
+Run cloud deployment:
 ```bash
-pip install fastapi uvicorn[standard] python-multipart aiofiles
+docker compose -f docker-compose.yml -f docker-compose.cloud.yml up
 ```
-
-### Frontend (Phase S3, no npm required for v1)
-Serve from `src/api/static/`. Use a CDN-hosted Preact or plain JS.
-
-### Docker (Phase S4)
-- Base image: `python:3.11-slim` for the API
-- Install conda dependencies via `pip` (export `conda env export --from-history`
-  then install via pip in Docker for smaller images)
 
 ---
 
-## What Does NOT Change
-The core pipeline (`src/ingest/`, `src/detection/`, `src/astrometry/`,
-`src/matching/`) is **not modified** for service deployment. The API layer
-calls the same functions the CLI does. This is the entire point of keeping
-Phase S1 as a prerequisite.
+## What Does NOT Change Between Deployments
+
+The inference pipeline (`streakmind/inference/`) is never modified for
+deployment. The API layer calls the same functions the CLI does. Storage
+and queue are injected via factory functions, not imported directly.

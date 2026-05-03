@@ -218,11 +218,48 @@ weighted_score = (
 
 ## Phase Roadmap
 
-| Phase | Weeks | Detector | Matching |
-|-------|-------|----------|---------|
-| 1 — Classical baseline | 1–4 | ASTRiDE (Hough) | SGP4 + weighted scoring |
-| 2 — YOLO-OBB integration | 5–10 | YOLO-OBB primary + ASTRiDE validator | Same |
-| 3 — Hybrid consensus | 11–14 | Consensus layer | + DINOv3 anomaly classifier |
+| Phase | Detector | Notes |
+|-------|----------|-------|
+| 0 — Classical baseline | ASTRiDE (Hough) | ✅ Complete. `src/` directory. Baseline metrics. |
+| 1 — Data pipeline | — | FITS loader, COCO conversion, augmentations (`streakmind/training/`) |
+| 2 — Co-DINO model | Co-DINO + Swin-L (StreakMind) | MMDetection config + training script |
+| 3 — Cross-identification | SGP4 ephemeris matching | Reuses Phase 0 matching logic, adapted for StreakMind |
+| 4 — Database | PostgreSQL/SQLite schema | SQLAlchemy async, normalized schema |
+| 5 — API | FastAPI | Upload / result / image endpoints |
+| 6 — Frontend | React + Vite + Tailwind | Canvas OBB renderer |
+| 7 — Docker | docker-compose | Separate API, worker (GPU), frontend containers |
+| 8 — Evaluation | mAP, angle error | DINO vs YOLO head-to-head benchmark |
+
+## StreakMind Pipeline (Phases 1–8)
+
+```
+[FITS or PNG Upload]
+        ↓
+[inference/fits_loader.py — FITSLoader]
+   Z-score normalize → 3-channel uint8 array
+   Extract WCS metadata
+        ↓
+[Co-DINO inference — MMDetection]
+   models/dino/streak_codino_swin_l.py
+   → axis-aligned bboxes + confidence scores
+        ↓
+[inference/postprocess.py — AngleRefinement + StreakNMS]
+   Radon transform on each crop → refined angle
+   Reconstruct OBB (cx, cy, w, h, angle_deg)
+   Rotated IoU NMS via Shapely
+        ↓
+[inference/crossid.py — SatelliteCrossIdentifier]
+   WCS → RA/Dec for streak midpoints
+   SGP4 propagate TLE catalog to obs epoch
+   Gaussian confidence score per candidate
+   Top-3 identifications per detection
+        ↓
+[Database write — SQLAlchemy async]
+   observations, detections, identifications tables
+        ↓
+[API response / Frontend display]
+   Canvas OBB rendering, detection table
+```
 
 ## Service Deployment Roadmap
 
@@ -230,9 +267,6 @@ See `agent_docs/service_roadmap.md` for the full plan. Summary:
 
 | Phase | What |
 |-------|------|
-| S1 | Standalone CLI pipeline (prerequisite — complete Phases 1–3 first) |
-| S2 | FastAPI wrapper, local file storage, in-memory job tracking |
-| S3 | Frontend with canvas OBB rendering, served from FastAPI |
-| S4 | Dockerize API + frontend, `docker-compose` with volume-mounted data |
-| S5 | Cloudflare Tunnel for self-hosted public HTTPS (optional) |
-| S6 | Scale path: Redis/SQS jobs, S3/Blob storage, cloud container deploy |
+| S1 | Standalone CLI pipeline (complete Phases 1–3 first) |
+| S2–S5 | FastAPI + React frontend + Docker + Cloudflare Tunnel |
+| S6 | Cloud scale: Redis/SQS, S3, separate GPU worker containers |
