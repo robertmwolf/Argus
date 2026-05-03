@@ -7,26 +7,30 @@ Space-Track's GP_History API using SGP4 propagation and multi-factor
 confidence scoring.
 
 ## Current Phase
-**PHASE 1 — Classical Baseline (Weeks 1–4). No ML yet.**
-Goal: Prove the end-to-end pipeline works on real FITS data.
-Establish baseline accuracy metrics for comparison against Phase 2.
+**ML PIPELINE — Co-DINO streak detection (Phases 1–8).**
+Phase 0 (classical ASTRiDE baseline) is complete and lives in `src/`.
+Active work is now the Co-DINO ML pipeline. See `agent_docs/ml_pipeline.md`.
+
+Development machine: MacBook Air M3 (CPU/MPS only).
+Training machine: Lambda Labs A100 (rented when code is ready).
 
 ## Read These Before Starting Any Task
 Always read the relevant agent_docs file before writing code:
 
-- `agent_docs/architecture.md`   — full system design, component map, data flow
-- `agent_docs/phase1_goals.md`   — week-by-week tasks and success metrics
-- `agent_docs/datasets.md`       — where to get test data, download links
-- `agent_docs/dependencies.md`   — exact packages, versions, install commands
+- `agent_docs/architecture.md`    — full system design, component map, data flow
+- `agent_docs/ml_pipeline.md`     — Co-DINO pipeline, hardware constraints, 8-phase sequence
+- `agent_docs/phase1_goals.md`    — Phase 0 classical baseline reference (ASTRiDE)
+- `agent_docs/datasets.md`        — where to get test data, download links
+- `agent_docs/dependencies.md`    — exact packages, versions, install commands (includes ML stack)
 - `agent_docs/service_roadmap.md` — FastAPI service, Docker, Cloudflare Tunnel, scale path
-- `agent_docs/test_strategy.md`  — how to measure and record baseline accuracy
-- `agent_docs/spacetrack.md`     — Space-Track API usage, rate limits, caching rules
+- `agent_docs/test_strategy.md`   — how to measure and record baseline accuracy
+- `agent_docs/spacetrack.md`      — Space-Track API usage, rate limits, caching rules
 
 ## Stack
-- Python 3.11, conda environment named `argus`
-- Key libs: astropy, astride, sgp4, skyfield, spacetrack, opencv-python, scipy
+- Python 3.11, conda environment named `satid`
+- Phase 0 libs: astropy, astride, sgp4, skyfield, spacetrack, opencv-python, scipy
+- ML libs: torch, torchvision, mmengine, mmcv, mmdet (Co-DINO), albumentations
 - Testing: pytest
-- No ML frameworks in Phase 1
 
 ## Project Structure
 ```

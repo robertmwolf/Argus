@@ -218,11 +218,17 @@ weighted_score = (
 
 ## Phase Roadmap
 
-| Phase | Weeks | Detector | Matching |
-|-------|-------|----------|---------|
-| 1 — Classical baseline | 1–4 | ASTRiDE (Hough) | SGP4 + weighted scoring |
-| 2 — YOLO-OBB integration | 5–10 | YOLO-OBB primary + ASTRiDE validator | Same |
-| 3 — Hybrid consensus | 11–14 | Consensus layer | + DINOv3 anomaly classifier |
+| Phase | Label | Detector | Notes |
+|-------|-------|----------|-------|
+| 0 | Classical baseline (done) | ASTRiDE + SGP4 scoring | `src/` — establishes baseline metrics |
+| 1–8 | Co-DINO ML pipeline | Co-DINO Swin-T/L | See `agent_docs/ml_pipeline.md` |
+
+**Phase 0** is the ASTRiDE classical pipeline in `src/` (Weeks 1–4, see `phase1_goals.md`).
+It is the baseline to beat — do not delete it.
+
+**Phases 1–8** replace YOLO-OBB with Co-DINO for higher accuracy.
+The ML pipeline lives in `inference/`, `training/`, `models/`, and `eval/`.
+Full spec in `agent_docs/ml_pipeline.md`.
 
 ## Service Deployment Roadmap
 
