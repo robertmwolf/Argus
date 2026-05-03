@@ -1,49 +1,98 @@
-# ARGUS — Automated Recognition and Grading of Unidentified Streaks
+# ARGUS / StreakMind — Satellite Streak Detection & Identification Pipeline
 
 ## What This Is
-An automated pipeline that identifies satellites in FITS telescope images
-by detecting streaks and matching them against TLE orbital data from
-Space-Track's GP_History API using SGP4 propagation and multi-factor
-confidence scoring.
+An end-to-end pipeline that detects satellite streaks in FITS telescope images
+using a Co-DINO transformer model (Swin-L backbone), refines streak angle via
+the Radon transform, and cross-identifies detected objects against TLE orbital
+data from Space-Track's GP_History API using SGP4 propagation and multi-factor
+confidence scoring. Results are served through a FastAPI backend and React frontend.
 
 ## Current Phase
-**PHASE 1 — Classical Baseline (Weeks 1–4). No ML yet.**
-Goal: Prove the end-to-end pipeline works on real FITS data.
-Establish baseline accuracy metrics for comparison against Phase 2.
+**PHASE 2 — Co-DINO model** (next to build).
+
+Progress:
+- ✅ Phase 0 (Classical baseline): `src/` — fits_parser, classical_detector, plate_solver, SGP4 matching
+- ✅ Phase 1 (Data pipeline): `inference/fits_loader.py`, `training/convert_labels.py`, `training/dataset.py`, `training/augmentations.py`
+- ⬜ Phase 2 (Co-DINO model): `inference/device.py`, MMDetection configs, training script
+- ⬜ Phase 3 (Cross-identification): `inference/crossid.py`, `inference/postprocess.py`
+- ⬜ Phase 4 (Database): `db/schema.sql`, SQLAlchemy async models
+- ⬜ Phase 5 (API): `api/` — FastAPI upload/result/image endpoints
+- ⬜ Phase 6 (Frontend): `frontend/` — React + Vite + Tailwind, canvas OBB rendering
+- ⬜ Phase 7 (Docker): `docker/` — docker-compose with GPU worker
+- ⬜ Phase 8 (Evaluation): `eval/` — mAP, angle error, DINO vs YOLO benchmark
+
+## Hardware
+- **Dev / CI:** MacBook Air M3 — CPU or MPS. Use `MODEL_SIZE=tiny` (Swin-T).
+- **Training:** Lambda Labs A100 40 GB — CUDA. Use `MODEL_SIZE=large` (Swin-L).
+- **Rule:** Never hardcode `torch.device("cuda")`. Always call `get_device()` from
+  `inference/device.py`. Code must run on CPU, MPS, and CUDA without changes.
 
 ## Read These Before Starting Any Task
 Always read the relevant agent_docs file before writing code:
 
-- `agent_docs/architecture.md`   — full system design, component map, data flow
-- `agent_docs/phase1_goals.md`   — week-by-week tasks and success metrics
-- `agent_docs/datasets.md`       — where to get test data, download links
-- `agent_docs/dependencies.md`   — exact packages, versions, install commands
-- `agent_docs/service_roadmap.md` — FastAPI service, Docker, Cloudflare Tunnel, scale path
-- `agent_docs/test_strategy.md`  — how to measure and record baseline accuracy
-- `agent_docs/spacetrack.md`     — Space-Track API usage, rate limits, caching rules
+- `agent_docs/architecture.md`       — full system design, component map, data flow
+- `agent_docs/phase1_goals.md`       — Phase 1 data pipeline (complete — reference only)
+- `agent_docs/streakmind_phases.md`  — Phases 2–8: model through eval
+- `agent_docs/datasets.md`           — where to get test data, download links
+- `agent_docs/dependencies.md`       — exact packages, versions, install commands
+- `agent_docs/service_roadmap.md`    — Docker, deployment, cloud scale path
+- `agent_docs/test_strategy.md`      — how to measure and record baseline accuracy
+- `agent_docs/spacetrack.md`         — Space-Track API usage, rate limits, caching rules
 
 ## Stack
-- Python 3.11, conda environment named `argus`
-- Key libs: astropy, astride, sgp4, skyfield, spacetrack, opencv-python, scipy
+- Python 3.11, conda environment named `satid`
+  (use `/Users/robert/miniconda3/envs/satid/bin/python`)
+- Core ML: PyTorch ≥ 2.2, MMDetection ≥ 3.3 (Co-DINO), Ultralytics (YOLO baseline)
+- Astronomy: astropy, astride, sgp4, skyfield, spacetrack
+- Image: opencv-python-headless<4.10, scikit-image (Radon), albumentations, Shapely
+- API: FastAPI, SQLAlchemy async, asyncpg/aiosqlite, Pydantic v2
+- Frontend: React 18 + Vite + Tailwind CSS
 - Testing: pytest
-- No ML frameworks in Phase 1
+- numpy must stay < 2.0 (sep and astride are compiled against numpy 1.x)
 
 ## Project Structure
 ```
 Argus/
 ├── CLAUDE.md
 ├── README.md
-├── agent_docs/          ← read before coding
-├── src/
-│   ├── ingest/          ← FITS parsing
-│   ├── detection/       ← ASTRiDE streak detection
-│   ├── astrometry/      ← WCS plate solving, pixel→sky coords
-│   └── matching/        ← Space-Track query, SGP4, scoring
-├── tests/               ← pytest test files
-├── results/             ← baseline metrics JSON output
-└── data/                ← FITS data (not checked in)
-    ├── milan/           ← MILAN sky survey FITS files
-    └── sample/          ← small sample files for quick testing
+├── agent_docs/              ← read before coding
+├── src/                     ← Phase 0: classical baseline (complete, do not modify)
+│   ├── ingest/fits_parser.py
+│   ├── detection/classical_detector.py
+│   ├── astrometry/plate_solver.py
+│   └── matching/            ← scorer, spacetrack_query, spatial_filter, propagator, matcher
+├── inference/               ← ML inference modules
+│   ├── fits_loader.py       ← FITS→tensor, Z-score normalisation (Phase 1 ✅)
+│   ├── device.py            ← get_device() helper — CPU/MPS/CUDA (Phase 2, next)
+│   ├── pipeline.py          ← main inference orchestrator (Phase 2)
+│   ├── postprocess.py       ← Radon angle refinement + NMS (Phase 3)
+│   └── crossid.py           ← satellite ephemeris cross-matching (Phase 3)
+├── training/                ← training data and model training
+│   ├── convert_labels.py    ← OBB YOLO labels → COCO JSON (Phase 1 ✅)
+│   ├── dataset.py           ← FITSStreakDataset (Phase 1 ✅)
+│   ├── augmentations.py     ← albumentations pipeline + SyntheticStreakInject (Phase 1 ✅)
+│   ├── train_dino.py        ← Co-DINO training script (Phase 2)
+│   └── train_baseline.py    ← YOLO11-OBB training script (Phase 2)
+├── models/
+│   ├── dino/                ← MMDetection configs: streak_codino_swin_t.py, _swin_l.py
+│   └── baselines/           ← YOLO11-OBB config
+├── api/                     ← FastAPI application (Phase 5)
+│   ├── main.py
+│   ├── models.py
+│   ├── storage.py           ← local / S3 swappable backend
+│   └── queue.py             ← in-memory / SQS swappable backend
+├── frontend/                ← React + Vite (Phase 6)
+├── eval/                    ← metrics, benchmark, visualise (Phase 8)
+├── db/                      ← schema.sql, migrations (Phase 4)
+├── docker/                  ← Dockerfiles + docker-compose (Phase 7)
+├── data/
+│   ├── raw/                 ← original FITS files (gitignored)
+│   ├── processed/           ← converted PNGs (gitignored)
+│   ├── catalogs/            ← TLE catalog files
+│   └── annotations/         ← COCO-format JSON label files
+├── tests/                   ← pytest (mirrors src/ and top-level module layout)
+├── results/                 ← baseline metrics JSON output
+└── weights/                 ← model weights (gitignored)
 ```
 
 ## Academic Research Context
@@ -51,8 +100,10 @@ This project is academic research software. It builds on the following prior wor
 
 - **ASTRiDE** — Automated Streak Detection for Astronomical Images
   (Kim et al., https://github.com/dwkim78/ASTRiDE)
-- **StreakMind** — YOLO-OBB satellite streak detection model
+- **StreakMind** — Co-DINO transformer-based satellite streak detection
   (StreakMind project, cite per their published paper/repo)
+- **Co-DINO** — Co-Deformable DETR object detection
+  (Zong et al., 2023, https://arxiv.org/abs/2211.12860)
 - **Danarianto et al. Prototype** — satellite identification prototype pipeline
   (Danarianto et al., cite per their published paper)
 
@@ -84,604 +135,125 @@ academic research code.
 - Google-style docstrings on every public function and class
 - Every module has a `if __name__ == "__main__":` block for standalone testing
 - Never hardcode credentials — use environment variables only
+- Never hardcode `torch.device("cuda")` — use `get_device()` from `inference/device.py`
 - All file paths via `pathlib.Path`, never raw strings
 - Log with `logging` module, not `print()` (except __main__ blocks)
+- Log all inference timings at DEBUG level:
+  `fits_load_ms`, `inference_ms`, `postprocess_ms`, `crossid_ms`, `db_write_ms`
 
 ## Environment Variables Required
 ```bash
 export SPACETRACK_USER=your@email.com
 export SPACETRACK_PASS=yourpassword
+export DATABASE_URL=sqlite+aiosqlite:///./argus.db   # default
+export MODEL_SIZE=tiny     # tiny=Swin-T (dev/MPS), large=Swin-L (A100)
+# Optional for cloud deployment:
+export STORAGE_BACKEND=local   # or s3
+export QUEUE_BACKEND=memory    # or sqs
+export S3_BUCKET=
+export AWS_REGION=
 ```
 
 ## Running Tests
 ```bash
-conda activate argus
+conda activate satid
 pytest tests/ -v
 ```
 
 ## Workflow Rules
-- Build one week's tasks completely before moving to the next
+- Complete and test each phase before starting the next
+- Phase 1 gate is already cleared — valid COCO JSON ✅, FITSStreakDataset iterates ✅
 - Write pytest tests alongside each module, not after
 - Run pytest after every module is complete — fix failures before continuing
-- Write baseline metrics to results/phase1_baseline.json at end of Week 4
 - Ask for a plan before writing code for any module over 100 lines
+- Storage and queue backends must be swappable via env var with zero changes to
+  `api/main.py` or `inference/pipeline.py`
+- numpy must stay pinned < 2.0; do not upgrade albumentations or opencv past versions
+  that require numpy ≥ 2.0
+- Set `PYTORCH_ENABLE_MPS_FALLBACK=1` in your shell when running on Mac
 
+## Device Abstraction (`inference/device.py`)
 
-═══════════════════════════════════════════════════════════
-HARDWARE ADDENDUM — READ THIS BEFORE WRITING ANY CODE
-═══════════════════════════════════════════════════════════
-
-This addendum modifies the main implementation plan to account 
-for a two-machine workflow:
-
-  DEVELOPMENT MACHINE: MacBook Air M3, 16GB unified RAM
-    - All code is written and tested here
-    - Uses CPU or MPS (Apple Silicon GPU) only
-    - No NVIDIA CUDA available
-
-  TRAINING MACHINE: Rented cloud GPU (Lambda Labs A100 40GB)
-    - Used only when code is complete and ready to train
-    - CUDA 12.1, PyTorch 2.2.0
-    - Accessed via SSH
-
-Every decision in this project must respect this constraint.
-Code that only works on CUDA is not acceptable.
-All modules must run on CPU/MPS for development.
-
-═══════════════════════════════════════════════════════════
-DEVICE ABSTRACTION — IMPLEMENT THIS FIRST
-═══════════════════════════════════════════════════════════
-
-Before writing any other code, create inference/device.py:
+`inference/device.py` must exist before any other ML code. It provides:
 
 ```python
-# inference/device.py
-
-import torch
-import logging
-
-logger = logging.getLogger(__name__)
-
 def get_device() -> torch.device:
-    """
-    Returns the best available device in priority order:
-      1. CUDA (cloud GPU)
-      2. MPS (Apple Silicon)
-      3. CPU (fallback)
-
-    Never hardcode 'cuda' anywhere in the codebase.
-    Always call get_device() instead.
-    """
-    if torch.cuda.is_available():
-        device = torch.device("cuda")
-        logger.info(f"Using CUDA: {torch.cuda.get_device_name(0)}")
-    elif torch.backends.mps.is_available():
-        device = torch.device("mps")
-        logger.info("Using Apple Silicon MPS")
-    else:
-        device = torch.device("cpu")
-        logger.warning("No GPU available, using CPU — training will be slow")
-    return device
-
+    """Priority: CUDA → MPS → CPU. Never hardcode 'cuda' anywhere."""
 
 def get_device_config() -> dict:
-    """
-    Returns device-appropriate training hyperparameters.
-    These are conservative values safe for each environment.
-    """
-    device = get_device()
-
-    configs = {
-        "cuda": {
-            "batch_size": 2,
-            "num_workers": 4,
-            "pin_memory": True,
-            "image_size": 800,
-            "mixed_precision": True,    # AMP on CUDA
-            "gradient_checkpointing": True,
-        },
-        "mps": {
-            "batch_size": 1,
-            "num_workers": 0,           # MPS doesn't support multiprocessing workers
-            "pin_memory": False,        # not supported on MPS
-            "image_size": 400,          # halved to fit in 16GB unified memory
-            "mixed_precision": False,   # MPS AMP support is incomplete
-            "gradient_checkpointing": True,
-        },
-        "cpu": {
-            "batch_size": 1,
-            "num_workers": 2,
-            "pin_memory": False,
-            "image_size": 400,
-            "mixed_precision": False,
-            "gradient_checkpointing": True,
-        },
-    }
-
-    return configs[device.type]
+    """Returns device-appropriate hyperparameters."""
 ```
 
-Import get_device() in every file that touches PyTorch tensors.
-Never write torch.device('cuda') or .cuda() anywhere.
-Always write .to(get_device()) instead.
+Config values by device:
 
-Set this environment variable in your shell before running anything:
-  export PYTORCH_ENABLE_MPS_FALLBACK=1
+| Key | CUDA | MPS | CPU |
+|-----|------|-----|-----|
+| `batch_size` | 2 | 1 | 1 |
+| `num_workers` | 4 | 0 | 2 |
+| `pin_memory` | True | False | False |
+| `image_size` | 800 | 400 | 400 |
+| `mixed_precision` | True | False | False |
+| `gradient_checkpointing` | True | True | True |
 
-Add it to .env.example as well.
+**MPS-specific rules** (apply everywhere):
+1. `num_workers` must be 0 — always use `get_device_config()["num_workers"]`
+2. Wrap AMP: `use_amp = device.type == "cuda"` then `torch.autocast(device_type=device.type, enabled=use_amp)`
+3. NMS/roi_align fallback: if `device.type == "mps"`, call `.cpu()` before torchvision op then `.to(device)` after
+4. `pin_memory=True` crashes on MPS — always use `get_device_config()["pin_memory"]`
+5. `skimage.transform.radon` and Shapely are CPU-only — expected, do not move to MPS
 
-═══════════════════════════════════════════════════════════
-MODEL SIZE SELECTION — TWO CONFIGS REQUIRED
-═══════════════════════════════════════════════════════════
+## Model Size Selection
 
-The main plan specifies Co-DINO with Swin-L backbone.
-Swin-L requires ~22GB VRAM minimum — it cannot run on the MacBook.
+Two MMDetection configs must always exist:
+- `models/dino/streak_codino_swin_t.py` — development, Mac-safe (Swin-T, ~340MB weights)
+- `models/dino/streak_codino_swin_l.py` — production, cloud GPU only (Swin-L, ~2.4GB weights)
 
-You must maintain TWO model configurations at all times:
+`MODEL_SIZE=large` must raise `EnvironmentError` if `device.type != "cuda"`.
 
-  models/dino/streak_codino_swin_t.py   ← development (Mac-safe)
-  models/dino/streak_codino_swin_l.py   ← production (cloud GPU)
+`scripts/download_weights.py` — downloads Swin-T (default) or Swin-L weights based on `MODEL_SIZE`; skips if file exists. Add `weights/` to `.gitignore`.
 
-The Swin-T config is for all local development, debugging, and 
-integration testing. The Swin-L config is only used during the 
-cloud training run.
+## Dev Subset Tool (`training/make_dev_subset.py`)
 
-Selection via environment variable:
-  MODEL_SIZE=tiny    → loads Swin-T config  (default)
-  MODEL_SIZE=large   → loads Swin-L config  (cloud only)
+50-image reproducible subset for fast local iteration:
+- 20 images with no streaks, 20 with short streaks (<269px), 10 with long streaks (≥269px)
+- `USE_DEV_SUBSET=true` (default) → loads `data/annotations/dev_subset.json`
+- `USE_DEV_SUBSET=false` → loads full annotation file (cloud training only)
 
-Implement this in inference/pipeline.py:
+## Fast Iteration Mode
 
-```python
-import os
-from inference.device import get_device, get_device_config
+`FAST_MODE=true` or `pipeline.run(image, fast=True)`:
+- Skips Radon angle refinement, cross-ID, DB write
+- Forces `image_size=256`
+- Target: <60 seconds wall time per image on Mac
 
-def load_model():
-    model_size = os.getenv("MODEL_SIZE", "tiny")
-    device = get_device()
-    device_cfg = get_device_config()
+## Phase Sequencing (Hardware-Aware)
 
-    if model_size == "large" and device.type != "cuda":
-        raise EnvironmentError(
-            "MODEL_SIZE=large requires CUDA. "
-            "On Mac, use MODEL_SIZE=tiny for development."
-        )
+| Phase | Where | Gate |
+|-------|-------|------|
+| 1 — Data pipeline | Mac CPU | COCO JSON valid, Dataset iterates |
+| 2 — Model config | Mac (no GPU) | Both configs pass mmdet check; Swin-T weights downloaded |
+| 3 — Augmentation | Mac CPU | `augmentations.py --visualize` runs clean |
+| 4 — Integration | Mac MPS, tiny | `pipeline.py --fast` <60s |
+| 5 — API + Frontend | Mac CPU | docker-compose up, upload curl works |
+| 6 — Cloud handoff | Mac | `prepare_cloud_training.py` all checks pass |
+| 7 — Cloud training | Lambda A100 | val mAP >90%, fetch weights |
+| 8 — Evaluation | Mac MPS | ≥94% precision, ≥97% recall |
 
-    config_map = {
-        "tiny":  "models/dino/streak_codino_swin_t.py",
-        "large": "models/dino/streak_codino_swin_l.py",
-    }
+## Cloud Training Scripts
 
-    config_path = config_map[model_size]
-    # ... rest of MMDetection model loading
-```
+`scripts/prepare_cloud_training.py` — validates all checklist items (annotations, dataset, configs, augmentations, pipeline fast-mode, API, docker, requirements.txt pinned) before GPU rental; exits 1 on any failure.
 
-Add to .env.example:
-  MODEL_SIZE=tiny
+`scripts/cloud_setup.sh` — run once on Lambda instance: installs deps, downloads Swin-L weights, verifies CUDA, flips `.env` to `MODEL_SIZE=large` and `USE_DEV_SUBSET=false`.
 
-═══════════════════════════════════════════════════════════
-LOCAL DEVELOPMENT DATASET
-═══════════════════════════════════════════════════════════
+`scripts/fetch_weights.sh <user@ip>` — rsync `weights/best.pth` and training logs back to Mac after training.
 
-The full dataset of 2335 FITS images is too large to iterate on 
-quickly during development on the Mac.
+## Cost Guardrails (`training/train_dino.py`)
 
-Create a development subset tool:
+After epoch 1 completes, print estimated total time and Lambda cost ($1.29/hr), then `sleep(30)` before epoch 2. Ctrl+C during that window aborts the run without further charges.
 
---- training/make_dev_subset.py ---
+## Deferred Work (stub with `raise NotImplementedError`)
 
-```python
-"""
-Creates a small reproducible subset of the dataset for fast
-local iteration on Mac. Not used during cloud training.
-
-Usage:
-  python -m training.make_dev_subset \
-    --annotation data/annotations/train.json \
-    --output data/annotations/dev_subset.json \
-    --n-images 50 \
-    --seed 42
-
-Selection strategy:
-  - 20 images with no streaks
-  - 20 images with short streaks (< 269px)
-  - 10 images with long streaks (>= 269px)
-This preserves class balance in the dev subset.
-"""
-```
-
-Add to .env.example:
-  USE_DEV_SUBSET=true       # set to false for cloud training run
-
-In training/dataset.py, read USE_DEV_SUBSET and load the 
-appropriate annotation file automatically.
-
-During all local development, training/testing is done on
-the 50-image subset only. Cloud training uses the full dataset.
-
-═══════════════════════════════════════════════════════════
-MPS-SPECIFIC COMPATIBILITY RULES
-═══════════════════════════════════════════════════════════
-
-These MMDetection and PyTorch operations are either broken or 
-slow on MPS. Handle each as specified:
-
-1. DataLoader num_workers must be 0 on MPS.
-   Use get_device_config()["num_workers"] everywhere.
-   Never hardcode num_workers.
-
-2. torch.cuda.amp.autocast() crashes on MPS.
-   Wrap all AMP usage:
-
-```python
-   from inference.device import get_device
-
-   device = get_device()
-   use_amp = device.type == "cuda"
-
-   with torch.autocast(device_type=device.type, enabled=use_amp):
-       outputs = model(inputs)
-```
-
-3. Some torchvision ops (e.g. nms, roi_align) have incomplete 
-   MPS implementations. If you get a "not implemented for MPS" 
-   error, add a CPU fallback:
-
-```python
-   def safe_nms(boxes, scores, iou_threshold):
-       device = boxes.device
-       if device.type == "mps":
-           # Fall back to CPU for this op
-           result = torchvision.ops.nms(
-               boxes.cpu(), scores.cpu(), iou_threshold
-           )
-           return result.to(device)
-       return torchvision.ops.nms(boxes, scores, iou_threshold)
-```
-
-4. pin_memory=True crashes on MPS. Always use 
-   get_device_config()["pin_memory"].
-
-5. skimage.transform.radon (used in postprocess.py) runs on CPU 
-   only — this is fine and expected. Do not attempt to move it 
-   to MPS.
-
-6. The Shapely library (rotated IoU) is CPU-only — also fine 
-   and expected.
-
-═══════════════════════════════════════════════════════════
-PRETRAINED WEIGHTS — MAC-SAFE DOWNLOAD
-═══════════════════════════════════════════════════════════
-
-The cloud-pretrained Co-DINO Swin-L weights file is ~2.4GB.
-Do NOT download it during local development.
-
-The Swin-T weights are ~340MB and should be downloaded for 
-local development.
-
-Create a script: scripts/download_weights.py
-
-```python
-"""
-Downloads pretrained weights appropriate for current environment.
-
-Usage:
-  python scripts/download_weights.py
-
-Behavior:
-  MODEL_SIZE=tiny  → downloads Swin-T Co-DINO COCO weights (~340MB)
-  MODEL_SIZE=large → downloads Swin-L Co-DINO COCO weights (~2.4GB)
-
-Weights are saved to: weights/ directory (gitignored)
-Skip download if file already exists.
-"""
-
-WEIGHT_URLS = {
-    "tiny": {
-        "url": "https://download.openmmlab.com/mmdetection/v3.0/"
-               "co_dino/co_dino_5scale_swin_t_3x_coco/"
-               "co_dino_5scale_swin_t_3x_coco.pth",
-        "filename": "co_dino_swin_t_coco.pth",
-        "sha256": "...",   # fill in after first download
-    },
-    "large": {
-        "url": "https://download.openmmlab.com/mmdetection/v3.0/"
-               "co_dino/co_dino_5scale_swin_l_16xb1_3x_coco/"
-               "co_dino_5scale_swin_l_16xb1_3x_coco.pth",
-        "filename": "co_dino_swin_l_coco.pth",
-        "sha256": "...",
-    },
-}
-```
-
-Add weights/ to .gitignore.
-
-═══════════════════════════════════════════════════════════
-FAST ITERATION MODE
-═══════════════════════════════════════════════════════════
-
-On Mac, full pipeline runs must complete in under 60 seconds 
-for a single image to be usable during development.
-
-Add a --fast flag to the pipeline that skips slow operations:
-
-  inference/pipeline.py --fast
-    - Skips Radon angle refinement (uses raw DINO box angle)
-    - Skips satellite cross-identification
-    - Skips database write (prints to stdout instead)
-    - Uses image_size=256 regardless of config
-
-This lets you verify the detection loop is working end-to-end 
-in seconds rather than minutes while on Mac.
-
-Implement as:
-  FAST_MODE=true  in environment, or
-  pipeline.run(image, fast=True) in code
-
-═══════════════════════════════════════════════════════════
-CLOUD TRAINING HANDOFF PACKAGE
-═══════════════════════════════════════════════════════════
-
-When local development is complete and ready for cloud training,
-the following must be ready to transfer. Create a script that 
-validates and packages everything:
-
---- scripts/prepare_cloud_training.py ---
-
-This script must verify and report on each item before you 
-SSH into the rented GPU:
-
-CHECKLIST — script must confirm all of these pass:
-
-  [ ] data/annotations/train.json exists and is valid COCO JSON
-        - Run: python -c "import json; json.load(open('...'))"
-        - Report: N images, N annotations, class names
-
-  [ ] data/annotations/val.json exists and is valid COCO JSON
-
-  [ ] All FITS paths in annotations resolve to actual files
-
-  [ ] training/dataset.py iterates 5 batches without error
-        using dev subset on CPU (USE_DEV_SUBSET=true)
-
-  [ ] models/dino/streak_codino_swin_t.py is valid MMDet config
-        - Run: python -m mmdet.utils.check_config ...
-
-  [ ] models/dino/streak_codino_swin_l.py is valid MMDet config
-
-  [ ] training/augmentations.py runs on a sample image without error
-
-  [ ] inference/pipeline.py runs end-to-end in FAST_MODE=true
-
-  [ ] api/main.py starts without error (uvicorn --reload)
-
-  [ ] docker-compose up --build completes without error
-        (using CPU/MPS, MODEL_SIZE=tiny)
-
-  [ ] requirements.txt is pinned (all packages have == versions)
-
-On success, print:
-  "✓ Ready for cloud training. 
-   Transfer the following to your GPU instance:
-   - Your full FITS dataset
-   - data/annotations/
-   - The entire repository
-   Run: rsync -avz --exclude='.git' --exclude='uploads' 
-        . user@lambda-instance:/home/ubuntu/streakmind/"
-
-On any failure, print which check failed and why, then exit 1.
-
-═══════════════════════════════════════════════════════════
-CLOUD INSTANCE SETUP SCRIPT
-═══════════════════════════════════════════════════════════
-
-Create scripts/cloud_setup.sh — run this once after SSHing 
-into the rented GPU instance:
-
-```bash
-#!/bin/bash
-# Run once on Lambda Labs A100 instance after rsync
-# Usage: bash scripts/cloud_setup.sh
-
-set -e
-
-echo "=== Installing system dependencies ==="
-sudo apt-get update -q
-sudo apt-get install -y libgl1 libglib2.0-0
-
-echo "=== Installing Python dependencies ==="
-pip install -q -U pip
-pip install -q torch==2.2.0 torchvision==0.17.0 \
-    --index-url https://download.pytorch.org/whl/cu121
-pip install -q -U openmim
-mim install -q mmengine mmcv mmdet
-pip install -r requirements.txt
-
-echo "=== Downloading Swin-L weights ==="
-MODEL_SIZE=large python scripts/download_weights.py
-
-echo "=== Verifying CUDA ==="
-python -c "import torch; assert torch.cuda.is_available(), 'CUDA not found'; \
-           print(f'CUDA OK: {torch.cuda.get_device_name(0)}')"
-
-echo "=== Setting environment ==="
-cp .env.example .env
-sed -i 's/MODEL_SIZE=tiny/MODEL_SIZE=large/' .env
-sed -i 's/USE_DEV_SUBSET=true/USE_DEV_SUBSET=false/' .env
-
-echo ""
-echo "=== Setup complete. Start training with: ==="
-echo "    python -m training.train_dino"
-```
-
-═══════════════════════════════════════════════════════════
-CLOUD TRAINING SCRIPT
-═══════════════════════════════════════════════════════════
-
---- training/train_dino.py ---
-
-The training script must:
-
-  1. Call get_device() at startup and log which device is active
-  2. Load device config via get_device_config()
-  3. Apply two-stage fine-tuning as specified in main plan:
-       Stage 1 epochs 1-15:  backbone frozen (lr_mult=0.0)
-       Stage 2 epochs 16-50: backbone unfrozen (lr_mult=0.01)
-  4. Save checkpoints every 5 epochs to weights/checkpoints/
-  5. Save best checkpoint (highest val mAP) to weights/best.pth
-  6. Log to both stdout and training/logs/run_{timestamp}.log
-  7. Print ETA after each epoch based on elapsed time
-
-Add a --smoke-test flag:
-  Runs 2 epochs on 10 images, verifies loss decreases, exits.
-  Used to confirm cloud setup works before committing to full run.
-  Usage: python -m training.train_dino --smoke-test
-
-The smoke test must complete in under 5 minutes on an A100.
-Run this first thing after cloud_setup.sh completes.
-
-═══════════════════════════════════════════════════════════
-WEIGHTS RETRIEVAL AFTER TRAINING
-═══════════════════════════════════════════════════════════
-
-After training completes on the cloud instance, retrieve weights:
-
-Create scripts/fetch_weights.sh:
-
-```bash
-#!/bin/bash
-# Run on your Mac after cloud training completes
-# Usage: bash scripts/fetch_weights.sh user@lambda-ip
-
-REMOTE=$1
-if [ -z "$REMOTE" ]; then
-  echo "Usage: bash scripts/fetch_weights.sh user@instance-ip"
-  exit 1
-fi
-
-mkdir -p weights/
-echo "Fetching best checkpoint..."
-rsync -avz --progress \
-  $REMOTE:/home/ubuntu/streakmind/weights/best.pth \
-  weights/streakmind_codino_swin_l.pth
-
-echo "Fetching training logs..."
-rsync -avz \
-  $REMOTE:/home/ubuntu/streakmind/training/logs/ \
-  training/logs/
-
-echo ""
-echo "Done. Update your .env:"
-echo "  MODEL_SIZE=large"
-echo "  MODEL_WEIGHTS=weights/streakmind_codino_swin_l.pth"
-echo ""
-echo "Note: MODEL_SIZE=large requires MPS or CUDA."
-echo "For inference only on Mac MPS, this may work."
-echo "If you get memory errors, convert weights to Swin-T"
-echo "using scripts/distill_to_swin_t.py (future work)."
-```
-
-═══════════════════════════════════════════════════════════
-PHASE SEQUENCING — REVISED FOR THIS HARDWARE PLAN
-═══════════════════════════════════════════════════════════
-
-Follow this exact order. Do not start a phase until the 
-previous one is complete and tested.
-
-PHASE 1 — Data Pipeline (Mac, CPU)
-  Goal: COCO JSON produced, FITSStreakDataset iterates cleanly
-  Verify: python -m training.convert_labels && 
-          python -m training.dataset --smoke-test
-  Environment: USE_DEV_SUBSET=true, MODEL_SIZE=tiny
-
-PHASE 2 — Model Config (Mac, no GPU needed)
-  Goal: Both Swin-T and Swin-L configs pass mmdet config check
-  Verify: python scripts/download_weights.py (Swin-T only)
-  Do NOT start Swin-L training locally
-
-PHASE 3 — Augmentation Pipeline (Mac, CPU)
-  Goal: augmentations.py runs on sample images, synthetic 
-        streak injection produces valid bounding boxes
-  Verify: python -m training.augmentations --visualize
-
-PHASE 4 — Integration Test (Mac, MPS, MODEL_SIZE=tiny)
-  Goal: Full pipeline runs end-to-end in FAST_MODE
-  Verify: python -m inference.pipeline --fast --image data/raw/sample.fits
-  Expected: <60 seconds wall time
-
-PHASE 5 — API + Frontend (Mac, CPU)
-  Goal: docker-compose up works, browser can upload image 
-        and see results using Swin-T model
-  Verify: curl -F "file=@data/raw/sample.fits" localhost:8000/api/upload
-  Note: results will be low quality with Swin-T and no fine-tuning,
-        this is expected — you are testing the plumbing, not accuracy
-
-PHASE 6 — Cloud Handoff Validation (Mac)
-  Goal: python scripts/prepare_cloud_training.py passes all checks
-  This is your go/no-go gate before spending money on GPU rental
-
-PHASE 7 — Cloud Training (Lambda Labs A100)
-  Goal: Fine-tuned Swin-L weights, val mAP > 90%
-  Steps:
-    1. Rent A100 instance on Lambda Labs
-    2. rsync repo + data to instance
-    3. bash scripts/cloud_setup.sh
-    4. python -m training.train_dino --smoke-test
-    5. python -m training.train_dino   (full run, ~6-10hrs)
-    6. bash scripts/fetch_weights.sh user@instance-ip
-    7. Terminate instance immediately after fetch
-
-PHASE 8 — Evaluation (Mac, MPS with Swin-L weights)
-  Goal: Reproduce ≥94% precision, ≥97% recall from StreakMind paper
-  Verify: python -m eval.benchmark
-
-═══════════════════════════════════════════════════════════
-COST GUARDRAILS
-═══════════════════════════════════════════════════════════
-
-Add a training time estimator to train_dino.py.
-After the first epoch completes, print:
-
-  "Epoch 1/50 complete in Xm Ys.
-   Estimated total training time: Xh Ym
-   Estimated cost at $1.29/hr (Lambda A100): $X.XX
-   Press Ctrl+C within 30 seconds to abort if cost is unexpected."
-
-Then sleep(30) before continuing to epoch 2.
-
-This prevents accidentally running a misconfigured training job
-for hours before noticing something is wrong.
-
-═══════════════════════════════════════════════════════════
-WHAT NOT TO BUILD YET
-═══════════════════════════════════════════════════════════
-
-Do not implement the following until Phase 7 is complete 
-and you have real fine-tuned weights:
-
-  - Satellite cross-identification with live Space-Track API
-    (use the local TLE file only for now)
-  - Multi-frame tracklet association
-    (implement the DB schema but leave the logic as a stub)
-  - The Swin-L → Swin-T weight distillation script
-    (only needed if Mac inference with large model is too slow)
-
-Stub these with:
-  raise NotImplementedError("Implement after cloud training — see Phase 7")
-
-So the codebase is complete in structure but honest about 
-what is not yet functional.
-
-═══════════════════════════════════════════════════════════
-FIRST TASK
-═══════════════════════════════════════════════════════════
-
-Begin with inference/device.py. 
-
-Show me the file, then run:
-  python -c "from inference.device import get_device, 
-             get_device_config; print(get_device()); 
-             print(get_device_config())"
-
-Confirm it prints 'mps' and the MPS config dict on this Mac.
-Then proceed to Phase 1.
+Do not implement until Phase 7 weights exist:
+- Live Space-Track cross-ID (use local TLE file only for now)
+- Multi-frame tracklet association (DB schema only)
+- Swin-L → Swin-T weight distillation

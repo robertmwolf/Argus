@@ -1,226 +1,227 @@
-# Phase 1 Goals — Classical Baseline (Weeks 1–4)
+# Phase 1 Goals — StreakMind Data Pipeline
+
+> **Phase 0 (Classical Baseline) is complete.** See the bottom of this file
+> for the completed Phase 0 week-by-week record.
+> Phase 1 is the StreakMind data pipeline: FITS loader, PyTorch dataset,
+> label conversion, and augmentations in `streakmind/`.
 
 ## Guiding Principle
-Build one week completely before moving to the next.
-Each week ends with a passing pytest suite and a clear metric recorded.
-The goal is not perfection — it is a working end-to-end pipeline
-with documented baseline numbers to compare against Phase 2.
+Phase 1 must produce two things before Phase 2 (model training) can start:
+1. `convert_labels.py` must produce a valid COCO JSON file
+2. `FITSStreakDataset.__getitem__()` must iterate without error
+
+Show these outputs before proceeding to Phase 2.
 
 ---
 
-## Week 1: FITS Ingest & Header Parser
+## Module 1: `streakmind/inference/fits_loader.py`
 
-### File to build
-`src/ingest/fits_parser.py`
+### Class: `FITSLoader`
 
-### What it must do
-- Accept a file path to any `.fits` or `.fit` file
-- Open with `astropy.io.fits`
-- Extract all fields into a `FITSImage` dataclass (see architecture.md)
-- Raise `ValueError` with a clear message if `DATE-OBS` or `NAXIS1/2` are missing
-- Handle both DATE-OBS formats: `2024-04-02T02:55:24.38` and `2024-04-02 02:55:24`
-- Parse `DATE-OBS` into a timezone-aware `datetime` (UTC)
-- Gracefully handle missing optional fields (RA, DEC, PIXSCALE, SITELAT etc.)
-  by setting them to `None` — do not crash
-- Normalize image data to float32
+```python
+def load(path: str) -> dict:
+    """Load a FITS file and normalize for model input.
 
-### Standalone __main__
-Running `python src/ingest/fits_parser.py path/to/image.fits` should:
-- Print all extracted header fields
-- Print image shape and dtype
-- Print any missing optional fields as warnings
+    Returns dict with keys:
+      array       — np.ndarray uint8 H×W×3 (Z-score normalized, 3-channel)
+      wcs         — astropy.wcs.WCS object (or None if header has no WCS)
+      exposure_time — float seconds (or None)
+      filename    — str basename
+      shape       — tuple (H, W)
+    """
 
-### Test file
-`tests/test_fits_parser.py`
+def fits_to_png(fits_path: str, output_path: str) -> None:
+    """Convert FITS to PNG via load(). Save with cv2.imwrite."""
 
-Tests must cover:
-- [ ] Parse a real FITS file from data/sample/ successfully
-- [ ] Correct datetime parsing including timezone awareness
-- [ ] Missing DATE-OBS raises ValueError with clear message
-- [ ] Missing optional fields (RA, DEC etc.) return None, not crash
-- [ ] Image data is float32 numpy array
+def extract_wcs_metadata(wcs: WCS, pixel_coords: list[tuple]) -> list[dict]:
+    """Convert pixel (x,y) list to RA/Dec.
 
-### Success Metric — Week 1
-Run parser on first 50 MILAN FITS files.
-**Target: 100% parse without crash, 0 unhandled exceptions.**
-Record result in `results/week1_ingest.json`.
-
----
-
-## Week 2: ASTRiDE Classical Streak Detector
-
-### File to build
-`src/detection/classical_detector.py`
-
-### What it must do
-- Accept a `FITSImage` (from week 1 parser)
-- Run ASTRiDE `Streak` detection on the image data
-- Return a list of `StreakDetection` dataclasses (see architecture.md)
-- Compute x_center, y_center as midpoint of start/end
-- Compute angle_deg from (x_start,y_start) → (x_end,y_end)
-  (0° = east, 90° = north, standard position angle convention)
-- Compute length_px as Euclidean distance start→end
-- Set all sky coord fields (ra_*, dec_*) to None — plate solve not yet wired
-- Accept `contour_threshold` as a parameter (default 3.0)
-  so sensitivity can be tuned without code changes
-- Accept `min_length_px` as a parameter (default 20)
-  to filter out very short detections
-
-### Preprocessing before ASTRiDE
-Before calling ASTRiDE:
-1. Subtract median background using `sep` library
-2. Clip extreme pixel values at 99.9th percentile
-3. Convert to 16-bit unsigned int (ASTRiDE expects this)
-
-### Standalone __main__
-Running `python src/detection/classical_detector.py path/to/image.fits` should:
-- Run detection
-- Print number of streaks found and their properties
-- Save an annotated PNG to the same directory showing bounding boxes
-
-### Test file
-`tests/test_classical_detector.py`
-
-Tests must cover:
-- [ ] Returns empty list on image with no streaks (don't crash)
-- [ ] Returns StreakDetection objects with correct types
-- [ ] angle_deg is in range [-180, 180]
-- [ ] length_px > 0 for all detections
-- [ ] Tunable parameters (contour_threshold, min_length_px) change results
-
-### Success Metric — Week 2
-Run detector on 20 MILAN images known to contain Starlink passes.
-**Target: detect visible streak in ≥ 70% of images.**
-Record per-image results in `results/week2_detection.json`.
-
----
-
-## Week 3: Astrometry + Space-Track Query
-
-### Files to build
-
-#### `src/astrometry/plate_solver.py`
-- Accept a `FITSImage` and a `StreakDetection`
-- Extract WCS from FITS header using `astropy.wcs.WCS`
-- Convert pixel coordinates (x, y) to sky coordinates (RA, Dec)
-  using `wcs.all_pix2world()`
-- Populate `ra_start`, `dec_start`, `ra_end`, `dec_end`, `ra_center`, `dec_center`
-  on the `StreakDetection` in place
-- Compute `position_angle_deg` (celestial, from North through East)
-- Compute `angular_velocity_arcsec_s` from streak length in arcsec / exptime
-- If FITS has no valid WCS, log a warning and return with sky fields as None
-  (do not crash — the pipeline continues, just without sky coords)
-
-#### `src/matching/spacetrack_query.py`
-- Accept `obs_time: datetime`, `epoch_window_days: int = 3`
-- Query Space-Track `GP_History` class
-- Filter: epoch within `(obs_time - window, obs_time)`
-- Sort: `orderby='epoch desc'` to prefer most recent TLE per object
-- Cache results to disk at `data/cache/` using pickle
-  Cache key: `f"{obs_time.strftime('%Y%m%d%H')}_{epoch_window_days}d"`
-  Cache TTL: 48 hours for historical queries (obs_time > 7 days ago)
-             2 hours for recent queries
-- Rate limiting: never make more than 1 request per 3 seconds
-- Return: list of raw TLE dicts from Space-Track JSON response
-- Read credentials from environment variables `SPACETRACK_USER`, `SPACETRACK_PASS`
-  Raise clear error if not set
-
-### Standalone __main__ for spacetrack_query.py
-Running `python src/matching/spacetrack_query.py 2024-04-02T02:55:24` should:
-- Query GP_History for that date ± 3 days
-- Print count of TLEs returned
-- Print first 5 TLE object names as a sanity check
-
-### Test files
-`tests/test_plate_solver.py`
-- [ ] Pixel (0,0) maps to a reasonable sky coord given known header
-- [ ] Center pixel maps to CRVAL1/CRVAL2 from header
-- [ ] angular_velocity is positive and in reasonable range for LEO (0.1–2.0 deg/s)
-
-`tests/test_spacetrack_query.py`
-- [ ] Returns non-empty list for a known historical date
-- [ ] Caches result and does not re-hit Space-Track on second call
-- [ ] Missing env vars raises clear error
-
-### Success Metric — Week 3
-For one confirmed Starlink pass in MILAN data (manually identified):
-**Target: correct NORAD ID appears in candidate list from GP_History query.**
-Record in `results/week3_query.json`.
-
----
-
-## Week 4: SGP4 Matching + End-to-End Metrics
-
-### Files to build
-
-#### `src/matching/spatial_filter.py`
-- Accept: list of TLE dicts, obs_time, observer lat/lon/alt, ra_center, dec_center, fov_radius_deg
-- For each TLE: run SGP4 to get position at obs_time
-- Convert TEME position to topocentric RA/Dec for observer
-- Return only TLEs whose predicted position falls within fov_radius_deg of (ra_center, dec_center)
-- This is the pre-screen — lightweight, fast, reduces 5–15k → 5–50 candidates
-
-#### `src/matching/propagator.py`
-- Accept: single TLE dict, obs_time, observer lat/lon/alt
-- Return: (predicted_ra, predicted_dec, velocity_arcsec_s, direction_deg, tle_age_hours)
-- Use `sgp4` library `Satrec.twoline2rv()` and `sat.sgp4(jd, fr)`
-- Convert TEME frame to topocentric using `skyfield` for observer-relative coords
-- Compute TLE age penalty using Gaussian decay (see architecture.md)
-
-#### `src/matching/matcher.py`
-- Accept: `StreakDetection`, list of propagated candidates, `FITSImage`
-- For each candidate:
-  - Compute angular_sep_arcsec (observed vs predicted position)
-  - Compute velocity_delta_pct (observed vs predicted speed)
-  - Compute direction_delta_deg (observed vs predicted PA) — **test both the stored
-    position_angle_deg and position_angle_deg + 180° (mod 360); take the smaller delta**
-    (see "Streak Direction Ambiguity" in architecture.md)
-  - Compute magnitude_delta if magnitudes available
-  - Score each factor using gaussian_score() (see architecture.md)
-  - Apply TLE age penalty to position_score
-  - Compute weighted_score
-- Sort by weighted_score descending
-- Flag ambiguous=True if top-2 scores within 0.05 of each other
-- Return list of `CandidateMatch` objects
-
-#### `src/matching/scorer.py`
-- Contains `gaussian_score(delta, sigma)` utility function
-- Contains `tle_age_penalty(age_hours, orbit_type='LEO')` function
-- Contains `aggregate_score(position, velocity, direction, magnitude, age_hours)` function
-
-#### `tests/test_end_to_end.py`
-Full pipeline test. For each of 5 test FITS images:
-1. Parse FITS → FITSImage
-2. Detect streaks → list of StreakDetection
-3. Plate solve → populate sky coords
-4. Query GP_History → TLE candidates
-5. Spatial filter → short candidate list
-6. Propagate + match → CandidateMatch list
-7. Assert: correct NORAD ID in top-3 candidates for confirmed passes
-
-### Success Metrics — Week 4 (record all in results/phase1_baseline.json)
-
-| Metric | Target | How to Measure |
-|--------|--------|----------------|
-| Detection recall | ≥ 60% | % of confirmed passes ASTRiDE found |
-| False positive rate | ≤ 30% | % of detections with no matching TLE |
-| Match rate | ≥ 70% | % of detections correctly IDed (correct NORAD in top-3) |
-| Position residual | log arcsec | median angular sep observed vs predicted |
-| Ambiguous rate | log % | % of matches flagged ambiguous |
-| Processing time | log seconds | wall clock per image, end-to-end |
-
-### results/phase1_baseline.json format
-```json
-{
-  "phase": 1,
-  "date_recorded": "2024-XX-XX",
-  "images_tested": 5,
-  "detection_recall": 0.0,
-  "false_positive_rate": 0.0,
-  "match_rate": 0.0,
-  "median_position_residual_arcsec": 0.0,
-  "ambiguous_rate": 0.0,
-  "mean_processing_time_sec": 0.0,
-  "notes": ""
-}
+    Returns list of dicts: {x_pix, y_pix, ra_deg, dec_deg}
+    """
 ```
+
+**Normalization rule:** Z-score, NOT min-max.
+- Clip pixel values to ±3σ from the image mean
+- Scale clipped range to [0, 255] uint8
+- Stack grayscale to 3 channels (shape H×W×3)
+
+Rationale: FITS images have extreme dynamic range. Min-max crushes faint
+streaks into noise. Z-score preserves relative contrast.
+
+### Test file: `tests/streakmind/test_fits_loader.py`
+- [ ] `load()` returns dict with all required keys and correct dtypes
+- [ ] Output array is uint8, shape (H, W, 3)
+- [ ] `fits_to_png()` creates a file at the given path
+- [ ] `extract_wcs_metadata()` returns correct RA/Dec for image center pixel
+- [ ] Corrupted FITS file raises a clear exception, not a cryptic crash
+- [ ] Missing WCS header → `wcs` key is None, no crash
+
+---
+
+## Module 2: `streakmind/training/convert_labels.py`
+
+### Function: `convert_yolo_obb_to_coco`
+
+```python
+def convert_yolo_obb_to_coco(
+    yolo_label_dir: str,
+    fits_dir: str,
+    output_json: str
+) -> None:
+    """Convert YOLO OBB label files to COCO JSON.
+
+    YOLO OBB format (per line): class cx cy w h angle_deg
+      - cx, cy, w, h normalized 0–1
+      - angle_deg in degrees (not normalized)
+
+    COCO JSON output:
+      images: [{id, file_name, width, height}]
+      annotations: [{
+        id, image_id, category_id,
+        bbox: [x1, y1, w, h],   ← axis-aligned, denormalized pixels
+        area: float,
+        obb: [cx, cy, w, h, angle_deg],  ← denormalized pixels, stored in extra field
+        iscrowd: 0
+      }]
+      categories: [{"id": 0, "name": "streak"}]
+
+    Prints summary: total images, total streaks,
+      streak length distribution (min / mean / max / p75 px)
+    """
+```
+
+### Test file: `tests/streakmind/test_convert_labels.py`
+- [ ] Output JSON parses without error and has `images`, `annotations`, `categories`
+- [ ] Category list is `[{"id": 0, "name": "streak"}]`
+- [ ] Each annotation has an `obb` field with 5 values
+- [ ] `bbox` values are pixel-space (not 0–1 normalized)
+- [ ] Empty label directory → valid COCO JSON with zero annotations
+- [ ] Prints summary statistics to stdout
+
+---
+
+## Module 3: `streakmind/training/dataset.py`
+
+### Class: `FITSStreakDataset(torch.utils.data.Dataset)`
+
+```python
+def __init__(self, annotation_file: str, transforms=None):
+    """Load COCO JSON and build id→metadata and id→annotation lookups."""
+
+def __getitem__(self, idx: int) -> tuple[Tensor, dict]:
+    """Load FITS via FITSLoader (NOT the PNG) and build target dict.
+
+    Target dict keys:
+      boxes       — FloatTensor [N, 4] in [x1, y1, x2, y2] pixel coords
+      labels      — LongTensor [N] all zeros (single class: streak)
+      image_id    — IntTensor scalar
+      obb_params  — FloatTensor [N, 5] as [cx, cy, w, h, angle_deg]
+                    (stored separately for angle supervision)
+    """
+```
+
+**Important:** Always load from the source FITS file, never from the cached PNG.
+The PNG is only for visualization. Training must use the normalized FITS data
+to ensure reproducibility.
+
+### Test file: `tests/streakmind/test_dataset.py`
+- [ ] `len(dataset)` equals number of images in annotation file
+- [ ] `__getitem__` returns `(Tensor, dict)` with correct key set
+- [ ] `boxes` shape is `[N, 4]`, dtype float32
+- [ ] `labels` shape is `[N]`, all values 0
+- [ ] `obb_params` shape is `[N, 5]`
+- [ ] Dataset with transforms applied does not crash
+
+---
+
+## Module 4: `streakmind/training/augmentations.py`
+
+### Function: `get_train_transforms() -> A.Compose`
+
+Build augmentation pipeline using albumentations in this exact order:
+1. `HorizontalFlip(p=0.5)`
+2. `VerticalFlip(p=0.5)`
+3. `RandomRotate90(p=0.5)`
+4. `ShiftScaleRotate(shift_limit=0.1, scale_limit=0.2, rotate_limit=180, p=0.8)`
+5. `RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3, p=0.7)`
+6. `GaussNoise(var_limit=(10, 50), p=0.5)`
+7. `Blur(blur_limit=3, p=0.3)`
+
+### Class: `SyntheticStreakInject(A.DualTransform)`
+
+```
+# Source: StreakMind — synthetic streak injection for class balancing
+# Ref: StreakMind paper/repo (cite per published source)
+```
+
+With probability `p`:
+- Inject 1–3 synthetic streaks into the image
+- Each streak parameters:
+  - Angle: uniform [0°, 180°)
+  - Length: uniform [50px, image diagonal]
+  - Brightness: image_mean_sky + U(1σ, 5σ)
+  - Cross-section: Gaussian profile, σ = 1.5 px
+  - Start position: random, ensuring streak stays fully in-frame
+- Return updated image AND updated `bboxes`/`obb_params`
+
+This is critical for balancing long vs short streak representation.
+
+### Function: `get_val_transforms() -> A.Compose`
+No augmentations — return raw normalized image only.
+
+### Test file: `tests/streakmind/test_augmentations.py`
+- [ ] `get_train_transforms()` runs on a dummy image without error
+- [ ] Output image stays uint8 with shape unchanged
+- [ ] `SyntheticStreakInject` adds at least one streak to bboxes when triggered
+- [ ] `get_val_transforms()` returns the image unchanged
+
+---
+
+## Phase 1 Gate
+
+Before starting Phase 2, verify both:
+
+```bash
+# 1. COCO conversion produces valid output
+python streakmind/training/convert_labels.py \
+  --yolo-labels data/annotations/yolo/ \
+  --fits-dir data/raw/ \
+  --output streakmind/data/annotations/train.json
+
+# 2. Dataset iterates cleanly
+python streakmind/training/dataset.py streakmind/data/annotations/train.json
+# Expected: prints first item shape + target keys, no errors
+
+pytest tests/streakmind/ -v
+# Expected: all tests pass
+```
+
+---
+
+---
+
+## Appendix: Phase 0 — Classical Baseline (Complete)
+
+The classical baseline is implemented in `src/`. It remains the comparison
+baseline for evaluation in Phase 8.
+
+### Week 1 — FITS Ingest (`src/ingest/fits_parser.py`) ✅
+- `FITSImage` dataclass with all header fields
+- Z-score normalization to float32
+- Graceful handling of missing optional fields
+
+### Week 2 — ASTRiDE Streak Detector (`src/detection/classical_detector.py`) ✅
+- Background subtraction (sep), 16-bit conversion, ASTRiDE detection
+- Returns `StreakDetection` dataclass list
+- Tunable `contour_threshold` and `min_length_px` parameters
+
+### Weeks 3–4 — Astrometry + SGP4 Matching (pending)
+Still to build for classical baseline:
+- `src/astrometry/plate_solver.py`
+- `src/matching/spacetrack_query.py`
+- `src/matching/spatial_filter.py`
+- `src/matching/propagator.py`
+- `src/matching/matcher.py` + `scorer.py`
+
+These can be built in parallel with StreakMind Phase 1, as the matching
+logic is shared with StreakMind's `inference/crossid.py`.
