@@ -70,3 +70,13 @@ coverage.xml
 
 # Logs
 *.log
+
+# Model weights — never commit large binaries
+weights/
+*.pth
+*.pt
+*.ckpt
+
+# Training logs and checkpoints
+training/logs/
+training/work_dirs/
