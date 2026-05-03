@@ -7,6 +7,19 @@
 conda create -n satid python=3.11 -y
 conda activate satid
 
+# --- ML pipeline (Co-DINO) ---
+# Install PyTorch with MPS support (Mac dev)
+pip install torch==2.2.0 torchvision==0.17.0
+# On Lambda Labs A100 (cloud training only):
+# pip install torch==2.2.0 torchvision==0.17.0 --index-url https://download.pytorch.org/whl/cu121
+
+# MMDetection stack (provides Co-DINO)
+pip install -U openmim
+mim install mmengine mmcv mmdet
+
+# Augmentation
+pip install albumentations==1.4.0
+
 # Core astronomy
 pip install astropy==6.1.0
 pip install photutils==1.13.0
