@@ -1,10 +1,13 @@
 """Satellite ephemeris cross-identification for ARGUS inference detections.
 
-Cross-matches DINO OBB detections against a local TLE catalog using SGP4
-propagation and Gaussian confidence scoring.  The live Space-Track GP_History
-API path is deferred (raises NotImplementedError) until cloud-trained weights
-exist.  The Celestrak active-satellite TLE is refreshed automatically if older
-than 24 hours.
+Cross-matches DINO OBB detections against Space-Track GP_History TLEs using
+SGP4 propagation and Gaussian confidence scoring.  TLE data is fetched
+directly from Space-Track for the observation time window and cached to disk
+via src.matching.spacetrack_query.
+
+Requires environment variables:
+    SPACETRACK_USER — your Space-Track account email
+    SPACETRACK_PASS — your Space-Track account password
 
 # Source: Danarianto et al. — Gaussian confidence scoring for satellite crossID
 # Ref: cite per published paper
@@ -14,20 +17,12 @@ from __future__ import annotations
 
 import logging
 import math
-import time
-import urllib.request
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger(__name__)
+from src.matching.spacetrack_query import query_gp_history
 
-# Default catalog location (relative to repo root, resolved at runtime)
-_DEFAULT_CATALOG_FILENAME = "active_sats.tle"
-_CATALOG_TTL_SECONDS = 86_400          # 24 hours
-_CELESTRAK_URL = (
-    "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle"
-)
+logger = logging.getLogger(__name__)
 
 # Gaussian sigma for position score: 0.25° = 900 arcsec
 # Source: ARGUS architecture — scoring formulas
@@ -36,100 +31,37 @@ _POSITION_SIGMA_ARCSEC = 900.0
 
 
 # ---------------------------------------------------------------------------
-# Catalog management
+# TLE loading from Space-Track
 # ---------------------------------------------------------------------------
 
-def _default_catalog_path() -> Path:
-    """Return the default TLE catalog path relative to the repo root."""
-    return Path(__file__).resolve().parent.parent / "data" / "catalogs" / _DEFAULT_CATALOG_FILENAME
+def _fetch_tle_catalog(
+    obs_time: datetime,
+    epoch_window_days: int,
+) -> list[tuple[str, str, str]]:
+    """Fetch TLEs from Space-Track GP_History for the observation window.
 
-
-def _catalog_needs_refresh(catalog_path: Path) -> bool:
-    """Return True if the catalog file is missing or older than 24 hours.
+    Delegates to src.matching.spacetrack_query.query_gp_history which handles
+    authentication, rate limiting, and disk caching.
 
     Args:
-        catalog_path: Path to the TLE catalog file.
+        obs_time: UTC observation time.
+        epoch_window_days: Days before obs_time to include in the epoch search.
 
     Returns:
-        True if the file does not exist or its mtime exceeds the TTL.
+        List of (name, line1, line2) tuples ready for SGP4 propagation.
     """
-    if not catalog_path.exists():
-        return True
-    age_seconds = time.time() - catalog_path.stat().st_mtime
-    return age_seconds > _CATALOG_TTL_SECONDS
-
-
-def _download_catalog(catalog_path: Path) -> None:
-    """Download the Celestrak active-satellite TLE catalog to *catalog_path*.
-
-    Uses the public Celestrak GP endpoint — no authentication required.
-    Space-Track GP_History live path is NOT implemented here; that raises
-    NotImplementedError and is deferred until Phase 7 weights exist.
-
-    Args:
-        catalog_path: Destination file path.
-
-    Raises:
-        NotImplementedError: If called with USE_SPACETRACK=true env var set.
-        OSError: If the HTTP request or file write fails.
-    """
-    import os
-    if os.environ.get("USE_SPACETRACK", "").lower() == "true":
-        raise NotImplementedError(
-            "Live Space-Track GP_History cross-ID is deferred until Phase 7. "
-            "Use the local Celestrak catalog (default) for now."
-        )
-
-    catalog_path.parent.mkdir(parents=True, exist_ok=True)
-    logger.info("Downloading TLE catalog from Celestrak → %s", catalog_path)
-    try:
-        with urllib.request.urlopen(_CELESTRAK_URL, timeout=30) as resp:
-            content = resp.read()
-        catalog_path.write_bytes(content)
-        logger.info(
-            "Catalog downloaded: %d bytes, %d lines",
-            len(content), content.count(b"\n"),
-        )
-    except Exception as exc:
-        raise OSError(f"Failed to download TLE catalog: {exc}") from exc
-
-
-def _load_tle_catalog(catalog_path: Path) -> list[tuple[str, str, str]]:
-    """Parse a 3-line TLE file into (name, line1, line2) triples.
-
-    Blank lines and comment lines (starting with '#') are skipped.
-
-    Args:
-        catalog_path: Path to a TLE text file.
-
-    Returns:
-        List of (name, line1, line2) tuples.  Returns empty list if the
-        file does not exist.
-    """
-    if not catalog_path.exists():
-        logger.warning("TLE catalog not found: %s", catalog_path)
-        return []
-
-    raw_lines = [
-        ln.rstrip()
-        for ln in catalog_path.read_text(encoding="utf-8", errors="replace").splitlines()
-        if ln.strip() and not ln.startswith("#")
-    ]
-
+    records = query_gp_history(obs_time, epoch_window_days=epoch_window_days)
     catalog: list[tuple[str, str, str]] = []
-    i = 0
-    while i + 2 < len(raw_lines):
-        name = raw_lines[i].strip()
-        line1 = raw_lines[i + 1].strip()
-        line2 = raw_lines[i + 2].strip()
-        # Basic format check
-        if line1.startswith("1 ") and line2.startswith("2 "):
+    for rec in records:
+        name  = rec.get("OBJECT_NAME", "UNKNOWN")
+        line1 = rec.get("TLE_LINE1", "")
+        line2 = rec.get("TLE_LINE2", "")
+        if line1 and line2:
             catalog.append((name, line1, line2))
-            i += 3
-        else:
-            i += 1  # re-sync on malformed input
-
-    logger.debug("Loaded %d TLEs from %s", len(catalog), catalog_path)
+    logger.debug(
+        "Space-Track returned %d records; %d have TLE lines",
+        len(records), len(catalog),
+    )
     return catalog
 
 
@@ -290,18 +222,16 @@ def cross_identify(
     observer_lat: float,
     observer_lon: float,
     observer_alt_m: float,
-    catalog_path: Path | None = None,
+    epoch_window_days: int = 3,
 ) -> list[dict]:
-    """Cross-match detections against the satellite TLE catalog.
+    """Cross-match detections against Space-Track GP_History TLEs.
 
-    Uses the same SGP4 + Gaussian scoring as src/matching/ (Phase 0),
-    adapted for DINO OBB detections.
+    Fetches TLEs for the epoch window ending at obs_time from Space-Track
+    (cached to disk), propagates each to obs_time via SGP4, and scores
+    candidates using Gaussian position confidence.
 
     Each detection dict is mutated in-place: an 'identifications' key is
     added containing up to 3 ranked candidate dicts.
-
-    DEFERRED: the live Space-Track GP_History API path is not implemented.
-    Set USE_SPACETRACK=true to see the NotImplementedError.
 
     # Source: Danarianto et al. — Gaussian confidence scoring for satellite crossID
     # Ref: cite per published paper
@@ -313,25 +243,13 @@ def cross_identify(
         observer_lat: Observer geodetic latitude in degrees.
         observer_lon: Observer geodetic longitude in degrees.
         observer_alt_m: Observer elevation above WGS84 in metres.
-        catalog_path: Path to the TLE catalog file.  Defaults to
-            data/catalogs/active_sats.tle relative to the repo root.
-            If the file is missing or older than 24 h, it is re-downloaded
-            from Celestrak automatically.
+        epoch_window_days: Days before obs_time to search for TLE epochs.
+            Passed to Space-Track GP_History; default 3 days.
 
     Returns:
         The mutated *detections* list (same objects, with 'identifications' added).
     """
-    if catalog_path is None:
-        catalog_path = _default_catalog_path()
-
-    # Refresh catalog if stale
-    if _catalog_needs_refresh(catalog_path):
-        try:
-            _download_catalog(catalog_path)
-        except Exception as exc:
-            logger.warning("Catalog refresh failed: %s — proceeding with existing file", exc)
-
-    catalog = _load_tle_catalog(catalog_path)
+    catalog = _fetch_tle_catalog(obs_time, epoch_window_days)
     if not catalog:
         logger.warning("Empty TLE catalog — all identifications will be empty")
         for det in detections:
@@ -398,20 +316,17 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG, format="%(levelname)s  %(message)s")
 
     # Smoke-test: cross-ID a single detection at a known position
+    # Requires SPACETRACK_USER and SPACETRACK_PASS to be set in the environment.
     obs = datetime(2024, 4, 2, 2, 55, 24, tzinfo=timezone.utc)
     dets = [
         {"ra_deg": 83.82, "dec_deg": -5.39, "confidence": 0.9},
         {"ra_deg": None,  "dec_deg": None,   "confidence": 0.5},  # no sky coords
     ]
 
-    cat = _default_catalog_path()
-    print(f"Catalog path: {cat}")
-    print(f"Needs refresh: {_catalog_needs_refresh(cat)}")
-
     result = cross_identify(
         dets, obs,
         observer_lat=49.61, observer_lon=6.13, observer_alt_m=280.0,
-        catalog_path=cat,
+        epoch_window_days=3,
     )
 
     for i, d in enumerate(result):
