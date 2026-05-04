@@ -183,6 +183,7 @@ class TestFastModeSkipsRefinement:
 
     def test_refine_angle_called_in_non_fast_mode(self):
         """refine_angle must be invoked for each detection when fast=False."""
+        import inference.crossid as crossid
         import inference.pipeline as pl
         import inference.postprocess as pp
 
@@ -191,6 +192,7 @@ class TestFastModeSkipsRefinement:
                  {"bbox": [50.0, 60.0, 200.0, 80.0], "confidence": 0.92},
              ]), \
              patch.object(pp, "refine_angle", return_value=45.0) as mock_refine, \
+             patch.object(crossid, "cross_identify", return_value=None), \
              patch.dict(os.environ,
                         {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS),
                          "FAST_MODE": "false"},

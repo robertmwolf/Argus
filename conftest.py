@@ -7,6 +7,13 @@ from pathlib import Path
 
 import pytest
 
+# Load .env from the project root so credentials are available without
+# having to export them manually before every pytest run.
+_ENV_FILE = Path(__file__).parent / ".env"
+if _ENV_FILE.exists():
+    from dotenv import load_dotenv
+    load_dotenv(_ENV_FILE, override=False)
+
 # Drop real FITS files here to include them in the real-data test suite.
 # Any .fits / .fit file placed in this directory is picked up automatically.
 # Naming convention (optional but respected by tests):
@@ -19,8 +26,8 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers",
         "integration: tests that make live network calls to external APIs "
-        "(Space-Track, etc.). Skipped automatically when credentials are absent. "
-        "Run explicitly with: pytest -m integration",
+        "(Space-Track, etc.). Require SPACETRACK_USER and SPACETRACK_PASS "
+        "in the environment or in a .env file at the project root.",
     )
     config.addinivalue_line(
         "markers",
@@ -46,17 +53,19 @@ def real_fits_files() -> list[Path]:
 
 @pytest.fixture
 def spacetrack_creds():
-    """Skip the test if Space-Track credentials are not set in the environment.
+    """Provide Space-Track credentials from the environment.
 
-    Integration tests that call the live Space-Track API must request this
-    fixture.  When SPACETRACK_USER or SPACETRACK_PASS is absent, the test is
-    skipped rather than failing, so CI without credentials stays green.
+    Credentials are loaded from SPACETRACK_USER / SPACETRACK_PASS env vars,
+    which are automatically populated from a .env file in the project root
+    if one exists.  The test fails (not skips) when credentials are absent
+    so missing configuration is immediately visible.
     """
     user = os.environ.get("SPACETRACK_USER", "")
     pw   = os.environ.get("SPACETRACK_PASS", "")
     if not user or not pw:
-        pytest.skip(
-            "Space-Track credentials not set. "
-            "Export SPACETRACK_USER and SPACETRACK_PASS to run integration tests."
+        pytest.fail(
+            "Space-Track credentials not found. "
+            "Set SPACETRACK_USER and SPACETRACK_PASS in your environment "
+            "or in a .env file at the project root."
         )
     return {"user": user, "password": pw}

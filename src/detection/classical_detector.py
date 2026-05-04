@@ -176,7 +176,7 @@ def _edge_to_detection(
     if length_px < min_length_px:
         return None
 
-    angle_deg = math.degrees(math.atan2(y1 - y0, x1 - x0))
+    angle_deg = math.degrees(math.atan2(y1 - y0, x1 - x0)) % 180.0
     x_center = (x0 + x1) / 2.0
     y_center = (y0 + y1) / 2.0
     area_px = float(edge.get("area", 0.0))
