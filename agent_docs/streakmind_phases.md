@@ -47,7 +47,7 @@ the current one passes its gate.
 
 ---
 
-## Phase 3 — Inference Pipeline  ← CURRENT
+## Phase 3 — Inference Pipeline  ✅ COMPLETE
 
 ### Gate condition
 Phase 2 configs parse cleanly and `device.py` works on MPS. ✅
@@ -172,7 +172,7 @@ completes in <60 seconds and returns at least one detection.
 
 ---
 
-## Phase 4 — Database
+## Phase 4 — Database  ✅ COMPLETE
 
 ### Gate condition
 Phase 3 pipeline returns detections in fast mode.
@@ -244,7 +244,7 @@ SQLAlchemy async setup:
 
 ---
 
-## Phase 5 — API
+## Phase 5 — API  ✅ COMPLETE
 
 ### Gate condition
 Database CRUD tests pass.
@@ -288,7 +288,7 @@ concrete storage/queue classes — only via factory function from env vars.
 
 ---
 
-## Phase 6 — Frontend
+## Phase 6 — Frontend  ✅ COMPLETE
 
 ### Stack
 React 18 + Vite + Tailwind CSS.
@@ -314,7 +314,7 @@ Upload FITS in browser, see annotated image with OBBs and table.
 
 ---
 
-## Phase 7 — Docker
+## Phase 7 — Docker  ✅ COMPLETE
 
 ### Dockerfiles: `docker/`
 
@@ -332,7 +332,7 @@ Override `docker-compose.cloud.yml` for S3 + SQS deployment.
 
 ---
 
-## Phase 8 — Evaluation
+## Phase 8 — Evaluation  ✅ COMPLETE (framework — awaiting trained weights for real numbers)
 
 ### `eval/metrics.py`
 

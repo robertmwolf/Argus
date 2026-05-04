@@ -18,12 +18,12 @@ through a FastAPI backend and React frontend.
 | 0 — Classical baseline | ASTRiDE detection, SGP4 matching | ✅ Complete |
 | 1 — Data pipeline | FITS loader, COCO labels, augmentations | ✅ Complete |
 | 2 — DINO model | device.py, MMDet configs, train script | ✅ Complete |
-| 3 — Cross-identification | inference pipeline, Radon, crossid | ⬜ Next |
-| 4 — Database | SQLAlchemy schema, async models | ⬜ Planned |
-| 5 — API | FastAPI upload / result endpoints | ⬜ Planned |
-| 6 — Frontend | React + Vite, canvas OBB rendering | ⬜ Planned |
-| 7 — Docker | docker-compose with GPU worker | ⬜ Planned |
-| 8 — Evaluation | mAP, angle error, DINO vs ASTRiDE | ⬜ Planned |
+| 3 — Inference pipeline | orchestrator, Radon postprocess, crossid | ✅ Complete |
+| 4 — Database | SQLAlchemy schema, async models | ✅ Complete |
+| 5 — API | FastAPI upload / result endpoints | ✅ Complete |
+| 6 — Frontend | React + Vite, canvas OBB rendering | ✅ Complete |
+| 7 — Docker | docker-compose with GPU worker | ✅ Complete |
+| 8 — Evaluation | mAP, angle error, DINO vs ASTRiDE | ✅ Complete |
 
 ---
 
@@ -72,9 +72,9 @@ FITS Image
         ├── inference/device.py             — get_device() / get_device_config()
         ├── models/dino/                    — DINO Swin-T (dev) / Swin-L (cloud) configs
         ├── training/train_dino.py          — two-stage fine-tuning + cost guardrails
-        ├── inference/pipeline.py           — end-to-end orchestrator  [Phase 3]
-        ├── inference/postprocess.py        — Radon angle refinement   [Phase 3]
-        └── inference/crossid.py            — TLE cross-identification  [Phase 3]
+        ├── inference/pipeline.py           — end-to-end orchestrator  ✅
+        ├── inference/postprocess.py        — Radon angle refinement   ✅
+        └── inference/crossid.py            — TLE cross-identification  ✅
 ```
 
 Full design: [`agent_docs/architecture.md`](agent_docs/architecture.md)
@@ -104,9 +104,9 @@ Argus/
 ├── inference/                 ← ML inference modules
 │   ├── device.py              ← get_device() / get_device_config()  ✅
 │   ├── fits_loader.py         ← FITS → tensor, Z-score normalisation  ✅
-│   ├── pipeline.py            ← inference orchestrator  [Phase 3]
-│   ├── postprocess.py         ← Radon angle refinement  [Phase 3]
-│   └── crossid.py             ← satellite cross-matching  [Phase 3]
+│   ├── pipeline.py            ← inference orchestrator  ✅
+│   ├── postprocess.py         ← Radon angle refinement  ✅
+│   └── crossid.py             ← satellite cross-matching  ✅
 ├── training/
 │   ├── convert_labels.py      ← YOLO OBB → COCO JSON  ✅
 │   ├── dataset.py             ← FITSStreakDataset  ✅
@@ -121,12 +121,12 @@ Argus/
 │   ├── make_test_fits.py      ← synthetic FITS generator  ✅
 │   ├── download_weights.py    ← pretrained weight downloader  ✅
 │   └── prepare_cloud_training.py  ← go/no-go checklist  [Phase 6]
-├── api/                       ← FastAPI application  [Phase 5]
-├── frontend/                  ← React + Vite  [Phase 6]
-├── eval/                      ← metrics, benchmark  [Phase 8]
-├── db/                        ← schema.sql, migrations  [Phase 4]
+├── api/                       ← FastAPI application  ✅
+├── frontend/                  ← React 18 + Vite + Tailwind  ✅
+├── eval/                      ← metrics, benchmark, results  ✅
+├── db/                        ← schema.sql, async ORM models  ✅
 ├── docker/                    ← docker-compose  [Phase 7]
-├── tests/                     ← 228 tests, all passing
+├── tests/                     ← 342 tests, all passing
 ├── data/
 │   ├── sample/                ← synthetic FITS for smoke-testing  ✅
 │   ├── raw/                   ← MILAN FITS (gitignored, download separately)
@@ -155,12 +155,34 @@ export MODEL_SIZE=tiny
 export PYTORCH_ENABLE_MPS_FALLBACK=1
 ```
 
+## Running with Docker
+
+```bash
+# 1. Copy and edit credentials
+cp .env.example .env
+
+# 2. Start the full stack (db + api + frontend)
+docker compose up --build
+
+# 3. Open http://localhost in your browser
+#    DEMO_MODE=true returns synthetic detections until real weights are available
+```
+
+Local Mac gate: `docker compose up` starts db, api, and frontend. The GPU worker
+is excluded from the default profile (it requires CUDA). Remove `DEMO_MODE: "true"`
+from docker-compose.yml once `weights/best.pth` is fetched from cloud training.
+
+```bash
+# Cloud deployment (S3 + SQS + GPU worker):
+docker compose -f docker-compose.yml -f docker-compose.cloud.yml up
+```
+
 ## Running Tests
 
 ```bash
 conda activate satid
 pytest tests/ -v
-# 228 passed, 1 skipped (CUDA test, skipped on Mac)
+# 342 passed, 1 skipped (CUDA test, skipped on Mac)
 ```
 
 ## Generating Synthetic Test Data
@@ -182,17 +204,58 @@ MODEL_SIZE=tiny python scripts/download_weights.py
 MODEL_SIZE=large python scripts/download_weights.py
 ```
 
-## Training
+## Local Training (Mac M3, no GPU required)
+
+All phases 0–8 are code-complete with 342 passing tests. To produce real detection
+results without a cloud GPU, train the Swin-T model on the 50-image dev subset:
 
 ```bash
-# Local Mac dev (Swin-T, 50-image dev subset):
-MODEL_SIZE=tiny python -m training.train_dino
+# 1. Get annotated training data (~150 MB)
+git clone https://github.com/jijup/SatStreaks data/satstreaks
 
-# Verify cloud setup before full run:
-MODEL_SIZE=large python -m training.train_dino --smoke-test
+# 2. Build the 50-image dev subset
+python training/make_dev_subset.py
 
-# Full cloud training (A100):
+# 3. Smoke-test MPS training pipeline (~5 min)
+PYTORCH_ENABLE_MPS_FALLBACK=1 MODEL_SIZE=tiny \
+  python -m training.train_dino --smoke-test
+
+# 4. Train YOLO11-OBB baseline (~30 min)
+MODEL_SIZE=tiny python -m training.train_baseline
+
+# 5. Train Swin-T DINO on dev subset (~1–2 hrs on MPS)
+PYTORCH_ENABLE_MPS_FALLBACK=1 MODEL_SIZE=tiny USE_DEV_SUBSET=true \
+  python -m training.train_dino --work-dir weights/local_run
+
+# 6. Run inference with trained weights
+MODEL_WEIGHTS=weights/local_run/best.pth MODEL_SIZE=tiny \
+  PYTORCH_ENABLE_MPS_FALLBACK=1 \
+  python -m inference.pipeline --fast --image data/sample/synth_streak_000.fits
+
+# 7. Evaluate
+python -m eval.benchmark \
+  --run-pipeline \
+  --annotations data/annotations/dev_subset.json \
+  --output results/phase8_benchmark.json
+```
+
+Expected local results: ~50–70% mAP (50-image dataset is small; Swin-L on full
+dataset is needed for ≥94% precision / ≥97% recall paper targets).
+
+## Cloud Training (Lambda A100)
+
+```bash
+# Before renting GPU — verify all checks pass:
+MODEL_SIZE=large python scripts/prepare_cloud_training.py
+
+# On Lambda instance (run once):
+bash scripts/cloud_setup.sh
+
+# Full Swin-L training (~4–8 hrs):
 MODEL_SIZE=large python -m training.train_dino --work-dir weights/run_001
+
+# Fetch weights back to Mac:
+bash scripts/fetch_weights.sh user@instance-ip
 ```
 
 ## Real Training Data

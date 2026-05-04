@@ -1,0 +1,1 @@
+"""ARGUS FastAPI application package."""
