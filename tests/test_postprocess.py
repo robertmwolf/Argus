@@ -1,0 +1,198 @@
+"""Tests for inference/postprocess.py — Radon angle refinement and OBB NMS."""
+
+from __future__ import annotations
+
+import math
+
+import numpy as np
+import pytest
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _make_streak_image(
+    height: int = 256,
+    width: int = 256,
+    angle_deg: float = 45.0,
+    brightness: float = 2000.0,
+    streak_width: float = 2.0,
+    seed: int = 0,
+) -> np.ndarray:
+    """Return a float32 greyscale image with one synthetic streak at *angle_deg*.
+
+    Uses a larger canvas and Gaussian cross-section for a clean, detectable
+    streak signal at all angles.
+    """
+    rng = np.random.default_rng(seed)
+    img = rng.normal(100.0, 8.0, size=(height, width)).astype(np.float32)
+    theta_rad = math.radians(angle_deg)
+    cx, cy = width // 2, height // 2
+    half_len = min(width, height) // 2 - 10
+    for t in np.linspace(-half_len, half_len, half_len * 6):
+        for dperp in np.linspace(-streak_width * 2, streak_width * 2, 9):
+            px = int(round(cx + t * math.cos(theta_rad) - dperp * math.sin(theta_rad)))
+            py = int(round(cy + t * math.sin(theta_rad) + dperp * math.cos(theta_rad)))
+            if 0 <= px < width and 0 <= py < height:
+                weight = math.exp(-0.5 * (dperp / streak_width) ** 2)
+                img[py, px] += brightness * weight
+    return np.clip(img, 0, 65535).astype(np.float32)
+
+
+def _make_obb(cx=64.0, cy=64.0, w=100.0, h=4.0, angle_deg=45.0) -> dict:
+    return {"cx": cx, "cy": cy, "w": w, "h": h, "angle_deg": angle_deg}
+
+
+def _make_det(confidence: float, cx=64.0, cy=64.0, w=80.0, h=5.0, angle_deg=45.0) -> dict:
+    return {
+        "confidence": confidence,
+        "bbox": [cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2],
+        "obb": _make_obb(cx=cx, cy=cy, w=w, h=h, angle_deg=angle_deg),
+    }
+
+
+# ---------------------------------------------------------------------------
+# bbox_to_obb
+# ---------------------------------------------------------------------------
+
+class TestBboxToObb:
+    def test_center_is_bbox_midpoint(self):
+        from inference.postprocess import bbox_to_obb
+        obb = bbox_to_obb([10, 20, 50, 80], angle_deg=30.0)
+        assert obb["cx"] == pytest.approx(30.0)
+        assert obb["cy"] == pytest.approx(50.0)
+
+    def test_returns_required_keys(self):
+        from inference.postprocess import bbox_to_obb
+        obb = bbox_to_obb([0, 0, 100, 20], angle_deg=0.0)
+        assert set(obb.keys()) == {"cx", "cy", "w", "h", "angle_deg"}
+
+    def test_w_is_long_axis(self):
+        from inference.postprocess import bbox_to_obb
+        obb = bbox_to_obb([0, 0, 100, 10], angle_deg=0.0)
+        assert obb["w"] >= obb["h"]
+
+    def test_square_bbox_zero_angle(self):
+        """For a 100×100 bbox at 0°, w and h should both be 100."""
+        from inference.postprocess import bbox_to_obb
+        obb = bbox_to_obb([0, 0, 100, 100], angle_deg=0.0)
+        assert obb["w"] == pytest.approx(100.0)
+        assert obb["h"] == pytest.approx(100.0)
+
+
+# ---------------------------------------------------------------------------
+# refine_angle
+# ---------------------------------------------------------------------------
+
+class TestRefineAngle:
+    @pytest.mark.parametrize("true_angle", [20.0, 45.0, 90.0, 135.0, 160.0])
+    def test_returns_within_5deg_of_ground_truth(self, true_angle):
+        from inference.postprocess import refine_angle
+        img = _make_streak_image(angle_deg=true_angle)
+        obb = _make_obb(angle_deg=true_angle + 8.0)  # deliberately offset by 8°
+        refined = refine_angle(img, obb, angle_search_range=15.0)
+        # Allow for 180° ambiguity in streak direction
+        err = min(
+            abs(refined - true_angle),
+            abs(refined - (true_angle + 180) % 180),
+            abs(refined - (true_angle - 180) % 180),
+        )
+        assert err <= 5.0, f"angle={true_angle}°  refined={refined:.1f}°  err={err:.1f}°"
+
+    def test_zero_search_range_returns_initial(self):
+        from inference.postprocess import refine_angle
+        img = _make_streak_image(angle_deg=45.0)
+        obb = _make_obb(angle_deg=30.0)
+        result = refine_angle(img, obb, angle_search_range=0.0)
+        assert result == pytest.approx(30.0)
+
+    def test_returns_float(self):
+        from inference.postprocess import refine_angle
+        img = _make_streak_image(angle_deg=45.0)
+        obb = _make_obb(angle_deg=45.0)
+        result = refine_angle(img, obb, angle_search_range=10.0)
+        assert isinstance(result, float)
+
+    def test_angle_in_0_to_180(self):
+        from inference.postprocess import refine_angle
+        img = _make_streak_image(angle_deg=170.0)
+        obb = _make_obb(angle_deg=170.0)
+        result = refine_angle(img, obb, angle_search_range=15.0)
+        assert 0.0 <= result < 180.0
+
+    def test_tiny_crop_returns_initial_no_crash(self):
+        """Very small crop should fall back to initial angle, not crash."""
+        from inference.postprocess import refine_angle
+        tiny = np.zeros((3, 3), dtype=np.uint8)
+        obb = _make_obb(angle_deg=45.0)
+        result = refine_angle(tiny, obb, angle_search_range=10.0)
+        assert isinstance(result, float)
+
+    def test_3channel_crop_accepted(self):
+        """3-channel uint8 crop should work (channels averaged internally)."""
+        from inference.postprocess import refine_angle
+        img_gray = _make_streak_image(angle_deg=45.0)
+        img_rgb = np.stack([img_gray, img_gray, img_gray], axis=-1)
+        obb = _make_obb(angle_deg=45.0)
+        result = refine_angle(img_rgb, obb, angle_search_range=10.0)
+        assert isinstance(result, float)
+
+
+# ---------------------------------------------------------------------------
+# nms_detections
+# ---------------------------------------------------------------------------
+
+class TestNmsDetections:
+    def test_empty_input_returns_empty(self):
+        from inference.postprocess import nms_detections
+        assert nms_detections([]) == []
+
+    def test_single_detection_always_kept(self):
+        from inference.postprocess import nms_detections
+        dets = [_make_det(0.9)]
+        assert len(nms_detections(dets)) == 1
+
+    def test_non_overlapping_detections_all_kept(self):
+        """Two streaks far apart should both survive NMS."""
+        from inference.postprocess import nms_detections
+        det1 = _make_det(0.9, cx=50.0, cy=50.0, angle_deg=45.0)
+        det2 = _make_det(0.8, cx=400.0, cy=400.0, angle_deg=10.0)
+        result = nms_detections([det1, det2], iou_threshold=0.5)
+        assert len(result) == 2
+
+    def test_heavily_overlapping_lower_confidence_suppressed(self):
+        """Two nearly identical detections → only the higher-confidence one survives."""
+        from inference.postprocess import nms_detections
+        det_high = _make_det(0.9, cx=64.0, cy=64.0, w=80.0, h=5.0, angle_deg=45.0)
+        det_low  = _make_det(0.5, cx=64.5, cy=64.5, w=80.0, h=5.0, angle_deg=45.0)
+        result = nms_detections([det_high, det_low], iou_threshold=0.5)
+        assert len(result) == 1
+        assert result[0]["confidence"] == pytest.approx(0.9)
+
+    def test_result_sorted_by_confidence_descending(self):
+        from inference.postprocess import nms_detections
+        dets = [
+            _make_det(0.5, cx=10.0, cy=10.0),
+            _make_det(0.9, cx=200.0, cy=200.0),
+            _make_det(0.7, cx=400.0, cy=400.0),
+        ]
+        result = nms_detections(dets)
+        confidences = [d["confidence"] for d in result]
+        assert confidences == sorted(confidences, reverse=True)
+
+    def test_all_suppressed_except_highest(self):
+        """All detections at the same location → only rank-1 kept."""
+        from inference.postprocess import nms_detections
+        dets = [_make_det(conf, cx=64.0, cy=64.0) for conf in [0.9, 0.7, 0.5, 0.3]]
+        result = nms_detections(dets, iou_threshold=0.3)
+        assert len(result) == 1
+        assert result[0]["confidence"] == pytest.approx(0.9)
+
+    def test_detections_without_obb_not_suppressed(self):
+        """Detections missing 'obb' key are kept and don't cause crashes."""
+        from inference.postprocess import nms_detections
+        det_no_obb = {"confidence": 0.8}
+        det_with_obb = _make_det(0.9)
+        result = nms_detections([det_no_obb, det_with_obb])
+        assert len(result) == 2
