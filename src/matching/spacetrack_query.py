@@ -59,17 +59,18 @@ def _cache_ttl(obs_time: datetime) -> int:
     return 2 * 3600
 
 
-def _cache_key(obs_time: datetime, epoch_window_days: int) -> str:
-    """Build deterministic cache key from obs_time and window.
+def _cache_key(obs_time: datetime, epoch_window_days: int, min_mean_motion: float = 11.25) -> str:
+    """Build deterministic cache key from obs_time, window, and motion filter.
 
     Args:
         obs_time: UTC observation time.
         epoch_window_days: Size of epoch search window in days.
+        min_mean_motion: Minimum mean motion filter applied to the query.
 
     Returns:
         Cache key string.
     """
-    return f"{obs_time.strftime('%Y%m%d%H')}_{epoch_window_days}d"
+    return f"{obs_time.strftime('%Y%m%d%H')}_{epoch_window_days}d_mm{min_mean_motion:.2f}"
 
 
 def _rate_limit() -> None:
@@ -83,22 +84,29 @@ def _rate_limit() -> None:
 
 def query_gp_history(
     obs_time: datetime,
-    epoch_window_days: int = 3,
+    epoch_window_days: int = 1,
+    min_mean_motion: float = 11.25,
 ) -> list[dict]:
     """Query Space-Track GP_History for TLEs near obs_time.
 
     Searches for TLE epochs in the window (obs_time - epoch_window_days, obs_time).
-    Results are sorted by epoch descending (most recent TLE per object first).
-    Results are cached to disk using diskcache.
+    Results are filtered to objects with mean_motion >= min_mean_motion (default
+    11.25 rev/day = LEO) to keep result sizes manageable.  Pass min_mean_motion=0
+    to include all orbit classes.
+
+    Results are sorted by epoch descending (most recent TLE per object first)
+    and cached to disk using diskcache.
 
     Args:
         obs_time: UTC datetime of the observation.
         epoch_window_days: Days before obs_time to include in epoch search.
+        min_mean_motion: Minimum mean motion in rev/day. 11.25 = LEO only,
+            0 = all orbits. Unfiltered multi-day queries can return millions
+            of records and will be rejected by Space-Track with HTTP 500.
 
     Returns:
-        List of raw TLE dicts from Space-Track JSON response.
-        Each dict has keys including: OBJECT_NAME, NORAD_CAT_ID,
-        TLE_LINE1, TLE_LINE2, EPOCH.
+        List of TLE dicts from Space-Track. Each dict has keys including:
+        OBJECT_NAME, NORAD_CAT_ID, TLE_LINE1, TLE_LINE2, EPOCH, MEAN_MOTION.
 
     Raises:
         ValueError: If SPACETRACK_USER or SPACETRACK_PASS are not set.
@@ -107,7 +115,7 @@ def query_gp_history(
     if obs_time.tzinfo is None:
         obs_time = obs_time.replace(tzinfo=timezone.utc)
 
-    key = _cache_key(obs_time, epoch_window_days)
+    key = _cache_key(obs_time, epoch_window_days, min_mean_motion)
     ttl = _cache_ttl(obs_time)
 
     _CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -127,20 +135,20 @@ def query_gp_history(
     )
 
     logger.info(
-        "Querying GP_History: epoch %s to %s",
+        "Querying GP_History: epoch %s to %s (mean_motion >= %.2f)",
         epoch_start.date(),
         epoch_end.date(),
+        min_mean_motion,
     )
 
     _rate_limit()
     client = _get_client()
-    results = list(
-        client.gp_history(
-            epoch=epoch_range,
-            orderby="epoch desc",
-            format="json",
-        )
-    )
+
+    query_kwargs: dict = dict(epoch=epoch_range, orderby="epoch desc")
+    if min_mean_motion > 0:
+        query_kwargs["mean_motion"] = op.greater_than(min_mean_motion)
+
+    results = list(client.gp_history(**query_kwargs))
 
     logger.info("Got %d TLEs from Space-Track", len(results))
     cache.set(key, results, expire=ttl)

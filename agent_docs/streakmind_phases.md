@@ -119,9 +119,11 @@ def nms_detections(
 
 #### `inference/crossid.py`
 
-Satellite ephemeris cross-matching.  **Stub only** until cloud training
-produces real weights — raise `NotImplementedError` for the live
-Space-Track path.
+Satellite ephemeris cross-matching against Space-Track GP_History TLEs.
+Delegates TLE fetching to `src.matching.spacetrack_query.query_gp_history`,
+which handles authentication, rate limiting, and disk caching.
+
+Requires `SPACETRACK_USER` and `SPACETRACK_PASS` environment variables.
 
 ```python
 # Source: Danarianto et al. — Gaussian confidence scoring approach
@@ -133,20 +135,19 @@ def cross_identify(
     observer_lat: float,
     observer_lon: float,
     observer_alt_m: float,
-    catalog_path: Path | None = None,
+    epoch_window_days: int = 3,
 ) -> list[dict]:
-    """Cross-match detections against satellite TLE catalog.
+    """Cross-match detections against Space-Track GP_History TLEs.
 
-    Uses the same SGP4 + Gaussian scoring as src/matching/ (Phase 0),
-    but operates on DINO OBB detections instead of ASTRiDE detections.
-
-    DEFERRED: live Space-Track API path raises NotImplementedError.
-    Uses local TLE file from data/catalogs/ only.
+    Fetches TLEs for the epoch window ending at obs_time from Space-Track
+    (cached to disk), propagates each to obs_time via SGP4, and scores
+    candidates using Gaussian position confidence.
     """
 ```
 
-Catalog path: `data/catalogs/active_sats.tle`
-Refresh from Celestrak if file is older than 24 hours.
+TLE data source: Space-Track GP_History API (authoritative).
+Caching: disk cache in `data/cache/` via `diskcache` (TTL 48 h for historical,
+2 h for recent observations).  No local TLE file is maintained.
 
 ### Tests to write
 
@@ -163,7 +164,7 @@ Refresh from Celestrak if file is older than 24 hours.
 - `cross_identify` with a known TLE returns top-3 candidates
 - Candidate with lowest angular separation has highest confidence
 - Missing sky coords → identifications empty list, no crash
-- Stale catalog triggers re-download (mock requests)
+- `_fetch_tle_catalog` maps GP_History JSON fields to (name, line1, line2) tuples
 
 ### Gate condition for Phase 4
 `inference/pipeline.py --fast --image data/sample/synth_streak_000.fits`
