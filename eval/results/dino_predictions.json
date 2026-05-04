@@ -1,0 +1,14 @@
+[
+  {
+    "image_id": "img001.fits",
+    "confidence": 0.92,
+    "obb": {
+      "cx": 100,
+      "cy": 100,
+      "w": 200,
+      "h": 10,
+      "angle_deg": 0.0
+    },
+    "streak_length_px": 200.0
+  }
+]

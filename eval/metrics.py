@@ -1,0 +1,403 @@
+"""Evaluation metrics for ARGUS streak detection.
+
+All functions operate on two flat lists:
+
+  predictions — one dict per predicted detection:
+    {
+      "image_id":        str | int,
+      "confidence":      float,          # in [0, 1]
+      "obb":             dict,           # {cx, cy, w, h, angle_deg}
+      "streak_length_px": float,         # used for per-band breakdown
+    }
+
+  ground_truth — one dict per annotated detection:
+    {
+      "image_id":        str | int,
+      "obb":             dict,           # {cx, cy, w, h, angle_deg}
+      "streak_length_px": float,
+    }
+
+Streak length bands (pixels):
+  short  : < 150
+  medium : 150 – 400
+  long   : > 400
+
+# Source: StreakMind — mAP and angle-error evaluation methodology
+# Ref: agent_docs/streakmind_phases.md
+"""
+
+from __future__ import annotations
+
+import math
+from typing import Sequence
+
+import numpy as np
+
+# Band thresholds (pixels)
+_SHORT_MAX = 150.0
+_LONG_MIN = 400.0
+
+
+# ---------------------------------------------------------------------------
+# OBB geometry helpers
+# ---------------------------------------------------------------------------
+
+def _obb_to_corners(obb: dict) -> np.ndarray:
+    """Return (4, 2) array of OBB corner coordinates.
+
+    Args:
+        obb: Dict with keys cx, cy, w, h, angle_deg.
+
+    Returns:
+        Array of shape (4, 2) in image pixel space.
+    """
+    cx, cy = float(obb["cx"]), float(obb["cy"])
+    w, h = float(obb["w"]), float(obb["h"])
+    rad = math.radians(float(obb["angle_deg"]))
+    cos_a, sin_a = math.cos(rad), math.sin(rad)
+
+    half_w, half_h = w / 2, h / 2
+    local = np.array([
+        [-half_w, -half_h],
+        [ half_w, -half_h],
+        [ half_w,  half_h],
+        [-half_w,  half_h],
+    ])
+    rot = np.array([[cos_a, -sin_a], [sin_a, cos_a]])
+    return (local @ rot.T) + np.array([cx, cy])
+
+
+def _polygon_area(pts: np.ndarray) -> float:
+    """Shoelace formula for polygon area.
+
+    Args:
+        pts: (N, 2) array of vertices.
+
+    Returns:
+        Signed area (take abs for unsigned).
+    """
+    x, y = pts[:, 0], pts[:, 1]
+    return float(np.abs(np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1))) / 2)
+
+
+def _obb_iou(a: dict, b: dict) -> float:
+    """Compute IoU between two oriented bounding boxes using Shapely.
+
+    Falls back to 0.0 if Shapely is unavailable or OBBs are degenerate.
+
+    Args:
+        a: OBB dict for prediction.
+        b: OBB dict for ground truth.
+
+    Returns:
+        IoU in [0, 1].
+    """
+    try:
+        from shapely.geometry import Polygon
+
+        poly_a = Polygon(_obb_to_corners(a))
+        poly_b = Polygon(_obb_to_corners(b))
+        if not poly_a.is_valid or not poly_b.is_valid:
+            return 0.0
+        inter = poly_a.intersection(poly_b).area
+        union = poly_a.union(poly_b).area
+        return float(inter / union) if union > 0 else 0.0
+    except Exception:
+        return 0.0
+
+
+def _angle_error_deg(pred_angle: float, gt_angle: float) -> float:
+    """Angular error in degrees accounting for 180° streak symmetry.
+
+    A streak at θ° is identical to one at θ+180°, so errors are clamped
+    to [0°, 90°].
+
+    Args:
+        pred_angle: Predicted angle in degrees.
+        gt_angle: Ground-truth angle in degrees.
+
+    Returns:
+        Absolute angular error in [0, 90].
+    """
+    diff = abs(pred_angle - gt_angle) % 180.0
+    return min(diff, 180.0 - diff)
+
+
+# ---------------------------------------------------------------------------
+# Matching
+# ---------------------------------------------------------------------------
+
+def _greedy_match(
+    preds_for_image: list[dict],
+    gts_for_image: list[dict],
+    iou_threshold: float,
+) -> tuple[list[tuple[int, int]], list[bool]]:
+    """Greedy IoU matching between predictions and GTs for one image.
+
+    Predictions must be pre-sorted by confidence descending.
+
+    Args:
+        preds_for_image: Predictions for a single image.
+        gts_for_image: Ground-truth annotations for the same image.
+        iou_threshold: Minimum IoU to count as a match.
+
+    Returns:
+        matched_pairs: List of (pred_index, gt_index) tuples.
+        is_tp: Boolean mask aligned with preds_for_image.
+    """
+    is_tp = [False] * len(preds_for_image)
+    matched_gts: set[int] = set()
+    matched_pairs: list[tuple[int, int]] = []
+
+    for pi, pred in enumerate(preds_for_image):
+        best_iou, best_gi = 0.0, -1
+        for gi, gt in enumerate(gts_for_image):
+            if gi in matched_gts:
+                continue
+            iou = _obb_iou(pred["obb"], gt["obb"])
+            if iou > best_iou:
+                best_iou, best_gi = iou, gi
+        if best_iou >= iou_threshold and best_gi >= 0:
+            is_tp[pi] = True
+            matched_gts.add(best_gi)
+            matched_pairs.append((pi, best_gi))
+
+    return matched_pairs, is_tp
+
+
+def _match_all(
+    predictions: list[dict],
+    ground_truth: list[dict],
+    iou_threshold: float,
+) -> tuple[list[bool], int, list[tuple[dict, dict]]]:
+    """Match all predictions to ground truth across all images.
+
+    Args:
+        predictions: All predicted detections (any order).
+        ground_truth: All ground-truth annotations.
+        iou_threshold: IoU threshold for a match.
+
+    Returns:
+        is_tp:         Boolean list aligned with predictions sorted by confidence.
+        n_gt:          Total number of ground-truth annotations.
+        matched_pairs: List of (pred_dict, gt_dict) for matched pairs.
+    """
+    # Group by image_id
+    from collections import defaultdict
+    preds_by_img: dict = defaultdict(list)
+    gts_by_img: dict = defaultdict(list)
+    for p in predictions:
+        preds_by_img[p["image_id"]].append(p)
+    for g in ground_truth:
+        gts_by_img[g["image_id"]].append(g)
+
+    # Sort each image's predictions by confidence descending
+    sorted_preds: list[dict] = []
+    is_tp_all: list[bool] = []
+    matched_pairs: list[tuple[dict, dict]] = []
+
+    all_image_ids = set(preds_by_img) | set(gts_by_img)
+    for img_id in all_image_ids:
+        img_preds = sorted(preds_by_img[img_id], key=lambda x: x.get("confidence", 0), reverse=True)
+        img_gts = gts_by_img[img_id]
+        pairs, is_tp = _greedy_match(img_preds, img_gts, iou_threshold)
+        sorted_preds.extend(img_preds)
+        is_tp_all.extend(is_tp)
+        for pi, gi in pairs:
+            matched_pairs.append((img_preds[pi], img_gts[gi]))
+
+    # Re-sort globally by confidence (for mAP PR curve)
+    order = sorted(range(len(sorted_preds)), key=lambda i: sorted_preds[i].get("confidence", 0), reverse=True)
+    is_tp_sorted = [is_tp_all[i] for i in order]
+
+    return is_tp_sorted, len(ground_truth), matched_pairs
+
+
+# ---------------------------------------------------------------------------
+# Core metric functions
+# ---------------------------------------------------------------------------
+
+def _compute_ap(
+    predictions: list[dict],
+    ground_truth: list[dict],
+    iou_threshold: float,
+) -> float:
+    """Compute Average Precision (AP) at a given IoU threshold.
+
+    Uses the area-under-curve approach over all confidence thresholds.
+
+    Args:
+        predictions: All predicted detections.
+        ground_truth: All ground-truth annotations.
+        iou_threshold: IoU threshold for a match.
+
+    Returns:
+        AP in [0, 1].
+    """
+    if not predictions or not ground_truth:
+        return 0.0
+
+    is_tp, n_gt, _ = _match_all(predictions, ground_truth, iou_threshold)
+
+    tp_cum = np.cumsum(is_tp).astype(float)
+    fp_cum = np.cumsum([not t for t in is_tp]).astype(float)
+
+    precisions = tp_cum / (tp_cum + fp_cum)
+    recalls = tp_cum / n_gt
+
+    # Prepend sentinel values for AUC calculation
+    precisions = np.concatenate([[1.0], precisions])
+    recalls = np.concatenate([[0.0], recalls])
+
+    # Monotonically decreasing precision envelope
+    for i in range(len(precisions) - 2, -1, -1):
+        precisions[i] = max(precisions[i], precisions[i + 1])
+
+    # Area under curve (trapezoid rule over recall axis)
+    recall_changes = np.diff(recalls)
+    return float(np.sum(recall_changes * precisions[1:]))
+
+
+def _compute_prf(
+    predictions: list[dict],
+    ground_truth: list[dict],
+    iou_threshold: float,
+) -> tuple[float, float, float]:
+    """Compute precision, recall, and F1 at a given IoU threshold.
+
+    Uses confidence-agnostic matching (all predictions are considered).
+
+    Args:
+        predictions: All predicted detections.
+        ground_truth: All ground-truth annotations.
+        iou_threshold: IoU threshold for a match.
+
+    Returns:
+        Tuple of (precision, recall, f1), each in [0, 1].
+    """
+    if not ground_truth:
+        return (0.0, 0.0, 0.0)
+    if not predictions:
+        return (0.0, 0.0, 0.0)
+
+    is_tp, n_gt, _ = _match_all(predictions, ground_truth, iou_threshold)
+    tp = sum(is_tp)
+    fp = len(is_tp) - tp
+
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / n_gt if n_gt > 0 else 0.0
+    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+    return precision, recall, f1
+
+
+def _compute_mean_angle_error(
+    predictions: list[dict],
+    ground_truth: list[dict],
+    iou_threshold: float = 0.5,
+) -> float:
+    """Mean angle error (degrees) over IoU-matched prediction / GT pairs.
+
+    Args:
+        predictions: All predicted detections.
+        ground_truth: All ground-truth annotations.
+        iou_threshold: IoU threshold for a match.
+
+    Returns:
+        Mean angular error in degrees, or 0.0 if no matches.
+    """
+    if not predictions or not ground_truth:
+        return 0.0
+
+    _, _, matched_pairs = _match_all(predictions, ground_truth, iou_threshold)
+    if not matched_pairs:
+        return 0.0
+
+    errors = [
+        _angle_error_deg(
+            pred["obb"]["angle_deg"],
+            gt["obb"]["angle_deg"],
+        )
+        for pred, gt in matched_pairs
+    ]
+    return float(np.mean(errors))
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+def evaluate(
+    predictions: list[dict],
+    ground_truth: list[dict],
+    iou_threshold: float = 0.5,
+    short_threshold: float = _SHORT_MAX,
+    long_threshold: float = _LONG_MIN,
+) -> dict:
+    """Compute the full evaluation metric suite for streak detection.
+
+    Args:
+        predictions: List of detection dicts (image_id, confidence, obb,
+                     streak_length_px).
+        ground_truth: List of annotation dicts (image_id, obb,
+                      streak_length_px).
+        iou_threshold: Primary IoU threshold for precision/recall/F1.
+        short_threshold: Streak length (px) upper bound for "short" band.
+        long_threshold: Streak length (px) lower bound for "long" band.
+
+    Returns:
+        Dict with keys: precision, recall, f1, map_50, map_75,
+        mean_angle_error_deg, per_band (short/medium/long each with
+        precision/recall/f1).
+    """
+    precision, recall, f1 = _compute_prf(predictions, ground_truth, iou_threshold)
+    map_50 = _compute_ap(predictions, ground_truth, 0.5)
+    map_75 = _compute_ap(predictions, ground_truth, 0.75)
+    mean_angle_err = _compute_mean_angle_error(predictions, ground_truth, iou_threshold)
+
+    bands = {
+        "short":  (0.0, short_threshold),
+        "medium": (short_threshold, long_threshold),
+        "long":   (long_threshold, float("inf")),
+    }
+    per_band: dict[str, dict[str, float]] = {}
+    for band_name, (lo, hi) in bands.items():
+        def in_band(det: dict, lo: float = lo, hi: float = hi) -> bool:
+            length = det.get("streak_length_px") or 0.0
+            return lo <= length < hi
+
+        band_preds = [p for p in predictions if in_band(p)]
+        band_gts = [g for g in ground_truth if in_band(g)]
+        bp, br, bf = _compute_prf(band_preds, band_gts, iou_threshold)
+        per_band[band_name] = {"precision": bp, "recall": br, "f1": bf}
+
+    return {
+        "precision": round(precision, 4),
+        "recall": round(recall, 4),
+        "f1": round(f1, 4),
+        "map_50": round(map_50, 4),
+        "map_75": round(map_75, 4),
+        "mean_angle_error_deg": round(mean_angle_err, 3),
+        "per_band": {
+            k: {m: round(v, 4) for m, v in band.items()}
+            for k, band in per_band.items()
+        },
+    }
+
+
+if __name__ == "__main__":
+    import json
+
+    # Smoke test with synthetic data
+    preds = [
+        {"image_id": "img1", "confidence": 0.95, "obb": {"cx": 100, "cy": 100, "w": 200, "h": 10, "angle_deg": 5.0}, "streak_length_px": 200},
+        {"image_id": "img1", "confidence": 0.60, "obb": {"cx": 300, "cy": 300, "w": 100, "h": 8,  "angle_deg": -10.0}, "streak_length_px": 100},
+    ]
+    gts = [
+        {"image_id": "img1", "obb": {"cx": 100, "cy": 100, "w": 200, "h": 10, "angle_deg": 4.0}, "streak_length_px": 200},
+        {"image_id": "img1", "obb": {"cx": 300, "cy": 300, "w": 100, "h": 8,  "angle_deg": -9.0}, "streak_length_px": 100},
+    ]
+    result = evaluate(preds, gts)
+    print(json.dumps(result, indent=2))
+    assert result["precision"] == 1.0
+    assert result["recall"] == 1.0
+    print("Smoke test passed.")

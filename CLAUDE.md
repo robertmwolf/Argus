@@ -8,18 +8,23 @@ data from Space-Track's GP_History API using SGP4 propagation and multi-factor
 confidence scoring. Results are served through a FastAPI backend and React frontend.
 
 ## Current Phase
-**PHASE 3 — Inference pipeline** (next to build).
+**ALL IMPLEMENTATION PHASES COMPLETE — proceeding to local training.**
 
 Progress:
 - ✅ Phase 0 (Classical baseline): `src/` — fits_parser, classical_detector, plate_solver, SGP4 matching
 - ✅ Phase 1 (Data pipeline): `inference/fits_loader.py`, `training/convert_labels.py`, `training/dataset.py`, `training/augmentations.py`
 - ✅ Phase 2 (DINO model): `inference/device.py`, `models/dino/` configs, `training/train_dino.py`, `scripts/download_weights.py`, `scripts/make_test_fits.py`
-- ⬜ Phase 3 (Inference pipeline): `inference/pipeline.py`, `inference/postprocess.py`, `inference/crossid.py`
-- ⬜ Phase 4 (Database): `db/schema.sql`, SQLAlchemy async models
-- ⬜ Phase 5 (API): `api/` — FastAPI upload/result/image endpoints
-- ⬜ Phase 6 (Frontend): `frontend/` — React + Vite + Tailwind, canvas OBB rendering
-- ⬜ Phase 7 (Docker): `docker/` — docker-compose with GPU worker
-- ⬜ Phase 8 (Evaluation): `eval/` — mAP, angle error, DINO vs ASTRiDE benchmark
+- ✅ Phase 3 (Inference pipeline): `inference/pipeline.py`, `inference/postprocess.py`, `inference/crossid.py`
+- ✅ Phase 4 (Database): `db/schema.sql`, `db/models.py` — SQLAlchemy async ORM (SQLite + PostgreSQL)
+- ✅ Phase 5 (API): `api/main.py`, `api/storage.py`, `api/queue.py`, `api/worker.py` — FastAPI + background worker
+- ✅ Phase 6 (Frontend): `frontend/` — React 18 + Vite + Tailwind, canvas OBB rendering, detection table
+- ✅ Phase 7 (Docker): `docker/`, `docker-compose.yml`, `docker-compose.cloud.yml` — full stack verified
+- ✅ Phase 8 (Evaluation): `eval/metrics.py`, `eval/benchmark.py` — mAP, angle error, per-band, DINO vs YOLO
+
+## Next Step: Local Training (Mac M3)
+Download SatStreaks dataset, train Swin-T DINO on 50-image dev subset (~1–2 hrs on MPS).
+Run YOLO baseline (~30 min) for comparison. Use results to fill `results/phase8_benchmark.json`.
+See **Phase Sequencing** table below for the cloud training handoff checklist.
 
 ## Hardware
 - **Dev / CI:** MacBook Air M3 — CPU or MPS. Use `MODEL_SIZE=tiny` (Swin-T).
