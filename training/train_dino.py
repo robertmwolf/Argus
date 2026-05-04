@@ -32,6 +32,48 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# PyTorch 2.6 compatibility — checkpoint loading patch
+# ---------------------------------------------------------------------------
+# PyTorch 2.6 changed torch.load to default weights_only=True. mmengine
+# checkpoints embed numpy arrays and custom objects that require weights_only=False.
+# We monkey-patch torch.load to restore the pre-2.6 behaviour; this is safe
+# because we only load checkpoints from MMDetection's official OpenMMLab releases.
+def _patch_torch_load_weights_only() -> None:
+    """Patch mmengine's torch.load reference to use weights_only=False.
+
+    PyTorch 2.6 defaulted weights_only=True.  mmengine checkpoints embed
+    numpy arrays and custom objects; loading them requires weights_only=False.
+    We patch the torch reference *inside* mmengine.runner.checkpoint so that
+    its load_from_local() call opts out of the new default safely — the
+    checkpoint files come from OpenMMLab's official release.
+    """
+    try:
+        import inspect
+        import torch
+        import mmengine.runner.checkpoint as ckpt_mod
+
+        sig = inspect.signature(torch.load)
+        if "weights_only" not in sig.parameters:
+            return  # torch < 2.0 — not applicable
+        # Patch whenever default is not explicitly False (covers True and None)
+
+        import functools
+        _orig = torch.load
+
+        @functools.wraps(_orig)
+        def _patched(*args, **kwargs):
+            kwargs.setdefault("weights_only", False)
+            return _orig(*args, **kwargs)
+
+        # Replace the torch.load reference used inside mmengine's checkpoint module
+        ckpt_mod.torch.load = _patched  # type: ignore[attr-defined]
+    except Exception:
+        pass  # safe to skip — worst case the user sees the same error as before
+
+
+_patch_torch_load_weights_only()
+
+# ---------------------------------------------------------------------------
 # Config selection
 # ---------------------------------------------------------------------------
 
@@ -207,6 +249,25 @@ def _run_smoke_test(cfg_path: str, work_dir: Path) -> None:
     cfg.train_dataloader.dataset["indices"] = list(range(10))
     cfg.work_dir = str(work_dir / "smoke_test")
 
+    # Force CPU for smoke test — DINO deformable attention peaks above the
+    # 4 GB MPS NDArray limit even at small image sizes.  CPU is slower
+    # (~5 min for 2 epochs) but exercises the full training codepath.
+    import torch
+    if not torch.cuda.is_available():
+        # Patch mmengine's device detection to report CPU so the Runner
+        # places the model on CPU instead of MPS.
+        try:
+            import mmengine.device.utils as _dev
+            _dev.DEVICE = "cpu"
+            import mmengine.device as _devmod
+            _devmod.DEVICE = "cpu"  # type: ignore[attr-defined]
+            if hasattr(_devmod, "get_device"):
+                _devmod.get_device = lambda: "cpu"  # type: ignore[attr-defined]
+        except Exception:
+            pass
+        cfg.train_dataloader.num_workers = 0
+        cfg.val_dataloader.num_workers = 0
+
     losses: list[float] = []
 
     from mmengine.hooks import Hook
@@ -219,10 +280,6 @@ def _run_smoke_test(cfg_path: str, work_dir: Path) -> None:
             loss = runner.message_hub.get_scalar("train/loss").current()
             losses.append(float(loss))
             logger.info("Smoke test epoch %d loss: %.4f", runner.epoch, loss)
-
-    cfg.custom_hooks = [
-        dict(type="LossRecorderHook"),
-    ]
 
     runner = Runner.from_cfg(cfg)
     runner.register_hook(LossRecorderHook())
@@ -279,9 +336,26 @@ def train(
         _run_smoke_test(config_path, work_dir)
         return
 
+    # DINO multi-scale deformable attention exceeds MPS's 4 GB per-allocation
+    # limit.  Force CPU on Mac until a memory-efficient MPS path is available.
+    import torch as _torch
+    if not _torch.cuda.is_available():
+        try:
+            import mmengine.device.utils as _dev
+            _dev.DEVICE = "cpu"
+            import mmengine.device as _devmod
+            _devmod.DEVICE = "cpu"  # type: ignore[attr-defined]
+            if hasattr(_devmod, "get_device"):
+                _devmod.get_device = lambda: "cpu"  # type: ignore[attr-defined]
+        except Exception:
+            pass
+
     cfg = Config.fromfile(config_path)
     cfg.work_dir = str(work_dir)
     cfg.resume = resume
+    if not _torch.cuda.is_available():
+        cfg.train_dataloader.num_workers = 0
+        cfg.val_dataloader.num_workers = 0
 
     # Log setup
     work_dir.mkdir(parents=True, exist_ok=True)
