@@ -1,4 +1,4 @@
-"""Convert YOLO OBB label files to COCO JSON format for StreakMind training.
+"""Convert YOLO OBB label files to COCO JSON format for ARGUS training.
 
 YOLO OBB format (one line per annotation):
   class_id cx cy w h angle_deg

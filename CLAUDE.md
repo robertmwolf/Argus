@@ -1,4 +1,4 @@
-# ARGUS / StreakMind — Satellite Streak Detection & Identification Pipeline
+# ARGUS — Satellite Streak Detection & Identification Pipeline
 
 ## What This Is
 An end-to-end pipeline that detects satellite streaks in FITS telescope images
@@ -8,18 +8,18 @@ data from Space-Track's GP_History API using SGP4 propagation and multi-factor
 confidence scoring. Results are served through a FastAPI backend and React frontend.
 
 ## Current Phase
-**PHASE 2 — Co-DINO model** (next to build).
+**PHASE 3 — Inference pipeline** (next to build).
 
 Progress:
 - ✅ Phase 0 (Classical baseline): `src/` — fits_parser, classical_detector, plate_solver, SGP4 matching
 - ✅ Phase 1 (Data pipeline): `inference/fits_loader.py`, `training/convert_labels.py`, `training/dataset.py`, `training/augmentations.py`
-- ⬜ Phase 2 (Co-DINO model): `inference/device.py`, MMDetection configs, training script
-- ⬜ Phase 3 (Cross-identification): `inference/crossid.py`, `inference/postprocess.py`
+- ✅ Phase 2 (DINO model): `inference/device.py`, `models/dino/` configs, `training/train_dino.py`, `scripts/download_weights.py`, `scripts/make_test_fits.py`
+- ⬜ Phase 3 (Inference pipeline): `inference/pipeline.py`, `inference/postprocess.py`, `inference/crossid.py`
 - ⬜ Phase 4 (Database): `db/schema.sql`, SQLAlchemy async models
 - ⬜ Phase 5 (API): `api/` — FastAPI upload/result/image endpoints
 - ⬜ Phase 6 (Frontend): `frontend/` — React + Vite + Tailwind, canvas OBB rendering
 - ⬜ Phase 7 (Docker): `docker/` — docker-compose with GPU worker
-- ⬜ Phase 8 (Evaluation): `eval/` — mAP, angle error, DINO vs YOLO benchmark
+- ⬜ Phase 8 (Evaluation): `eval/` — mAP, angle error, DINO vs ASTRiDE benchmark
 
 ## Hardware
 - **Dev / CI:** MacBook Air M3 — CPU or MPS. Use `MODEL_SIZE=tiny` (Swin-T).
@@ -32,7 +32,7 @@ Always read the relevant agent_docs file before writing code:
 
 - `agent_docs/architecture.md`       — full system design, component map, data flow
 - `agent_docs/phase1_goals.md`       — Phase 1 data pipeline (complete — reference only)
-- `agent_docs/streakmind_phases.md`  — Phases 2–8: model through eval
+- `agent_docs/streakmind_phases.md`  — ARGUS Phases 2–8: model through eval
 - `agent_docs/datasets.md`           — where to get test data, download links
 - `agent_docs/dependencies.md`       — exact packages, versions, install commands
 - `agent_docs/service_roadmap.md`    — Docker, deployment, cloud scale path
@@ -100,8 +100,8 @@ This project is academic research software. It builds on the following prior wor
 
 - **ASTRiDE** — Automated Streak Detection for Astronomical Images
   (Kim et al., https://github.com/dwkim78/ASTRiDE)
-- **StreakMind** — Co-DINO transformer-based satellite streak detection
-  (StreakMind project, cite per their published paper/repo)
+- **StreakMind** — Co-DINO transformer-based satellite streak detection pipeline
+  (prior work that ARGUS builds upon; cite per their published paper/repo)
 - **Co-DINO** — Co-Deformable DETR object detection
   (Zong et al., 2023, https://arxiv.org/abs/2211.12860)
 - **Danarianto et al. Prototype** — satellite identification prototype pipeline

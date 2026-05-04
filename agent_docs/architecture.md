@@ -221,16 +221,16 @@ weighted_score = (
 | Phase | Detector | Notes |
 |-------|----------|-------|
 | 0 — Classical baseline | ASTRiDE (Hough) | ✅ Complete. `src/` directory. Baseline metrics. |
-| 1 — Data pipeline | — | FITS loader, COCO conversion, augmentations (`streakmind/training/`) |
-| 2 — Co-DINO model | Co-DINO + Swin-L (StreakMind) | MMDetection config + training script |
-| 3 — Cross-identification | SGP4 ephemeris matching | Reuses Phase 0 matching logic, adapted for StreakMind |
+| 1 — Data pipeline | — | FITS loader, COCO conversion, augmentations (`training/`) |
+| 2 — DINO model | DINO + Swin-L backbone | MMDetection config + training script (adapts StreakMind architecture) |
+| 3 — Cross-identification | SGP4 ephemeris matching | Reuses Phase 0 matching logic, adapted for ARGUS inference |
 | 4 — Database | PostgreSQL/SQLite schema | SQLAlchemy async, normalized schema |
 | 5 — API | FastAPI | Upload / result / image endpoints |
 | 6 — Frontend | React + Vite + Tailwind | Canvas OBB renderer |
 | 7 — Docker | docker-compose | Separate API, worker (GPU), frontend containers |
 | 8 — Evaluation | mAP, angle error | DINO vs YOLO head-to-head benchmark |
 
-## StreakMind Pipeline (Phases 1–8)
+## ARGUS ML Pipeline (Phases 1–8)
 
 ```
 [FITS or PNG Upload]
