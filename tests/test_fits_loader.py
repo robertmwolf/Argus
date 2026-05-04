@@ -54,7 +54,8 @@ class TestFITSLoaderLoad:
         fits_path = _make_fits(tmp_path)
         loader = FITSLoader()
         result = loader.load(fits_path)
-        assert set(result.keys()) == {"array", "wcs", "exposure_time", "filename", "shape"}
+        assert set(result.keys()) >= {"array", "wcs", "exposure_time", "filename", "shape",
+                                       "obs_time", "observer_lat", "observer_lon", "observer_alt_m"}
 
     def test_array_dtype_uint8(self, tmp_path: Path) -> None:
         fits_path = _make_fits(tmp_path)

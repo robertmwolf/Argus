@@ -47,6 +47,10 @@ class FITSLoader:
               exposure_time — float seconds or None (from EXPTIME header key)
               filename     — str (basename only)
               shape        — tuple (H, W)
+              obs_time     — datetime (UTC) or None (from DATE-OBS header key)
+              observer_lat  — float degrees or None (from SITELAT)
+              observer_lon  — float degrees or None (from SITELONG)
+              observer_alt_m — float metres or None (from SITEELEV)
 
         Raises:
             FileNotFoundError: If the file does not exist.
@@ -107,6 +111,30 @@ class FITSLoader:
                     except (TypeError, ValueError):
                         logger.warning("Could not parse EXPTIME in %s", path.name)
 
+                # --- Observation time (DATE-OBS) ---
+                obs_time = None
+                if "DATE-OBS" in header:
+                    try:
+                        from datetime import datetime, timezone
+                        date_str = str(header["DATE-OBS"])
+                        # Accept ISO 8601 with or without trailing 'Z'
+                        date_str = date_str.rstrip("Z")
+                        obs_time = datetime.fromisoformat(date_str).replace(
+                            tzinfo=timezone.utc
+                        )
+                    except (ValueError, TypeError):
+                        logger.warning("Could not parse DATE-OBS in %s", path.name)
+
+                # --- Observer location ---
+                def _float_header(key: str) -> float | None:
+                    val = header.get(key)
+                    if val is None:
+                        return None
+                    try:
+                        return float(val)
+                    except (TypeError, ValueError):
+                        return None
+
                 h, w = arr_u8.shape
 
                 return {
@@ -115,6 +143,10 @@ class FITSLoader:
                     "exposure_time": exposure_time,
                     "filename": path.name,
                     "shape": (h, w),
+                    "obs_time": obs_time,
+                    "observer_lat":   _float_header("SITELAT"),
+                    "observer_lon":   _float_header("SITELONG"),
+                    "observer_alt_m": _float_header("SITEELEV"),
                 }
         except fits.verify.VerifyError as exc:
             raise ValueError(
