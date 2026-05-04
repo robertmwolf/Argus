@@ -16,6 +16,13 @@
 #   Stage 2 (epochs 21-50): backbone unfrozen (lr_mult=0.1)
 
 # ---------------------------------------------------------------------------
+# Custom FITS transform registration
+# ---------------------------------------------------------------------------
+# training.transforms registers LoadFITSFromFile with the mmcv TRANSFORMS
+# registry so it can be referenced by name in the pipeline dicts below.
+custom_imports = dict(imports=['training.transforms'], allow_failed_imports=False)
+
+# ---------------------------------------------------------------------------
 # Base dataset and runtime settings
 # ---------------------------------------------------------------------------
 dataset_type = 'CocoDataset'
@@ -158,11 +165,12 @@ model = dict(
 # ---------------------------------------------------------------------------
 # Data pipeline
 # ---------------------------------------------------------------------------
-# Image size 400 — fits in 16 GB unified memory with Swin-T backbone
-_img_scale = (400, 400)
+# Image size 256 — MPS has a 4GB NDArray limit per operation; DINO's
+# deformable attention at larger sizes exceeds it on M3 16 GB.
+_img_scale = (256, 256)
 
 train_pipeline = [
-    dict(type='LoadImageFromFile', backend_args=backend_args),
+    dict(type='LoadFITSFromFile'),
     dict(type='LoadAnnotations', with_bbox=True),
     dict(type='RandomFlip', prob=0.5),
     dict(
@@ -174,7 +182,7 @@ train_pipeline = [
 ]
 
 val_pipeline = [
-    dict(type='LoadImageFromFile', backend_args=backend_args),
+    dict(type='LoadFITSFromFile'),
     dict(type='Resize', scale=_img_scale, keep_ratio=True),
     dict(type='LoadAnnotations', with_bbox=True),
     dict(
@@ -199,7 +207,7 @@ train_dataloader = dict(
         data_root=data_root,
         metainfo=metainfo,
         ann_file='annotations/dev_subset.json',   # 50-image dev subset
-        data_prefix=dict(img='raw/'),
+        data_prefix=dict(img='raw/'),  # COCO file_names use relative ../dev_subset/ paths
         filter_cfg=dict(filter_empty_gt=False),
         pipeline=train_pipeline,
         backend_args=backend_args,
@@ -218,7 +226,7 @@ val_dataloader = dict(
         data_root=data_root,
         metainfo=metainfo,
         ann_file='annotations/dev_subset.json',
-        data_prefix=dict(img='raw/'),
+        data_prefix=dict(img='raw/'),  # COCO file_names use relative ../dev_subset/ paths
         test_mode=True,
         pipeline=val_pipeline,
         backend_args=backend_args,
