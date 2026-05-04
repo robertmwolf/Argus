@@ -1,9 +1,9 @@
-# Phase 1 Goals — StreakMind Data Pipeline
+# Phase 1 Goals — ARGUS Data Pipeline
 
 > **Phase 0 (Classical Baseline) is complete.** See the bottom of this file
 > for the completed Phase 0 week-by-week record.
-> Phase 1 is the StreakMind data pipeline: FITS loader, PyTorch dataset,
-> label conversion, and augmentations in `streakmind/`.
+> Phase 1 is the ARGUS data pipeline: FITS loader, PyTorch dataset,
+> label conversion, and augmentations.
 
 ## Guiding Principle
 Phase 1 must produce two things before Phase 2 (model training) can start:
@@ -14,7 +14,7 @@ Show these outputs before proceeding to Phase 2.
 
 ---
 
-## Module 1: `streakmind/inference/fits_loader.py`
+## Module 1: `inference/fits_loader.py`
 
 ### Class: `FITSLoader`
 
@@ -48,7 +48,7 @@ def extract_wcs_metadata(wcs: WCS, pixel_coords: list[tuple]) -> list[dict]:
 Rationale: FITS images have extreme dynamic range. Min-max crushes faint
 streaks into noise. Z-score preserves relative contrast.
 
-### Test file: `tests/streakmind/test_fits_loader.py`
+### Test file: `tests/test_fits_loader.py`
 - [ ] `load()` returns dict with all required keys and correct dtypes
 - [ ] Output array is uint8, shape (H, W, 3)
 - [ ] `fits_to_png()` creates a file at the given path
@@ -58,7 +58,7 @@ streaks into noise. Z-score preserves relative contrast.
 
 ---
 
-## Module 2: `streakmind/training/convert_labels.py`
+## Module 2: `training/convert_labels.py`
 
 ### Function: `convert_yolo_obb_to_coco`
 
@@ -90,7 +90,7 @@ def convert_yolo_obb_to_coco(
     """
 ```
 
-### Test file: `tests/streakmind/test_convert_labels.py`
+### Test file: `tests/test_convert_labels.py`
 - [ ] Output JSON parses without error and has `images`, `annotations`, `categories`
 - [ ] Category list is `[{"id": 0, "name": "streak"}]`
 - [ ] Each annotation has an `obb` field with 5 values
@@ -100,7 +100,7 @@ def convert_yolo_obb_to_coco(
 
 ---
 
-## Module 3: `streakmind/training/dataset.py`
+## Module 3: `training/dataset.py`
 
 ### Class: `FITSStreakDataset(torch.utils.data.Dataset)`
 
@@ -124,7 +124,7 @@ def __getitem__(self, idx: int) -> tuple[Tensor, dict]:
 The PNG is only for visualization. Training must use the normalized FITS data
 to ensure reproducibility.
 
-### Test file: `tests/streakmind/test_dataset.py`
+### Test file: `tests/test_dataset.py`
 - [ ] `len(dataset)` equals number of images in annotation file
 - [ ] `__getitem__` returns `(Tensor, dict)` with correct key set
 - [ ] `boxes` shape is `[N, 4]`, dtype float32
@@ -134,7 +134,7 @@ to ensure reproducibility.
 
 ---
 
-## Module 4: `streakmind/training/augmentations.py`
+## Module 4: `training/augmentations.py`
 
 ### Function: `get_train_transforms() -> A.Compose`
 
@@ -169,7 +169,7 @@ This is critical for balancing long vs short streak representation.
 ### Function: `get_val_transforms() -> A.Compose`
 No augmentations — return raw normalized image only.
 
-### Test file: `tests/streakmind/test_augmentations.py`
+### Test file: `tests/test_augmentations.py`
 - [ ] `get_train_transforms()` runs on a dummy image without error
 - [ ] Output image stays uint8 with shape unchanged
 - [ ] `SyntheticStreakInject` adds at least one streak to bboxes when triggered
@@ -183,16 +183,16 @@ Before starting Phase 2, verify both:
 
 ```bash
 # 1. COCO conversion produces valid output
-python streakmind/training/convert_labels.py \
+python training/convert_labels.py \
   --yolo-labels data/annotations/yolo/ \
   --fits-dir data/raw/ \
-  --output streakmind/data/annotations/train.json
+  --output data/annotations/train.json
 
 # 2. Dataset iterates cleanly
-python streakmind/training/dataset.py streakmind/data/annotations/train.json
+python training/dataset.py data/annotations/train.json
 # Expected: prints first item shape + target keys, no errors
 
-pytest tests/streakmind/ -v
+pytest tests/ -v
 # Expected: all tests pass
 ```
 
@@ -223,5 +223,5 @@ Still to build for classical baseline:
 - `src/matching/propagator.py`
 - `src/matching/matcher.py` + `scorer.py`
 
-These can be built in parallel with StreakMind Phase 1, as the matching
-logic is shared with StreakMind's `inference/crossid.py`.
+These can be built in parallel with ARGUS Phase 1, as the matching
+logic is shared with ARGUS's `inference/crossid.py`.

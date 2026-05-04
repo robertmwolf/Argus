@@ -1,4 +1,4 @@
-"""Augmentation pipelines for StreakMind training.
+"""Augmentation pipelines for ARGUS training.
 
 Provides training and validation transforms via albumentations, plus a
 custom synthetic streak injection transform for class balancing.

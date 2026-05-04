@@ -1,4 +1,4 @@
-"""FITS file loading and normalisation for StreakMind inference.
+"""FITS file loading and normalisation for ARGUS inference.
 
 Loads a FITS image, applies Z-score normalisation, and packages the
 result for downstream ML inference.

@@ -18,20 +18,20 @@ to `api/main.py` or `inference/pipeline.py`.
 | `worker`   | pytorch/pytorch:2.2.0-cuda12.1-...   | —    | GPU inference: FITS→Co-DINO→cross-ID→DB |
 | `frontend` | nginx:alpine (multi-stage build)      | 80   | React/Vite static + OBB canvas rendering |
 
-For local development without Docker, use SQLite (`DATABASE_URL=sqlite+aiosqlite:///./streakmind.db`)
+For local development without Docker, use SQLite (`DATABASE_URL=sqlite+aiosqlite:///./argus.db`)
 and run api + worker in separate terminals.
 
 ---
 
 ## Phase S1 — Standalone CLI Pipeline (prerequisite)
 
-Complete StreakMind Phases 1–3 (data pipeline + model + cross-ID).
+Complete ARGUS Phases 1–3 (data pipeline + model + cross-ID).
 The pipeline must accept a FITS file path and return detections + identifications
 as plain Python objects with no web layer.
 
 **Done when:**
 ```bash
-python -m streakmind.inference.pipeline path/to/image.fits
+python -m inference.pipeline path/to/image.fits
 # prints ranked detections with satellite identifications
 ```
 
@@ -39,7 +39,7 @@ python -m streakmind.inference.pipeline path/to/image.fits
 
 ## Phase S2 — FastAPI Service (local, no Docker)
 
-Builds `streakmind/api/`:
+Builds `api/`:
 - `main.py` — FastAPI routes
 - `models.py` — Pydantic request/response schemas
 - `storage.py` — `LocalStorage` / `S3Storage` behind abstract interface
@@ -47,7 +47,7 @@ Builds `streakmind/api/`:
 
 Run locally:
 ```bash
-uvicorn streakmind.api.main:app --reload --port 8000
+uvicorn api.main:app --reload --port 8000
 ```
 
 Storage: `./uploads/` directory.
@@ -60,14 +60,14 @@ returns a job_id and polling `/api/result/{job_id}` eventually shows results.
 
 ## Phase S3 — Frontend (React + Vite)
 
-Builds `streakmind/frontend/`:
+Builds `frontend/`:
 - `UploadZone.jsx` — drag-drop upload, status polling
 - `ResultViewer.jsx` — canvas OBB rendering
 - `DetectionTable.jsx` — detection list, row-click highlights OBB
 
 Dev server:
 ```bash
-cd streakmind/frontend && npm run dev
+cd frontend && npm run dev
 ```
 
 **Done when:** Upload FITS in browser, see annotated image with OBBs and
@@ -84,19 +84,19 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: streakmind
-      POSTGRES_USER: streakmind
+      POSTGRES_DB: argus
+      POSTGRES_USER: argus
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./streakmind/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
 
   api:
     build:
       context: .
-      dockerfile: streakmind/docker/Dockerfile.api
+      dockerfile: docker/Dockerfile.api
     environment:
-      DATABASE_URL: postgresql+asyncpg://streakmind:${DB_PASSWORD}@db/streakmind
+      DATABASE_URL: postgresql+asyncpg://argus:${DB_PASSWORD}@db/argus
       STORAGE_BACKEND: local
       QUEUE_BACKEND: memory
     volumes:
@@ -108,12 +108,12 @@ services:
   worker:
     build:
       context: .
-      dockerfile: streakmind/docker/Dockerfile.worker
+      dockerfile: docker/Dockerfile.worker
     environment:
-      DATABASE_URL: postgresql+asyncpg://streakmind:${DB_PASSWORD}@db/streakmind
+      DATABASE_URL: postgresql+asyncpg://argus:${DB_PASSWORD}@db/argus
       STORAGE_BACKEND: local
       QUEUE_BACKEND: memory
-      MODEL_WEIGHTS: /app/weights/streakmind_codino.pth
+      MODEL_WEIGHTS: /app/weights/argus_dino.pth
       SPACETRACK_USER: ${SPACETRACK_USER}
       SPACETRACK_PASS: ${SPACETRACK_PASS}
     volumes:
@@ -131,7 +131,7 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: streakmind/docker/Dockerfile.frontend
+      dockerfile: docker/Dockerfile.frontend
     ports:
       - "80:80"
     depends_on: [api]
@@ -149,9 +149,9 @@ volumes:
 Use Cloudflare Tunnel to expose the service without opening firewall ports.
 
 ```bash
-cloudflared tunnel create streakmind
-cloudflared tunnel route dns streakmind streakmind.yourdomain.com
-cloudflared tunnel run streakmind
+cloudflared tunnel create argus
+cloudflared tunnel route dns argus argus.yourdomain.com
+cloudflared tunnel run argus
 ```
 
 Add `cloudflared` as a fifth container in `docker-compose.yml`.
@@ -195,6 +195,6 @@ docker compose -f docker-compose.yml -f docker-compose.cloud.yml up
 
 ## What Does NOT Change Between Deployments
 
-The inference pipeline (`streakmind/inference/`) is never modified for
+The inference pipeline (`inference/`) is never modified for
 deployment. The API layer calls the same functions the CLI does. Storage
 and queue are injected via factory functions, not imported directly.

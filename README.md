@@ -1,24 +1,38 @@
 # ARGUS
 ### Automated Recognition and Grading of Unidentified Streaks
 
-ARGUS is an academic research pipeline for automated satellite identification
-in FITS telescope images. It detects satellite streaks using classical image
-processing techniques, then identifies the satellite by matching the observed
-trajectory against historical Two-Line Element (TLE) orbital data from the
-US Space Force Space-Track catalog, using SGP4 propagation and multi-factor
-confidence scoring.
+ARGUS is an academic research pipeline for automated satellite streak detection
+and identification in FITS telescope images.  It detects satellite streaks using
+a DINO transformer model (Swin backbone), refines streak orientation via the
+Radon transform, and cross-identifies detected objects against historical
+Two-Line Element (TLE) orbital data from the US Space Force Space-Track catalog
+using SGP4 propagation and multi-factor confidence scoring.  Results are served
+through a FastAPI backend and React frontend.
+
+---
+
+## Status
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 0 — Classical baseline | ASTRiDE detection, SGP4 matching | ✅ Complete |
+| 1 — Data pipeline | FITS loader, COCO labels, augmentations | ✅ Complete |
+| 2 — DINO model | device.py, MMDet configs, train script | ✅ Complete |
+| 3 — Cross-identification | inference pipeline, Radon, crossid | ⬜ Next |
+| 4 — Database | SQLAlchemy schema, async models | ⬜ Planned |
+| 5 — API | FastAPI upload / result endpoints | ⬜ Planned |
+| 6 — Frontend | React + Vite, canvas OBB rendering | ⬜ Planned |
+| 7 — Docker | docker-compose with GPU worker | ⬜ Planned |
+| 8 — Evaluation | mAP, angle error, DINO vs ASTRiDE | ⬜ Planned |
 
 ---
 
 ## Name
 
-**ARGUS** stands for **Automated Recognition and Grading of Unidentified Streaks**.
+**ARGUS** — **Automated Recognition and Grading of Unidentified Streaks**.
 
-The name also references **Argus Panoptes** (Ἄργος Πανόπτης), the many-eyed
-giant of Greek mythology — son of Gaia, set by Hera to watch over Io with his
-hundred eyes, each pair taking turns to sleep so that he was always vigilant.
-Like its namesake, this system watches the sky continuously, cataloguing every
-streak it finds.
+Also a reference to **Argus Panoptes** (Ἄργος Πανόπτης), the hundred-eyed
+giant of Greek mythology — always vigilant, always watching.
 
 ---
 
@@ -27,108 +41,43 @@ streak it finds.
 This project builds on and cites the following prior works:
 
 - **ASTRiDE** — Automated Streak Detection for Astronomical Images.
-  Kim et al. *Astronomical Journal* (2017).
+  Kim et al., *Astronomical Journal* (2017).
   https://github.com/dwkim78/ASTRiDE
 
-- **StreakMind** — YOLO-OBB model for satellite streak detection.
-  Cite per published paper/repo.
+- **Co-DINO** — Co-Deformable DETR object detection transformer.
+  Zong et al., *arXiv* 2211.12860 (2023).
+  https://arxiv.org/abs/2211.12860
 
 - **Danarianto et al.** — Satellite identification prototype pipeline.
   Cite per published paper.
 
-Code that is directly derived from or substantially adapts these works is
-annotated with `# Source:` and `# Ref:` comments at the relevant function,
-class, or block level, in accordance with academic attribution standards.
+Code derived from or substantially adapting these works is annotated with
+`# Source:` and `# Ref:` comments at the function/class level.
 
 ---
 
-## Pipeline Overview
+## Architecture
 
 ```
-FITS Image → Streak Detection (ASTRiDE) → Plate Solve (WCS)
-          → Space-Track GP_History Query → SGP4 Propagation
-          → Multi-Factor Matching → Ranked Candidate List
+FITS Image
+    │
+    ├─ Phase 0/3: Classical path
+    │   ├── src/ingest/fits_parser.py       — FITS → FITSImage dataclass
+    │   ├── src/detection/classical_detector.py  — ASTRiDE streak extraction
+    │   ├── src/astrometry/plate_solver.py  — pixel → RA/Dec (WCS)
+    │   └── src/matching/                   — Space-Track query → SGP4 → scorer → matcher
+    │
+    └─ Phase 2/3: ML path
+        ├── inference/fits_loader.py        — FITS → normalised tensor
+        ├── inference/device.py             — get_device() / get_device_config()
+        ├── models/dino/                    — DINO Swin-T (dev) / Swin-L (cloud) configs
+        ├── training/train_dino.py          — two-stage fine-tuning + cost guardrails
+        ├── inference/pipeline.py           — end-to-end orchestrator  [Phase 3]
+        ├── inference/postprocess.py        — Radon angle refinement   [Phase 3]
+        └── inference/crossid.py            — TLE cross-identification  [Phase 3]
 ```
 
-Full architecture: [`agent_docs/architecture.md`](agent_docs/architecture.md)
-
----
-
-## Phase Roadmap
-
-| Phase | Weeks | Detector | Status |
-|-------|-------|----------|--------|
-| 1 — Classical baseline | 1–4 | ASTRiDE + SGP4 weighted scoring | In progress |
-| 2 — YOLO-OBB integration | 5–10 | YOLO-OBB primary + ASTRiDE validator | Planned |
-| 3 — Hybrid consensus | 11–14 | Consensus layer + DINOv3 anomaly classifier | Planned |
-
----
-
-## Tech Stack
-
-The pipeline is built in phases. Phase 1 establishes a classical, deterministic baseline
-before any ML is introduced. Later phases layer in neural models whose gains can be
-measured against that baseline.
-
-**Phase 1 — Classical Baseline (Weeks 1–4)** ✓ current
-
-| Layer | Tool | Purpose |
-|-------|------|---------|
-| Runtime | Python 3.11 (conda) | Core language |
-| Astronomy I/O | [astropy](https://www.astropy.org/) | FITS parsing, WCS astrometry, coordinate transforms |
-| Streak detection | [ASTRiDE](https://github.com/dwkim78/ASTRiDE) | Classical contour-based streak detection |
-| Orbit propagation | [sgp4](https://github.com/brandon-rhodes/python-sgp4) + [skyfield](https://rhodesmill.org/skyfield/) | SGP4 TLE propagation, satellite position/velocity |
-| Catalog access | [spacetrack](https://pypi.org/project/spacetrack/) | Space-Track GP_History API client |
-| Image processing | opencv-python, scipy | Preprocessing, morphological operations |
-| Testing | pytest | Unit and integration tests |
-
-**Phase 2 — YOLO-OBB Integration (Weeks 5–10)** *(planned)*
-
-| Layer | Tool | Purpose |
-|-------|------|---------|
-| Streak detection (primary) | [StreakMind](https://github.com/StreakMind) YOLO-OBB | Neural oriented bounding-box streak detector |
-| Streak detection (validator) | ASTRiDE | Classical cross-check of YOLO detections |
-
-**Phase 3 — Hybrid Consensus (Weeks 11–14)** *(planned)*
-
-| Layer | Tool | Purpose |
-|-------|------|---------|
-| Consensus layer | custom | Merges YOLO-OBB + ASTRiDE detections |
-| Anomaly classification | DINOv3 | Flags unknown/anomalous objects not in TLE catalog |
-
----
-
-## Setup
-
-```bash
-# Create and activate the conda environment
-conda create -n argus python=3.11
-conda activate argus
-pip install -r requirements.txt
-
-# Set Space-Track credentials (required for Week 3+)
-export SPACETRACK_USER=your@email.com
-export SPACETRACK_PASS=yourpassword
-```
-
-## Running Tests
-
-```bash
-conda activate argus
-pytest tests/ -v
-```
-
-## Data
-
-Real FITS images from the [MILAN Sky Survey](https://zenodo.org/records/7049839)
-(Parisot et al., 2023) are used for testing. Download to `data/milan/`:
-
-```bash
-pip install zenodo_get
-zenodo_get 7049839 -o data/milan/2022-08/
-```
-
-Data files are excluded from version control (see `.gitignore`).
+Full design: [`agent_docs/architecture.md`](agent_docs/architecture.md)
 
 ---
 
@@ -136,16 +85,139 @@ Data files are excluded from version control (see `.gitignore`).
 
 ```
 Argus/
-├── CLAUDE.md              ← agent instructions
+├── CLAUDE.md                  ← agent coding instructions
 ├── README.md
-├── requirements.txt
-├── agent_docs/            ← design docs (read before coding)
-├── src/
-│   ├── ingest/            ← FITS parsing
-│   ├── detection/         ← ASTRiDE streak detection
-│   ├── astrometry/        ← WCS plate solving
-│   └── matching/          ← Space-Track query, SGP4, scoring
-├── tests/
-├── results/               ← baseline metrics JSON output
-└── data/                  ← not checked in
+├── agent_docs/                ← read before writing any code
+│   ├── architecture.md
+│   ├── streakmind_phases.md   ← Phases 2–8 spec
+│   ├── phase1_goals.md        ← Phase 1 (complete, reference only)
+│   ├── datasets.md
+│   ├── dependencies.md
+│   ├── service_roadmap.md
+│   ├── spacetrack.md
+│   └── test_strategy.md
+├── src/                       ← Phase 0: classical baseline (complete)
+│   ├── ingest/fits_parser.py
+│   ├── detection/classical_detector.py
+│   ├── astrometry/plate_solver.py
+│   └── matching/              ← scorer, propagator, spatial_filter, matcher, spacetrack_query
+├── inference/                 ← ML inference modules
+│   ├── device.py              ← get_device() / get_device_config()  ✅
+│   ├── fits_loader.py         ← FITS → tensor, Z-score normalisation  ✅
+│   ├── pipeline.py            ← inference orchestrator  [Phase 3]
+│   ├── postprocess.py         ← Radon angle refinement  [Phase 3]
+│   └── crossid.py             ← satellite cross-matching  [Phase 3]
+├── training/
+│   ├── convert_labels.py      ← YOLO OBB → COCO JSON  ✅
+│   ├── dataset.py             ← FITSStreakDataset  ✅
+│   ├── augmentations.py       ← albumentations + SyntheticStreakInject  ✅
+│   ├── train_dino.py          ← DINO training script  ✅
+│   └── train_baseline.py      ← YOLO11-OBB baseline  [Phase 2]
+├── models/
+│   └── dino/
+│       ├── streak_codino_swin_t.py   ← Swin-T dev config  ✅
+│       └── streak_codino_swin_l.py   ← Swin-L cloud config  ✅
+├── scripts/
+│   ├── make_test_fits.py      ← synthetic FITS generator  ✅
+│   ├── download_weights.py    ← pretrained weight downloader  ✅
+│   └── prepare_cloud_training.py  ← go/no-go checklist  [Phase 6]
+├── api/                       ← FastAPI application  [Phase 5]
+├── frontend/                  ← React + Vite  [Phase 6]
+├── eval/                      ← metrics, benchmark  [Phase 8]
+├── db/                        ← schema.sql, migrations  [Phase 4]
+├── docker/                    ← docker-compose  [Phase 7]
+├── tests/                     ← 228 tests, all passing
+├── data/
+│   ├── sample/                ← synthetic FITS for smoke-testing  ✅
+│   ├── raw/                   ← MILAN FITS (gitignored, download separately)
+│   ├── annotations/           ← COCO JSON label files
+│   └── catalogs/              ← TLE catalog files
+├── weights/                   ← model weights (gitignored)
+└── results/                   ← baseline metrics JSON output
 ```
+
+---
+
+## Setup
+
+```bash
+# Create and activate the conda environment
+conda create -n satid python=3.11
+conda activate satid
+pip install -r requirements.txt
+
+# Set Space-Track credentials (required for matching)
+export SPACETRACK_USER=your@email.com
+export SPACETRACK_PASS=yourpassword
+
+# Set model size (tiny=Mac dev, large=cloud A100)
+export MODEL_SIZE=tiny
+export PYTORCH_ENABLE_MPS_FALLBACK=1
+```
+
+## Running Tests
+
+```bash
+conda activate satid
+pytest tests/ -v
+# 228 passed, 1 skipped (CUDA test, skipped on Mac)
+```
+
+## Generating Synthetic Test Data
+
+No real FITS files are required to develop and test the pipeline:
+
+```bash
+python scripts/make_test_fits.py --small   # fast 512×512 images
+python scripts/make_test_fits.py           # full 3096×2080 MILAN resolution
+```
+
+## Downloading Pretrained Weights
+
+```bash
+# Swin-T weights for local development (~160 MB):
+MODEL_SIZE=tiny python scripts/download_weights.py
+
+# Swin-L weights for cloud training (~828 MB, A100 only):
+MODEL_SIZE=large python scripts/download_weights.py
+```
+
+## Training
+
+```bash
+# Local Mac dev (Swin-T, 50-image dev subset):
+MODEL_SIZE=tiny python -m training.train_dino
+
+# Verify cloud setup before full run:
+MODEL_SIZE=large python -m training.train_dino --smoke-test
+
+# Full cloud training (A100):
+MODEL_SIZE=large python -m training.train_dino --work-dir weights/run_001
+```
+
+## Real Training Data
+
+The model requires annotated FITS images.  Two sources:
+
+| Dataset | Images | Format | Access |
+|---------|--------|--------|--------|
+| **SatStreaks** | 3,073 annotated | PNG + YOLO OBB labels | [GitHub](https://github.com/jijup/SatStreaks) — free |
+| **MILAN Sky Survey** | 50,068 raw FITS | FITS (needs annotation) | [Zenodo](https://zenodo.org/records/7049839) — free |
+
+```bash
+# Download one month of MILAN (2–5 GB):
+pip install zenodo_get
+zenodo_get 7049839 -o data/raw/milan_2022-08/
+```
+
+---
+
+## Hardware
+
+| Machine | Use | Config |
+|---------|-----|--------|
+| MacBook Air M3 (16 GB) | Development, testing | `MODEL_SIZE=tiny`, MPS |
+| Lambda Labs A100 40 GB | Training | `MODEL_SIZE=large`, CUDA |
+
+Never hardcode `torch.device("cuda")` — always use `get_device()` from
+`inference/device.py`.
