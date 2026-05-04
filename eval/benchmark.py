@@ -114,7 +114,7 @@ def run_pipeline_predictions(
                 logger.warning("Image not found, skipping: %s", fits_path)
                 continue
             logger.info("Running DINO on %s", fits_path.name)
-            dets = pipeline_run(fits_path=fits_path, fast=False)
+            dets = pipeline_run(fits_path=fits_path, fast=True)
             for det in dets:
                 predictions.append({
                     "image_id": img_info["file_name"],

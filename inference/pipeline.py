@@ -33,6 +33,33 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# PyTorch 2.6 compatibility — checkpoint loading patch
+# ---------------------------------------------------------------------------
+
+def _patch_torch_load_weights_only() -> None:
+    try:
+        import inspect
+        import torch
+        import mmengine.runner.checkpoint as ckpt_mod
+        sig = inspect.signature(torch.load)
+        if "weights_only" not in sig.parameters:
+            return
+        import functools
+        _orig = torch.load
+
+        @functools.wraps(_orig)
+        def _patched(*args, **kwargs):
+            kwargs.setdefault("weights_only", False)
+            return _orig(*args, **kwargs)
+
+        ckpt_mod.torch.load = _patched  # type: ignore[attr-defined]
+    except Exception:
+        pass
+
+
+_patch_torch_load_weights_only()
+
+# ---------------------------------------------------------------------------
 # Constants / defaults
 # ---------------------------------------------------------------------------
 
@@ -318,7 +345,15 @@ def run(
         root = Path(__file__).resolve().parent.parent
         weights_path = root / "weights" / f"dino_{model_size}.pth"
 
-    model      = _load_model(config_path, weights_path, device)
+    # DINO multi-scale deformable attention exceeds MPS's 4 GB per-allocation
+    # limit.  Force CPU on Mac until a memory-efficient MPS path is available.
+    import torch as _torch
+    inference_device = device
+    if device.type == "mps" and not _torch.cuda.is_available():
+        inference_device = _torch.device("cpu")
+        logger.debug("MPS device detected — forcing DINO inference to CPU")
+
+    model      = _load_model(config_path, weights_path, inference_device)
     raw_dets   = _run_inference(model, array, image_size)
     inference_ms = (time.perf_counter() - t1) * 1000
     logger.debug("inference_ms=%.1f  raw_dets=%d", inference_ms, len(raw_dets))

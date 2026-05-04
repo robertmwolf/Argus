@@ -1,205 +1,357 @@
 # Structural Refactor Plan
 
 Recorded 2026-05-04 after a full codebase audit.  All implementation phases
-(0–8) are complete.  This document captures structural debt to address before
-the project is extended further.  None of these are blocking; the pipeline
+(0–8) are complete.  This document captures the structural work needed before
+the project is extended or handed off.  Nothing here is blocking; the pipeline
 runs end-to-end.  Address in priority order.
 
 ---
 
-## Background
+## The Core Problem
 
-The project grew in two distinct waves:
+A future maintainer cloning this repo sees the following at the root:
 
-**Wave 1 (Phase 0):** A classical ASTRiDE + SGP4 pipeline written entirely
-inside `src/`.  It is self-contained: `fits_parser → classical_detector →
-plate_solver → spacetrack_query → spatial_filter → propagator → scorer →
-matcher`.  These modules were designed to be frozen once the ML path was built.
+```
+api/
+agent_docs/
+data/
+db/
+docker/
+eval/
+frontend/
+inference/
+models/
+results/
+scripts/
+src/
+tests/
+training/
+```
 
-**Wave 2 (Phases 1–8):** The ML pipeline was built in top-level packages
-(`inference/`, `training/`, `api/`, `eval/`, `db/`).  Some Phase 0 logic was
-needed here too, so `inference/crossid.py` imports directly from `src/`, and
-several algorithms from `src/` were re-implemented locally in `inference/`
-rather than shared.
+This layout is unreadable without prior context:
 
-The result is two separate implementations of the same maths, and a hard
-dependency from the "new" code into the "frozen" baseline.
+- **`src/` alongside `api/`, `inference/`, `training/`** — `src/` is not a
+  meaningful name when everything in the repo is source code.  A maintainer
+  cannot tell whether `src/` is the canonical implementation or an auxiliary
+  one.  It is actually the *classical baseline*, a frozen research reference
+  that should never be modified.  The name hides this completely.
+
+- **`agent_docs/`** — named after the AI tooling that generated it, not after
+  its content.  A maintainer unfamiliar with the development process will not
+  know what to look in here for.  It contains architecture, dataset, deployment,
+  and API documentation that belongs in `docs/`.
+
+- **`models/`** — contains only MMDetection Python config files, no Python
+  model classes.  A Python developer expects `models/` to be a package with
+  class definitions.  The actual content is detector configurations.
+
+- **No `pyproject.toml`** — the project is not installable as a package.  All
+  imports work only because the repo root is on `sys.path`.  There is no
+  machine-readable declaration of what this project is, what its entry points
+  are, or what Python version it requires.
+
+- **`requirements.txt` header reads "Phase 1 — Classical Baseline"** — stale
+  comment from early development; the file now covers the full stack.
+
+The refactor below fixes all of these in one coordinated pass.
 
 ---
 
-## Issue 1 — `src/matching/spacetrack_query.py` is shared infrastructure locked inside a frozen package
+## Before and After
 
-**What happened:**
-`inference/crossid.py` does:
+**Today — what a new maintainer sees:**
+```
+src/                   ← frozen classical ASTRiDE pipeline (not obvious)
+inference/             ← ML inference modules
+training/              ← training scripts and data tools
+api/                   ← FastAPI application
+frontend/              ← React UI
+eval/                  ← metrics and benchmark
+db/                    ← schema and ORM
+agent_docs/            ← documentation (name is an internal artifact)
+models/                ← MMDetection config files (not Python models)
+tests/                 ← mirrors src/ and top-level packages
+```
+
+**After refactor — what a new maintainer sees:**
+```
+classical/             ← frozen ASTRiDE baseline (Phase 0 reference, read-only)
+common/                ← shared utilities used by both classical/ and inference/
+inference/             ← ML inference modules (unchanged)
+training/              ← training scripts and data tools (unchanged)
+api/                   ← FastAPI application (unchanged)
+frontend/              ← React UI (unchanged)
+eval/                  ← metrics and benchmark (unchanged)
+db/                    ← schema and ORM (unchanged)
+docs/                  ← architecture, deployment, API, dataset documentation
+configs/               ← MMDetection training configs (Swin-T and Swin-L)
+tests/                 ← mirrors package layout
+pyproject.toml         ← project metadata, entry points, dependency declaration
+```
+
+Every top-level directory now has a self-documenting name.  A new maintainer
+can understand the structure without reading any documentation first.
+
+---
+
+## Issue 1 — `src/` should be renamed `classical/`
+
+**Why it matters:**
+`src/` is the Phase 0 classical ASTRiDE + SGP4 pipeline.  CLAUDE.md says it is
+"complete, do not modify."  The name `src/` communicates nothing about this.
+Renaming to `classical/` makes the purpose and status of the package
+immediately legible — it is the classical detection baseline, frozen as a
+research reference.
+
+**Changes required:**
+- Rename directory: `src/` → `classical/`
+- Rename Python package init if present
+- Update all imports: `from src.matching...` → `from classical.matching...`
+  (only two locations: `src/matching/matcher.py` and `inference/crossid.py`)
+- Rename test files: `tests/test_classical_detector.py` etc. already use
+  descriptive names; only the `from src.` import lines need updating
+- Update CLAUDE.md: replace all `src/` references with `classical/`
+- Update `agent_docs/architecture.md` (will become `docs/architecture.md`)
+
+**Effort:** 30 minutes.  Pure rename — zero logic changes.
+
+---
+
+## Issue 2 — `agent_docs/` should be renamed `docs/`
+
+**Why it matters:**
+`agent_docs/` is named after the AI agent that wrote the files during
+development.  This is an internal implementation detail that has no meaning
+to a future maintainer.  The directory contains project architecture,
+deployment runbooks, dataset provenance, and API documentation — it is the
+project's documentation root and should be called `docs/`.
+
+**Changes required:**
+- Rename directory: `agent_docs/` → `docs/`
+- Update CLAUDE.md: replace `agent_docs/` references with `docs/`
+- Update any script or test that references the path directly
+
+**Effort:** 15 minutes.
+
+---
+
+## Issue 3 — `models/` should be renamed `configs/`
+
+**Why it matters:**
+`models/` contains MMDetection Python config files
+(`streak_codino_swin_t.py`, `streak_codino_swin_l.py`).  A Python developer
+expects `models/` to be a package containing model class definitions.  The
+actual content is training configuration — hyperparameters, data pipelines,
+schedules.  `configs/` is the standard name for this in the MMDetection
+ecosystem.
+
+**Changes required:**
+- Rename directory: `models/` → `configs/`
+- Rename subdirectory: `models/dino/` → `configs/dino/`
+- Update `training/train_dino.py`: `_CONFIG_MAP` paths
+  (`models/dino/...` → `configs/dino/...`)
+- Update `models/dino/streak_codino_swin_t.py` `custom_imports` path if it
+  references a path rather than a module
+- Update CLAUDE.md and docs references
+
+**Effort:** 20 minutes.
+
+---
+
+## Issue 4 — Create `common/` for shared infrastructure
+
+**Why it matters:**
+Two separate code trees (`classical/` and `inference/`) need the same
+building blocks: Space-Track queries, angular separation math, Gaussian
+scoring, and SGP4 propagation.  Currently this shared code is either
+duplicated or the ML code imports directly from the "frozen" classical
+package.  Both patterns create maintenance debt.
+
+**Sub-issue 4a — `spacetrack_query.py` is shared infrastructure in a frozen package**
+
+`inference/crossid.py` imports:
 ```python
 from src.matching.spacetrack_query import query_gp_history
 ```
-This is the *only* import from `src/` outside of `src/` itself.  It exists
-because both the classical and ML cross-ID paths need to query Space-Track,
-and the caching logic in `spacetrack_query.py` is non-trivial.
+This is the only import from `src/` outside `src/` itself.  Moving to
+`common/` breaks the frozen-package dependency and lets `classical/` be
+archived independently if needed.
 
-**The problem:**
-`src/` is supposed to be frozen (CLAUDE.md: "Phase 0 classical baseline —
-complete, do not modify").  Having `inference/` depend on it means any
-refactor of `src/matching/spacetrack_query.py` must be co-ordinated with the
-ML pipeline.  It also means the "frozen baseline" can never truly be archived
-or removed while the ML path is live.
-
-**Long-term fix:**
-Move `src/matching/spacetrack_query.py` to a new `common/` package:
-```
-common/
-  __init__.py
-  spacetrack_query.py   ← moved from src/matching/
-```
-Update the two callers:
-- `src/matching/matcher.py` → `from common.spacetrack_query import ...`
-- `inference/crossid.py` → `from common.spacetrack_query import ...`
-
-`src/` can then be treated as a true read-only reference implementation.
-
-**Effort:** ~1 hour.  No logic changes — file move + import updates + test
-update for `tests/test_spacetrack_query.py`.
-
----
-
-## Issue 2 — Three separate `angular_separation` implementations
-
-The same haversine formula exists in three places with different unit
-conventions:
+**Sub-issue 4b — Three separate `angular_separation` implementations**
 
 | Location | Function | Units |
 |----------|----------|-------|
-| `src/matching/spatial_filter.py:18` | `_angular_separation` | degrees |
-| `src/matching/matcher.py:76` | `_angular_separation_deg` | degrees |
+| `classical/matching/spatial_filter.py:18` | `_angular_separation` | degrees |
+| `classical/matching/matcher.py:76` | `_angular_separation_deg` | degrees |
 | `inference/crossid.py:173` | `_angular_separation_arcsec` | arcseconds |
 
-**Long-term fix:**
-Once Issue 1 is addressed and `common/` exists, add:
-```python
-# common/astro_utils.py
-def angular_separation_deg(ra1, dec1, ra2, dec2) -> float: ...
-def angular_separation_arcsec(ra1, dec1, ra2, dec2) -> float: ...
-```
-Remove the three local copies and import from `common/`.
+All three are the same haversine formula.
 
-**Effort:** ~1 hour including test updates.
-
----
-
-## Issue 3 — Two separate `gaussian_score` implementations
+**Sub-issue 4c — Two separate `gaussian_score` implementations**
 
 | Location | Function |
 |----------|----------|
-| `src/matching/scorer.py:21` | `gaussian_score(delta, sigma)` |
+| `classical/matching/scorer.py:21` | `gaussian_score(delta, sigma)` |
 | `inference/crossid.py:199` | `_gaussian_score(delta, sigma)` |
 
 Identical formula: `exp(-0.5 * (delta/sigma)^2)`.
-The `src/` version also includes `tle_age_penalty()` and `aggregate_score()`
-which have no equivalent in `inference/crossid.py` (the ML cross-ID uses a
-simpler single-factor score).
 
-**Long-term fix:**
-Move the formula to `common/astro_utils.py` (see Issue 2) and import it in
-both places.  Keep `src/matching/scorer.py` intact as the classical scorer
-but have it import the formula from `common/`.
+**Sub-issue 4d — Two separate SGP4 propagators**
 
-**Effort:** ~30 min, low risk.
+| Location | Returns |
+|----------|---------|
+| `classical/matching/propagator.py:32` | `PropagationResult` (RA/Dec + velocity + direction) |
+| `inference/crossid.py:84` | `(ra, dec)` tuple only |
+
+Both use skyfield's `EarthSatellite`.  `inference/crossid.py` even comments:
+*"Reuses the same skyfield EarthSatellite approach as src/matching/propagator.py"*
+
+**Proposed `common/` layout:**
+```
+common/
+  __init__.py
+  spacetrack_query.py    ← moved from classical/matching/
+  astro_utils.py         ← angular_separation_deg(), angular_separation_arcsec(),
+                            gaussian_score()
+  propagator.py          ← shared SGP4 propagation; classical/matching/propagator.py
+                            can import from here and add its PropagationResult wrapper
+```
+
+**Callers to update after creating `common/`:**
+- `classical/matching/spacetrack_query.py` → delete (file moves, not copies)
+- `classical/matching/matcher.py` → `from common.spacetrack_query import ...`
+- `classical/matching/spatial_filter.py` → `from common.astro_utils import angular_separation_deg`
+- `classical/matching/scorer.py` → `from common.astro_utils import gaussian_score`
+- `inference/crossid.py` → `from common.spacetrack_query import ...`,
+  `from common.astro_utils import ...`, drop local `_propagate_to_radec`
+- `tests/test_spacetrack_query.py` → update import path
+
+**Effort:** ~3 hours total for all four sub-issues.  Low logic-change risk —
+the functions themselves do not change.
 
 ---
 
-## Issue 4 — Two separate SGP4 propagators
+## Issue 5 — Add `pyproject.toml`
 
-| Location | Function |
-|----------|----------|
-| `src/matching/propagator.py:32` | `propagate(tle_name, line1, line2, obs_time, lat, lon, alt)` |
-| `inference/crossid.py:84` | `_propagate_to_radec(name, line1, line2, obs_time, lat, lon, alt)` |
+**Why it matters:**
+There is no machine-readable project declaration.  The project only works when
+run from the repo root because all packages rely on the implicit root-level
+`sys.path` entry.  A `pyproject.toml` enables:
 
-Both use skyfield's `EarthSatellite`.  The crossid version even comments:
-> *"Reuses the same skyfield EarthSatellite approach as src/matching/propagator.py"*
+- `pip install -e .` for development installs (no path hacks)
+- Entry points (`argus-api`, `argus-pipeline`, `argus-eval`) for clean CLI
+  invocation without `python -m`
+- Formal declaration of Python version requirement (3.11)
+- IDE tooling (Pyright, Ruff) picks up package roots automatically
 
-The classical propagator returns a `PropagationResult` dataclass with
-velocity and direction; the ML version returns only RA/Dec.
+**Minimum viable `pyproject.toml`:**
+```toml
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
 
-**Long-term fix:**
-Extend `src/matching/propagator.py`'s `propagate()` to optionally return
-ra/dec-only mode (or add a thin wrapper).  Move it to `common/` as part of
-Issue 1.  The ML crossid drops its local `_propagate_to_radec` and calls the
-shared version.
+[project]
+name = "argus"
+version = "0.1.0"
+requires-python = ">=3.11"
+description = "Satellite streak detection and identification pipeline"
 
-**Effort:** ~2 hours.  Requires care around the return-type change.
+[project.scripts]
+argus-api      = "api.main:main"
+argus-pipeline = "inference.pipeline:main"
+argus-eval     = "eval.benchmark:main"
+argus-classical = "scripts.run_classical:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["api*", "classical*", "common*", "db*", "eval*", "inference*", "training*"]
+```
+
+**Effort:** 1 hour including testing `pip install -e .` in the satid environment.
 
 ---
 
-## Issue 5 — Classical path (`src/`) is disconnected from the API and database
+## Issue 6 — Classical path is disconnected from API and database
 
-The classical pipeline produces `FITSImage`, `StreakDetection`, and
-`CandidateMatch` dataclasses.  None of these are written to the database or
+The classical pipeline (`classical/`) produces `FITSImage`, `StreakDetection`,
+and `CandidateMatch` dataclasses that are never written to the database or
 returned by any API endpoint.  The API uses only `inference/pipeline.py`.
 
-The classical path can be run via `tests/test_end_to_end.py` and standalone
-scripts, but there is no way to upload a FITS file to the web UI and get
-classical detections back.
+**Decision: Option A — classical path as CLI-only benchmark tool (recommended)**
 
-**Decision required (choose one):**
+Accept that `classical/` is a research baseline, not a service.  Add a
+`scripts/run_classical.py` CLI entry point for benchmarking.  Document the
+boundary explicitly in `docs/architecture.md`.
 
-**Option A — Classical path as CLI-only benchmark tool (recommended)**
-Accept that `src/` is a research baseline, not a service.  Document this
-explicitly.  Add a `scripts/run_classical.py` CLI entry point so it remains
-usable for benchmarking.  Update `README.md` to make the boundary clear.
-Cost: ~30 min.
+Option B (add `DETECTOR=classical|dino` env var to the API) is ~4 hours and
+only needed if side-by-side comparison through the UI is specifically required.
+The eval benchmark already handles DINO vs YOLO comparison; the classical path
+is covered by `eval/benchmark.py` through its direct API.
 
-**Option B — Integrate classical detector as an alternative API backend**
-Add a `DETECTOR=classical|dino` env var.  When `classical`, `api/main.py`
-calls `src/` instead of `inference/pipeline.py`.  Requires an adapter layer
-converting `CandidateMatch` → detection dict format (the JSON the frontend
-expects).
-Cost: ~4 hours.  Only worth doing if there is a specific need for
-side-by-side comparison through the UI.
-
-*Current recommendation: Option A.  The purpose of `src/` is to establish
-baseline metrics (eval/benchmark.py already handles this comparison), not to
-be a production detector.*
+**Effort for Option A:** 30 minutes.
 
 ---
 
-## Issue 6 — `architecture.md` references a missing file
+## Issue 7 — `docs/architecture.md` references a missing file
 
-`agent_docs/architecture.md` (line 22–26) describes:
-```
-[3. Search Window Computation]
-  src/matching/search_window.py
-```
-This file does not exist.  The search-window logic was folded into
-`src/matching/spacetrack_query.py` (the epoch/cone filter parameters are
-computed inline there).
+`docs/architecture.md` (line 22–26) describes `src/matching/search_window.py`
+which does not exist.  The search-window logic was folded inline into
+`spacetrack_query.py`.
 
-**Fix:** Remove the `search_window.py` box from the architecture diagram and
-note inline that search-window computation lives in `spacetrack_query.py`.
+**Fix:** Remove the `search_window.py` box from the diagram; note that
+search-window computation lives in `spacetrack_query.py` (will be
+`common/spacetrack_query.py` after Issue 4).
 
 **Effort:** 5 minutes.
 
 ---
 
-## Recommended execution order
+## Issue 8 — `requirements.txt` header is stale
 
-1. **Issue 6** — Fix the architecture doc (5 min, no code risk)
-2. **Issue 1** — Create `common/` and move `spacetrack_query.py` (1 hr)
-3. **Issues 2 + 3** — Consolidate angular_separation and gaussian_score into `common/astro_utils.py` while `common/` is open (1.5 hr)
-4. **Issue 4** — Consolidate propagators (2 hr)
-5. **Issue 5** — Decide on classical path strategy, add CLI or adapter (0.5–4 hr)
+The file header reads "Phase 1 — Classical Baseline" — a relic from early
+development.  The file now covers the full stack (ML, API, frontend build,
+database, evaluation).
 
-Total: ~5–9 hours of focused refactor work.  No new features required.
-All existing tests should pass without modification after each step; the
-only expected changes are import lines.
+**Fix:** Replace the header comment with a neutral description and a note
+about the pinned numpy constraint.
+
+**Effort:** 2 minutes.
 
 ---
 
-## What does NOT need to change
+## Recommended Execution Order
+
+Execute as a **single coordinated commit** once training results are in hand
+and the codebase is stable.  Doing this piecemeal risks a window where imports
+are broken across commits.
+
+1. **Issue 7** — Fix the architecture doc stale reference (5 min, no code)
+2. **Issue 8** — Fix `requirements.txt` header (2 min)
+3. **Issues 1–3** — Directory renames: `src/` → `classical/`, `agent_docs/` → `docs/`, `models/` → `configs/`
+   - Update all internal references in the same commit
+   - Update `CLAUDE.md` in the same commit
+4. **Issue 4** — Create `common/`, move shared modules, update all callers
+5. **Issue 5** — Add `pyproject.toml`, verify `pip install -e .` works
+6. **Issue 6** — Add `scripts/run_classical.py` CLI entry point
+
+**Total effort:** approximately 6–8 hours of focused work.
+
+A future maintainer arriving after this refactor is complete can:
+- Read the directory tree and immediately understand what each package does
+- Run `pip install -e .` to get a working development install
+- Find all project documentation in `docs/`
+- Know that `classical/` is the frozen baseline and everything else is active
+- Find shared math utilities in `common/` rather than searching three packages
+
+---
+
+## What Does NOT Need to Change
 
 - The module boundary between `inference/` and `api/` — clean already
 - The abstract storage/queue backends in `api/` — correct design
 - The `training/` ↔ `inference/` dependency (training imports fits_loader) — intentional
 - The lazy imports in `inference/pipeline.py` — needed for MPS/CPU flexibility
 - The `db/` schema — no structural issues
-- The test directory structure — mirrors source layout correctly
+- The `frontend/` layout — standard Vite project structure
+- The `eval/` module — clean interface
+- The `docker/` layout — correct separation of dev and cloud compose files

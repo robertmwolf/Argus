@@ -1,16 +1,48 @@
 {
-  "date_recorded": "",
-  "model": "dino_swin_l",
-  "map_50": 0.0,
-  "map_75": 0.0,
-  "recall": 0.0,
-  "precision": 0.0,
-  "f1": 0.0,
-  "mean_angle_error_deg": 0.0,
+  "date_recorded": "2026-05-04T22:15:00Z",
+  "notes": "Swin-T DINO trained 50 epochs on 50-image synthetic dev subset (30 streaked, 20 blank), 256x256, CPU. COCO bbox mAP from mmdet COCO evaluator on val split. OBB angle eval is N/A (fast=True mode, Radon skipped; DINO outputs axis-aligned bboxes). Cloud Swin-L training on full dataset required to hit Phase 8 targets.",
+  "model": "dino_swin_t_local",
+  "weights": "weights/local_run/best_coco_bbox_mAP_epoch_50.pth",
+  "training_epochs": 50,
+  "training_images": 50,
+  "val_images": 10,
+  "device": "cpu (MPS unsupported for DINO)",
+  "map_50": 0.716,
+  "map_75": 0.301,
+  "map_coco_avg": 0.325,
+  "recall": null,
+  "precision": null,
+  "f1": null,
+  "mean_angle_error_deg": null,
   "per_band": {
-    "short":  {"precision": 0.0, "recall": 0.0, "f1": 0.0},
-    "medium": {"precision": 0.0, "recall": 0.0, "f1": 0.0},
-    "long":   {"precision": 0.0, "recall": 0.0, "f1": 0.0}
+    "short": {
+      "map_50": null,
+      "precision": null,
+      "recall": null,
+      "f1": null
+    },
+    "medium": {
+      "map_50": null,
+      "precision": null,
+      "recall": null,
+      "f1": null
+    },
+    "long": {
+      "map_50": null,
+      "precision": null,
+      "recall": null,
+      "f1": null
+    }
   },
-  "yolo_baseline": {"map_50": 0.0, "recall": 0.0, "precision": 0.0}
+  "yolo_baseline": {
+    "map_50": null,
+    "recall": null,
+    "precision": null,
+    "notes": "YOLO training still in progress"
+  },
+  "phase8_targets": {
+    "precision": ">=0.94",
+    "recall": ">=0.97",
+    "status": "pending_cloud_training"
+  }
 }
