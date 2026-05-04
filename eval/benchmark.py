@@ -127,8 +127,9 @@ def run_pipeline_predictions(
         # Source: Ultralytics YOLO11-OBB baseline inference
         try:
             from ultralytics import YOLO
+            import cv2
         except ImportError as exc:
-            raise ImportError("ultralytics is required for YOLO baseline") from exc
+            raise ImportError("ultralytics and opencv are required for YOLO baseline") from exc
 
         weights = Path("weights/yolo_baseline.pt")
         if not weights.exists():
@@ -136,13 +137,24 @@ def run_pipeline_predictions(
 
         yolo = YOLO(str(weights))
 
+        # YOLO cannot read FITS — find the matching PNG in the pre-converted dataset
+        png_train = Path("weights/yolo_baseline/dataset/images/train")
+        png_val   = Path("weights/yolo_baseline/dataset/images/val")
+
         for img_info in coco["images"]:
-            fits_path = image_dir / img_info["file_name"]
-            if not fits_path.exists():
-                logger.warning("Image not found, skipping: %s", fits_path)
+            stem = Path(img_info["file_name"]).stem
+            # Search train then val for the converted PNG
+            png_path = None
+            for png_dir in (png_train, png_val):
+                candidate = png_dir / (stem + ".png")
+                if candidate.exists():
+                    png_path = candidate
+                    break
+            if png_path is None:
+                logger.warning("PNG not found for %s, skipping", stem)
                 continue
-            logger.info("Running YOLO on %s", fits_path.name)
-            results = yolo(str(fits_path))
+            logger.info("Running YOLO on %s", png_path.name)
+            results = yolo(str(png_path))
             for result in results:
                 if result.obb is None:
                     continue

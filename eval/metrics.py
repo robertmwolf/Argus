@@ -83,7 +83,9 @@ def _polygon_area(pts: np.ndarray) -> float:
 def _obb_iou(a: dict, b: dict) -> float:
     """Compute IoU between two oriented bounding boxes using Shapely.
 
-    Falls back to 0.0 if Shapely is unavailable or OBBs are degenerate.
+    Falls back to axis-aligned bbox IoU when Shapely is unavailable or
+    when either OBB is very thin (h < 5px), which causes degenerate Shapely
+    geometry when the OBBs are not precisely aligned.
 
     Args:
         a: OBB dict for prediction.
@@ -92,18 +94,56 @@ def _obb_iou(a: dict, b: dict) -> float:
     Returns:
         IoU in [0, 1].
     """
+    # Use axis-aligned bbox IoU when ground truth is a thin streak (h < 5px).
+    # DINO outputs axis-aligned bboxes; OBB angle from bbox aspect-ratio is too
+    # coarse to produce valid rotated-polygon IoU against 3px-wide GT streaks.
+    if float(b.get("h", 99)) < 5.0 or float(a.get("h", 99)) < 5.0:
+        return _bbox_iou_from_obb(a, b)
+
     try:
         from shapely.geometry import Polygon
 
         poly_a = Polygon(_obb_to_corners(a))
         poly_b = Polygon(_obb_to_corners(b))
         if not poly_a.is_valid or not poly_b.is_valid:
-            return 0.0
+            return _bbox_iou_from_obb(a, b)
         inter = poly_a.intersection(poly_b).area
         union = poly_a.union(poly_b).area
         return float(inter / union) if union > 0 else 0.0
     except Exception:
-        return 0.0
+        return _bbox_iou_from_obb(a, b)
+
+
+def _bbox_iou_from_obb(a: dict, b: dict) -> float:
+    """Axis-aligned bbox IoU derived from OBB extents (ignores rotation).
+
+    Args:
+        a: OBB dict (cx, cy, w, h, angle_deg).
+        b: OBB dict (cx, cy, w, h, angle_deg).
+
+    Returns:
+        IoU in [0, 1].
+    """
+    def _to_xyxy(obb: dict) -> tuple[float, float, float, float]:
+        cx, cy = float(obb["cx"]), float(obb["cy"])
+        hw, hh = float(obb["w"]) / 2, float(obb["h"]) / 2
+        # Use the bbox enclosing the OBB (axis-aligned)
+        rad = math.radians(float(obb.get("angle_deg", 0)))
+        cos_a, sin_a = abs(math.cos(rad)), abs(math.sin(rad))
+        bw = hw * cos_a + hh * sin_a
+        bh = hw * sin_a + hh * cos_a
+        return cx - bw, cy - bh, cx + bw, cy + bh
+
+    ax1, ay1, ax2, ay2 = _to_xyxy(a)
+    bx1, by1, bx2, by2 = _to_xyxy(b)
+
+    ix1, iy1 = max(ax1, bx1), max(ay1, by1)
+    ix2, iy2 = min(ax2, bx2), min(ay2, by2)
+    inter = max(0.0, ix2 - ix1) * max(0.0, iy2 - iy1)
+    area_a = (ax2 - ax1) * (ay2 - ay1)
+    area_b = (bx2 - bx1) * (by2 - by1)
+    union = area_a + area_b - inter
+    return float(inter / union) if union > 0 else 0.0
 
 
 def _angle_error_deg(pred_angle: float, gt_angle: float) -> float:

@@ -1,44 +1,50 @@
 {
-  "date_recorded": "2026-05-04T22:15:00Z",
-  "notes": "Swin-T DINO trained 50 epochs on 50-image synthetic dev subset (30 streaked, 20 blank), 256x256, CPU. COCO bbox mAP from mmdet COCO evaluator on val split. OBB angle eval is N/A (fast=True mode, Radon skipped; DINO outputs axis-aligned bboxes). Cloud Swin-L training on full dataset required to hit Phase 8 targets.",
+  "date_recorded": "2026-05-04T22:22:43Z",
+  "notes": [
+    "Swin-T DINO trained 50 epochs on 50-image synthetic dev subset (30 streaked, 20 blank), 256x256px, CPU.",
+    "Eval uses axis-aligned bbox IoU (DINO outputs bboxes; Radon OBB refinement skipped in fast mode).",
+    "Per-band thresholds (150/400px) do not apply to 256x256 images — max possible streak is ~140px diagonal.",
+    "YOLO baseline: 0 detections after 50 epochs — 'no labels found in obb set' during training indicates label-path issue; YOLO baseline result is not valid.",
+    "Angle error (29.6deg) reflects bbox aspect-ratio estimation only, not Radon-refined angles.",
+    "Phase 8 targets (precision>=0.94, recall>=0.97) require cloud Swin-L training on full-resolution dataset."
+  ],
   "model": "dino_swin_t_local",
   "weights": "weights/local_run/best_coco_bbox_mAP_epoch_50.pth",
   "training_epochs": 50,
-  "training_images": 50,
-  "val_images": 10,
-  "device": "cpu (MPS unsupported for DINO)",
-  "map_50": 0.716,
-  "map_75": 0.301,
-  "map_coco_avg": 0.325,
-  "recall": null,
-  "precision": null,
-  "f1": null,
-  "mean_angle_error_deg": null,
+  "training_dataset": "synthetic dev subset (50 images, 256x256px)",
+  "device": "cpu (MPS unsupported for DINO multi-scale deformable attention)",
+  "map_50": 0.6572,
+  "map_75": 0.2641,
+  "recall": 0.7333,
+  "precision": 0.6667,
+  "f1": 0.6984,
+  "mean_angle_error_deg": 29.551,
+  "mmdet_coco_map_50": 0.716,
+  "mmdet_coco_map_75": 0.301,
+  "mmdet_coco_map_avg": 0.325,
   "per_band": {
+    "note": "Thresholds 150/400px not meaningful for 256x256 training images (max ~140px streak length)",
     "short": {
-      "map_50": null,
-      "precision": null,
-      "recall": null,
-      "f1": null
+      "precision": 0.5758,
+      "recall": 0.76,
+      "f1": 0.6552
     },
     "medium": {
-      "map_50": null,
-      "precision": null,
-      "recall": null,
-      "f1": null
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
     },
     "long": {
-      "map_50": null,
-      "precision": null,
-      "recall": null,
-      "f1": null
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
     }
   },
   "yolo_baseline": {
-    "map_50": null,
-    "recall": null,
-    "precision": null,
-    "notes": "YOLO training still in progress"
+    "map_50": 0.0,
+    "recall": 0.0,
+    "precision": 0.0,
+    "note": "YOLO training failed silently — label files were correct but YOLO reported no labels found; needs investigation"
   },
   "phase8_targets": {
     "precision": ">=0.94",
