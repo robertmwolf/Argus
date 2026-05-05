@@ -15,6 +15,20 @@ export SPACETRACK_PASS=yourpassword
 
 ---
 
+## API Policy (read carefully)
+
+Space-Track has flagged the following as violations:
+- Querying `gp_history` repeatedly for the same date ranges.
+- Using `gp_history` when the GP class is appropriate.
+
+**Rules**:
+1. Once you download historical TLE data from `gp_history`, store it locally and never re-download it.  Historical TLEs are immutable — cache them permanently.
+2. For current/recent TLEs (live pipeline), use the `GP` class, at most **once per hour**.
+3. For large historical date ranges or full-catalog dumps, download the **annual TLE zip bundles** — do not use `gp_history` for bulk retrieval:
+   https://ln5.sync.com/dl/afd354190/c5cd2q72-a5qjzp4q-nbjdiqkr-cenajuqu
+
+---
+
 ## Rate Limits
 
 | Limit | Value | Notes |
@@ -34,21 +48,38 @@ time.sleep(3)  # between Space-Track calls
 
 ## Key API Classes
 
-### GP (current element sets)
-Current TLE/OMM for all catalogued objects.
-Use this only if you need today's positions — NOT for historical matching.
+### GP class — use this for current/live TLEs
+For active-satellite TLEs (live inference pipeline).
+Call at most **once per hour**.  Time your calls 10–20 minutes off the top and
+bottom of the hour (e.g. HH:12 or HH:48, **never** HH:00 or HH:30) to avoid
+peak load periods.
 
-```python
-# Get current TLE for ISS:
-st.gp(norad_cat_id=25544, format='json')
-
-# Get all currently active satellites:
-st.gp(decay_date='null-val', format='json')
+Space-Track's recommended query:
+```
+https://www.space-track.org/basicspacedata/query/class/gp/decay_date/null-val/CREATION_DATE/%3Enow-0.042/format/tle
 ```
 
-### GP_History (historical element sets — USE THIS for your pipeline)
-**This is the primary API for your system.**
-Contains ALL historical TLE sets — 138+ million records.
+Equivalent via the spacetrack Python library (use JSON format so the pipeline
+gets dict records instead of raw TLE text):
+```python
+import spacetrack.operators as op
+from datetime import datetime, timedelta, timezone
+
+cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=1)
+results = st.gp(
+    decay_date="null-val",
+    creation_date=op.greater_than(cutoff.strftime("%Y-%m-%dT%H:%M:%S")),
+    orderby="norad_cat_id asc",
+)
+```
+
+In ARGUS code, call `query_gp_current()` from `src/matching/spacetrack_query.py`.
+It enforces the one-hour rate limit internally via a 55-minute disk cache.
+
+### GP_History class — one-time ad-hoc historical queries only
+For cross-identifying objects in **archival images** (obs_time > 2 hours ago).
+
+**Do not poll this class.**  Fetch the data once, cache it permanently.
 
 ```python
 import spacetrack.operators as op
@@ -57,96 +88,53 @@ from datetime import datetime, timedelta
 obs_time = datetime(2024, 4, 2, 2, 55, 24)
 window = timedelta(days=3)
 
-# Fetch TLEs within 3 days before observation
 results = st.gp_history(
     epoch=op.inclusive_range(
         obs_time - window,
         obs_time
     ),
-    orderby='epoch desc',    # most recent first per object
-    format='json'
+    mean_motion=op.greater_than(11.25),  # LEO only
+    orderby='epoch desc',
 )
 ```
 
-**Filtering by object type (reduces result size significantly):**
-```python
-# LEO objects only (most likely to appear in ground-based images)
-results = st.gp_history(
-    epoch=op.inclusive_range(obs_time - window, obs_time),
-    mean_motion=op.greater_than(11.25),  # >11.25 rev/day = LEO
-    format='json'
-)
+In ARGUS code, call `query_gp_history()` from `src/matching/spacetrack_query.py`.
+It caches results **permanently** (TTL=None) for observations older than 2 hours.
 
-# Starlink constellation only (for Starlink-dense images)
-results = st.gp_history(
-    epoch=op.inclusive_range(obs_time - window, obs_time),
-    object_name='STARLINK~',  # ~ is wildcard
-    format='json'
-)
-```
+**For large date ranges**: do not use `gp_history` — download the annual zip
+bundles from:
+https://ln5.sync.com/dl/afd354190/c5cd2q72-a5qjzp4q-nbjdiqkr-cenajuqu
 
 ---
 
-## Caching Strategy
+## Routing in ARGUS
 
-**Critical:** Never re-query Space-Track for the same time window.
-Cache everything to disk.
+`inference/crossid.py → _fetch_tle_catalog()` routes automatically:
 
-```python
-import diskcache as dc
-import hashlib
-import json
-from datetime import datetime, timedelta
-
-cache = dc.Cache('data/cache')
-
-def make_cache_key(obs_time: datetime, window_days: int) -> str:
-    # Round obs_time to nearest hour to maximize cache hits
-    # Images taken minutes apart will share the same cache entry
-    rounded = obs_time.replace(minute=0, second=0, microsecond=0)
-    return f"gp_history_{rounded.strftime('%Y%m%d%H')}_{window_days}d"
-
-def get_ttl(obs_time: datetime) -> int:
-    """Historical queries never change. Recent queries do."""
-    age_days = (datetime.utcnow() - obs_time).days
-    if age_days > 7:
-        return 30 * 24 * 3600   # 30 days for historical
-    elif age_days > 1:
-        return 24 * 3600         # 24 hours for recent
-    else:
-        return 2 * 3600          # 2 hours for very recent
-```
+| obs_time age | API class used | Cache TTL |
+|---|---|---|
+| < 2 hours | `GP` via `query_gp_current()` | 55 minutes |
+| ≥ 2 hours | `GP_History` via `query_gp_history()` | **Permanent** |
 
 ---
 
 ## TLE Format Reference
 
-The JSON response from GP_History contains these fields:
+The JSON response from both GP and GP_History contains these fields:
 
 ```json
 {
-  "CCSDS_OPM_VERS": "2.0",
-  "COMMENT": "GENERATED VIA SPACETRACK.ORG API",
-  "CREATION_DATE": "2024-04-02T04:00:00",
-  "ORIGINATOR": "18 SPCS",
   "OBJECT_NAME": "STARLINK-2183",
-  "OBJECT_ID": "2021-044AP",
   "NORAD_CAT_ID": "48274",
   "OBJECT_TYPE": "PAYLOAD",
-  "CLASSIFICATION_TYPE": "U",
   "EPOCH": "2024-04-02T02:30:00.123456",
-  "MEAN_MOTION": "15.06389548",       // rev/day — >11.25 = LEO
+  "MEAN_MOTION": "15.06389548",
   "ECCENTRICITY": ".0001423",
-  "INCLINATION": "53.0538",           // degrees
+  "INCLINATION": "53.0538",
   "RA_OF_ASC_NODE": "142.5671",
   "ARG_OF_PERICENTER": "89.4284",
   "MEAN_ANOMALY": "270.6936",
-  "EPHEMERIS_TYPE": "0",
-  "ELEMENT_SET_NO": "999",
-  "REV_AT_EPOCH": "16982",
   "BSTAR": ".35291E-3",
-  "MEAN_MOTION_DOT": ".51230E-4",
-  "MEAN_MOTION_DDOT": "0",
   "TLE_LINE1": "1 48274U ...",
   "TLE_LINE2": "2 48274  ..."
 }
@@ -195,14 +183,14 @@ from spacetrack.base import AuthenticationError
 import requests
 
 try:
-    results = st.gp_history(...)
+    results = st.gp(...)
 except AuthenticationError:
     logger.error("Space-Track authentication failed. Check SPACETRACK_USER/PASS env vars.")
     raise
 except requests.exceptions.Timeout:
     logger.warning("Space-Track request timed out. Will retry with backoff.")
     time.sleep(30)
-    results = st.gp_history(...)  # one retry
+    results = st.gp(...)  # one retry
 except requests.exceptions.ConnectionError:
     logger.error("Cannot reach Space-Track. Check network connection.")
     raise
@@ -213,25 +201,19 @@ except requests.exceptions.ConnectionError:
 ## Useful Test Queries
 
 ```python
-# Verify your account works — fetch ISS current TLE
+# Verify your account works — fetch ISS current TLE via GP class
 iss = st.gp(norad_cat_id=25544, format='json')
 print(iss[0]['OBJECT_NAME'])  # Should print: ISS (ZARYA)
 
-# Count LEO objects in a historical window (sanity check)
-count = st.gp_history(
-    epoch=op.inclusive_range('2024-04-01', '2024-04-02'),
-    mean_motion=op.greater_than(11.25),
-    format='count'
-)
-print(f"LEO objects with TLEs on 2024-04-01/02: {count}")
-# Expect: 5,000–15,000
+# Fetch all active TLEs (GP class, ≤ once/hour):
+from src.matching.spacetrack_query import query_gp_current
+tles = query_gp_current()
+print(f"Active objects: {len(tles)}")
 
-# Fetch all Starlink passes in a 3-day window (moderate size query)
-starlinks = st.gp_history(
-    epoch=op.inclusive_range('2024-04-01', '2024-04-04'),
-    object_name='STARLINK~',
-    orderby='epoch desc',
-    format='json'
-)
-print(f"Starlink TLEs in window: {len(list(starlinks))}")
+# Fetch historical TLEs for a specific archival observation (cached permanently):
+from src.matching.spacetrack_query import query_gp_history
+from datetime import datetime, timezone
+obs = datetime(2024, 4, 2, 2, 55, 24, tzinfo=timezone.utc)
+tles = query_gp_history(obs, epoch_window_days=1)
+print(f"TLEs in 1-day window: {len(tles)}")
 ```
