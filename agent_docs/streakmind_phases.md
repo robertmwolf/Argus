@@ -332,7 +332,7 @@ Override `docker-compose.cloud.yml` for S3 + SQS deployment.
 
 ---
 
-## Phase 8 — Evaluation  ✅ COMPLETE (framework — awaiting trained weights for real numbers)
+## Phase 8 — Evaluation  ✅ COMPLETE (local dev results recorded; cloud training pending)
 
 ### `eval/metrics.py`
 
@@ -342,27 +342,42 @@ def evaluate(predictions, ground_truth) -> dict:
     mean_angle_error_deg; per_band (short/medium/long streaks)."""
 ```
 
+IoU note: ground-truth streaks are ~3 px wide; DINO outputs axis-aligned bboxes.
+`_obb_iou()` falls back to axis-aligned bbox IoU when GT height < 5 px so narrow
+synthetic streaks score correctly against DINO predictions.
+
 ### `eval/benchmark.py`
 Head-to-head: DINO vs YOLO11-OBB baseline on same test split.
 Output markdown table + save per-image results to `eval/results/`.
 
+**Batch inference API** — the benchmark loads the DINO model once before the
+image loop (not once per image):
+
+```python
+from inference.pipeline import load_model, run as pipeline_run
+
+dino_model, dino_device = load_model()          # one checkpoint load
+for img_info in coco["images"]:
+    dets = pipeline_run(
+        fits_path=fits_path, fast=True,
+        model=dino_model, inference_device=dino_device,  # reuse loaded model
+    )
+```
+
 Target metrics (from StreakMind paper):
-- DINO: ≥94% precision, ≥97% recall
+- DINO Swin-L: ≥94% precision, ≥97% recall
 - YOLO baseline: reference comparison
 
-### Results template: `results/phase8_benchmark.json`
-```json
-{
-  "date_recorded": "",
-  "model": "dino_swin_l",
-  "map_50": 0.0, "map_75": 0.0,
-  "recall": 0.0, "precision": 0.0, "f1": 0.0,
-  "mean_angle_error_deg": 0.0,
-  "per_band": {
-    "short":  {"precision": 0.0, "recall": 0.0, "f1": 0.0},
-    "medium": {"precision": 0.0, "recall": 0.0, "f1": 0.0},
-    "long":   {"precision": 0.0, "recall": 0.0, "f1": 0.0}
-  },
-  "yolo_baseline": {"map_50": 0.0, "recall": 0.0, "precision": 0.0}
-}
-```
+### Local dev results: `results/phase8_benchmark.json`
+Recorded 2026-05-05. Swin-T, 50 epochs, 50-image synthetic dev subset, 256×256px, CPU.
+
+| Metric | DINO Swin-T | YOLO11-OBB | Target |
+|--------|-------------|------------|--------|
+| mAP@0.5 | 65.7% | 36.0% | — |
+| Precision | 66.7% | 63.2% | ≥94% |
+| Recall | 73.3% | 40.0% | ≥97% |
+| F1 | 69.8% | 49.0% | — |
+| Angle error | 29.6°* | 0.66° | — |
+
+*DINO angle is estimated from bbox aspect ratio in fast mode (Radon skipped).
+YOLO angle is real (OBB corner-point output).

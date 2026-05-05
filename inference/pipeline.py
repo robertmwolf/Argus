@@ -280,12 +280,67 @@ def _angle_from_bbox(bbox: list[float]) -> float:
 
 
 # ---------------------------------------------------------------------------
+# Public model loader (for batch inference — load once, run many)
+# ---------------------------------------------------------------------------
+
+def load_model(
+    model_size: str | None = None,
+    weights_path: str | Path | None = None,
+) -> tuple[Any, Any]:
+    """Load the DINO detector once for reuse across multiple images.
+
+    Call this before a batch inference loop and pass the returned values to
+    ``run()`` via the ``model`` and ``inference_device`` parameters to avoid
+    reloading the checkpoint on every image.
+
+    Args:
+        model_size: 'tiny' or 'large'.  Defaults to the MODEL_SIZE env var
+            (or 'tiny' if unset).
+        weights_path: Explicit path to a .pth checkpoint.  Defaults to the
+            MODEL_WEIGHTS env var, then ``weights/dino_{model_size}.pth``.
+
+    Returns:
+        (model, inference_device) — pass both to ``run()``.
+
+    Raises:
+        FileNotFoundError: If the weights file does not exist.
+        EnvironmentError: If model_size='large' on a non-CUDA device.
+    """
+    if model_size is None:
+        model_size = os.environ.get("MODEL_SIZE", "tiny")
+
+    from inference.device import get_device
+    device = get_device()
+
+    import torch as _torch
+    inference_device = device
+    if device.type == "mps" and not _torch.cuda.is_available():
+        inference_device = _torch.device("cpu")
+        logger.debug("MPS device detected — forcing DINO inference to CPU")
+
+    config_path = _select_config(model_size)
+
+    if weights_path is None:
+        weights_env = os.environ.get("MODEL_WEIGHTS", "")
+        if weights_env:
+            weights_path = Path(weights_env)
+        else:
+            root = Path(__file__).resolve().parent.parent
+            weights_path = root / "weights" / f"dino_{model_size}.pth"
+
+    model = _load_model(config_path, Path(weights_path), inference_device)
+    return model, inference_device
+
+
+# ---------------------------------------------------------------------------
 # Main pipeline entry point
 # ---------------------------------------------------------------------------
 
 def run(
     fits_path: str | Path,
     fast: bool = False,
+    model: Any | None = None,
+    inference_device: Any | None = None,
 ) -> list[dict]:
     """Run the full ARGUS inference pipeline on a single FITS image.
 
@@ -294,6 +349,11 @@ def run(
         fast: If True, skip Radon refinement, cross-ID, and DB write.
             Equivalent to setting FAST_MODE=true.  Uses image_size=256.
             Target: <60 s wall time per image on Mac.
+        model: Pre-loaded MMDetection model from ``load_model()``.  When
+            provided, the checkpoint is not reloaded — use this for batch
+            eval loops to avoid loading 187 MB per image.
+        inference_device: The device the pre-loaded model lives on.
+            Required when ``model`` is passed; ignored otherwise.
 
     Returns:
         List of detection dicts.  Each dict has keys:
@@ -338,22 +398,26 @@ def run(
     dev_config = get_device_config()
     image_size = _FAST_IMAGE_SIZE if fast else dev_config["image_size"]
 
-    config_path = _select_config(model_size)
-    if weights_env:
-        weights_path = Path(weights_env)
-    else:
-        root = Path(__file__).resolve().parent.parent
-        weights_path = root / "weights" / f"dino_{model_size}.pth"
+    if model is None:
+        config_path = _select_config(model_size)
+        if weights_env:
+            weights_path = Path(weights_env)
+        else:
+            root = Path(__file__).resolve().parent.parent
+            weights_path = root / "weights" / f"dino_{model_size}.pth"
 
-    # DINO multi-scale deformable attention exceeds MPS's 4 GB per-allocation
-    # limit.  Force CPU on Mac until a memory-efficient MPS path is available.
-    import torch as _torch
-    inference_device = device
-    if device.type == "mps" and not _torch.cuda.is_available():
-        inference_device = _torch.device("cpu")
-        logger.debug("MPS device detected — forcing DINO inference to CPU")
+        # DINO multi-scale deformable attention exceeds MPS's 4 GB per-allocation
+        # limit.  Force CPU on Mac until a memory-efficient MPS path is available.
+        import torch as _torch
+        inference_device = device
+        if device.type == "mps" and not _torch.cuda.is_available():
+            inference_device = _torch.device("cpu")
+            logger.debug("MPS device detected — forcing DINO inference to CPU")
 
-    model      = _load_model(config_path, weights_path, inference_device)
+        model = _load_model(config_path, weights_path, inference_device)
+    elif inference_device is None:
+        inference_device = device
+
     raw_dets   = _run_inference(model, array, image_size)
     inference_ms = (time.perf_counter() - t1) * 1000
     logger.debug("inference_ms=%.1f  raw_dets=%d", inference_ms, len(raw_dets))
