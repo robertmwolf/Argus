@@ -126,7 +126,7 @@ Argus/
 ├── eval/                      ← metrics, benchmark, results  ✅
 ├── db/                        ← schema.sql, async ORM models  ✅
 ├── docker/                    ← docker-compose  [Phase 7]
-├── tests/                     ← 342 tests, all passing
+├── tests/                     ← 325 tests passing, 15 integration tests auto-skipped
 ├── data/
 │   ├── sample/                ← synthetic FITS for smoke-testing  ✅
 │   ├── raw/                   ← MILAN FITS (gitignored, download separately)
@@ -182,7 +182,10 @@ docker compose -f docker-compose.yml -f docker-compose.cloud.yml up
 ```bash
 conda activate satid
 pytest tests/ -v
-# 342 passed, 1 skipped (CUDA test, skipped on Mac)
+# 325 passed, 15 skipped (integration tests auto-skipped — require Space-Track creds)
+
+# Run live Space-Track API tests (requires SPACETRACK_USER and SPACETRACK_PASS):
+pytest tests/ -m integration -v
 ```
 
 ## Generating Synthetic Test Data
@@ -206,7 +209,8 @@ MODEL_SIZE=large python scripts/download_weights.py
 
 ## Local Training (Mac M3, no GPU required)
 
-All phases 0–8 are code-complete with 342 passing tests. To produce real detection
+All phases 0–8 are code-complete with 325 passing tests (plus 15 integration tests that
+run against the live Space-Track API — auto-skipped by default). To produce real detection
 results without a cloud GPU, train the Swin-T model on the 50-image dev subset:
 
 ```bash
@@ -228,19 +232,23 @@ PYTORCH_ENABLE_MPS_FALLBACK=1 MODEL_SIZE=tiny USE_DEV_SUBSET=true \
   python -m training.train_dino --work-dir weights/local_run
 
 # 6. Run inference with trained weights
-MODEL_WEIGHTS=weights/local_run/best.pth MODEL_SIZE=tiny \
+#    mmdet saves the best checkpoint as best_coco_bbox_mAP_epoch_NN.pth
+MODEL_WEIGHTS=weights/local_run/best_coco_bbox_mAP_epoch_50.pth MODEL_SIZE=tiny \
   PYTORCH_ENABLE_MPS_FALLBACK=1 \
   python -m inference.pipeline --fast --image data/sample/synth_streak_000.fits
 
-# 7. Evaluate
+# 7. Evaluate (loads model once for all images — fast)
 python -m eval.benchmark \
   --run-pipeline \
   --annotations data/annotations/dev_subset.json \
   --output results/phase8_benchmark.json
 ```
 
-Expected local results: ~50–70% mAP (50-image dataset is small; Swin-L on full
-dataset is needed for ≥94% precision / ≥97% recall paper targets).
+Recorded local results (50-image dev subset, Swin-T, CPU, 50 epochs):
+- DINO Swin-T: mAP@0.5=65.7%, precision=66.7%, recall=73.3%, F1=69.8%
+- YOLO11-OBB: mAP@0.5=36.0%, precision=63.2%, recall=40.0%, angle error=0.66°
+
+Swin-L on the full dataset is needed for ≥94% precision / ≥97% recall (paper targets).
 
 ## Cloud Training (Lambda A100)
 

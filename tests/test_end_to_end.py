@@ -153,7 +153,6 @@ class TestAngularSeparation:
         assert sep == pytest.approx(1.0, abs=1e-6)
 
 
-@pytest.mark.integration
 class TestFullPipelineWithMockPropagator:
     """Full pipeline test: streak → spatial filter (mocked) → match."""
 

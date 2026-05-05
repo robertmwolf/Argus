@@ -106,7 +106,10 @@ def run_pipeline_predictions(
     predictions = []
 
     if model == "dino":
-        from inference.pipeline import run as pipeline_run
+        from inference.pipeline import load_model, run as pipeline_run
+
+        logger.info("Loading DINO model (once for all images)…")
+        dino_model, dino_device = load_model()
 
         for img_info in coco["images"]:
             fits_path = image_dir / img_info["file_name"]
@@ -114,7 +117,12 @@ def run_pipeline_predictions(
                 logger.warning("Image not found, skipping: %s", fits_path)
                 continue
             logger.info("Running DINO on %s", fits_path.name)
-            dets = pipeline_run(fits_path=fits_path, fast=True)
+            dets = pipeline_run(
+                fits_path=fits_path,
+                fast=True,
+                model=dino_model,
+                inference_device=dino_device,
+            )
             for det in dets:
                 predictions.append({
                     "image_id": img_info["file_name"],

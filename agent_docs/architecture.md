@@ -239,8 +239,10 @@ weighted_score = (
    Z-score normalize → 3-channel uint8 array
    Extract WCS metadata
         ↓
-[Co-DINO inference — MMDetection]
-   models/dino/streak_codino_swin_l.py
+[Co-DINO inference — inference/pipeline.py]
+   pipeline.load_model()  — load once for batch eval
+   pipeline.run(fits_path, model=model)  — reuse preloaded model
+   models/dino/streak_codino_swin_l.py  — MMDetection config
    → axis-aligned bboxes + confidence scores
         ↓
 [inference/postprocess.py — AngleRefinement + StreakNMS]

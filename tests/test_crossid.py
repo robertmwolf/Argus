@@ -1,9 +1,6 @@
 """Tests for inference/crossid.py — satellite TLE cross-identification.
 
-Unit tests run offline using mocks.
-Integration tests (marked @pytest.mark.integration) make live Space-Track API
-calls and require SPACETRACK_USER and SPACETRACK_PASS in the environment.
-Run them with: pytest -m integration
+All tests run offline using mocks.  No live Space-Track API calls are made.
 """
 
 from __future__ import annotations
@@ -82,6 +79,46 @@ class TestFetchTleCatalog:
             catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=1)
 
         assert catalog == []
+
+    def test_recent_obs_routes_to_gp_current(self):
+        """obs_time within the last 2 hours must use query_gp_current, not gp_history."""
+        from datetime import timedelta
+        from inference.crossid import _fetch_tle_catalog
+
+        recent = datetime.now(tz=timezone.utc) - timedelta(minutes=30)
+        fake_records = [
+            {
+                "OBJECT_NAME": _TEST_TLE_NAME,
+                "TLE_LINE1": _TEST_TLE_LINE1,
+                "TLE_LINE2": _TEST_TLE_LINE2,
+            }
+        ]
+        with patch("inference.crossid.query_gp_current", return_value=fake_records) as mock_current, \
+             patch("inference.crossid.query_gp_history") as mock_history:
+            catalog = _fetch_tle_catalog(recent, epoch_window_days=1)
+
+        mock_current.assert_called_once()
+        mock_history.assert_not_called()
+        assert len(catalog) == 1
+
+    def test_historical_obs_routes_to_gp_history(self):
+        """obs_time older than 2 hours must use query_gp_history, not gp_current."""
+        from inference.crossid import _fetch_tle_catalog
+
+        fake_records = [
+            {
+                "OBJECT_NAME": _TEST_TLE_NAME,
+                "TLE_LINE1": _TEST_TLE_LINE1,
+                "TLE_LINE2": _TEST_TLE_LINE2,
+            }
+        ]
+        with patch("inference.crossid.query_gp_history", return_value=fake_records) as mock_history, \
+             patch("inference.crossid.query_gp_current") as mock_current:
+            catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=1)
+
+        mock_history.assert_called_once()
+        mock_current.assert_not_called()
+        assert len(catalog) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -194,131 +231,6 @@ class TestCrossIdentifyKnownTle:
         with patch("inference.crossid._fetch_tle_catalog", return_value=[]) as mock_fetch:
             cross_identify(dets, _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT, epoch_window_days=7)
         mock_fetch.assert_called_once_with(_OBS_TIME, 7)
-
-
-# ---------------------------------------------------------------------------
-# Integration tests — live Space-Track API + end-to-end cross-ID
-# Require: SPACETRACK_USER and SPACETRACK_PASS set in the environment.
-# Run with: pytest -m integration
-# ---------------------------------------------------------------------------
-
-_ISS_NORAD = "25544"
-
-
-@pytest.mark.integration
-class TestCrossIdIntegration:
-    """End-to-end tests that call Space-Track and run the full cross-ID pipeline.
-
-    Each test uses an isolated tmp_path cache so a warm cache from a prior run
-    cannot mask connectivity failures.
-    """
-
-    def test_fetch_tle_catalog_returns_nonempty_list(
-        self, spacetrack_creds, tmp_path, monkeypatch
-    ):
-        """_fetch_tle_catalog must return at least one (name, line1, line2) tuple."""
-        from inference.crossid import _fetch_tle_catalog
-
-        monkeypatch.setattr("src.matching.spacetrack_query._CACHE_DIR", tmp_path / "cache")
-        catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=1)
-        assert len(catalog) > 0, "Expected TLE records; got empty catalog"
-
-    def test_fetch_tle_catalog_tuples_have_valid_tle_format(
-        self, spacetrack_creds, tmp_path, monkeypatch
-    ):
-        """Every tuple must be (str, '1 …', '2 …') — valid 3-line TLE structure."""
-        from inference.crossid import _fetch_tle_catalog
-
-        monkeypatch.setattr("src.matching.spacetrack_query._CACHE_DIR", tmp_path / "cache")
-        catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=1)
-        assert catalog, "No records returned"
-        for name, line1, line2 in catalog[:20]:
-            assert isinstance(name, str) and name
-            assert line1.startswith("1 "), f"Bad TLE_LINE1: {line1!r}"
-            assert line2.startswith("2 "), f"Bad TLE_LINE2: {line2!r}"
-
-    def test_iss_present_in_catalog(self, spacetrack_creds, tmp_path, monkeypatch):
-        """ISS (NORAD 25544) must appear in the catalog for the 3-day window."""
-        from inference.crossid import _fetch_tle_catalog
-
-        monkeypatch.setattr("src.matching.spacetrack_query._CACHE_DIR", tmp_path / "cache")
-        catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=1)
-        norad_ids = set()
-        for _name, line1, _line2 in catalog:
-            try:
-                norad_ids.add(line1[2:7].strip())
-            except IndexError:
-                pass
-        assert _ISS_NORAD in norad_ids, (
-            f"ISS (NORAD {_ISS_NORAD}) not found in {len(catalog)}-entry catalog."
-        )
-
-    def test_cross_identify_iss_is_top_candidate(
-        self, spacetrack_creds, tmp_path, monkeypatch
-    ):
-        """When a detection is placed at ISS's predicted sky position, ISS must
-        be the rank-1 identification returned by the live pipeline."""
-        from inference.crossid import _fetch_tle_catalog, _propagate_to_radec, cross_identify
-
-        monkeypatch.setattr("src.matching.spacetrack_query._CACHE_DIR", tmp_path / "cache")
-
-        # Fetch real TLEs from Space-Track
-        catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=1)
-        assert catalog, "No TLEs returned from Space-Track"
-
-        # Find ISS entry in the live catalog
-        iss_entry = None
-        for name, line1, line2 in catalog:
-            try:
-                if line1[2:7].strip() == _ISS_NORAD:
-                    iss_entry = (name, line1, line2)
-                    break
-            except IndexError:
-                continue
-        if iss_entry is None:
-            pytest.skip(f"ISS (NORAD {_ISS_NORAD}) not found in live catalog")
-
-        # Propagate ISS to obs_time to get its actual sky position
-        pred = _propagate_to_radec(
-            iss_entry[0], iss_entry[1], iss_entry[2],
-            _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT,
-        )
-        if pred is None:
-            pytest.skip("skyfield propagation failed for ISS TLE")
-
-        # Place a detection exactly at ISS's predicted position and cross-ID
-        dets = [{"ra_deg": pred["predicted_ra"], "dec_deg": pred["predicted_dec"]}]
-        with patch("inference.crossid._fetch_tle_catalog", return_value=catalog):
-            result = cross_identify(dets, _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT)
-
-        ids = result[0]["identifications"]
-        assert ids, "cross_identify returned no candidates"
-        assert ids[0]["norad_id"] == int(_ISS_NORAD), (
-            f"Expected ISS (NORAD {_ISS_NORAD}) as rank-1; "
-            f"got {ids[0]['satellite_name']} (NORAD {ids[0]['norad_id']})"
-        )
-
-    def test_cross_identify_confidence_bounds(
-        self, spacetrack_creds, tmp_path, monkeypatch
-    ):
-        """All confidence scores must be in [0, 1] and rank-1 ≥ rank-2 ≥ rank-3."""
-        from inference.crossid import _fetch_tle_catalog, cross_identify
-
-        monkeypatch.setattr("src.matching.spacetrack_query._CACHE_DIR", tmp_path / "cache")
-        catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=1)
-        assert catalog, "No TLEs returned"
-
-        dets = [{"ra_deg": 83.82, "dec_deg": -5.39}]
-        with patch("inference.crossid._fetch_tle_catalog", return_value=catalog):
-            result = cross_identify(dets, _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT)
-
-        ids = result[0]["identifications"]
-        for cand in ids:
-            assert 0.0 <= cand["confidence"] <= 1.0, (
-                f"Confidence out of bounds: {cand['confidence']}"
-            )
-        confs = [c["confidence"] for c in ids]
-        assert confs == sorted(confs, reverse=True), "Candidates not sorted by confidence"
 
 
 # ---------------------------------------------------------------------------

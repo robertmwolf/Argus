@@ -11,15 +11,28 @@ The numbers from Phase 1 become the comparison target for Phase 2.
 
 ```
 tests/
-├── conftest.py              ← shared fixtures (sample FITS, mock TLEs)
-├── test_fits_parser.py      ← Week 1
-├── test_classical_detector.py  ← Week 2
-├── test_plate_solver.py     ← Week 3
-├── test_spacetrack_query.py ← Week 3
-├── test_propagator.py       ← Week 4
-├── test_matcher.py          ← Week 4
-├── test_scorer.py           ← Week 4
-└── test_end_to_end.py       ← Week 4 (integration)
+├── conftest.py                  ← shared fixtures; auto-skip integration/real_data markers
+├── test_fits_parser.py          ← Phase 0: FITS parsing
+├── test_classical_detector.py   ← Phase 0: ASTRiDE detection
+├── test_plate_solver.py         ← Phase 0: WCS plate solving
+├── test_spacetrack_query.py     ← Phase 0/3: Space-Track query + caching
+├── test_matcher.py              ← Phase 0: SGP4 matcher
+├── test_scorer.py               ← Phase 0: multi-factor scorer
+├── test_end_to_end.py           ← Phase 0: classical pipeline end-to-end
+├── test_fits_loader.py          ← Phase 1: FITS→tensor loader
+├── test_convert_labels.py       ← Phase 1: COCO label conversion
+├── test_dataset.py              ← Phase 1: FITSStreakDataset
+├── test_augmentations.py        ← Phase 1: albumentations pipeline
+├── test_device.py               ← Phase 2: device abstraction
+├── test_model_configs.py        ← Phase 2: MMDet config validation
+├── test_train_dino.py           ← Phase 2: training script
+├── test_pipeline.py             ← Phase 3: inference pipeline
+├── test_postprocess.py          ← Phase 3: Radon refinement + NMS
+├── test_crossid.py              ← Phase 3: TLE cross-identification
+├── test_db.py                   ← Phase 4: async ORM models
+├── test_api.py                  ← Phase 5: FastAPI endpoints
+├── test_eval.py                 ← Phase 8: metrics + benchmark
+└── test_real_images.py          ← real FITS images (auto-skipped when dir empty)
 ```
 
 ---
@@ -85,7 +98,7 @@ def luxembourg_observer():
 ## Running Tests
 
 ```bash
-# All tests
+# All tests (325 passing, 15 integration tests auto-skipped)
 pytest tests/ -v
 
 # Single module
@@ -99,6 +112,9 @@ pytest tests/ -x
 
 # Run only tests matching a keyword
 pytest tests/ -k "streak" -v
+
+# Live Space-Track API tests (requires SPACETRACK_USER + SPACETRACK_PASS):
+pytest tests/ -m integration -v
 ```
 
 ---
@@ -165,31 +181,29 @@ results/confirmed_passes.json            ← ground truth, small, commit this
 results/phase1_baseline.json             ← once recorded, commit this
 ```
 
-### Generating sample FITS for CI
-In CI environments without real FITS files, use synthetic fixtures only.
-The conftest.py fixtures generate synthetic FITS in tmp dirs — no real data needed for unit tests.
-Only `test_end_to_end.py` needs real FITS files and real Space-Track access.
-Mark those tests to skip in CI:
+### Integration and real-data tests
 
-```python
-import pytest
-import os
+`conftest.py` registers two markers and auto-skips them in normal `pytest` runs:
 
-requires_real_data = pytest.mark.skipif(
-    not os.path.exists('data/milan'),
-    reason="Real FITS data not available"
-)
+- `@pytest.mark.integration` — tests that call the live Space-Track API.
+  Auto-skipped unless `-m integration` is passed.  Require `SPACETRACK_USER`
+  and `SPACETRACK_PASS` in the environment (or a `.env` file at the project root).
+- `@pytest.mark.real_data` — tests that read real FITS images from `tests/data/test/`.
+  Auto-skipped unless `-m real_data` is passed.
 
-requires_spacetrack = pytest.mark.skipif(
-    'SPACETRACK_USER' not in os.environ,
-    reason="Space-Track credentials not set"
-)
+```bash
+# Normal run — no network calls, no real FITS needed:
+pytest tests/ -v
 
-@requires_real_data
-@requires_spacetrack
-def test_full_pipeline_on_real_image():
-    ...
+# Live Space-Track API tests (requires credentials):
+pytest tests/ -m integration -v
+
+# Real-image tests (drop .fits files into tests/data/test/ first):
+pytest tests/ -m real_data -v
 ```
+
+The auto-skip is implemented as a `pytest_collection_modifyitems` hook in
+`conftest.py` — no `skipif` decorators needed on individual tests.
 
 ---
 

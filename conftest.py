@@ -27,7 +27,8 @@ def pytest_configure(config):
         "markers",
         "integration: tests that make live network calls to external APIs "
         "(Space-Track, etc.). Require SPACETRACK_USER and SPACETRACK_PASS "
-        "in the environment or in a .env file at the project root.",
+        "in the environment or in a .env file at the project root. "
+        "Skipped by default — run with: pytest -m integration",
     )
     config.addinivalue_line(
         "markers",
@@ -35,6 +36,29 @@ def pytest_configure(config):
         "Skipped automatically when the directory is empty. "
         "Run explicitly with: pytest -m real_data",
     )
+
+
+def pytest_collection_modifyitems(config, items):
+    """Auto-skip integration and real_data tests unless explicitly selected.
+
+    Running ``pytest`` (no -m flag) never touches the live Space-Track API
+    or real FITS files.  Pass ``-m integration`` or ``-m real_data`` to opt
+    in.
+    """
+    marker_expr = config.option.markexpr if hasattr(config.option, "markexpr") else ""
+
+    skip_integration = pytest.mark.skip(
+        reason="live API test — run with: pytest -m integration"
+    )
+    skip_real_data = pytest.mark.skip(
+        reason="requires real FITS files — run with: pytest -m real_data"
+    )
+
+    for item in items:
+        if "integration" in item.keywords and "integration" not in marker_expr:
+            item.add_marker(skip_integration)
+        if "real_data" in item.keywords and "real_data" not in marker_expr:
+            item.add_marker(skip_real_data)
 
 
 @pytest.fixture(scope="session")
