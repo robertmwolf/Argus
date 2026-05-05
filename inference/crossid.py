@@ -1,9 +1,11 @@
 """Satellite ephemeris cross-identification for ARGUS inference detections.
 
-Cross-matches DINO OBB detections against Space-Track GP_History TLEs using
-SGP4 propagation and Gaussian confidence scoring.  TLE data is fetched
-directly from Space-Track for the observation time window and cached to disk
-via src.matching.spacetrack_query.
+Cross-matches DINO OBB detections against Space-Track TLEs using SGP4
+propagation and Gaussian confidence scoring.
+
+TLE source routing (Space-Track API policy compliance):
+  - obs_time within last 2 hours → query_gp_current() [GP class, ≤1/hr]
+  - obs_time older than 2 hours  → query_gp_history() [GP_History, cached permanently]
 
 Requires environment variables:
     SPACETRACK_USER — your Space-Track account email
@@ -20,7 +22,7 @@ import math
 from datetime import datetime, timezone
 from typing import Any
 
-from src.matching.spacetrack_query import query_gp_history
+from src.matching.spacetrack_query import query_gp_current, query_gp_history
 
 logger = logging.getLogger(__name__)
 
@@ -38,19 +40,39 @@ def _fetch_tle_catalog(
     obs_time: datetime,
     epoch_window_days: int,
 ) -> list[tuple[str, str, str]]:
-    """Fetch TLEs from Space-Track GP_History for the observation window.
+    """Fetch TLEs for the observation time, routing to the correct API class.
 
-    Delegates to src.matching.spacetrack_query.query_gp_history which handles
-    authentication, rate limiting, and disk caching.
+    Space-Track API policy routing:
+      - obs_time within the last 2 hours: use the optimised GP class via
+        query_gp_current() (cached 55 min; never called more than once/hour).
+      - obs_time older than 2 hours: use GP_History via query_gp_history()
+        for a one-time ad-hoc fetch, cached permanently.
 
     Args:
         obs_time: UTC observation time.
-        epoch_window_days: Days before obs_time to include in the epoch search.
+        epoch_window_days: Days before obs_time to include (GP_History path only).
 
     Returns:
         List of (name, line1, line2) tuples ready for SGP4 propagation.
     """
-    records = query_gp_history(obs_time, epoch_window_days=epoch_window_days)
+    if obs_time.tzinfo is None:
+        obs_time = obs_time.replace(tzinfo=timezone.utc)
+
+    age_hours = (datetime.now(tz=timezone.utc) - obs_time).total_seconds() / 3600
+
+    if age_hours < 2:
+        # Live/near-live observation: use GP class (optimised, ≤ once per hour).
+        logger.info(
+            "obs_time is %.1f hours old — using GP class (query_gp_current)", age_hours
+        )
+        records = query_gp_current()
+    else:
+        # Historical observation: use GP_History once; result cached permanently.
+        logger.info(
+            "obs_time is %.1f hours old — using GP_History (query_gp_history)", age_hours
+        )
+        records = query_gp_history(obs_time, epoch_window_days=epoch_window_days)
+
     catalog: list[tuple[str, str, str]] = []
     for rec in records:
         name  = rec.get("OBJECT_NAME", "UNKNOWN")
