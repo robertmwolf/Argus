@@ -1,12 +1,13 @@
 {
-  "date_recorded": "2026-05-04T22:22:43Z",
+  "date_recorded": "2026-05-05T02:25:50Z",
   "notes": [
-    "Swin-T DINO trained 50 epochs on 50-image synthetic dev subset (30 streaked, 20 blank), 256x256px, CPU.",
+    "Swin-T DINO: 50 epochs, 50-image synthetic dev subset, 256x256px, CPU.",
+    "YOLO11n-OBB: 50 epochs, same dataset, CPU (MPS crashes on 0-instance batches).",
     "Eval uses axis-aligned bbox IoU (DINO outputs bboxes; Radon OBB refinement skipped in fast mode).",
-    "Per-band thresholds (150/400px) do not apply to 256x256 images — max possible streak is ~140px diagonal.",
-    "YOLO baseline: 0 detections after 50 epochs — 'no labels found in obb set' during training indicates label-path issue; YOLO baseline result is not valid.",
-    "Angle error (29.6deg) reflects bbox aspect-ratio estimation only, not Radon-refined angles.",
-    "Phase 8 targets (precision>=0.94, recall>=0.97) require cloud Swin-L training on full-resolution dataset."
+    "YOLO angle error (0.66 deg) is meaningful — YOLO outputs true OBBs with corner-point labels.",
+    "DINO angle error (29.6 deg) reflects fast-mode bbox aspect-ratio estimation only, not Radon-refined angles.",
+    "Per-band thresholds (150/400px) not meaningful for 256x256 training images (max streak ~140px diagonal).",
+    "Phase 8 targets (precision>=0.94, recall>=0.97) require cloud Swin-L training on full-resolution real data."
   ],
   "model": "dino_swin_t_local",
   "weights": "weights/local_run/best_coco_bbox_mAP_epoch_50.pth",
@@ -41,10 +42,15 @@
     }
   },
   "yolo_baseline": {
-    "map_50": 0.0,
-    "recall": 0.0,
-    "precision": 0.0,
-    "note": "YOLO training failed silently — label files were correct but YOLO reported no labels found; needs investigation"
+    "model": "yolo11n-obb",
+    "weights": "weights/yolo_baseline.pt",
+    "training_epochs": 50,
+    "device": "cpu",
+    "map_50": 0.3603,
+    "recall": 0.4,
+    "precision": 0.6316,
+    "f1": 0.49,
+    "mean_angle_error_deg": 0.656
   },
   "phase8_targets": {
     "precision": ">=0.94",
