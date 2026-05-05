@@ -4,8 +4,8 @@
 ARGUS is an academic research pipeline for automated satellite streak detection
 and identification in FITS telescope images.  It detects satellite streaks using
 a DINO transformer model (Swin backbone), refines streak orientation via the
-Radon transform, and cross-identifies detected objects against historical
-Two-Line Element (TLE) orbital data from the US Space Force Space-Track catalog
+Radon transform, and cross-identifies detected objects against a local TLE
+catalog — sourced once from Space-Track and stored in the ARGUS database —
 using SGP4 propagation and multi-factor confidence scoring.  Results are served
 through a FastAPI backend and React frontend.
 
@@ -100,7 +100,7 @@ Argus/
 │   ├── ingest/fits_parser.py
 │   ├── detection/classical_detector.py
 │   ├── astrometry/plate_solver.py
-│   └── matching/              ← scorer, propagator, spatial_filter, matcher, spacetrack_query
+│   └── matching/              ← scorer, propagator, spatial_filter, matcher, spacetrack_query, tle_store
 ├── inference/                 ← ML inference modules
 │   ├── device.py              ← get_device() / get_device_config()  ✅
 │   ├── fits_loader.py         ← FITS → tensor, Z-score normalisation  ✅
@@ -118,9 +118,11 @@ Argus/
 │       ├── streak_codino_swin_t.py   ← Swin-T dev config  ✅
 │       └── streak_codino_swin_l.py   ← Swin-L cloud config  ✅
 ├── scripts/
-│   ├── make_test_fits.py      ← synthetic FITS generator  ✅
-│   ├── download_weights.py    ← pretrained weight downloader  ✅
-│   └── prepare_cloud_training.py  ← go/no-go checklist  [Phase 6]
+│   ├── make_test_fits.py           ← synthetic FITS generator  ✅
+│   ├── download_weights.py         ← pretrained weight downloader  ✅
+│   ├── bootstrap_tle_catalog.py    ← one-time TLE catalog setup  ✅
+│   ├── update_tle_catalog.py       ← hourly TLE refresh (GP class)  ✅
+│   └── prepare_cloud_training.py   ← go/no-go checklist  [Phase 6]
 ├── api/                       ← FastAPI application  ✅
 ├── frontend/                  ← React 18 + Vite + Tailwind  ✅
 ├── eval/                      ← metrics, benchmark, results  ✅
@@ -146,13 +148,22 @@ conda create -n satid python=3.11
 conda activate satid
 pip install -r requirements.txt
 
-# Set Space-Track credentials (required for matching)
-export SPACETRACK_USER=your@email.com
-export SPACETRACK_PASS=yourpassword
-
 # Set model size (tiny=Mac dev, large=cloud A100)
 export MODEL_SIZE=tiny
 export PYTORCH_ENABLE_MPS_FALLBACK=1
+
+# Bootstrap the local TLE catalog (one-time per environment):
+# 1. Download the 2025 annual bundle from Space-Track's cloud storage:
+#    https://ln5.sync.com/dl/afd354190/c5cd2q72-a5qjzp4q-nbjdiqkr-cenajuqu
+#    Place the file (e.g. tle2025.txt or TLE_2025.zip) in data/tle_zips/
+python scripts/bootstrap_tle_catalog.py --zip-dir data/tle_zips/ --years 2025
+
+# Space-Track credentials (only needed for live TLE maintenance, not inference):
+export SPACETRACK_USER=your@email.com
+export SPACETRACK_PASS=yourpassword
+
+# Update the catalog with the latest active satellites (≤ once/hour, respects rate limits):
+python scripts/update_tle_catalog.py
 ```
 
 ## Running with Docker
@@ -182,10 +193,7 @@ docker compose -f docker-compose.yml -f docker-compose.cloud.yml up
 ```bash
 conda activate satid
 pytest tests/ -v
-# 325 passed, 15 skipped (integration tests auto-skipped — require Space-Track creds)
-
-# Run live Space-Track API tests (requires SPACETRACK_USER and SPACETRACK_PASS):
-pytest tests/ -m integration -v
+# All tests are pure unit/synthetic-data tests — no live API calls, no credentials required
 ```
 
 ## Generating Synthetic Test Data

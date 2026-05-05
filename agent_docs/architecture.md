@@ -25,10 +25,11 @@
              → sky cone (FOV center + radius)
              → observer ECEF coords
                       ↓
-           [4. Space-Track GP_History Query]
-             src/matching/spacetrack_query.py
-             → filtered by epoch range + optional object type
-             → cached to disk keyed by (obs_hour, ra, dec)
+           [4. Local TLE Catalog Query (DB-first, API fallback)]
+             src/matching/tle_store.py          — primary: SQLite tle_catalog table
+             src/matching/spacetrack_query.py   — fallback: GP class (live) or GP_History (archive)
+             → filtered by epoch range (obs_time ± epoch_window_days)
+             → DB hit returns instantly; API results stored immediately for future queries
              → returns ~5,000–15,000 candidate TLEs
                       ↓
            [5. Spatial Cone Filter]
@@ -167,23 +168,30 @@ Position scores are penalized for stale TLEs using a Gaussian decay:
 - 24–72 hours: ~50% score
 - > 72 hours: ~20% score (flagged in output)
 
-### Surgical Space-Track Queries
-Never pull the full catalog. Always filter by:
-1. Epoch range (± 3 days of obs_time) — reduces 50k → 5–15k objects
-2. Spatial cone (local SGP4 prescreen) — reduces 5–15k → 5–50 objects
-3. Only then run full SGP4 for the small surviving set
+### TLE Catalog Strategy
+TLE data is stored permanently in the local `argus.db` SQLite database (`tle_catalog` table).
+The lookup path in `crossid.py` is:
+1. **DB first**: `query_tles_for_window()` — epoch-range filter, returns in milliseconds
+2. **API fallback**: only if DB returns nothing
+   - obs_time < 2 hours old → `query_gp_current()` (GP class, ≤ once/hour rate limit)
+   - obs_time ≥ 2 hours old → `query_gp_history()` (GP_History, use sparingly)
+3. **Store immediately**: API results are written to DB via `upsert_tles()` before returning
+
+Bootstrap the DB once per environment with `scripts/bootstrap_tle_catalog.py`. Keep it
+current with `scripts/update_tle_catalog.py` (hourly cron or manual).
 
 ### Historical Image Support
-The pipeline is identical for current and archival images.
-For a 6-month-old image, the Space-Track query targets GP_History
-using the obs_time from the FITS header — not today's catalog.
-This is handled transparently in spacetrack_query.py.
+The pipeline is identical for current and archival images. For a 6-month-old image,
+`query_tles_for_window()` filters the local DB by the obs_time epoch from the FITS header.
+No API call is needed once historical data is bootstrapped. If the local DB lacks coverage
+for that period, `query_gp_history()` is called as a one-time fallback and the results
+are stored locally for all future queries.
 
-### Caching Strategy
-Cache Space-Track query results to disk keyed by:
-  (obs_time rounded to nearest hour, ra_center rounded to 1°, dec_center rounded to 1°)
-TTL: 24 hours for historical queries (data won't change),
-     2 hours for recent queries (catalog updates frequently).
+### Spatial Filtering
+Never run full SGP4 on the entire TLE window. Always:
+1. Epoch-range filter in the DB (obs_time ± epoch_window_days) — reduces 16M → 5–15k
+2. Spatial cone (local SGP4 prescreen in `spatial_filter.py`) — reduces 5–15k → 5–50
+3. Only then run full SGP4 propagation for the small surviving set
 
 ## Scoring Formulas
 
@@ -252,7 +260,8 @@ weighted_score = (
         ↓
 [inference/crossid.py — SatelliteCrossIdentifier]
    WCS → RA/Dec for streak midpoints
-   SGP4 propagate TLE catalog to obs epoch
+   DB-first TLE lookup (src/matching/tle_store.py), API fallback
+   SGP4 propagate candidate TLEs to obs epoch
    Gaussian confidence score per candidate
    Top-3 identifications per detection
         ↓

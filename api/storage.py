@@ -60,6 +60,46 @@ class StorageBackend(ABC):
             PNG bytes, or None if not found.
         """
 
+    @abstractmethod
+    async def save_preview(self, job_id: str, data: bytes) -> None:
+        """Persist a raw preview PNG (no detection overlays).
+
+        Args:
+            job_id: UUID string identifying the job.
+            data: PNG bytes to store.
+        """
+
+    @abstractmethod
+    async def load_preview(self, job_id: str) -> bytes | None:
+        """Load the raw preview PNG, or None if not yet available.
+
+        Args:
+            job_id: UUID string identifying the job.
+
+        Returns:
+            PNG bytes, or None if not found.
+        """
+
+    @abstractmethod
+    async def save_fits_header(self, job_id: str, data: bytes) -> None:
+        """Persist serialised FITS header JSON.
+
+        Args:
+            job_id: UUID string identifying the job.
+            data: UTF-8 encoded JSON bytes.
+        """
+
+    @abstractmethod
+    async def load_fits_header(self, job_id: str) -> bytes | None:
+        """Load serialised FITS header JSON, or None if not available.
+
+        Args:
+            job_id: UUID string identifying the job.
+
+        Returns:
+            UTF-8 encoded JSON bytes, or None if not found.
+        """
+
 
 class LocalStorage(StorageBackend):
     """Stores files under a local base directory."""
@@ -85,6 +125,24 @@ class LocalStorage(StorageBackend):
         path = self._base / job_id / "result.png"
         return path.read_bytes() if path.exists() else None
 
+    async def save_preview(self, job_id: str, data: bytes) -> None:
+        path = self._base / job_id / "preview.png"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+
+    async def load_preview(self, job_id: str) -> bytes | None:
+        path = self._base / job_id / "preview.png"
+        return path.read_bytes() if path.exists() else None
+
+    async def save_fits_header(self, job_id: str, data: bytes) -> None:
+        path = self._base / job_id / "header.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+
+    async def load_fits_header(self, job_id: str) -> bytes | None:
+        path = self._base / job_id / "header.json"
+        return path.read_bytes() if path.exists() else None
+
 
 class S3Storage(StorageBackend):
     """AWS S3 storage backend — implemented in Phase 7."""
@@ -99,6 +157,18 @@ class S3Storage(StorageBackend):
         raise NotImplementedError("S3 storage not implemented until Phase 7")
 
     async def load_image(self, job_id: str) -> bytes | None:
+        raise NotImplementedError("S3 storage not implemented until Phase 7")
+
+    async def save_preview(self, job_id: str, data: bytes) -> None:
+        raise NotImplementedError("S3 storage not implemented until Phase 7")
+
+    async def load_preview(self, job_id: str) -> bytes | None:
+        raise NotImplementedError("S3 storage not implemented until Phase 7")
+
+    async def save_fits_header(self, job_id: str, data: bytes) -> None:
+        raise NotImplementedError("S3 storage not implemented until Phase 7")
+
+    async def load_fits_header(self, job_id: str) -> bytes | None:
         raise NotImplementedError("S3 storage not implemented until Phase 7")
 
 
