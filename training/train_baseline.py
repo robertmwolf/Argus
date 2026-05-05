@@ -132,18 +132,29 @@ def _coco_to_yolo_dataset(
                 cv2.imwrite(str(dst), np.zeros((img_h, img_w, 3), dtype=np.uint8))
 
         # YOLO OBB label: one line per annotation (stem matches the .png image)
-        # Format: class_id cx_norm cy_norm w_norm h_norm angle_deg
+        # Format: class_id x1_n y1_n x2_n y2_n x3_n y3_n x4_n y4_n
+        # (normalized corner coordinates of the rotated bbox, same as DOTA format)
         label_path = out_dir / "labels" / split / (stem + ".txt")
         anns = id_to_anns.get(img_id, [])
         lines = []
+        import math as _math
         for ann in anns:
             obb = ann["obb"]  # [cx_px, cy_px, w_px, h_px, angle_deg]
-            cx_n = obb[0] / img_w
-            cy_n = obb[1] / img_h
-            w_n  = obb[2] / img_w
-            h_n  = obb[3] / img_h
-            angle = obb[4]
-            lines.append(f"0 {cx_n:.6f} {cy_n:.6f} {w_n:.6f} {h_n:.6f} {angle:.4f}")
+            cx, cy, w, h, angle_deg = obb[0], obb[1], obb[2], obb[3], obb[4]
+            rad = _math.radians(angle_deg)
+            cos_a, sin_a = _math.cos(rad), _math.sin(rad)
+            hw, hh = w / 2, h / 2
+            # Four corners in local frame, rotated, then shifted to image coords
+            corners = [
+                (cx + (-hw) * cos_a - (-hh) * sin_a, cy + (-hw) * sin_a + (-hh) * cos_a),
+                (cx + ( hw) * cos_a - (-hh) * sin_a, cy + ( hw) * sin_a + (-hh) * cos_a),
+                (cx + ( hw) * cos_a - ( hh) * sin_a, cy + ( hw) * sin_a + ( hh) * cos_a),
+                (cx + (-hw) * cos_a - ( hh) * sin_a, cy + (-hw) * sin_a + ( hh) * cos_a),
+            ]
+            coords = " ".join(
+                f"{x / img_w:.6f} {y / img_h:.6f}" for x, y in corners
+            )
+            lines.append(f"0 {coords}")
         label_path.write_text("\n".join(lines) + ("\n" if lines else ""))
 
     # Write dataset.yaml
@@ -223,21 +234,25 @@ def train(
         epochs=epochs,
         imgsz=imgsz,
         batch=_BATCH_SIZE,
-        project=str(work_dir),
+        # Use absolute path so YOLO saves directly to work_dir/run/ rather
+        # than under Ultralytics' default runs/obb/{project}/ directory.
+        project=str(work_dir.resolve()),
         name="run",
         exist_ok=True,
-        device="mps" if _device_is_mps() else ("cuda" if _device_is_cuda() else "cpu"),
-        workers=0,          # MPS requires 0; harmless on CPU
+        # MPS crashes with 0-instance batches (blank images) due to a PyTorch
+        # MPS limitation with zero-size tensors in OBB loss computation.
+        device="cuda" if _device_is_cuda() else "cpu",
+        workers=0,
         verbose=True,
         save=True,
         val=True,
     )
 
-    best_path = work_dir / "run" / "weights" / "best.pt"
+    best_path = work_dir.resolve() / "run" / "weights" / "best.pt"
     if best_path.exists():
         print(f"\nBest weights: {best_path}")
     else:
-        print(f"\nTraining complete. Weights in {work_dir}/run/weights/")
+        print(f"\nTraining complete. Weights in {work_dir.resolve()}/run/weights/")
 
     if smoke_test:
         print("Smoke test passed.")
