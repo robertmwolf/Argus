@@ -3,9 +3,10 @@
 ## What This Is
 An end-to-end pipeline that detects satellite streaks in FITS telescope images
 using a Co-DINO transformer model (Swin-L backbone), refines streak angle via
-the Radon transform, and cross-identifies detected objects against TLE orbital
-data from Space-Track's GP_History API using SGP4 propagation and multi-factor
-confidence scoring. Results are served through a FastAPI backend and React frontend.
+the Radon transform, and cross-identifies detected objects against a local TLE
+catalog (sourced once from Space-Track, stored in the ARGUS database) using SGP4
+propagation and multi-factor confidence scoring. Results are served through a
+FastAPI backend and React frontend.
 
 ## Current Phase
 **ALL IMPLEMENTATION PHASES COMPLETE — local training done, cloud GPU training next.**
@@ -44,7 +45,7 @@ Always read the relevant agent_docs file before writing code:
 - `agent_docs/dependencies.md`       — exact packages, versions, install commands
 - `agent_docs/service_roadmap.md`    — Docker, deployment, cloud scale path
 - `agent_docs/test_strategy.md`      — how to measure and record baseline accuracy
-- `agent_docs/spacetrack.md`         — Space-Track API usage, rate limits, caching rules
+- `agent_docs/spacetrack.md`         — Space-Track API policy, TLE catalog setup, rate limits
 
 ## Stack
 - Python 3.11, conda environment named `satid`
@@ -67,7 +68,7 @@ Argus/
 │   ├── ingest/fits_parser.py
 │   ├── detection/classical_detector.py
 │   ├── astrometry/plate_solver.py
-│   └── matching/            ← scorer, spacetrack_query, spatial_filter, propagator, matcher
+│   └── matching/            ← scorer, spacetrack_query, tle_store, spatial_filter, propagator, matcher
 ├── inference/               ← ML inference modules
 │   ├── fits_loader.py       ← FITS→tensor, Z-score normalisation (Phase 1 ✅)
 │   ├── device.py            ← get_device() helper — CPU/MPS/CUDA (Phase 2, next)
@@ -96,6 +97,7 @@ Argus/
 │   ├── raw/                 ← original FITS files (gitignored)
 │   ├── processed/           ← converted PNGs (gitignored)
 │   ├── catalogs/            ← TLE catalog files
+│   ├── tle_zips/            ← Space-Track annual TLE bundles (gitignored, one-time setup)
 │   └── annotations/         ← COCO-format JSON label files
 ├── tests/                   ← pytest (mirrors src/ and top-level module layout)
 ├── results/                 ← baseline metrics JSON output
@@ -150,8 +152,6 @@ academic research code.
 
 ## Environment Variables Required
 ```bash
-export SPACETRACK_USER=your@email.com
-export SPACETRACK_PASS=yourpassword
 export DATABASE_URL=sqlite+aiosqlite:///./argus.db   # default
 export MODEL_SIZE=tiny     # tiny=Swin-T (dev/MPS), large=Swin-L (A100)
 # Optional for cloud deployment:
@@ -159,12 +159,40 @@ export STORAGE_BACKEND=local   # or s3
 export QUEUE_BACKEND=memory    # or sqs
 export S3_BUCKET=
 export AWS_REGION=
+
+# Space-Track credentials — only needed for TLE catalog maintenance:
+#   scripts/bootstrap_tle_catalog.py --update-current
+#   scripts/update_tle_catalog.py  (hourly GP-class updater)
+# NOT required for day-to-day inference once the TLE catalog is bootstrapped.
+export SPACETRACK_USER=your@email.com
+export SPACETRACK_PASS=yourpassword
 ```
+
+## TLE Catalog Setup (one-time per environment)
+
+The cross-identification pipeline reads TLEs from a local database table
+(`tle_catalog` in `argus.db`) rather than querying Space-Track at inference
+time.  This must be bootstrapped once per environment.
+
+```bash
+# 1. Download annual TLE bundle(s) from Space-Track's cloud storage:
+#    https://ln5.sync.com/dl/afd354190/c5cd2q72-a5qjzp4q-nbjdiqkr-cenajuqu
+#    Place file(s) in data/tle_zips/  (any .zip or .txt format is accepted)
+
+# 2. Load into the database (idempotent — safe to re-run):
+python scripts/bootstrap_tle_catalog.py --zip-dir data/tle_zips/ --years 2025
+
+# 3. Keep current TLEs fresh (run at most once/hour, e.g. via cron at HH:12 and HH:48):
+python scripts/update_tle_catalog.py
+```
+
+See `agent_docs/spacetrack.md` for full API policy details.
 
 ## Running Tests
 ```bash
 conda activate satid
 pytest tests/ -v
+# All tests are offline (mocked) — no Space-Track credentials required
 ```
 
 ## Workflow Rules
@@ -261,6 +289,5 @@ After epoch 1 completes, print estimated total time and Lambda cost ($1.29/hr), 
 ## Deferred Work (stub with `raise NotImplementedError`)
 
 Do not implement until Phase 7 weights exist:
-- Live Space-Track cross-ID (use local TLE file only for now)
 - Multi-frame tracklet association (DB schema only)
 - Swin-L → Swin-T weight distillation

@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from src.matching.spacetrack_query import query_gp_current, query_gp_history
+from src.matching.tle_store import query_tles_for_window, upsert_tles
 
 logger = logging.getLogger(__name__)
 
@@ -40,17 +41,22 @@ def _fetch_tle_catalog(
     obs_time: datetime,
     epoch_window_days: int,
 ) -> list[tuple[str, str, str]]:
-    """Fetch TLEs for the observation time, routing to the correct API class.
+    """Return TLEs for the observation window, querying the local DB first.
 
-    Space-Track API policy routing:
-      - obs_time within the last 2 hours: use the optimised GP class via
-        query_gp_current() (cached 55 min; never called more than once/hour).
-      - obs_time older than 2 hours: use GP_History via query_gp_history()
-        for a one-time ad-hoc fetch, cached permanently.
+    Lookup order:
+      1. Local ``tle_catalog`` DB table — populated at environment setup by
+         ``scripts/bootstrap_tle_catalog.py`` and kept current by
+         ``scripts/update_tle_catalog.py``.  Zero Space-Track calls when the
+         DB has coverage.
+      2. Space-Track API fallback (only when the DB is empty for this window):
+         - obs_time < 2 hours old → GP class via query_gp_current() (≤ 1/hr)
+         - obs_time ≥ 2 hours old → GP_History via query_gp_history() (one-time)
+         API results are stored in the DB before returning so the same window
+         is never re-fetched from Space-Track.
 
     Args:
         obs_time: UTC observation time.
-        epoch_window_days: Days before obs_time to include (GP_History path only).
+        epoch_window_days: Days before obs_time to search.
 
     Returns:
         List of (name, line1, line2) tuples ready for SGP4 propagation.
@@ -58,31 +64,45 @@ def _fetch_tle_catalog(
     if obs_time.tzinfo is None:
         obs_time = obs_time.replace(tzinfo=timezone.utc)
 
-    age_hours = (datetime.now(tz=timezone.utc) - obs_time).total_seconds() / 3600
+    # --- 1. Local DB lookup ---
+    db_rows = query_tles_for_window(obs_time, epoch_window_days)
+    if db_rows:
+        logger.debug("TLE catalog DB hit: %d records for window", len(db_rows))
+        return [
+            (r["object_name"], r["tle_line1"], r["tle_line2"])
+            for r in db_rows
+        ]
 
+    # --- 2. API fallback ---
+    age_hours = (datetime.now(tz=timezone.utc) - obs_time).total_seconds() / 3600
     if age_hours < 2:
-        # Live/near-live observation: use GP class (optimised, ≤ once per hour).
         logger.info(
-            "obs_time is %.1f hours old — using GP class (query_gp_current)", age_hours
+            "DB empty for window; obs_time %.1f h old — falling back to GP class",
+            age_hours,
         )
-        records = query_gp_current()
+        api_records = query_gp_current()
     else:
-        # Historical observation: use GP_History once; result cached permanently.
         logger.info(
-            "obs_time is %.1f hours old — using GP_History (query_gp_history)", age_hours
+            "DB empty for window; obs_time %.1f h old — falling back to GP_History",
+            age_hours,
         )
-        records = query_gp_history(obs_time, epoch_window_days=epoch_window_days)
+        api_records = query_gp_history(obs_time, epoch_window_days=epoch_window_days)
+
+    # Store API results so this window is never re-fetched
+    if api_records:
+        stored = upsert_tles(api_records)
+        logger.info("Stored %d new TLE records from API into local DB", stored)
 
     catalog: list[tuple[str, str, str]] = []
-    for rec in records:
+    for rec in api_records:
         name  = rec.get("OBJECT_NAME", "UNKNOWN")
         line1 = rec.get("TLE_LINE1", "")
         line2 = rec.get("TLE_LINE2", "")
         if line1 and line2:
             catalog.append((name, line1, line2))
     logger.debug(
-        "Space-Track returned %d records; %d have TLE lines",
-        len(records), len(catalog),
+        "API returned %d records; %d have TLE lines",
+        len(api_records), len(catalog),
     )
     return catalog
 

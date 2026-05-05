@@ -149,6 +149,41 @@ class TrackletDetection(Base):
     frame_index: Mapped[int | None] = mapped_column(Integer)
 
 
+class TleCatalogEntry(Base):
+    """One TLE epoch for one catalogued object.
+
+    Populated at environment setup from Space-Track annual zip bundles and
+    kept current by the hourly GP-class updater.  Never re-fetched from
+    gp_history once stored here.
+    """
+
+    __tablename__ = "tle_catalog"
+
+    norad_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    epoch: Mapped[str] = mapped_column(Text, primary_key=True)  # ISO8601 UTC
+    object_name: Mapped[str] = mapped_column(Text, nullable=False)
+    object_type: Mapped[str | None] = mapped_column(Text)
+    mean_motion: Mapped[float | None] = mapped_column(Float)    # rev/day
+    tle_line1: Mapped[str] = mapped_column(Text, nullable=False)
+    tle_line2: Mapped[str] = mapped_column(Text, nullable=False)
+    ingested_at: Mapped[str | None] = mapped_column(Text)
+
+
+class TleCatalogCoverage(Base):
+    """Records which data sources have been loaded into tle_catalog.
+
+    Allows bootstrap_tle_catalog.py to skip years already present so
+    re-running the script is always a safe no-op.
+    """
+
+    __tablename__ = "tle_catalog_coverage"
+
+    source_tag: Mapped[str] = mapped_column(Text, primary_key=True)
+    description: Mapped[str | None] = mapped_column(Text)
+    record_count: Mapped[int | None] = mapped_column(Integer)
+    downloaded_at: Mapped[str | None] = mapped_column(Text)
+
+
 async def init_db(engine: AsyncEngine) -> None:
     """Create all tables if they do not already exist.
 

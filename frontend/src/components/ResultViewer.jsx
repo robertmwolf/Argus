@@ -2,33 +2,75 @@ import { useEffect, useRef, useState } from 'react'
 
 const OBB_COLOUR = '#00DCFF'
 const HIGHLIGHT_COLOUR = '#FF6B35'
+const LABEL_BG = 'rgba(0,0,0,0.65)'
 
 /**
  * Draw one oriented bounding box on the canvas context.
- *
- * @param {CanvasRenderingContext2D} ctx
- * @param {object} obb  - {cx, cy, w, h, angle_deg}
- * @param {number} conf - confidence in [0,1]
- * @param {boolean} highlighted
- * @param {number} scaleX - canvas-width / image-width
- * @param {number} scaleY - canvas-height / image-height
  */
 function drawOBB(ctx, obb, conf, highlighted, scaleX, scaleY) {
   const { cx, cy, w, h, angle_deg } = obb
   if ([cx, cy, w, h, angle_deg].some((v) => v == null)) return
 
   const rad = (angle_deg * Math.PI) / 180
-
   ctx.save()
   ctx.translate(cx * scaleX, cy * scaleY)
   ctx.rotate(rad)
 
   ctx.strokeStyle = highlighted ? HIGHLIGHT_COLOUR : OBB_COLOUR
-  ctx.lineWidth = highlighted ? 4 : 2
-  ctx.globalAlpha = highlighted ? 1.0 : 0.3 + conf * 0.7
+  ctx.lineWidth = highlighted ? 3 : 1.5
+  ctx.globalAlpha = highlighted ? 1.0 : 0.35 + conf * 0.65
   ctx.strokeRect((-w / 2) * scaleX, (-h / 2) * scaleY, w * scaleX, h * scaleY)
 
   ctx.restore()
+}
+
+/**
+ * Draw a numbered label badge above the OBB centre.
+ */
+function drawLabel(ctx, obb, index, highlighted, scaleX, scaleY) {
+  const { cx, cy, h } = obb
+  if ([cx, cy, h].some((v) => v == null)) return
+
+  const x = cx * scaleX
+  const y = (cy - h / 2) * scaleY - 6
+
+  const label = String(index + 1)
+  const fontSize = 11
+  ctx.font = `bold ${fontSize}px system-ui, sans-serif`
+  const textW = ctx.measureText(label).width
+  const pad = 4
+  const bw = textW + pad * 2
+  const bh = fontSize + pad * 2
+
+  ctx.save()
+  ctx.globalAlpha = highlighted ? 1.0 : 0.85
+
+  // Badge background
+  ctx.fillStyle = highlighted ? HIGHLIGHT_COLOUR : OBB_COLOUR
+  roundRect(ctx, x - bw / 2, y - bh, bw, bh, 3)
+  ctx.fill()
+
+  // Badge text
+  ctx.fillStyle = highlighted ? '#fff' : '#000'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(label, x, y - bh / 2)
+
+  ctx.restore()
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.lineTo(x + w - r, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+  ctx.lineTo(x + w, y + h - r)
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+  ctx.lineTo(x + r, y + h)
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+  ctx.lineTo(x, y + r)
+  ctx.quadraticCurveTo(x, y, x + r, y)
+  ctx.closePath()
 }
 
 /**
@@ -37,14 +79,14 @@ function drawOBB(ctx, obb, conf, highlighted, scaleX, scaleY) {
  * Props:
  *   jobId            — UUID of the completed job
  *   detections       — array of detection dicts from /api/result
- *   highlightIndex   — index of the detection row to highlight (or null)
+ *   highlightIndex   — index of the detection to highlight (or null)
  *   onHover(index)   — called when mouse enters an OBB (null = leave)
  */
 export default function ResultViewer({ jobId, detections, highlightIndex, onHover }) {
   const canvasRef = useRef(null)
   const imgRef = useRef(null)
   const [imgLoaded, setImgLoaded] = useState(false)
-  const [tooltip, setTooltip] = useState(null) // {x, y, det}
+  const [tooltip, setTooltip] = useState(null) // {x, y, det, index}
 
   // Load the processed PNG
   useEffect(() => {
@@ -57,7 +99,7 @@ export default function ResultViewer({ jobId, detections, highlightIndex, onHove
     }
   }, [jobId])
 
-  // Redraw whenever image or detections change
+  // Redraw when image, detections, or highlight changes
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !imgRef.current) return
@@ -73,14 +115,16 @@ export default function ResultViewer({ jobId, detections, highlightIndex, onHove
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
 
+    // Draw all OBBs first, then labels on top
     detections.forEach((det, i) => {
-      if (det.obb) {
-        drawOBB(ctx, det.obb, det.confidence ?? 1, i === highlightIndex, scaleX, scaleY)
-      }
+      if (det.obb) drawOBB(ctx, det.obb, det.confidence ?? 1, i === highlightIndex, scaleX, scaleY)
+    })
+    detections.forEach((det, i) => {
+      if (det.obb) drawLabel(ctx, det.obb, i, i === highlightIndex, scaleX, scaleY)
     })
   }, [imgLoaded, detections, highlightIndex])
 
-  // Hit-test OBBs on mouse move to show tooltip
+  // OBB hit-test on mouse move
   const onMouseMove = (e) => {
     if (!canvasRef.current || !imgRef.current) return
     const rect = canvasRef.current.getBoundingClientRect()
@@ -117,8 +161,12 @@ export default function ResultViewer({ jobId, detections, highlightIndex, onHove
   return (
     <div className="relative">
       {!imgLoaded && (
-        <div className="flex items-center justify-center h-48 bg-slate-900 rounded-xl text-slate-400 text-sm">
-          Loading image…
+        <div className="flex items-center justify-center h-48 bg-slate-900 rounded-xl text-slate-500 text-sm gap-2">
+          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+          Loading result image…
         </div>
       )}
 
@@ -129,24 +177,45 @@ export default function ResultViewer({ jobId, detections, highlightIndex, onHove
         onMouseLeave={() => { setTooltip(null); onHover?.(null) }}
       />
 
+      {/* Hover tooltip */}
       {tooltip && (
         <div
-          className="fixed z-50 bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-xs text-slate-200 pointer-events-none shadow-xl"
-          style={{ left: tooltip.x + 14, top: tooltip.y - 10 }}
+          className="fixed z-50 bg-slate-900 border border-slate-600 rounded-xl px-3 py-2.5 text-xs text-slate-200 pointer-events-none shadow-2xl"
+          style={{ left: tooltip.x + 16, top: tooltip.y - 12 }}
         >
-          <p className="font-semibold text-cyan-300 mb-1">
+          <p className="font-semibold text-cyan-300 mb-1.5">
             Detection {tooltip.index + 1}
           </p>
-          <p>Confidence: {(tooltip.det.confidence * 100).toFixed(1)}%</p>
-          <p>Length: {tooltip.det.streak_length_px?.toFixed(0)} px</p>
-          {tooltip.det.ra_deg != null && (
-            <p>RA / Dec: {tooltip.det.ra_deg.toFixed(4)}° / {tooltip.det.dec_deg.toFixed(4)}°</p>
-          )}
-          {tooltip.det.identifications?.[0] && (
-            <p className="mt-1 text-yellow-300">
-              {tooltip.det.identifications[0].satellite_name}
-              {' '}({(tooltip.det.identifications[0].confidence * 100).toFixed(0)}%)
+          <div className="flex flex-col gap-0.5 text-slate-300">
+            <p>
+              Confidence:{' '}
+              <span className={
+                tooltip.det.confidence >= 0.9 ? 'text-green-400 font-semibold' :
+                tooltip.det.confidence >= 0.7 ? 'text-yellow-400 font-semibold' :
+                'text-red-400 font-semibold'
+              }>
+                {(tooltip.det.confidence * 100).toFixed(1)}%
+              </span>
             </p>
+            {tooltip.det.streak_length_px != null && (
+              <p>Length: <span className="font-mono">{tooltip.det.streak_length_px.toFixed(0)} px</span></p>
+            )}
+            {tooltip.det.obb?.angle_deg != null && (
+              <p>Angle: <span className="font-mono">{tooltip.det.obb.angle_deg.toFixed(1)}°</span></p>
+            )}
+            {tooltip.det.ra_deg != null && (
+              <p>RA / Dec: <span className="font-mono">{tooltip.det.ra_deg.toFixed(4)}° / {tooltip.det.dec_deg.toFixed(4)}°</span></p>
+            )}
+          </div>
+          {tooltip.det.identifications?.[0] && (
+            <div className="mt-2 pt-2 border-t border-slate-700">
+              <p className="text-yellow-300 font-semibold">
+                {tooltip.det.identifications[0].satellite_name ?? `NORAD ${tooltip.det.identifications[0].norad_id}`}
+              </p>
+              <p className="text-slate-400">
+                Match: {(tooltip.det.identifications[0].confidence * 100).toFixed(0)}%
+              </p>
+            </div>
           )}
         </div>
       )}

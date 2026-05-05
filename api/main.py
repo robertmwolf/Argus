@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import json
 import logging
 import os
 import tempfile
@@ -193,55 +194,204 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
             tmp_path.unlink(missing_ok=True)
 
 
-def _demo_detections(fits_path: Path) -> list[dict]:
-    """Return plausible synthetic detections for demo/dev use (no weights needed).
+def _extract_fits_header(data: bytes) -> list[dict] | None:
+    """Extract FITS primary header cards as a JSON-serialisable list.
 
     Args:
-        fits_path: Path to the FITS file (used to derive plausible bbox coords).
+        data: Raw FITS file bytes.
 
     Returns:
-        List of two synthetic detection dicts.
+        List of {key, value, comment} dicts, or None on failure.
     """
     try:
         from astropy.io import fits as afits
+
+        with afits.open(io.BytesIO(data)) as hdul:
+            header = hdul[0].header
+            cards = []
+            for card in header.cards:
+                key = card.keyword
+                if not key:
+                    continue
+                val = card.value
+                if isinstance(val, bool):
+                    val = bool(val)
+                elif isinstance(val, float):
+                    val = float(val)
+                elif isinstance(val, int):
+                    val = int(val)
+                else:
+                    val = str(val) if val is not None else None
+                cards.append({
+                    "key": key,
+                    "value": val,
+                    "comment": str(card.comment) if card.comment else None,
+                })
+            return cards
+    except Exception:
+        logger.exception("FITS header extraction failed")
+        return None
+
+
+def _render_fits_preview(data: bytes) -> bytes | None:
+    """Render FITS image data to a preview PNG without any overlays.
+
+    Uses 1st–99th percentile stretch for visibility.
+
+    Args:
+        data: Raw FITS file bytes.
+
+    Returns:
+        PNG bytes, or None on failure.
+    """
+    try:
+        import numpy as np
+        from astropy.io import fits as afits
+        from PIL import Image
+
+        with afits.open(io.BytesIO(data)) as hdul:
+            img_data = None
+            for hdu in hdul:
+                if hdu.data is not None and hdu.data.ndim >= 2:
+                    img_data = hdu.data.copy()
+                    break
+        if img_data is None:
+            return None
+
+        while img_data.ndim > 2:
+            img_data = img_data[0]
+
+        img_data = img_data.astype(float)
+        finite = img_data[np.isfinite(img_data)]
+        if finite.size == 0:
+            return None
+        lo, hi = np.percentile(finite, [1, 99])
+        if hi == lo:
+            hi = lo + 1.0
+        img_data = np.clip((img_data - lo) / (hi - lo) * 255, 0, 255).astype(np.uint8)
+
+        # Downsample very large images for the preview to keep response small
+        img = Image.fromarray(img_data, mode="L").convert("RGB")
+        max_side = 1200
+        if max(img.width, img.height) > max_side:
+            scale = max_side / max(img.width, img.height)
+            img = img.resize(
+                (int(img.width * scale), int(img.height * scale)),
+                Image.LANCZOS,
+            )
+
+        buf = io.BytesIO()
+        img.save(buf, format="PNG", optimize=True)
+        return buf.getvalue()
+    except Exception:
+        logger.exception("FITS preview generation failed")
+        return None
+
+
+def _demo_detections(fits_path: Path) -> list[dict]:
+    """Return a demo detection by finding the actual streak via Hough transform.
+
+    Uses probabilistic Hough lines on the Z-score-normalised image so the
+    returned OBB aligns with the real streak regardless of image size or
+    streak angle.  Falls back to a single centred placeholder on failure.
+
+    Args:
+        fits_path: Path to the FITS file.
+
+    Returns:
+        List with one detection dict whose OBB covers the detected streak.
+    """
+    import math as _math
+
+    try:
+        import cv2 as _cv2
+        import numpy as _np
+        from inference.fits_loader import FITSLoader
+
+        result = FITSLoader().load(fits_path)
+        arr = result["array"]          # (H, W, 3) uint8, Z-score normalised
+        ht, w = arr.shape[:2]
+        gray = arr[:, :, 0]
+
+        # Threshold at 99th percentile — keeps only the very brightest pixels
+        threshold = float(_np.percentile(gray, 99))
+        binary = (gray >= threshold).astype(_np.uint8) * 255
+
+        # Hough: require lines longer than 12 % of the shorter image edge
+        min_len = max(20, int(min(w, ht) * 0.12))
+        lines = _cv2.HoughLinesP(
+            binary, 1, _np.pi / 180,
+            threshold=max(15, min_len // 2),
+            minLineLength=min_len,
+            maxLineGap=15,
+        )
+
+        if lines is not None and len(lines) > 0:
+            # Longest segment wins
+            best = max(lines, key=lambda l: _math.hypot(
+                l[0][2] - l[0][0], l[0][3] - l[0][1]
+            ))
+            lx1, ly1, lx2, ly2 = map(float, best[0])
+
+            length  = _math.hypot(lx2 - lx1, ly2 - ly1)
+            cx      = (lx1 + lx2) / 2.0
+            cy      = (ly1 + ly2) / 2.0
+            angle_deg = _math.degrees(_math.atan2(ly2 - ly1, lx2 - lx1)) % 180.0
+
+            pad  = max(4, int(length * 0.02))
+            bx1  = max(0.0, min(lx1, lx2) - pad)
+            by1  = max(0.0, min(ly1, ly2) - pad)
+            bx2  = min(float(w),  max(lx1, lx2) + pad)
+            by2  = min(float(ht), max(ly1, ly2) + pad)
+
+            obb_long = length + pad * 2
+            obb_short = 8.0   # visual streak width in pixels
+
+            return [{
+                "confidence": 0.94,
+                "bbox": [bx1, by1, bx2, by2],
+                "obb": {
+                    "cx": cx, "cy": cy,
+                    "w": obb_long, "h": obb_short,
+                    "angle_deg": angle_deg,
+                },
+                "streak_length_px": round(length, 1),
+                "ra_deg": 83.82,
+                "dec_deg": -5.39,
+                "identifications": [
+                    {"satellite_name": "ISS (ZARYA)", "norad_id": 25544,
+                     "confidence": 0.87, "rank": 1},
+                    {"satellite_name": "STARLINK-1234", "norad_id": 47123,
+                     "confidence": 0.41, "rank": 2},
+                ],
+            }]
+
+    except Exception:
+        logger.exception("Demo Hough detection failed — using placeholder")
+
+    # Fallback: single centred placeholder
+    try:
+        from astropy.io import fits as afits
         with afits.open(fits_path) as hdul:
-            h = hdul[0].header
-            w = int(h.get("NAXIS1", 1024))
-            ht = int(h.get("NAXIS2", 768))
+            _h = hdul[0].header
+            w  = int(_h.get("NAXIS1", 1024))
+            ht = int(_h.get("NAXIS2", 768))
     except Exception:
         w, ht = 1024, 768
 
-    return [
-        {
-            "confidence": 0.94,
-            "bbox": [int(w * 0.12), int(ht * 0.28), int(w * 0.55), int(ht * 0.34)],
-            "obb": {
-                "cx": w * 0.335, "cy": ht * 0.31,
-                "w": w * 0.43, "h": ht * 0.045,
-                "angle_deg": 7.2,
-            },
-            "streak_length_px": round(w * 0.43, 1),
-            "ra_deg": 83.82,
-            "dec_deg": -5.39,
-            "identifications": [
-                {"satellite_name": "ISS (ZARYA)", "norad_id": 25544, "confidence": 0.87, "rank": 1},
-                {"satellite_name": "STARLINK-1234", "norad_id": 47123, "confidence": 0.41, "rank": 2},
-            ],
+    return [{
+        "confidence": 0.50,
+        "bbox": [int(w * 0.1), int(ht * 0.1), int(w * 0.9), int(ht * 0.9)],
+        "obb": {
+            "cx": w * 0.5, "cy": ht * 0.5,
+            "w": w * 0.8,  "h": 8.0,
+            "angle_deg": 45.0,
         },
-        {
-            "confidence": 0.78,
-            "bbox": [int(w * 0.60), int(ht * 0.55), int(w * 0.92), int(ht * 0.62)],
-            "obb": {
-                "cx": w * 0.76, "cy": ht * 0.585,
-                "w": w * 0.32, "h": ht * 0.05,
-                "angle_deg": -12.5,
-            },
-            "streak_length_px": round(w * 0.32, 1),
-            "ra_deg": 84.11,
-            "dec_deg": -5.72,
-            "identifications": [],
-        },
-    ]
+        "streak_length_px": round(w * 0.8, 1),
+        "ra_deg": None,
+        "dec_deg": None,
+        "identifications": [],
+    }]
 
 
 def _render_png(fits_path: Path, detections: list[dict]) -> bytes:
@@ -260,12 +410,10 @@ def _render_png(fits_path: Path, detections: list[dict]) -> bytes:
 
         from inference.fits_loader import FITSLoader
 
-        loader = FITSLoader(fits_path)
-        arr, _ = loader.load()  # HWC uint8
+        result = FITSLoader().load(fits_path)
+        arr = result["array"]  # (H, W, 3) uint8
 
-        if arr.ndim == 3 and arr.shape[2] == 1:
-            arr = arr[:, :, 0]
-        img = Image.fromarray(arr, mode="L" if arr.ndim == 2 else "RGB").convert("RGB")
+        img = Image.fromarray(arr, mode="RGB")
         draw = ImageDraw.Draw(img, "RGBA")
 
         for det in detections:
@@ -336,6 +484,20 @@ async def upload(request: Request, file: UploadFile) -> dict[str, str]:
 
     await request.app.state.storage.save_upload(job_id, filename, data)
 
+    # Extract FITS header and generate preview PNG at upload time so the
+    # frontend can display them immediately while the job is queued/processing.
+    if ext in {".fits", ".fit", ".fts"}:
+        header_cards = _extract_fits_header(data)
+        if header_cards is not None:
+            await request.app.state.storage.save_fits_header(
+                job_id, json.dumps(header_cards).encode()
+            )
+        preview_png = _render_fits_preview(data)
+        if preview_png is not None:
+            await request.app.state.storage.save_preview(job_id, preview_png)
+    elif ext == ".png":
+        await request.app.state.storage.save_preview(job_id, data)
+
     async with request.app.state.session_factory() as session:
         session.add(Observation(id=job_id, filename=filename, status="queued"))
         await session.commit()
@@ -396,6 +558,7 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
                         "satellite_name": i.satellite_name,
                         "norad_id": i.norad_id,
                         "confidence": i.confidence,
+                        "separation_deg": i.separation_deg,
                         "rank": i.rank,
                     }
                     for i in sorted(ident_rows, key=lambda x: x.rank or 99)
@@ -437,6 +600,61 @@ async def image(job_id: str, request: Request) -> Response:
             detail="Image not yet available — job may still be processing",
         )
     return Response(content=png, media_type="image/png")
+
+
+@app.get("/api/preview/{job_id}")
+async def preview(job_id: str, request: Request) -> Response:
+    """Return the raw preview PNG for a job (no detection overlays).
+
+    Available immediately after upload for FITS files and PNGs.
+
+    Args:
+        job_id: UUID of the observation.
+        request: FastAPI Request (for app state access).
+
+    Returns:
+        PNG image bytes.
+
+    Raises:
+        HTTPException 404: Job not found or preview not yet available.
+    """
+    async with request.app.state.session_factory() as session:
+        obs = await session.get(Observation, job_id)
+        if obs is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+
+    png = await request.app.state.storage.load_preview(job_id)
+    if png is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Preview not yet available",
+        )
+    return Response(content=png, media_type="image/png")
+
+
+@app.get("/api/fits-header/{job_id}")
+async def fits_header(job_id: str, request: Request) -> dict[str, Any]:
+    """Return FITS primary header cards for a job.
+
+    Args:
+        job_id: UUID of the observation.
+        request: FastAPI Request (for app state access).
+
+    Returns:
+        dict with a ``cards`` list of {key, value, comment} objects.
+
+    Raises:
+        HTTPException 404: Job not found.
+    """
+    async with request.app.state.session_factory() as session:
+        obs = await session.get(Observation, job_id)
+        if obs is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+
+    raw = await request.app.state.storage.load_fits_header(job_id)
+    if raw is None:
+        return {"cards": []}
+    return {"cards": json.loads(raw)}
 
 
 @app.get("/health")

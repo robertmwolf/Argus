@@ -41,6 +41,33 @@ CREATE TABLE tracklets (
     created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- TLE catalog: local copy of Space-Track data so gp_history is never re-queried.
+-- Populated once at environment setup via scripts/bootstrap_tle_catalog.py,
+-- then kept current by scripts/update_tle_catalog.py (GP class, ≤ once/hour).
+CREATE TABLE IF NOT EXISTS tle_catalog (
+    norad_id     INTEGER NOT NULL,
+    epoch        TEXT NOT NULL,          -- ISO8601 UTC
+    object_name  TEXT NOT NULL,
+    object_type  TEXT,                   -- PAYLOAD / DEBRIS / ROCKET BODY / UNKNOWN
+    mean_motion  REAL,                   -- rev/day
+    tle_line1    TEXT NOT NULL,
+    tle_line2    TEXT NOT NULL,
+    ingested_at  TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (norad_id, epoch)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tle_catalog_epoch ON tle_catalog(epoch);
+CREATE INDEX IF NOT EXISTS idx_tle_catalog_norad  ON tle_catalog(norad_id);
+
+-- Coverage log: records which data sources have been fully loaded so the
+-- bootstrap script is a no-op when re-run against an already-populated DB.
+CREATE TABLE IF NOT EXISTS tle_catalog_coverage (
+    source_tag    TEXT PRIMARY KEY,      -- e.g. 'zip_2025', 'gp_current'
+    description   TEXT,
+    record_count  INTEGER,
+    downloaded_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE tracklet_detections (
     tracklet_id  TEXT REFERENCES tracklets(id),
     detection_id TEXT REFERENCES detections(id),

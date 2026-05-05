@@ -14,3 +14,12 @@ body {
 #root {
   min-height: 100svh;
 }
+
+@keyframes scan-sweep {
+  0%   { transform: translateY(-110%); }
+  100% { transform: translateY(110%); }
+}
+
+.animate-scan {
+  animation: scan-sweep 2.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
