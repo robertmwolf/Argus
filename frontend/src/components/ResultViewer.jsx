@@ -2,35 +2,117 @@ import { useEffect, useRef, useState } from 'react'
 
 const OBB_COLOUR = '#00DCFF'
 const HIGHLIGHT_COLOUR = '#FF6B35'
-const LABEL_BG = 'rgba(0,0,0,0.65)'
 
-/**
- * Draw one oriented bounding box on the canvas context.
- */
-function drawOBB(ctx, obb, conf, highlighted, scaleX, scaleY) {
+// ---------------------------------------------------------------------------
+// Geometry helpers
+// ---------------------------------------------------------------------------
+
+function streakEndpoints(obb, scaleX, scaleY) {
+  const { cx, cy, w, angle_deg } = obb
+  const rad = (angle_deg * Math.PI) / 180
+  const half = w / 2
+  return {
+    p1: { x: (cx - half * Math.cos(rad)) * scaleX, y: (cy - half * Math.sin(rad)) * scaleY },
+    p2: { x: (cx + half * Math.cos(rad)) * scaleX, y: (cy + half * Math.sin(rad)) * scaleY },
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Drawing primitives
+// ---------------------------------------------------------------------------
+
+function drawOBB(ctx, obb, colour, alpha, scaleX, scaleY, lineWidth) {
   const { cx, cy, w, h, angle_deg } = obb
-  if ([cx, cy, w, h, angle_deg].some((v) => v == null)) return
-
   const rad = (angle_deg * Math.PI) / 180
   ctx.save()
+  ctx.globalAlpha = alpha
+  ctx.strokeStyle = colour
+  ctx.lineWidth = lineWidth
   ctx.translate(cx * scaleX, cy * scaleY)
   ctx.rotate(rad)
-
-  ctx.strokeStyle = highlighted ? HIGHLIGHT_COLOUR : OBB_COLOUR
-  ctx.lineWidth = highlighted ? 3 : 1.5
-  ctx.globalAlpha = highlighted ? 1.0 : 0.35 + conf * 0.65
   ctx.strokeRect((-w / 2) * scaleX, (-h / 2) * scaleY, w * scaleX, h * scaleY)
+  ctx.restore()
+}
+
+function drawCenterline(ctx, p1, p2, colour, alpha, lineWidth) {
+  ctx.save()
+  ctx.globalAlpha = alpha
+  ctx.strokeStyle = colour
+  ctx.lineWidth = lineWidth
+  ctx.setLineDash([6, 3])
+  ctx.beginPath()
+  ctx.moveTo(p1.x, p1.y)
+  ctx.lineTo(p2.x, p2.y)
+  ctx.stroke()
+  ctx.setLineDash([])
+  ctx.restore()
+}
+
+function drawEndpoint(ctx, p, colour, alpha, radius) {
+  ctx.save()
+  ctx.globalAlpha = alpha
+  // Outer filled circle
+  ctx.fillStyle = colour
+  ctx.beginPath()
+  ctx.arc(p.x, p.y, radius, 0, Math.PI * 2)
+  ctx.fill()
+  // Inner dark ring for contrast
+  ctx.fillStyle = '#000'
+  ctx.globalAlpha = alpha * 0.55
+  ctx.beginPath()
+  ctx.arc(p.x, p.y, radius * 0.42, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+}
+
+function drawAngleIndicator(ctx, obb, colour, alpha, scaleX, scaleY) {
+  const { cx, cy, w, angle_deg } = obb
+  const rad = (angle_deg * Math.PI) / 180
+  const cxS = cx * scaleX
+  const cyS = cy * scaleY
+
+  // Arc radius: proportional to streak length, clamped
+  const arcR = Math.max(16, Math.min(28, (w / 2) * scaleX * 0.28))
+
+  ctx.save()
+  ctx.globalAlpha = alpha * 0.75
+  ctx.strokeStyle = colour
+  ctx.fillStyle = colour
+  ctx.lineWidth = 1
+
+  // Horizontal reference tick from centre
+  ctx.beginPath()
+  ctx.moveTo(cxS, cyS)
+  ctx.lineTo(cxS + arcR + 4, cyS)
+  ctx.stroke()
+
+  // Arc from 0 → angle_deg (counterclockwise if negative)
+  ctx.beginPath()
+  if (rad >= 0) {
+    ctx.arc(cxS, cyS, arcR, 0, rad)
+  } else {
+    ctx.arc(cxS, cyS, arcR, rad, 0)
+  }
+  ctx.stroke()
+
+  // Angle text at midpoint of arc
+  const midAngle = rad / 2
+  const labelR = arcR + 11
+  ctx.globalAlpha = alpha
+  ctx.font = 'bold 10px system-ui, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(
+    `${angle_deg.toFixed(1)}°`,
+    cxS + labelR * Math.cos(midAngle),
+    cyS + labelR * Math.sin(midAngle),
+  )
 
   ctx.restore()
 }
 
-/**
- * Draw a numbered label badge above the OBB centre.
- */
-function drawLabel(ctx, obb, index, highlighted, scaleX, scaleY) {
+function drawLabel(ctx, obb, index, colour, alpha, scaleX, scaleY) {
   const { cx, cy, h } = obb
-  if ([cx, cy, h].some((v) => v == null)) return
-
   const x = cx * scaleX
   const y = (cy - h / 2) * scaleY - 6
 
@@ -43,15 +125,13 @@ function drawLabel(ctx, obb, index, highlighted, scaleX, scaleY) {
   const bh = fontSize + pad * 2
 
   ctx.save()
-  ctx.globalAlpha = highlighted ? 1.0 : 0.85
+  ctx.globalAlpha = alpha
 
-  // Badge background
-  ctx.fillStyle = highlighted ? HIGHLIGHT_COLOUR : OBB_COLOUR
+  ctx.fillStyle = colour
   roundRect(ctx, x - bw / 2, y - bh, bw, bh, 3)
   ctx.fill()
 
-  // Badge text
-  ctx.fillStyle = highlighted ? '#fff' : '#000'
+  ctx.fillStyle = colour === HIGHLIGHT_COLOUR ? '#fff' : '#000'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(label, x, y - bh / 2)
@@ -73,6 +153,32 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath()
 }
 
+// ---------------------------------------------------------------------------
+// Composite draw: one detection
+// ---------------------------------------------------------------------------
+
+function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
+  const { obb, confidence: conf = 1 } = det
+  if (!obb || [obb.cx, obb.cy, obb.w, obb.h, obb.angle_deg].some((v) => v == null)) return
+
+  const colour = highlighted ? HIGHLIGHT_COLOUR : OBB_COLOUR
+  const alpha = highlighted ? 1.0 : 0.4 + conf * 0.6
+  const endpointR = highlighted ? 5.5 : 4
+  const lineWidth = highlighted ? 2.5 : 1.5
+
+  const { p1, p2 } = streakEndpoints(obb, scaleX, scaleY)
+
+  drawOBB(ctx, obb, colour, alpha * 0.55, scaleX, scaleY, highlighted ? 1.5 : 1)
+  drawCenterline(ctx, p1, p2, colour, alpha, lineWidth)
+  drawEndpoint(ctx, p1, colour, alpha, endpointR)
+  drawEndpoint(ctx, p2, colour, alpha, endpointR)
+  drawAngleIndicator(ctx, obb, colour, alpha, scaleX, scaleY)
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 /**
  * ResultViewer — canvas overlay of detection OBBs on the result image.
  *
@@ -86,20 +192,18 @@ export default function ResultViewer({ jobId, detections, highlightIndex, onHove
   const canvasRef = useRef(null)
   const imgRef = useRef(null)
   const [imgLoaded, setImgLoaded] = useState(false)
-  const [tooltip, setTooltip] = useState(null) // {x, y, det, index}
+  const [tooltip, setTooltip] = useState(null)
 
-  // Load the processed PNG
   useEffect(() => {
     if (!jobId) return
     const img = new Image()
-    img.src = `/api/image/${jobId}`
+    img.src = `/api/preview/${jobId}`
     img.onload = () => {
       imgRef.current = img
       setImgLoaded(true)
     }
   }, [jobId])
 
-  // Redraw when image, detections, or highlight changes
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !imgRef.current) return
@@ -115,16 +219,24 @@ export default function ResultViewer({ jobId, detections, highlightIndex, onHove
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
 
-    // Draw all OBBs first, then labels on top
+    // Non-highlighted detections first, then highlighted on top
     detections.forEach((det, i) => {
-      if (det.obb) drawOBB(ctx, det.obb, det.confidence ?? 1, i === highlightIndex, scaleX, scaleY)
+      if (i !== highlightIndex) drawDetection(ctx, det, i, false, scaleX, scaleY)
     })
     detections.forEach((det, i) => {
-      if (det.obb) drawLabel(ctx, det.obb, i, i === highlightIndex, scaleX, scaleY)
+      if (i === highlightIndex) drawDetection(ctx, det, i, true, scaleX, scaleY)
+    })
+
+    // Labels always on top of everything
+    detections.forEach((det, i) => {
+      if (det.obb) {
+        const colour = i === highlightIndex ? HIGHLIGHT_COLOUR : OBB_COLOUR
+        const alpha = i === highlightIndex ? 1.0 : 0.4 + (det.confidence ?? 1) * 0.6
+        drawLabel(ctx, det.obb, i, colour, alpha, scaleX, scaleY)
+      }
     })
   }, [imgLoaded, detections, highlightIndex])
 
-  // OBB hit-test on mouse move
   const onMouseMove = (e) => {
     if (!canvasRef.current || !imgRef.current) return
     const rect = canvasRef.current.getBoundingClientRect()
@@ -166,7 +278,7 @@ export default function ResultViewer({ jobId, detections, highlightIndex, onHove
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
-          Loading result image…
+          Loading image…
         </div>
       )}
 
@@ -183,9 +295,7 @@ export default function ResultViewer({ jobId, detections, highlightIndex, onHove
           className="fixed z-50 bg-slate-900 border border-slate-600 rounded-xl px-3 py-2.5 text-xs text-slate-200 pointer-events-none shadow-2xl"
           style={{ left: tooltip.x + 16, top: tooltip.y - 12 }}
         >
-          <p className="font-semibold text-cyan-300 mb-1.5">
-            Detection {tooltip.index + 1}
-          </p>
+          <p className="font-semibold text-cyan-300 mb-1.5">Detection {tooltip.index + 1}</p>
           <div className="flex flex-col gap-0.5 text-slate-300">
             <p>
               Confidence:{' '}
@@ -201,7 +311,7 @@ export default function ResultViewer({ jobId, detections, highlightIndex, onHove
               <p>Length: <span className="font-mono">{tooltip.det.streak_length_px.toFixed(0)} px</span></p>
             )}
             {tooltip.det.obb?.angle_deg != null && (
-              <p>Angle: <span className="font-mono">{tooltip.det.obb.angle_deg.toFixed(1)}°</span></p>
+              <p>Angle: <span className="font-mono">{tooltip.det.obb.angle_deg.toFixed(1)}° from horizontal</span></p>
             )}
             {tooltip.det.ra_deg != null && (
               <p>RA / Dec: <span className="font-mono">{tooltip.det.ra_deg.toFixed(4)}° / {tooltip.det.dec_deg.toFixed(4)}°</span></p>
@@ -217,6 +327,24 @@ export default function ResultViewer({ jobId, detections, highlightIndex, onHove
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Legend */}
+      {imgLoaded && detections.length > 0 && (
+        <div className="absolute bottom-3 right-3 bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-400 flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-6 border-t-2 border-dashed border-cyan-400" />
+            <span>Streak axis</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center justify-center w-3 h-3 rounded-full bg-cyan-400" />
+            <span>Endpoints</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-cyan-400">θ°</span>
+            <span>Angle from horizontal</span>
+          </div>
         </div>
       )}
     </div>

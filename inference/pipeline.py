@@ -63,7 +63,7 @@ _patch_torch_load_weights_only()
 # Constants / defaults
 # ---------------------------------------------------------------------------
 
-_DEFAULT_CONFIDENCE_THRESHOLD = 0.3
+_DEFAULT_CONFIDENCE_THRESHOLD = 0.10  # raised to 0.30 once cloud-trained Swin-L is in use
 _FAST_IMAGE_SIZE = 256
 
 
@@ -259,10 +259,10 @@ def _pixel_to_sky(
 # ---------------------------------------------------------------------------
 
 def _angle_from_bbox(bbox: list[float]) -> float:
-    """Estimate streak angle from the aspect ratio of an axis-aligned bbox.
+    """Estimate streak angle from the diagonal of an axis-aligned bbox.
 
-    Used in fast mode when Radon refinement is skipped.  Returns 0° for
-    square or near-square bboxes (no strong orientation signal).
+    Uses atan2(height, width) as the seed angle for Radon refinement.
+    This is more accurate than snapping to 0/90° for diagonal streaks.
 
     Args:
         bbox: [x1, y1, x2, y2]
@@ -273,10 +273,9 @@ def _angle_from_bbox(bbox: list[float]) -> float:
     x1, y1, x2, y2 = bbox
     bw = abs(x2 - x1)
     bh = abs(y2 - y1)
-    if bw >= bh:
-        return 0.0   # wider than tall → horizontal streak
-    else:
-        return 90.0  # taller than wide → vertical streak
+    if bw < 1e-6 and bh < 1e-6:
+        return 0.0
+    return math.degrees(math.atan2(bh, bw)) % 180.0
 
 
 # ---------------------------------------------------------------------------
@@ -379,6 +378,9 @@ def run(
 
     model_size    = os.environ.get("MODEL_SIZE", "tiny")
     weights_env   = os.environ.get("MODEL_WEIGHTS", "")
+    confidence_threshold = float(
+        os.environ.get("CONFIDENCE_THRESHOLD", str(_DEFAULT_CONFIDENCE_THRESHOLD))
+    )
 
     # --- 1. Load FITS --------------------------------------------------------
     t0 = time.perf_counter()
@@ -418,9 +420,10 @@ def run(
     elif inference_device is None:
         inference_device = device
 
-    raw_dets   = _run_inference(model, array, image_size)
+    raw_dets   = _run_inference(model, array, image_size, confidence_threshold)
     inference_ms = (time.perf_counter() - t1) * 1000
-    logger.debug("inference_ms=%.1f  raw_dets=%d", inference_ms, len(raw_dets))
+    logger.debug("inference_ms=%.1f  raw_dets=%d  threshold=%.2f",
+                 inference_ms, len(raw_dets), confidence_threshold)
 
     if not raw_dets:
         logger.debug("No detections above threshold — returning empty list")
@@ -428,7 +431,7 @@ def run(
 
     # --- 3. Postprocess: angle refinement + OBB + NMS -----------------------
     t2 = time.perf_counter()
-    from inference.postprocess import bbox_to_obb, refine_angle, nms_detections
+    from inference.postprocess import bbox_to_obb, refine_angle, nms_detections, extend_obb_to_streak_extent
 
     h_img = array.shape[0]
     w_img = array.shape[1]
@@ -436,20 +439,24 @@ def run(
     for det in raw_dets:
         x1, y1, x2, y2 = det["bbox"]
 
-        if fast:
-            angle = _angle_from_bbox(det["bbox"])
-        else:
-            # Extract crop for Radon refinement — clamp to image bounds
-            px1 = max(0, int(math.floor(x1)))
-            py1 = max(0, int(math.floor(y1)))
-            px2 = min(w_img, int(math.ceil(x2)))
-            py2 = min(h_img, int(math.ceil(y2)))
-            crop = array[py1:py2, px1:px2]
-            initial_obb = bbox_to_obb(det["bbox"], _angle_from_bbox(det["bbox"]))
-            angle = refine_angle(crop, initial_obb, angle_search_range=15.0)
+        # Always run Radon refinement — it operates on a small crop and is fast.
+        # FAST_MODE only skips cross-ID, not angle refinement.
+        px1 = max(0, int(math.floor(x1)))
+        py1 = max(0, int(math.floor(y1)))
+        px2 = min(w_img, int(math.ceil(x2)))
+        py2 = min(h_img, int(math.ceil(y2)))
+        crop = array[py1:py2, px1:px2]
+        seed_angle = _angle_from_bbox(det["bbox"])
+        initial_obb = bbox_to_obb(det["bbox"], seed_angle)
+        # Use ±45° search so diagonal streaks aren't missed by a coarse seed
+        angle = refine_angle(crop, initial_obb, angle_search_range=45.0)
 
-        det["obb"] = bbox_to_obb(det["bbox"], angle)
-        det["streak_length_px"] = float(det["obb"]["w"])
+        obb = bbox_to_obb(det["bbox"], angle)
+        # Extend OBB endpoints along the streak axis to the true streak tips —
+        # DINO bboxes often cover only a fraction of a long streak.
+        obb = extend_obb_to_streak_extent(array, obb)
+        det["obb"] = obb
+        det["streak_length_px"] = float(obb["w"])
 
     detections = nms_detections(raw_dets, iou_threshold=0.5)
     postprocess_ms = (time.perf_counter() - t2) * 1000

@@ -2,7 +2,7 @@
 #   docker compose -f docker-compose.yml -f docker-compose.cloud.yml up
 #
 # Changes from base:
-#   - api: S3 storage, SQS queue, no DEMO_MODE
+#   - api: S3 storage, SQS queue, full pipeline (Radon + cross-ID, no FAST_MODE)
 #   - worker: S3 storage, SQS queue, GPU enabled, profile removed (always runs)
 #   - No local uploads volume (files live in S3)
 
@@ -13,7 +13,6 @@ services:
       DATABASE_URL: postgresql+asyncpg://argus:argus@db/argus
       STORAGE_BACKEND: s3
       QUEUE_BACKEND: sqs
-      DEMO_MODE: "false"
       S3_BUCKET: ${S3_BUCKET}
       AWS_REGION: ${AWS_REGION:-us-east-1}
     volumes: []

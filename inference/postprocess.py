@@ -106,6 +106,12 @@ def refine_angle(
         logger.debug("refine_angle: crop too small (%s), returning initial angle", crop.shape)
         return float(initial_angle % 180.0)
 
+    # Subtract background so Radon variance reflects the streak, not the sky level.
+    # Without this, a non-zero background dominates the Radon at all angles and
+    # the variance peak gets pulled toward whichever axis is most compressed by
+    # the crop geometry (typically 90° for tall narrow crops).
+    crop = np.clip(crop - np.median(crop), 0.0, None)
+
     # Coordinate system: skimage.transform.radon at angle θ integrates along
     # lines perpendicular to θ — it rotates the image by −θ then sums columns.
     # The sinogram variance peaks when θ is perpendicular to the streak, so:
@@ -144,6 +150,120 @@ def refine_angle(
         initial_angle, radon_center, best_radon_angle, refined,
     )
     return refined
+
+
+# ---------------------------------------------------------------------------
+# Streak extent — extend OBB endpoints to the true streak tips
+# ---------------------------------------------------------------------------
+
+def extend_obb_to_streak_extent(
+    array: np.ndarray,
+    obb: dict,
+    sample_halfwidth: int = 3,
+    threshold_sigma: float = 1.5,
+) -> dict:
+    """Extend OBB w/cx/cy so endpoints cover the full streak, not just the bbox.
+
+    DINO bboxes often capture only a portion of a long streak.  This function
+    traces the streak axis across the full image and finds where the signal
+    drops to background level, then returns an updated OBB with corrected
+    centre and long-axis length.
+
+    Args:
+        array: uint8 (H, W, 3) or (H, W) image array from FITSLoader.
+        obb: OBB dict {cx, cy, w, h, angle_deg} — modified copy is returned.
+        sample_halfwidth: Pixels either side of the axis to average (robustness
+            against sub-pixel positioning). Default 3.
+        threshold_sigma: Multiplier on std above the image median to call a
+            pixel "streak". Lower values catch faint streaks; default 1.5.
+
+    Returns:
+        Updated OBB dict with corrected cx, cy, w.  h and angle_deg unchanged.
+    """
+    cx = obb["cx"]
+    cy = obb["cy"]
+    angle_rad = math.radians(obb["angle_deg"])
+    cos_a = math.cos(angle_rad)
+    sin_a = math.sin(angle_rad)
+
+    gray = np.asarray(array, dtype=np.float32)
+    if gray.ndim == 3:
+        gray = gray.mean(axis=2)
+    h_img, w_img = gray.shape
+
+    bg = float(np.median(gray))
+    threshold = bg + threshold_sigma * float(gray.std())
+
+    # Perpendicular unit vector (for the cross-section sample)
+    perp_cos = -sin_a
+    perp_sin = cos_a
+
+    def _strip_mean(t: float) -> float:
+        """Mean of a perpendicular strip of pixels at parameter t along axis."""
+        vals: list[float] = []
+        xc = cx + t * cos_a
+        yc = cy + t * sin_a
+        for s in range(-sample_halfwidth, sample_halfwidth + 1):
+            xi = int(round(xc + s * perp_cos))
+            yi = int(round(yc + s * perp_sin))
+            if 0 <= xi < w_img and 0 <= yi < h_img:
+                vals.append(float(gray[yi, xi]))
+        return float(np.mean(vals)) if vals else bg
+
+    # Compute the t-range that keeps (x,y) inside the image
+    eps = 1e-9
+    t_candidates: list[float] = []
+    if abs(cos_a) > eps:
+        t_candidates += [(-cx) / cos_a, (w_img - 1 - cx) / cos_a]
+    if abs(sin_a) > eps:
+        t_candidates += [(-cy) / sin_a, (h_img - 1 - cy) / sin_a]
+    diag = math.sqrt(w_img ** 2 + h_img ** 2)
+    t_lo = max(min(t_candidates) if t_candidates else -diag, -diag)
+    t_hi = min(max(t_candidates) if t_candidates else diag,  diag)
+
+    # Collect all t values where the strip is above threshold
+    streak_ts = [
+        t for t in np.arange(t_lo, t_hi, 1.0)
+        if _strip_mean(t) > threshold
+    ]
+
+    if not streak_ts:
+        logger.debug("extend_obb: no bright pixels found along axis — OBB unchanged")
+        return dict(obb)
+
+    # Group bright t values into contiguous runs (gap tolerance = 5 px).
+    # Then select the run that contains t=0 (the OBB centre is guaranteed to
+    # lie on the streak), falling back to the longest run if t=0 is not bright.
+    # This prevents isolated noise spikes beyond the streak from inflating w.
+    gap_tolerance = 5.0
+    runs: list[tuple[float, float]] = []
+    run_start = streak_ts[0]
+    run_end   = streak_ts[0]
+    for t in streak_ts[1:]:
+        if t - run_end <= gap_tolerance:
+            run_end = t
+        else:
+            runs.append((run_start, run_end))
+            run_start = run_end = t
+    runs.append((run_start, run_end))
+
+    # Prefer the run that straddles t=0 (OBB centre on the streak)
+    centre_runs = [(s, e) for s, e in runs if s <= 0.0 <= e]
+    if centre_runs:
+        t_start, t_end = centre_runs[0]
+    else:
+        t_start, t_end = max(runs, key=lambda r: r[1] - r[0])
+
+    new_w   = t_end - t_start
+    new_cx  = cx + (t_start + t_end) / 2.0 * cos_a
+    new_cy  = cy + (t_start + t_end) / 2.0 * sin_a
+
+    logger.debug(
+        "extend_obb: t=[%.0f, %.0f]  old_w=%.0f→new_w=%.0f  "
+        "cx=(%.1f→%.1f)  cy=(%.1f→%.1f)",
+        t_start, t_end, obb["w"], new_w, cx, new_cx, cy, new_cy,
+    )
+    return {**obb, "cx": new_cx, "cy": new_cy, "w": new_w}
 
 
 # ---------------------------------------------------------------------------
