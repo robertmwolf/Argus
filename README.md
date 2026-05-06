@@ -3,11 +3,12 @@
 
 ARGUS is an academic research pipeline for automated satellite streak detection
 and identification in FITS telescope images.  It detects satellite streaks using
-a DINO transformer model (Swin backbone), refines streak orientation via the
-Radon transform, and cross-identifies detected objects against a local TLE
-catalog — sourced once from Space-Track and stored in the ARGUS database —
-using SGP4 propagation and multi-factor confidence scoring.  Results are served
-through a FastAPI backend and React frontend.
+a Co-DINO transformer model (Swin backbone), refines streak orientation via the
+Radon transform, traces each streak to its true endpoints across the full image,
+and cross-identifies detected objects against a local TLE catalog — sourced once
+from Space-Track and stored in the ARGUS database — using SGP4 propagation and
+multi-factor confidence scoring.  Results are served through a FastAPI backend
+and React frontend.
 
 ---
 
@@ -44,6 +45,9 @@ This project builds on and cites the following prior works:
   Kim et al., *Astronomical Journal* (2017).
   https://github.com/dwkim78/ASTRiDE
 
+- **StreakMind** — Co-DINO transformer-based satellite streak detection pipeline
+  (prior work that ARGUS builds upon; cite per their published paper/repo).
+
 - **Co-DINO** — Co-Deformable DETR object detection transformer.
   Zong et al., *arXiv* 2211.12860 (2023).
   https://arxiv.org/abs/2211.12860
@@ -61,23 +65,179 @@ Code derived from or substantially adapting these works is annotated with
 ```
 FITS Image
     │
-    ├─ Phase 0/3: Classical path
-    │   ├── src/ingest/fits_parser.py       — FITS → FITSImage dataclass
-    │   ├── src/detection/classical_detector.py  — ASTRiDE streak extraction
-    │   ├── src/astrometry/plate_solver.py  — pixel → RA/Dec (WCS)
-    │   └── src/matching/                   — Space-Track query → SGP4 → scorer → matcher
+    ├─ Phase 0/3: Classical path (src/)
+    │   ├── ingest/fits_parser.py        — FITS → FITSImage dataclass
+    │   ├── detection/classical_detector.py  — ASTRiDE streak extraction
+    │   ├── astrometry/plate_solver.py   — pixel → RA/Dec (WCS)
+    │   └── matching/                    — Space-Track → SGP4 → scorer → matcher
     │
-    └─ Phase 2/3: ML path
-        ├── inference/fits_loader.py        — FITS → normalised tensor
-        ├── inference/device.py             — get_device() / get_device_config()
-        ├── models/dino/                    — DINO Swin-T (dev) / Swin-L (cloud) configs
-        ├── training/train_dino.py          — two-stage fine-tuning + cost guardrails
-        ├── inference/pipeline.py           — end-to-end orchestrator  ✅
-        ├── inference/postprocess.py        — Radon angle refinement   ✅
-        └── inference/crossid.py            — TLE cross-identification  ✅
+    └─ Phase 2–8: ML path
+        ├── inference/fits_loader.py     — FITS → Z-score uint8 array + WCS
+        ├── inference/device.py          — get_device(): CUDA → MPS → CPU
+        ├── models/dino/                 — DINO Swin-T (dev) / Swin-L (cloud) configs
+        ├── training/train_dino.py       — two-stage fine-tuning + cost guardrails
+        ├── inference/pipeline.py        — end-to-end orchestrator
+        ├── inference/postprocess.py     — Radon angle refinement + extent tracing + NMS
+        ├── inference/crossid.py         — TLE cross-identification
+        ├── api/main.py                  — FastAPI: upload / queue / result endpoints
+        └── frontend/                    — React 18 + Vite: canvas OBB overlay
 ```
 
 Full design: [`agent_docs/architecture.md`](agent_docs/architecture.md)
+
+---
+
+## End-to-End Pipeline
+
+This describes exactly what happens from the moment a FITS file is uploaded
+to the moment results appear in the browser.
+
+### 1. Upload (Browser → API)
+
+The user drags a `.fits` file onto the React frontend.  The browser POSTs it
+to `POST /api/upload`, which:
+
+1. Saves the file to the configured storage backend (local disk or S3).
+2. Creates a job record in the SQLite/PostgreSQL database with status `queued`.
+3. Returns a `job_id` UUID to the browser.
+4. Enqueues the job to the background worker (in-memory queue or SQS).
+
+### 2. FITS Loading (`inference/fits_loader.py`)
+
+The background worker calls `inference.pipeline.run(fits_path)`.  The first
+stage opens the FITS file with **astropy** and:
+
+- Reads the primary HDU pixel data (any bit depth).
+- Performs Z-score normalisation: subtract mean, divide by standard deviation,
+  then rescale to uint8 [0, 255] clipped at ±3σ.
+- Converts the single-channel science image to a 3-channel uint8 array
+  `(H, W, 3)` so the DINO detector receives an RGB-like tensor.
+- Extracts the WCS solution from the FITS header for later pixel → RA/Dec
+  conversion, and the observation timestamp (`DATE-OBS`) for SGP4 propagation.
+
+Timing logged: `fits_load_ms`.
+
+### 3. DINO Detection (`inference/pipeline.py` + MMDetection)
+
+The normalised array is passed to a Co-DINO transformer model (Swin-T backbone
+for local dev, Swin-L for cloud training).
+
+- The image is rescaled so its longest edge equals `image_size` (400 px on Mac,
+  256 px in fast mode).
+- MMDetection's `inference_detector` runs a forward pass.
+- Every predicted bounding box with score ≥ `CONFIDENCE_THRESHOLD` (default
+  0.10 for locally-trained Swin-T; raise to 0.30 for cloud Swin-L) is kept.
+- Bounding boxes are scaled back to original image pixel coordinates.
+
+DINO can return multiple overlapping detections for the same physical streak
+(common for long streaks that span multiple attention heads).  These are
+deduplicated in stage 5.
+
+Timing logged: `inference_ms`.
+
+### 4. Radon Angle Refinement (`inference/postprocess.py`)
+
+DINO produces axis-aligned bounding boxes — the streak angle is not directly
+predicted.  For each raw detection:
+
+**a) Seed angle from bbox geometry**
+
+`_angle_from_bbox` uses `atan2(height, width)` to produce a rough initial
+angle estimate.  This is always more accurate than snapping to 0° or 90°.
+
+**b) Radon transform on the bbox crop**
+
+The image region inside the DINO bounding box is cropped.  Before computing
+the Radon transform:
+
+- The crop is converted to float32 greyscale.
+- The sky background (image median) is subtracted and negative values are
+  clipped to zero.  Without this step the high DC sky level (~120 counts)
+  dominates the Radon variance at all angles, pulling the estimate toward the
+  axis aligned with the crop geometry.
+
+The Radon sinogram is computed over a ±45° window around the seed angle.
+The sinogram column with maximum variance corresponds to the projection where
+the streak integrates to a single bright, narrow peak — i.e. the true streak
+orientation.  The winning Radon angle is converted back to image streak angle:
+
+```
+φ_streak = 90° − θ_radon   (mod 180°)
+```
+
+This produces sub-degree angle precision without any GPU compute (scikit-image
+Radon is CPU-only).
+
+Timing is included in `postprocess_ms`.
+
+### 5. OBB Construction and Streak Extent (`inference/postprocess.py`)
+
+**a) Initial OBB from refined angle**
+
+`bbox_to_obb` converts the DINO axis-aligned box and the Radon-refined angle
+into an oriented bounding box `{cx, cy, w, h, angle_deg}` where `w` is always
+the long axis.
+
+**b) Full-image streak tracing (`extend_obb_to_streak_extent`)**
+
+DINO bounding boxes frequently cover only a portion of a long streak.  This
+function traces the streak axis across the entire image to find the true
+endpoints:
+
+1. A perpendicular strip of pixels (±3 px wide) is sampled at each integer
+   position along the streak axis (parameterised as `t` px from the OBB
+   centre, ranging from image edge to image edge).
+2. Strip means above `background + 1.5σ` are marked as "bright".
+3. Bright positions are grouped into contiguous runs (gap tolerance 5 px).
+4. The run containing `t = 0` (the OBB centre, which DINO is guaranteed to
+   have detected) is selected as the true streak.  Selecting by containment
+   rather than by raw min/max prevents isolated noise spikes beyond the streak
+   tip from inflating the endpoint position.
+5. The OBB centre and long-axis length are updated to match the selected run.
+
+**c) Rotated-IoU NMS**
+
+All OBBs are converted to Shapely polygons.  A greedy NMS pass (sorted by
+confidence descending) suppresses any detection whose rotated-IoU with a
+higher-confidence kept detection exceeds 0.5.
+
+### 6. WCS Coordinate Conversion (`inference/pipeline.py`)
+
+The OBB centre pixel `(cx, cy)` is converted to equatorial coordinates using
+astropy's `all_pix2world` with the FITS header WCS.  If no WCS is present
+(e.g., synthetic test images) `ra_deg` and `dec_deg` are set to `null`.
+
+### 7. Cross-Identification (`inference/crossid.py`)
+
+*Skipped in fast mode (`FAST_MODE=true`).*
+
+For each detection:
+
+1. The local `tle_catalog` table in the ARGUS database is queried for all
+   active satellites whose TLE epoch is within ±3 days of the observation time.
+2. SGP4 propagation (via **sgp4** / **skyfield**) computes each candidate
+   satellite's sky position at the observation epoch.
+3. Angular separation and velocity-vector angle are compared against the
+   detected streak's RA/Dec and `angle_deg`.
+4. Up to 3 candidates are returned, ranked by a multi-factor confidence score.
+
+Timing logged: `crossid_ms`.
+
+### 8. Result Delivery (API → Browser)
+
+The worker updates the job status to `complete` in the database and stores the
+detection JSON.  The frontend polls `GET /api/result/{job_id}` until the job
+is done, then:
+
+- Loads the original (unmodified) FITS preview image from `GET /api/preview/{job_id}`.
+- Renders detection overlays on an HTML5 canvas:
+  - Thin rotated bounding box outline at 55% opacity.
+  - Dashed streak centreline from endpoint to endpoint.
+  - Filled endpoint circles with dark inner rings for contrast.
+  - Angle arc from horizontal with degree label.
+  - Numbered badge above each detection.
+- Hovering over a detection shows a tooltip: confidence, streak length, angle,
+  RA/Dec, and the top cross-identification match if available.
 
 ---
 
@@ -102,35 +262,35 @@ Argus/
 │   ├── astrometry/plate_solver.py
 │   └── matching/              ← scorer, propagator, spatial_filter, matcher, spacetrack_query, tle_store
 ├── inference/                 ← ML inference modules
-│   ├── device.py              ← get_device() / get_device_config()  ✅
-│   ├── fits_loader.py         ← FITS → tensor, Z-score normalisation  ✅
-│   ├── pipeline.py            ← inference orchestrator  ✅
-│   ├── postprocess.py         ← Radon angle refinement  ✅
-│   └── crossid.py             ← satellite cross-matching  ✅
+│   ├── device.py              ← get_device() / get_device_config()
+│   ├── fits_loader.py         ← FITS → tensor, Z-score normalisation
+│   ├── pipeline.py            ← inference orchestrator
+│   ├── postprocess.py         ← Radon angle refinement + streak extent + NMS
+│   └── crossid.py             ← satellite cross-matching
 ├── training/
-│   ├── convert_labels.py      ← YOLO OBB → COCO JSON  ✅
-│   ├── dataset.py             ← FITSStreakDataset  ✅
-│   ├── augmentations.py       ← albumentations + SyntheticStreakInject  ✅
-│   ├── train_dino.py          ← DINO training script  ✅
-│   └── train_baseline.py      ← YOLO11-OBB baseline  [Phase 2]
+│   ├── convert_labels.py      ← YOLO OBB → COCO JSON
+│   ├── dataset.py             ← FITSStreakDataset
+│   ├── augmentations.py       ← albumentations + SyntheticStreakInject
+│   ├── train_dino.py          ← DINO training script
+│   └── train_baseline.py      ← YOLO11-OBB baseline
 ├── models/
 │   └── dino/
-│       ├── streak_codino_swin_t.py   ← Swin-T dev config  ✅
-│       └── streak_codino_swin_l.py   ← Swin-L cloud config  ✅
+│       ├── streak_codino_swin_t.py   ← Swin-T dev config
+│       └── streak_codino_swin_l.py   ← Swin-L cloud config
 ├── scripts/
-│   ├── make_test_fits.py           ← synthetic FITS generator  ✅
-│   ├── download_weights.py         ← pretrained weight downloader  ✅
-│   ├── bootstrap_tle_catalog.py    ← one-time TLE catalog setup  ✅
-│   ├── update_tle_catalog.py       ← hourly TLE refresh (GP class)  ✅
-│   └── prepare_cloud_training.py   ← go/no-go checklist  [Phase 6]
-├── api/                       ← FastAPI application  ✅
-├── frontend/                  ← React 18 + Vite + Tailwind  ✅
-├── eval/                      ← metrics, benchmark, results  ✅
-├── db/                        ← schema.sql, async ORM models  ✅
-├── docker/                    ← docker-compose  [Phase 7]
-├── tests/                     ← 325 tests passing, 15 integration tests auto-skipped
+│   ├── make_test_fits.py           ← synthetic FITS generator
+│   ├── download_weights.py         ← pretrained weight downloader
+│   ├── bootstrap_tle_catalog.py    ← one-time TLE catalog setup
+│   ├── update_tle_catalog.py       ← hourly TLE refresh (GP class)
+│   └── prepare_cloud_training.py   ← go/no-go checklist before GPU rental
+├── api/                       ← FastAPI application
+├── frontend/                  ← React 18 + Vite + Tailwind
+├── eval/                      ← metrics, benchmark, results
+├── db/                        ← schema.sql, async ORM models
+├── docker/                    ← docker-compose (deploy only)
+├── tests/                     ← pytest — all offline, no credentials required
 ├── data/
-│   ├── sample/                ← synthetic FITS for smoke-testing  ✅
+│   ├── sample/                ← synthetic FITS for smoke-testing
 │   ├── raw/                   ← MILAN FITS (gitignored, download separately)
 │   ├── annotations/           ← COCO JSON label files
 │   └── catalogs/              ← TLE catalog files
@@ -148,25 +308,53 @@ conda create -n satid python=3.11
 conda activate satid
 pip install -r requirements.txt
 
-# Set model size (tiny=Mac dev, large=cloud A100)
-export MODEL_SIZE=tiny
-export PYTORCH_ENABLE_MPS_FALLBACK=1
+# Required env vars for local dev
+export MODEL_SIZE=tiny                          # tiny=Swin-T (Mac), large=Swin-L (A100)
+export MODEL_WEIGHTS=weights/dino_tiny.pth      # path to trained checkpoint
+export PYTORCH_ENABLE_MPS_FALLBACK=1            # required on Apple Silicon
+export DATABASE_URL=sqlite+aiosqlite:///./argus.db
+
+# Optional: lower the confidence threshold for locally-trained models
+export CONFIDENCE_THRESHOLD=0.10               # default; raise to 0.30 after cloud training
 
 # Bootstrap the local TLE catalog (one-time per environment):
 # 1. Download the 2025 annual bundle from Space-Track's cloud storage:
 #    https://ln5.sync.com/dl/afd354190/c5cd2q72-a5qjzp4q-nbjdiqkr-cenajuqu
-#    Place the file (e.g. tle2025.txt or TLE_2025.zip) in data/tle_zips/
+#    Place the file in data/tle_zips/
 python scripts/bootstrap_tle_catalog.py --zip-dir data/tle_zips/ --years 2025
 
 # Space-Track credentials (only needed for live TLE maintenance, not inference):
 export SPACETRACK_USER=your@email.com
 export SPACETRACK_PASS=yourpassword
 
-# Update the catalog with the latest active satellites (≤ once/hour, respects rate limits):
+# Update the catalog with the latest active satellites (≤ once/hour):
 python scripts/update_tle_catalog.py
 ```
 
-## Running with Docker
+## Running Locally (Dev)
+
+Run the API directly with the satid conda environment — Docker is reserved for
+deployment.  The satid env has torch, mmdet, and all ML packages installed.
+
+```bash
+conda activate satid
+export MODEL_SIZE=tiny
+export MODEL_WEIGHTS=weights/dino_tiny.pth
+export PYTORCH_ENABLE_MPS_FALLBACK=1
+
+# Start the API (port 8000)
+uvicorn api.main:app --reload --port 8000
+
+# Start the frontend dev server (port 5173)
+cd frontend && npm run dev
+```
+
+Open `http://localhost:5173` in your browser and upload a FITS file.
+
+## Running with Docker (Deploy)
+
+Docker images should only be built for deployment — they do not include
+torch/mmdet (GPU-intensive packages belong in the dedicated worker image).
 
 ```bash
 # 1. Copy and edit credentials
@@ -176,14 +364,7 @@ cp .env.example .env
 docker compose up --build
 
 # 3. Open http://localhost in your browser
-#    DEMO_MODE=true returns synthetic detections until real weights are available
-```
 
-Local Mac gate: `docker compose up` starts db, api, and frontend. The GPU worker
-is excluded from the default profile (it requires CUDA). Remove `DEMO_MODE: "true"`
-from docker-compose.yml once `weights/best.pth` is fetched from cloud training.
-
-```bash
 # Cloud deployment (S3 + SQS + GPU worker):
 docker compose -f docker-compose.yml -f docker-compose.cloud.yml up
 ```
@@ -193,7 +374,7 @@ docker compose -f docker-compose.yml -f docker-compose.cloud.yml up
 ```bash
 conda activate satid
 pytest tests/ -v
-# All tests are pure unit/synthetic-data tests — no live API calls, no credentials required
+# All tests are offline (mocked) — no GPU, no Space-Track credentials required
 ```
 
 ## Generating Synthetic Test Data
@@ -217,9 +398,9 @@ MODEL_SIZE=large python scripts/download_weights.py
 
 ## Local Training (Mac M3, no GPU required)
 
-All phases 0–8 are code-complete with 325 passing tests (plus 15 integration tests that
-run against the live Space-Track API — auto-skipped by default). To produce real detection
-results without a cloud GPU, train the Swin-T model on the 50-image dev subset:
+All phases 0–8 are code-complete with 325 passing tests.  To produce real
+detection results without a cloud GPU, train the Swin-T model on the 50-image
+dev subset:
 
 ```bash
 # 1. Get annotated training data (~150 MB)
@@ -240,12 +421,11 @@ PYTORCH_ENABLE_MPS_FALLBACK=1 MODEL_SIZE=tiny USE_DEV_SUBSET=true \
   python -m training.train_dino --work-dir weights/local_run
 
 # 6. Run inference with trained weights
-#    mmdet saves the best checkpoint as best_coco_bbox_mAP_epoch_NN.pth
-MODEL_WEIGHTS=weights/local_run/best_coco_bbox_mAP_epoch_50.pth MODEL_SIZE=tiny \
-  PYTORCH_ENABLE_MPS_FALLBACK=1 \
-  python -m inference.pipeline --fast --image data/sample/synth_streak_000.fits
+MODEL_WEIGHTS=weights/local_run/best_coco_bbox_mAP_epoch_50.pth \
+  MODEL_SIZE=tiny PYTORCH_ENABLE_MPS_FALLBACK=1 \
+  python -m inference.pipeline --image data/sample/synth_streak_000.fits
 
-# 7. Evaluate (loads model once for all images — fast)
+# 7. Evaluate (loads model once for all images)
 python -m eval.benchmark \
   --run-pipeline \
   --annotations data/annotations/dev_subset.json \

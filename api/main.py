@@ -131,13 +131,17 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
             tmp_path = Path(f.name)
 
         # pipeline_run is patched in tests via unittest.mock.
-        # DEMO_MODE=true returns synthetic detections without requiring weights.
-        if os.environ.get("DEMO_MODE", "").lower() == "true":
-            detections = _demo_detections(tmp_path)
-        else:
+        # Set FAST_MODE=true in the environment to skip Radon + cross-ID.
+        try:
             from inference.pipeline import run as pipeline_run
-            detections = pipeline_run(fits_path=tmp_path, fast=True)
-            app.state.model_loaded = True
+        except ImportError as exc:
+            raise RuntimeError(
+                "ML packages (torch/mmdet) are not installed in this environment. "
+                "Run the API directly with the satid conda env for local inference, "
+                "or use the GPU worker container for Docker deployments."
+            ) from exc
+        detections = pipeline_run(fits_path=tmp_path)
+        app.state.model_loaded = True
 
         png_bytes = _render_png(tmp_path, detections)
         await storage.save_image(job_id, png_bytes)
@@ -286,112 +290,6 @@ def _render_fits_preview(data: bytes) -> bytes | None:
     except Exception:
         logger.exception("FITS preview generation failed")
         return None
-
-
-def _demo_detections(fits_path: Path) -> list[dict]:
-    """Return a demo detection by finding the actual streak via Hough transform.
-
-    Uses probabilistic Hough lines on the Z-score-normalised image so the
-    returned OBB aligns with the real streak regardless of image size or
-    streak angle.  Falls back to a single centred placeholder on failure.
-
-    Args:
-        fits_path: Path to the FITS file.
-
-    Returns:
-        List with one detection dict whose OBB covers the detected streak.
-    """
-    import math as _math
-
-    try:
-        import cv2 as _cv2
-        import numpy as _np
-        from inference.fits_loader import FITSLoader
-
-        result = FITSLoader().load(fits_path)
-        arr = result["array"]          # (H, W, 3) uint8, Z-score normalised
-        ht, w = arr.shape[:2]
-        gray = arr[:, :, 0]
-
-        # Threshold at 99th percentile — keeps only the very brightest pixels
-        threshold = float(_np.percentile(gray, 99))
-        binary = (gray >= threshold).astype(_np.uint8) * 255
-
-        # Hough: require lines longer than 12 % of the shorter image edge
-        min_len = max(20, int(min(w, ht) * 0.12))
-        lines = _cv2.HoughLinesP(
-            binary, 1, _np.pi / 180,
-            threshold=max(15, min_len // 2),
-            minLineLength=min_len,
-            maxLineGap=15,
-        )
-
-        if lines is not None and len(lines) > 0:
-            # Longest segment wins
-            best = max(lines, key=lambda l: _math.hypot(
-                l[0][2] - l[0][0], l[0][3] - l[0][1]
-            ))
-            lx1, ly1, lx2, ly2 = map(float, best[0])
-
-            length  = _math.hypot(lx2 - lx1, ly2 - ly1)
-            cx      = (lx1 + lx2) / 2.0
-            cy      = (ly1 + ly2) / 2.0
-            angle_deg = _math.degrees(_math.atan2(ly2 - ly1, lx2 - lx1)) % 180.0
-
-            pad  = max(4, int(length * 0.02))
-            bx1  = max(0.0, min(lx1, lx2) - pad)
-            by1  = max(0.0, min(ly1, ly2) - pad)
-            bx2  = min(float(w),  max(lx1, lx2) + pad)
-            by2  = min(float(ht), max(ly1, ly2) + pad)
-
-            obb_long = length + pad * 2
-            obb_short = 8.0   # visual streak width in pixels
-
-            return [{
-                "confidence": 0.94,
-                "bbox": [bx1, by1, bx2, by2],
-                "obb": {
-                    "cx": cx, "cy": cy,
-                    "w": obb_long, "h": obb_short,
-                    "angle_deg": angle_deg,
-                },
-                "streak_length_px": round(length, 1),
-                "ra_deg": 83.82,
-                "dec_deg": -5.39,
-                "identifications": [
-                    {"satellite_name": "ISS (ZARYA)", "norad_id": 25544,
-                     "confidence": 0.87, "rank": 1},
-                    {"satellite_name": "STARLINK-1234", "norad_id": 47123,
-                     "confidence": 0.41, "rank": 2},
-                ],
-            }]
-
-    except Exception:
-        logger.exception("Demo Hough detection failed — using placeholder")
-
-    # Fallback: single centred placeholder
-    try:
-        from astropy.io import fits as afits
-        with afits.open(fits_path) as hdul:
-            _h = hdul[0].header
-            w  = int(_h.get("NAXIS1", 1024))
-            ht = int(_h.get("NAXIS2", 768))
-    except Exception:
-        w, ht = 1024, 768
-
-    return [{
-        "confidence": 0.50,
-        "bbox": [int(w * 0.1), int(ht * 0.1), int(w * 0.9), int(ht * 0.9)],
-        "obb": {
-            "cx": w * 0.5, "cy": ht * 0.5,
-            "w": w * 0.8,  "h": 8.0,
-            "angle_deg": 45.0,
-        },
-        "streak_length_px": round(w * 0.8, 1),
-        "ra_deg": None,
-        "dec_deg": None,
-        "identifications": [],
-    }]
 
 
 def _render_png(fits_path: Path, detections: list[dict]) -> bytes:

@@ -159,14 +159,15 @@ class TestRunFastMode:
 # refine_angle NOT called in fast mode
 # ---------------------------------------------------------------------------
 
-class TestFastModeSkipsRefinement:
+class TestAngleRefinement:
+    """Radon refinement now always runs; FAST_MODE only skips cross-ID."""
 
     @pytest.fixture(autouse=True)
     def ensure_synth_fits(self):
         _ensure_synth_fits()
 
-    def test_refine_angle_not_called_in_fast_mode(self):
-        """refine_angle must not be invoked when fast=True."""
+    def test_refine_angle_always_called(self):
+        """refine_angle must be invoked for every detection regardless of fast mode."""
         import inference.pipeline as pl
         import inference.postprocess as pp
 
@@ -174,12 +175,12 @@ class TestFastModeSkipsRefinement:
              patch.object(pl, "_run_inference", return_value=[
                  {"bbox": [50.0, 60.0, 200.0, 80.0], "confidence": 0.92},
              ]), \
-             patch.object(pp, "refine_angle") as mock_refine, \
+             patch.object(pp, "refine_angle", return_value=45.0) as mock_refine, \
              patch.dict(os.environ,
                         {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS)},
                         clear=False):
             pl.run(_SYNTH_FITS, fast=True)
-        mock_refine.assert_not_called()
+        assert mock_refine.call_count >= 1
 
     def test_refine_angle_called_in_non_fast_mode(self):
         """refine_angle must be invoked for each detection when fast=False."""

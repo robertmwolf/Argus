@@ -291,7 +291,12 @@ def cross_identify(
     Returns:
         The mutated *detections* list (same objects, with 'identifications' added).
     """
-    catalog = _fetch_tle_catalog(obs_time, epoch_window_days)
+    try:
+        catalog = _fetch_tle_catalog(obs_time, epoch_window_days)
+    except Exception:
+        logger.warning("TLE catalog fetch failed — skipping cross-identification", exc_info=True)
+        catalog = []
+
     if not catalog:
         logger.warning("Empty TLE catalog — all identifications will be empty")
         for det in detections:

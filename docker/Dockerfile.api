@@ -19,9 +19,7 @@ RUN pip install --no-cache-dir -r requirements-api.txt
 # Copy application source (not data/, weights/, or frontend/)
 COPY api/        ./api/
 COPY db/         ./db/
-COPY inference/fits_loader.py ./inference/fits_loader.py
-COPY inference/device.py      ./inference/device.py
-COPY inference/__init__.py    ./inference/__init__.py
+COPY inference/ ./inference/
 COPY src/        ./src/
 
 ENV PYTHONPATH=/app

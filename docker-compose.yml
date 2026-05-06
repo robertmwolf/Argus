@@ -24,9 +24,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://argus:argus@db/argus
       STORAGE_BACKEND: local
       QUEUE_BACKEND: memory
-      # DEMO_MODE returns synthetic detections without model weights.
-      # Remove this line after cloud training and fetching weights/best.pth.
-      DEMO_MODE: "true"
+      FAST_MODE: "true"
     env_file:
       - path: .env
         required: false
