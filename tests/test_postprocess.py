@@ -138,6 +138,32 @@ class TestRefineAngle:
         result = refine_angle(img_rgb, obb, angle_search_range=10.0)
         assert isinstance(result, float)
 
+    def test_wide_search_recovers_mirrored_bbox_angle(self):
+        """A bbox seed at +40° should recover a -40°/140° streak when allowed."""
+        from inference.postprocess import refine_angle
+        img = _make_streak_image(angle_deg=140.0)
+        obb = _make_obb(angle_deg=40.0)
+        refined = refine_angle(img, obb, angle_search_range=90.0)
+        err = min(abs(refined - 140.0), abs(refined - (140.0 - 180.0)))
+        assert err <= 5.0
+
+
+# ---------------------------------------------------------------------------
+# extend_obb_to_streak_extent
+# ---------------------------------------------------------------------------
+
+class TestExtendObbToStreakExtent:
+    def test_never_shrinks_existing_obb(self):
+        from inference.postprocess import extend_obb_to_streak_extent
+
+        image = np.full((128, 128), 100, dtype=np.uint8)
+        image[64, 63:66] = 255
+        obb = _make_obb(cx=64.0, cy=64.0, w=80.0, h=4.0, angle_deg=0.0)
+
+        extended = extend_obb_to_streak_extent(image, obb)
+
+        assert extended["w"] == pytest.approx(obb["w"])
+
 
 # ---------------------------------------------------------------------------
 # nms_detections

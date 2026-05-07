@@ -193,9 +193,13 @@ class TestSwinLConfig:
     def test_depths_large(self, swin_l_cfg):
         assert swin_l_cfg.model.backbone.depths == [2, 2, 18, 2]
 
-    def test_batch_size_2(self, swin_l_cfg):
-        """Cloud config uses batch_size=2 on A100 40 GB."""
-        assert swin_l_cfg.train_dataloader.batch_size == 2
+    def test_batch_size_1(self, swin_l_cfg):
+        """Cloud config uses batch_size=1 with gradient accumulation for 16 GB VRAM."""
+        assert swin_l_cfg.train_dataloader.batch_size == 1
+
+    def test_grad_accumulation(self, swin_l_cfg):
+        """Gradient accumulation=2 gives effective batch size=2."""
+        assert swin_l_cfg.optim_wrapper.accumulative_counts == 2
 
     def test_num_workers_4(self, swin_l_cfg):
         assert swin_l_cfg.train_dataloader.num_workers == 4

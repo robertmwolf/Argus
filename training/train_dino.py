@@ -353,6 +353,13 @@ def train(
     cfg = Config.fromfile(config_path)
     cfg.work_dir = str(work_dir)
     cfg.resume = resume
+    if os.environ.get("USE_DEV_SUBSET", "true").lower() in {"0", "false", "no"}:
+        cfg.train_dataloader.dataset.ann_file = "annotations/train.json"
+        cfg.val_dataloader.dataset.ann_file = "annotations/val.json"
+        cfg.test_dataloader = cfg.val_dataloader
+        cfg.val_evaluator.ann_file = "data/annotations/val.json"
+        cfg.test_evaluator = cfg.val_evaluator
+        logger.info("USE_DEV_SUBSET=false → training on data/annotations/train.json")
     if not _torch.cuda.is_available():
         cfg.train_dataloader.num_workers = 0
         cfg.val_dataloader.num_workers = 0

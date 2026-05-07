@@ -1,49 +1,46 @@
 # Datasets
 
 ## Overview
-Three data sources are needed for Phase 1. Start with MILAN — it is
-available immediately with no account required.
+Three data sources support the ARGUS pipeline. GTImages is the primary
+validation and negative-example source — it is already present in `data/GTImages/`.
 
 ---
 
-## 1. MILAN Sky Survey — Start Here (Available Now)
+## 1. GTImages — Primary Validation & Negative Source (Available Locally)
 
-**What it is:** 50,068 raw FITS images from a Stellina automated telescope,
-captured over 12 months (April 2022 – early 2023) during deep sky sessions.
-Satellite streaks appear incidentally during observations.
-Each image is 10-second exposure, ~3096×2080 pixels, 16-bit.
+**What it is:** 759 FITS images of intentional satellite streak observations
+captured by a fixed ground station (43.67°N, 81.02°W — Ontario, Canada) using
+SkyTrack 1.9.8. Images are 6248×4176 pixels, 16-bit, 0.5 s exposures, GAIN=300,
+with ASTAP plate solutions provided as `.wcs` / `.ini` sidecar files.
 
-**Why it's good for Phase 1:** Real noise, real PSF, real artefacts.
-The FITS headers contain valid DATE-OBS timestamps which are essential
-for Space-Track queries. Many images contain Starlink passes that can
-be confirmed against GP_History.
+**Annotations:** 68 `.strk` files (one per tracked NORAD ID) containing
+pixel-precise start/end coordinates of every streak, peak/mean SNR, streak
+length, full TLE elements for the tracked satellite, and a reject flag.
 
-**Download (one month at a time — start with August 2022):**
-```
-August 2022:    https://zenodo.org/records/7049839
-September 2022: https://zenodo.org/records/7115518
-October 2022:   https://zenodo.org/records/7399412   (actually November)
-November 2022:  https://zenodo.org/records/7399412
-```
-Each monthly archive is a ZIP of FITS files, roughly 2–5 GB per month.
+**Key statistics:**
+- 593 usable labeled streak images (reject=0)
+- 93 real no-streak images (reject=−1) — valuable as negative training examples
+- 68 unique NORAD IDs (79% Starlink; also Meteor-M2, Yaogan, Cosmos, Iridium)
+- Streak lengths: median 624 px, p10=373 px, p90=1003 px (mostly long streaks)
+- Single night (2026-04-27), single site — no sky-background diversity
 
-**How to download programmatically:**
+**Role in ARGUS:**
+- **Negative examples:** 93 no-streak images fill the gap in SatStreaks
+- **Cross-ID benchmark:** every image has a known NORAD ID — run pipeline and
+  check whether crossid.py recovers the correct satellite
+- **Supplemental training:** fold 593 labeled images into training alongside
+  SatStreaks, but do not replace SatStreaks (GTImages lacks short streaks and
+  scene diversity)
+
+**Convert to COCO JSON:**
 ```bash
-# Install zenodo_get for easy Zenodo downloads
-pip install zenodo_get
-
-# Download August 2022 (record 7049839)
-zenodo_get 7049839 -o data/milan/2022-08/
-
-# Or direct wget (find URLs on the Zenodo page)
-wget https://zenodo.org/records/7049839/files/MILAN_2022-08.zip
-unzip MILAN_2022-08.zip -d data/milan/2022-08/
+python scripts/convert_gtimages.py \
+    --strk-dir data/GTImages \
+    --output data/annotations/gtimages.json \
+    --negatives-output data/annotations/gtimages_negatives.json
 ```
 
-**Cite as:**
-Parisot, O. et al. (2023). MILAN Sky Survey, a dataset of raw deep sky
-images captured during one year with a Stellina automated telescope.
-Data in Brief, 48, 109133.
+**Location:** `data/GTImages/` — already present, no download needed.
 
 ---
 
@@ -115,7 +112,7 @@ print(result[0]['OBJECT_NAME'])  # Should print: ISS (ZARYA)
 
 ---
 
-## 4. SatStreaks Dataset (Phase 2 — Annotated, for YOLO Training)
+## 4. SatStreaks Dataset (Annotated, for DINO/YOLO Training)
 
 **What it is:** 3,073 densely annotated real images of satellite streaks
 from Hubble Space Telescope (114,607 images scanned via citizen science)
@@ -131,10 +128,9 @@ Use for Phase 2 YOLO-OBB annotation training only, not Phase 1.
 
 ---
 
-## Sample Data for Testing (Phase 1 Day 1)
+## Sample Data for Testing
 
-Before MILAN downloads complete, use these small FITS files to test
-the parser immediately:
+Use synthetic FITS files to test the parser without real images:
 
 **Any public FITS file from NASA/STScI works for parser testing:**
 ```bash
@@ -208,29 +204,19 @@ if __name__ == '__main__':
 
 ---
 
-## Confirmed Test Cases (Ground Truth)
+## Cross-ID Ground Truth (GTImages)
 
-These are MILAN images where a Starlink pass has been manually
-confirmed and the NORAD ID identified via Heavens-Above.com.
-Use these as your Week 3–4 validation set.
+GTImages provides ready-made cross-ID ground truth — every image has a known
+NORAD ID and embedded TLE.  The converter (`scripts/convert_gtimages.py`) writes
+`data/annotations/gtimages.json` which the eval benchmark can use directly.
 
-**To build your own confirmed test cases:**
-1. Pick a MILAN FITS file with a visible streak
-2. Note DATE-OBS and observer location (Luxembourg: 49.61°N, 6.13°E)
-3. Go to https://heavens-above.com → enter location → Starlink passes
-4. Match the time and direction to confirm the NORAD ID
-5. Record in results/confirmed_passes.json
-
-**Format:**
-```json
-[
-  {
-    "fits_file": "data/milan/2022-08/frame_001234.fits",
-    "obs_time_utc": "2022-08-15T21:43:12.4",
-    "confirmed_norad_id": 48274,
-    "object_name": "STARLINK-2183",
-    "confirmed_by": "heavens-above.com cross-reference",
-    "streak_visible": true
-  }
-]
+To run a cross-ID accuracy check against GTImages:
+```bash
+python -m eval.benchmark \
+    --run-pipeline \
+    --annotations data/annotations/gtimages.json \
+    --output results/gtimages_crossid.json
 ```
+
+The benchmark reports whether the correct NORAD ID appears in the top-3
+`CandidateMatch` results for each image.

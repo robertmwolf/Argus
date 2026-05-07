@@ -8,9 +8,12 @@ const HIGHLIGHT_COLOUR = '#FF6B35'
 // ---------------------------------------------------------------------------
 
 function streakEndpoints(obb, scaleX, scaleY) {
-  const { cx, cy, w, angle_deg } = obb
+  const { cx, cy, w, h, angle_deg } = obb
   const rad = (angle_deg * Math.PI) / 180
-  const half = w / 2
+  // Use the longer OBB dimension as the streak half-length.  For correctly
+  // processed detections w is the along-streak extent; for legacy DB rows
+  // where w/h may be the raw bbox extents, max() picks the right one.
+  const half = Math.max(w, h) / 2
   return {
     p1: { x: (cx - half * Math.cos(rad)) * scaleX, y: (cy - half * Math.sin(rad)) * scaleY },
     p2: { x: (cx + half * Math.cos(rad)) * scaleX, y: (cy + half * Math.sin(rad)) * scaleY },
@@ -48,7 +51,7 @@ function drawCenterline(ctx, p1, p2, colour, alpha, lineWidth) {
   ctx.restore()
 }
 
-function drawEndpoint(ctx, p, colour, alpha, radius) {
+function drawEndpoint(ctx, p, label, colour, alpha, radius) {
   ctx.save()
   ctx.globalAlpha = alpha
   // Outer filled circle
@@ -62,17 +65,24 @@ function drawEndpoint(ctx, p, colour, alpha, radius) {
   ctx.beginPath()
   ctx.arc(p.x, p.y, radius * 0.42, 0, Math.PI * 2)
   ctx.fill()
+  // Label ("1" / "2") just above the dot
+  ctx.globalAlpha = alpha
+  ctx.fillStyle = colour
+  ctx.font = `bold ${Math.round(radius * 1.6)}px system-ui, sans-serif`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'bottom'
+  ctx.fillText(label, p.x, p.y - radius - 1)
   ctx.restore()
 }
 
 function drawAngleIndicator(ctx, obb, colour, alpha, scaleX, scaleY) {
-  const { cx, cy, w, angle_deg } = obb
+  const { cx, cy, w, h, angle_deg } = obb
   const rad = (angle_deg * Math.PI) / 180
   const cxS = cx * scaleX
   const cyS = cy * scaleY
 
   // Arc radius: proportional to streak length, clamped
-  const arcR = Math.max(16, Math.min(28, (w / 2) * scaleX * 0.28))
+  const arcR = Math.max(16, Math.min(28, (Math.max(w, h) / 2) * scaleX * 0.28))
 
   ctx.save()
   ctx.globalAlpha = alpha * 0.75
@@ -170,8 +180,8 @@ function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
 
   drawOBB(ctx, obb, colour, alpha * 0.55, scaleX, scaleY, highlighted ? 1.5 : 1)
   drawCenterline(ctx, p1, p2, colour, alpha, lineWidth)
-  drawEndpoint(ctx, p1, colour, alpha, endpointR)
-  drawEndpoint(ctx, p2, colour, alpha, endpointR)
+  drawEndpoint(ctx, p1, '1', colour, alpha, endpointR)
+  drawEndpoint(ctx, p2, '2', colour, alpha, endpointR)
   drawAngleIndicator(ctx, obb, colour, alpha, scaleX, scaleY)
 }
 
@@ -313,8 +323,21 @@ export default function ResultViewer({ jobId, detections, highlightIndex, onHove
             {tooltip.det.obb?.angle_deg != null && (
               <p>Angle: <span className="font-mono">{tooltip.det.obb.angle_deg.toFixed(1)}° from horizontal</span></p>
             )}
-            {tooltip.det.ra_deg != null && (
-              <p>RA / Dec: <span className="font-mono">{tooltip.det.ra_deg.toFixed(4)}° / {tooltip.det.dec_deg.toFixed(4)}°</span></p>
+            {tooltip.det.ra_tip1_deg != null && (
+              <p>
+                Soln 1 RA / Dec:{' '}
+                <span className="font-mono">
+                  {tooltip.det.ra_tip1_deg.toFixed(4)}° / {tooltip.det.dec_tip1_deg.toFixed(4)}°
+                </span>
+              </p>
+            )}
+            {tooltip.det.ra_tip2_deg != null && (
+              <p>
+                Soln 2 RA / Dec:{' '}
+                <span className="font-mono">
+                  {tooltip.det.ra_tip2_deg.toFixed(4)}° / {tooltip.det.dec_tip2_deg.toFixed(4)}°
+                </span>
+              </p>
             )}
           </div>
           {tooltip.det.identifications?.[0] && (
@@ -338,8 +361,8 @@ export default function ResultViewer({ jobId, detections, highlightIndex, onHove
             <span>Streak axis</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center justify-center w-3 h-3 rounded-full bg-cyan-400" />
-            <span>Endpoints</span>
+            <span className="inline-flex items-center justify-center w-3 h-3 rounded-full bg-cyan-400 text-[7px] font-bold text-black">1</span>
+            <span>Soln 1 / 2 positions</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="font-mono text-cyan-400">θ°</span>

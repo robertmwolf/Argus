@@ -1,0 +1,46 @@
+SIMPLE  =                    T / PowerBasic FITS                                
+BITPIX  =                   16 /                                                
+NAXIS   =                    0 / Minimal header                                 
+BZERO   =                32768 / BZERO                                          
+ROWORDER=           'TOP-DOWN' / Image Orientation                              
+XBINNING=                    1 / X axis binning factor                          
+YBINNING=                    1 / Y axis binning factor                          
+XPIXSZ  =                 3.76 / [um] Pixel X axis size                         
+YPIXSZ  =                 3.76 / [um] Pixel Y axis size                         
+EXPOSURE=                0.500 / [s] Exposure duration                          
+GAIN    =                  300 /                                                
+OFFSET  =                   50 /                                                
+SET-TEMP=                  -10 / Sensor temperature setpoint in C               
+CCD-TEMP=                -10.0 / Sensor temperature at end of exposure in C     
+RA      =           143.069150 /                                                
+DEC     =            32.960592 /                                                
+FOCALLEN=                  612 / Telescope Focal Length                         
+EXTEND  =                    T /                                                
+SITEELEV=                  365 / [m] Observation site elevation                 
+SITELAT =           43.6735556 / [deg] Observation site latitude                
+SITELONG=          -81.0204722 / [deg] Observation site longitude               
+DATE-OBS= '2026-04-27T02:34:07.054' / Time of observation (UTC)                 
+DATE-LOC= '2026-04-26T22:34:07.054' / Time of observation (local)               
+EQUINOX =               2000.0 / Equinox of coordinates                         
+SWCREATE=     'SkyTrack 1.9.8' / Software that created this file                
+CTYPE1  = 'RA---TAN'           / first parameter RA,    projection TANgential   
+CTYPE2  = 'DEC--TAN'           / second parameter DEC,  projection TANgential   
+CUNIT1  = 'deg     '           / Unit of coordinates                            
+CRPIX1  =  3.124500000000E+003 / X of reference pixel                           
+CRPIX2  =  2.088500000000E+003 / Y of reference pixel                           
+CRVAL1  =  1.430658262418E+002 / RA of reference pixel (deg)                    
+CRVAL2  =  3.295282491054E+001 / DEC of reference pixel (deg)                   
+CDELT1  =  3.320536608354E-004 / X pixel size (deg)                             
+CDELT2  =  3.319960915881E-004 / Y pixel size (deg)                             
+CROTA1  =  8.344885000447E+001 / Image twist X axis (deg)                       
+CROTA2  =  8.344529832282E+001 / Image twist Y axis (deg) E of N if not flipped.
+CD1_1   =  3.788405719914E-005 / CD matrix to convert (x,y) to (Ra, Dec)        
+CD1_2   = -3.298854829851E-004 / CD matrix to convert (x,y) to (Ra, Dec)        
+CD2_1   =  3.298259410381E-004 / CD matrix to convert (x,y) to (Ra, Dec)        
+CD2_2   =  3.789793461509E-005 / CD matrix to convert (x,y) to (Ra, Dec)        
+PLTSOLVD=                    T / Astrometric solved by ASTAP v2024.09.25.       
+COMMENT 7  Solved in 0.2 sec. Offset 29.6". Mount offset RA=10.0", DEC=28.0"
+WARNING = 'Warning inexact scale! Set FOV=1.39d or scale=1.2"/pix or FL=649mm '
+COMMENT cmdline:"C:\Program Files\astap\astap.exe"   -f "C:\skytrack\Images\Stre
+COMMENT ak_58354_223407.fits" -s 500
+END                                                                             

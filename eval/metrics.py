@@ -29,6 +29,7 @@ Streak length bands (pixels):
 from __future__ import annotations
 
 import math
+from pathlib import Path
 from typing import Sequence
 
 import numpy as np
@@ -421,6 +422,187 @@ def evaluate(
             k: {m: round(v, 4) for m, v in band.items()}
             for k, band in per_band.items()
         },
+    }
+
+
+# ---------------------------------------------------------------------------
+# Confusion matrix
+# ---------------------------------------------------------------------------
+
+def confusion_matrix(
+    predictions: list[dict],
+    ground_truth: list[dict],
+    iou_threshold: float = 0.5,
+    save_path: str | Path | None = None,
+) -> np.ndarray:
+    """Compute and optionally plot a 2×2 confusion matrix for streak detection.
+
+    Rows = actual (Positive streak / Negative no-streak).
+    Columns = predicted (Positive / Negative).
+
+    An image is treated as positive if it has ≥ 1 ground-truth annotation.
+    A detection is a True Positive if it IoU-matches a GT box above threshold.
+
+    Args:
+        predictions: All predicted detections (image_id, confidence, obb, …).
+        ground_truth: All ground-truth annotations (image_id, obb, …).
+        iou_threshold: IoU threshold for TP matching.
+        save_path: If given, save a PNG confusion-matrix plot to this path.
+            Parent directory is created if needed.
+
+    Returns:
+        2×2 numpy array [[TP, FP], [FN, TN]] as int32.
+
+    # Source: StreakMind — evaluation methodology
+    # Ref: agent_docs/streakmind_phases.md
+    """
+    is_tp, n_gt, _ = _match_all(predictions, ground_truth, iou_threshold)
+    tp = int(sum(is_tp))
+    fp = int(len(is_tp) - tp)
+    fn = int(n_gt - tp)
+
+    # TN: images with no GT and no prediction
+    all_image_ids = {p["image_id"] for p in predictions} | {g["image_id"] for g in ground_truth}
+    from collections import defaultdict
+    pred_by_img: dict = defaultdict(list)
+    gt_by_img:   dict = defaultdict(list)
+    for p in predictions:
+        pred_by_img[p["image_id"]].append(p)
+    for g in ground_truth:
+        gt_by_img[g["image_id"]].append(g)
+
+    tn = sum(
+        1 for img_id in all_image_ids
+        if not gt_by_img[img_id] and not pred_by_img[img_id]
+    )
+
+    cm = np.array([[tp, fp], [fn, tn]], dtype=np.int32)
+
+    if save_path is not None:
+        _plot_confusion_matrix(cm, Path(save_path))
+
+    return cm
+
+
+def _plot_confusion_matrix(cm: np.ndarray, save_path: Path) -> None:
+    """Render and save a confusion matrix PNG.
+
+    Args:
+        cm: 2×2 array [[TP, FP], [FN, TN]].
+        save_path: Output path for the PNG file.
+    """
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return  # matplotlib optional — skip silently
+
+    fig, ax = plt.subplots(figsize=(5, 4))
+    im = ax.imshow(cm, interpolation="nearest", cmap="Blues")
+    fig.colorbar(im, ax=ax)
+
+    classes = ["Streak\n(Positive)", "No-streak\n(Negative)"]
+    ax.set_xticks([0, 1])
+    ax.set_yticks([0, 1])
+    ax.set_xticklabels(["Predicted\nPositive", "Predicted\nNegative"])
+    ax.set_yticklabels(["Actual\nPositive", "Actual\nNegative"])
+
+    labels = [["TP", "FP"], ["FN", "TN"]]
+    thresh = cm.max() / 2.0
+    for i in range(2):
+        for j in range(2):
+            ax.text(
+                j, i,
+                f"{labels[i][j]}\n{cm[i, j]}",
+                ha="center", va="center",
+                color="white" if cm[i, j] > thresh else "black",
+                fontsize=14,
+            )
+
+    ax.set_title(f"Confusion Matrix (IoU ≥ 0.5)\n"
+                 f"Precision={cm[0,0]/(cm[0,0]+cm[0,1]+1e-9):.1%}  "
+                 f"Recall={cm[0,0]/(cm[0,0]+cm[1,0]+1e-9):.1%}")
+    fig.tight_layout()
+
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(save_path, dpi=150)
+    plt.close(fig)
+
+
+# ---------------------------------------------------------------------------
+# Cross-identification quality metrics
+# ---------------------------------------------------------------------------
+
+def evaluate_crossid(detections: list[dict]) -> dict:
+    """Compute cross-identification quality metrics from pipeline detections.
+
+    Extracts along-track (Atrk) and cross-track (Xtrk) residuals from the
+    top-1 candidate of each identified detection and computes RMS statistics.
+
+    Atrk RMS reflects timing/epoch errors; Xtrk RMS reflects orbital plane
+    errors.  A correct identification typically has Xtrk < Atrk.
+
+    # Source: SkyTrack (colleague) — ComputeRMSResidual
+    # Ref: examples/streak_live.inc, line 2150
+
+    Args:
+        detections: Detection dicts that have gone through cross_identify(),
+            each with an 'identifications' list whose top entry may contain
+            'atrk_arcsec' and 'xtrk_arcsec' keys.
+
+    Returns:
+        Dict with keys:
+          n_detections        — total number of input detections
+          n_identified        — detections with at least one candidate
+          identification_rate — n_identified / n_detections
+          n_with_residuals    — candidates that have Atrk/Xtrk values
+          atrk_rms_arcsec     — RMS along-track residual (arcsec)
+          xtrk_rms_arcsec     — RMS cross-track residual (arcsec)
+          total_rms_arcsec    — RMS of sqrt(Atrk²+Xtrk²) (arcsec)
+          top1_confidence_mean — mean confidence of top-1 candidates
+    """
+    n_det   = len(detections)
+    n_id    = 0
+    conf_sum = 0.0
+    atrk_sq_sum = 0.0
+    xtrk_sq_sum = 0.0
+    total_sq_sum = 0.0
+    n_resid = 0
+
+    for det in detections:
+        ids = det.get("identifications") or []
+        if not ids:
+            continue
+        n_id += 1
+        top = ids[0]
+        conf_sum += float(top.get("confidence", 0.0))
+
+        atrk = top.get("atrk_arcsec")
+        xtrk = top.get("xtrk_arcsec")
+        if atrk is not None and xtrk is not None:
+            atrk = float(atrk)
+            xtrk = float(xtrk)
+            atrk_sq_sum  += atrk ** 2
+            xtrk_sq_sum  += xtrk ** 2
+            total_sq_sum += atrk ** 2 + xtrk ** 2
+            n_resid += 1
+
+    id_rate          = n_id / n_det if n_det > 0 else 0.0
+    conf_mean        = conf_sum / n_id if n_id > 0 else 0.0
+    atrk_rms         = math.sqrt(atrk_sq_sum  / n_resid) if n_resid > 0 else 0.0
+    xtrk_rms         = math.sqrt(xtrk_sq_sum  / n_resid) if n_resid > 0 else 0.0
+    total_rms        = math.sqrt(total_sq_sum / n_resid) if n_resid > 0 else 0.0
+
+    return {
+        "n_detections":         n_det,
+        "n_identified":         n_id,
+        "identification_rate":  round(id_rate, 4),
+        "n_with_residuals":     n_resid,
+        "atrk_rms_arcsec":      round(atrk_rms,  2),
+        "xtrk_rms_arcsec":      round(xtrk_rms,  2),
+        "total_rms_arcsec":     round(total_rms,  2),
+        "top1_confidence_mean": round(conf_mean,  4),
     }
 
 

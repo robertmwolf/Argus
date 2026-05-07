@@ -113,7 +113,8 @@ async def test_detection_references_observation(session):
         obb_w=305.0, obb_h=15.0,
         obb_angle_deg=12.4,
         streak_length_px=305.0,
-        ra_deg=123.45, dec_deg=-10.2,
+        ra_tip1_deg=123.45, dec_tip1_deg=-10.2,
+        ra_tip2_deg=123.50, dec_tip2_deg=-10.3,
     )
     session.add(det)
     await session.commit()
@@ -122,7 +123,7 @@ async def test_detection_references_observation(session):
     assert fetched is not None
     assert fetched.observation_id == obs_id
     assert fetched.confidence == pytest.approx(0.93)
-    assert fetched.ra_deg == pytest.approx(123.45)
+    assert fetched.ra_tip1_deg == pytest.approx(123.45)
 
 
 @pytest.mark.asyncio

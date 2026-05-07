@@ -167,7 +167,7 @@ Report: mean per image, total for batch
 ### Never commit large FITS files to git
 Add to `.gitignore`:
 ```
-data/milan/
+data/GTImages/
 data/frigate/
 data/cache/
 data/sample/*.fits

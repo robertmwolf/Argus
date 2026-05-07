@@ -22,8 +22,10 @@ CREATE TABLE detections (
     obb_w            REAL, obb_h   REAL,
     obb_angle_deg    REAL,
     streak_length_px REAL,
-    ra_deg           REAL,
-    dec_deg          REAL
+    ra_tip1_deg      REAL,
+    dec_tip1_deg     REAL,
+    ra_tip2_deg      REAL,
+    dec_tip2_deg     REAL
 );
 
 CREATE TABLE identifications (

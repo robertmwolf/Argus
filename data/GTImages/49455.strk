@@ -1,0 +1,11 @@
+[VERSION]
+Skytrack 	1.9.8
+[SITE]
+	Latitude(deg)	Longitude(deg, East=+)	Elevation(m)
+43.6735556	-81.0204722	365.0
+[TLE]
+NORAD	EpochYear	EpochDay	Incl	RAAN	ECC	ARGP	MA	MM	BSTAR	MM1	MM2	EphemType	Elset	Rev	Name	Object ID	Class
+49455	26	112.24729449	 53.2184	 23.5818	0001334	 89.9785	270.1360	15.08838880	 71142-4	 .00000844	 00000+0	0	 999	24535	STARLINK-3145           	2021-104AZ	U
+[OBS]
+Image	Date Time(UTC)	JD Midpoint	Start X Pixel	Start Y Pixel	End X Pixel	End Y Pixel	Mid X Pixel	Mid Y Pixel	Peak SNR	Mean SNR	Elongation	Length	Reject	Mid RA	Mid Dec	Start RA	Start Dec	End RA	End Dec	Expected RA	Expected Dec	Expected Range	Exposure	Gain	Comment
+Streak_51128_212803.fits	2026-04-23T01:28:03.806	2461153.5611580553	0	0	0	0	0	0	0	0	2	30	-1	0.00000000	0.00000000	0.00000000	0.00000000	0.00000000	0.00000000	0.00000000	0.00000000	0.000	0.5000	300.0	No streak found

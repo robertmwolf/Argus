@@ -31,7 +31,7 @@ export default function DetectionTable({ detections, highlightIndex, onRowClick 
         <table className="w-full text-sm text-left">
           <thead className="bg-slate-800/40 text-slate-400 text-xs uppercase tracking-wider">
             <tr>
-              {['#', 'Confidence', 'Length (px)', 'Angle (°)', 'RA (°)', 'Dec (°)', 'Best Match', 'Match Conf'].map((h) => (
+              {['#', 'Confidence', 'Length (px)', 'Angle (°)', 'Sky Position', 'Best Match', 'Match Conf'].map((h) => (
                 <th key={h} className="px-4 py-2.5 whitespace-nowrap font-medium">{h}</th>
               ))}
             </tr>
@@ -86,9 +86,16 @@ export default function DetectionTable({ detections, highlightIndex, onRowClick 
                     </div>
                   </td>
 
-                  {/* Length */}
+                  {/* Length — fall back to max OBB dimension for legacy rows where
+                      streak_length_px was recorded as the raw bbox x-extent */}
                   <td className="px-4 py-2.5 font-mono text-slate-300">
-                    {det.streak_length_px != null ? det.streak_length_px.toFixed(0) : '—'}
+                    {(() => {
+                      const obbMax = det.obb ? Math.max(det.obb.w ?? 0, det.obb.h ?? 0) : 0
+                      const len = (det.streak_length_px != null && det.streak_length_px > obbMax * 0.1)
+                        ? det.streak_length_px
+                        : obbMax
+                      return len > 0 ? len.toFixed(0) : '—'
+                    })()}
                   </td>
 
                   {/* Angle */}
@@ -96,14 +103,28 @@ export default function DetectionTable({ detections, highlightIndex, onRowClick 
                     {angleDeg != null ? angleDeg.toFixed(1) : '—'}
                   </td>
 
-                  {/* RA */}
-                  <td className="px-4 py-2.5 font-mono text-slate-400">
-                    {det.ra_deg != null ? det.ra_deg.toFixed(4) : '—'}
-                  </td>
-
-                  {/* Dec */}
-                  <td className="px-4 py-2.5 font-mono text-slate-400">
-                    {det.dec_deg != null ? det.dec_deg.toFixed(4) : '—'}
+                  {/* Sky Position — Solution 1 and Solution 2 */}
+                  <td className="px-4 py-2.5">
+                    {det.ra_tip1_deg != null ? (
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-cyan-700 text-cyan-200 text-[8px] font-bold shrink-0">1</span>
+                          <span className="font-mono text-xs text-slate-300">
+                            {det.ra_tip1_deg.toFixed(4)}°&nbsp;/&nbsp;{det.dec_tip1_deg.toFixed(4)}°
+                          </span>
+                        </div>
+                        {det.ra_tip2_deg != null && (
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-slate-600 text-slate-200 text-[8px] font-bold shrink-0">2</span>
+                            <span className="font-mono text-xs text-slate-400">
+                              {det.ra_tip2_deg.toFixed(4)}°&nbsp;/&nbsp;{det.dec_tip2_deg.toFixed(4)}°
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-slate-600">—</span>
+                    )}
                   </td>
 
                   {/* Best match name */}
