@@ -13,11 +13,22 @@
 # USAGE: Cloud training only — requires CUDA and MODEL_SIZE=large.
 # For local Mac development use streak_codino_swin_t.py instead.
 #
+# HARDWARE: Tuned for RTX 5070 Ti (16 GB GDDR7, Blackwell).
+#   - batch_size=1 with accumulative_counts=2 gives effective batch=2
+#   - with_cp=True (gradient checkpointing) is required to fit Swin-L at 800px
+#   - If you hit OOM, export IMAGE_SIZE=640 before training (train_dino.py honours it)
+#   - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True reduces fragmentation on 16 GB
+#
 # TRAINING:
 #   Stage 1 (epochs 1-20):  backbone frozen   (lr_mult=0.0)
 #   Stage 2 (epochs 21-50): backbone unfrozen (lr_mult=0.1)
 #
 # See training/train_dino.py for the two-stage schedule implementation.
+
+# ---------------------------------------------------------------------------
+# Custom astronomy image transform registration
+# ---------------------------------------------------------------------------
+custom_imports = dict(imports=['training.transforms'], allow_failed_imports=False)
 
 # ---------------------------------------------------------------------------
 # Base dataset and runtime settings
@@ -167,7 +178,7 @@ model = dict(
 # Data pipeline
 # ---------------------------------------------------------------------------
 train_pipeline = [
-    dict(type='LoadImageFromFile', backend_args=backend_args),
+    dict(type='LoadFITSFromFile'),
     dict(type='LoadAnnotations', with_bbox=True),
     dict(type='RandomFlip', prob=0.5),
     dict(
@@ -208,7 +219,7 @@ train_pipeline = [
 ]
 
 val_pipeline = [
-    dict(type='LoadImageFromFile', backend_args=backend_args),
+    dict(type='LoadFITSFromFile'),
     dict(type='Resize', scale=(800, 800), keep_ratio=True),
     dict(type='LoadAnnotations', with_bbox=True),
     dict(
@@ -219,10 +230,11 @@ val_pipeline = [
 ]
 
 # ---------------------------------------------------------------------------
-# Dataloaders  (cloud training values — A100 40 GB)
+# Dataloaders  (tuned for RTX 5070 Ti 16 GB — effective batch size = 2 via
+# gradient accumulation; set accumulative_counts in optim_wrapper below)
 # ---------------------------------------------------------------------------
 train_dataloader = dict(
-    batch_size=2,
+    batch_size=1,
     num_workers=4,
     persistent_workers=True,
     pin_memory=True,        # safe on CUDA; improves host→GPU transfer speed
@@ -233,7 +245,7 @@ train_dataloader = dict(
         data_root=data_root,
         metainfo=metainfo,
         ann_file='annotations/train.json',
-        data_prefix=dict(img='raw/'),
+        data_prefix=dict(img=''),
         filter_cfg=dict(filter_empty_gt=False),
         pipeline=train_pipeline,
         backend_args=backend_args,
@@ -251,7 +263,7 @@ val_dataloader = dict(
         data_root=data_root,
         metainfo=metainfo,
         ann_file='annotations/val.json',
-        data_prefix=dict(img='raw/'),
+        data_prefix=dict(img=''),
         test_mode=True,
         pipeline=val_pipeline,
         backend_args=backend_args,
@@ -282,7 +294,8 @@ test_evaluator = val_evaluator
 # backbone from 0.0 → 0.1 at epoch 21 by updating this config programmatically.
 
 optim_wrapper = dict(
-    type='OptimWrapper',
+    type='AmpOptimWrapper',          # automatic mixed precision — saves ~30% VRAM on CUDA
+    accumulative_counts=2,           # gradient accumulation: effective batch = 1 × 2 = 2
     optimizer=dict(
         type='AdamW',
         lr=1e-5,
@@ -358,4 +371,8 @@ log_level = 'INFO'
 load_from = None          # set to 'weights/co_dino_swin_l_coco.pth' before training
 resume = False
 
+# LR scaling: effective batch = 1 (per-GPU) × 2 (accumulation) = 2.
+# base_batch_size=16 means the configured lr=1e-5 is already scaled for 16
+# images; with effective batch=2 the auto-scaler will halve it to 1.25e-6.
+# That is intentional — Swin-L fine-tuning benefits from a conservative LR.
 auto_scale_lr = dict(base_batch_size=16)

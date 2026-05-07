@@ -1,0 +1,11 @@
+[VERSION]
+Skytrack 	1.9.8
+[SITE]
+	Latitude(deg)	Longitude(deg, East=+)	Elevation(m)
+43.6735556	-81.0204722	365.0
+[TLE]
+NORAD	EpochYear	EpochDay	Incl	RAAN	ECC	ARGP	MA	MM	BSTAR	MM1	MM2	EphemType	Elset	Rev	Name	Object ID	Class
+60040	26	116.47716881	 53.1580	 30.9070	0001434	 80.9676	279.1504	15.69707444	 40743-5	-.00000096	 00000+0	0	 999	10848	STARLINK-11122 [DTC]    	2024-112C	U
+[OBS]
+Image	Date Time(UTC)	JD Midpoint	Start X Pixel	Start Y Pixel	End X Pixel	End Y Pixel	Mid X Pixel	Mid Y Pixel	Peak SNR	Mean SNR	Elongation	Length	Reject	Mid RA	Mid Dec	Start RA	Start Dec	End RA	End Dec	Expected RA	Expected Dec	Expected Range	Exposure	Gain	Comment
+Streak_57973_214027.fits	2026-04-27T01:40:27.076	2461157.5697607178	0	0	0	0	0	0	0	0	0	0	-1	0.00000000	0.00000000	0.00000000	0.00000000	0.00000000	0.00000000	0.00000000	0.00000000	0.000	0.5000	300.0	No streak found

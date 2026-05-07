@@ -106,8 +106,10 @@ class Detection(Base):
     obb_h: Mapped[float | None] = mapped_column(Float)
     obb_angle_deg: Mapped[float | None] = mapped_column(Float)
     streak_length_px: Mapped[float | None] = mapped_column(Float)
-    ra_deg: Mapped[float | None] = mapped_column(Float)
-    dec_deg: Mapped[float | None] = mapped_column(Float)
+    ra_tip1_deg: Mapped[float | None] = mapped_column(Float)
+    dec_tip1_deg: Mapped[float | None] = mapped_column(Float)
+    ra_tip2_deg: Mapped[float | None] = mapped_column(Float)
+    dec_tip2_deg: Mapped[float | None] = mapped_column(Float)
 
 
 class Identification(Base):

@@ -164,8 +164,10 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
                     obb_h=obb.get("h"),
                     obb_angle_deg=obb.get("angle_deg"),
                     streak_length_px=det_dict.get("streak_length_px"),
-                    ra_deg=det_dict.get("ra_deg"),
-                    dec_deg=det_dict.get("dec_deg"),
+                    ra_tip1_deg=det_dict.get("ra_tip1_deg"),
+                    dec_tip1_deg=det_dict.get("dec_tip1_deg"),
+                    ra_tip2_deg=det_dict.get("ra_tip2_deg"),
+                    dec_tip2_deg=det_dict.get("dec_tip2_deg"),
                 )
                 session.add(det)
                 await session.flush()
@@ -240,7 +242,7 @@ def _extract_fits_header(data: bytes) -> list[dict] | None:
 def _render_fits_preview(data: bytes) -> bytes | None:
     """Render FITS image data to a preview PNG without any overlays.
 
-    Uses 1st–99th percentile stretch for visibility.
+    Uses PixInsight AutoSTF for consistent stretch with the inference pipeline.
 
     Args:
         data: Raw FITS file bytes.
@@ -252,6 +254,8 @@ def _render_fits_preview(data: bytes) -> bytes | None:
         import numpy as np
         from astropy.io import fits as afits
         from PIL import Image
+
+        from inference.autostretch import autostretch
 
         with afits.open(io.BytesIO(data)) as hdul:
             img_data = None
@@ -265,14 +269,11 @@ def _render_fits_preview(data: bytes) -> bytes | None:
         while img_data.ndim > 2:
             img_data = img_data[0]
 
-        img_data = img_data.astype(float)
-        finite = img_data[np.isfinite(img_data)]
-        if finite.size == 0:
+        if not np.isfinite(img_data).any():
             return None
-        lo, hi = np.percentile(finite, [1, 99])
-        if hi == lo:
-            hi = lo + 1.0
-        img_data = np.clip((img_data - lo) / (hi - lo) * 255, 0, 255).astype(np.uint8)
+
+        stretched = autostretch(img_data.astype(np.float32))  # [0, 1]
+        img_data = (stretched * 255).astype(np.uint8)
 
         # Downsample very large images for the preview to keep response small
         img = Image.fromarray(img_data, mode="L").convert("RGB")
@@ -449,8 +450,10 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
                     "angle_deg": det.obb_angle_deg,
                 },
                 "streak_length_px": det.streak_length_px,
-                "ra_deg": det.ra_deg,
-                "dec_deg": det.dec_deg,
+                "ra_tip1_deg": det.ra_tip1_deg,
+                "dec_tip1_deg": det.dec_tip1_deg,
+                "ra_tip2_deg": det.ra_tip2_deg,
+                "dec_tip2_deg": det.dec_tip2_deg,
                 "identifications": [
                     {
                         "satellite_name": i.satellite_name,

@@ -21,8 +21,10 @@ _REQUIRED_KEYS = {
     "bbox",
     "obb",
     "streak_length_px",
-    "ra_deg",
-    "dec_deg",
+    "ra_tip1_deg",
+    "dec_tip1_deg",
+    "ra_tip2_deg",
+    "dec_tip2_deg",
     "identifications",
 }
 _OBB_KEYS = {"cx", "cy", "w", "h", "angle_deg"}

@@ -129,7 +129,7 @@ class TestCrossIdentifyMissingSkyCoords:
     def test_none_ra_dec_gives_empty_identifications(self):
         from inference.crossid import cross_identify
 
-        dets = [{"ra_deg": None, "dec_deg": None, "confidence": 0.9}]
+        dets = [{"ra_tip1_deg": None, "dec_tip1_deg": None, "ra_tip2_deg": None, "dec_tip2_deg": None, "confidence": 0.9}]
         with patch("inference.crossid._fetch_tle_catalog", return_value=_SAMPLE_CATALOG):
             result = cross_identify(dets, _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT)
         assert result[0]["identifications"] == []
@@ -152,7 +152,7 @@ class TestCrossIdentifyMissingSkyCoords:
     def test_empty_catalog_gives_empty_identifications(self):
         from inference.crossid import cross_identify
 
-        dets = [{"ra_deg": 83.82, "dec_deg": -5.39}]
+        dets = [{"ra_tip1_deg": 83.82, "dec_tip1_deg": -5.39, "ra_tip2_deg": 83.85, "dec_tip2_deg": -5.41}]
         with patch("inference.crossid._fetch_tle_catalog", return_value=[]):
             result = cross_identify(dets, _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT)
         assert result[0]["identifications"] == []
@@ -174,7 +174,8 @@ class TestCrossIdentifyKnownTle:
         if pred is None:
             pytest.skip("skyfield propagation failed in this environment")
 
-        dets = [{"ra_deg": pred["predicted_ra"], "dec_deg": pred["predicted_dec"]}]
+        dets = [{"ra_tip1_deg": pred["predicted_ra"], "dec_tip1_deg": pred["predicted_dec"],
+                 "ra_tip2_deg": pred["predicted_ra"] + 0.01, "dec_tip2_deg": pred["predicted_dec"] + 0.01}]
         with patch("inference.crossid._fetch_tle_catalog", return_value=_SAMPLE_CATALOG):
             result = cross_identify(dets, _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT)
 
@@ -196,7 +197,8 @@ class TestCrossIdentifyKnownTle:
         if pred is None:
             pytest.skip("skyfield propagation failed in this environment")
 
-        dets = [{"ra_deg": pred["predicted_ra"], "dec_deg": pred["predicted_dec"]}]
+        dets = [{"ra_tip1_deg": pred["predicted_ra"], "dec_tip1_deg": pred["predicted_dec"],
+                 "ra_tip2_deg": pred["predicted_ra"] + 0.01, "dec_tip2_deg": pred["predicted_dec"] + 0.01}]
         with patch("inference.crossid._fetch_tle_catalog", return_value=_SAMPLE_CATALOG):
             result = cross_identify(dets, _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT)
 
@@ -213,7 +215,8 @@ class TestCrossIdentifyKnownTle:
         if pred is None:
             pytest.skip("skyfield propagation failed in this environment")
 
-        dets = [{"ra_deg": pred["predicted_ra"], "dec_deg": pred["predicted_dec"]}]
+        dets = [{"ra_tip1_deg": pred["predicted_ra"], "dec_tip1_deg": pred["predicted_dec"],
+                 "ra_tip2_deg": pred["predicted_ra"] + 0.01, "dec_tip2_deg": pred["predicted_dec"] + 0.01}]
         with patch("inference.crossid._fetch_tle_catalog", return_value=_SAMPLE_CATALOG):
             result = cross_identify(dets, _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT)
 
@@ -227,7 +230,7 @@ class TestCrossIdentifyKnownTle:
         """epoch_window_days is forwarded to _fetch_tle_catalog."""
         from inference.crossid import cross_identify
 
-        dets = [{"ra_deg": None, "dec_deg": None}]
+        dets = [{"ra_tip1_deg": None, "dec_tip1_deg": None, "ra_tip2_deg": None, "dec_tip2_deg": None}]
         with patch("inference.crossid._fetch_tle_catalog", return_value=[]) as mock_fetch:
             cross_identify(dets, _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT, epoch_window_days=7)
         mock_fetch.assert_called_once_with(_OBS_TIME, 7)

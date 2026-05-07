@@ -1,4 +1,4 @@
-"""Custom mmcv/mmdet data transforms for FITS image loading.
+"""Custom mmcv/mmdet data transforms for astronomy image loading.
 
 Register this module before building the MMDetection runner so that
 ``LoadFITSFromFile`` is available in the transform registry.
@@ -36,12 +36,12 @@ except ImportError:
 
 @TRANSFORMS.register_module()
 class LoadFITSFromFile(BaseTransform):
-    """Load a FITS telescope image and convert it to uint8 BGR for mmcv.
+    """Load a FITS telescope image or regular image for mmcv.
 
     Uses ``inference.FITSLoader`` for Z-score normalisation and uint8
-    conversion (identical to the inference pipeline).  The result is
-    compatible with all downstream mmcv transforms (``Resize``,
-    ``RandomFlip``, ``Normalize``, etc.).
+    conversion when the path is a FITS file.  Non-FITS images are loaded via
+    mmcv so mixed SatStreaks + GTImages COCO splits can use one pipeline.
+    The result is compatible with all downstream mmcv transforms.
 
     Expected keys in ``results``:
         img_path (str): Path to the FITS file.
@@ -81,10 +81,17 @@ class LoadFITSFromFile(BaseTransform):
         img_path = results.get("img_path") or results.get("filename", "")
         loader = self._get_loader()
         try:
-            loaded = loader.load(img_path)
-            arr = loaded["array"]  # uint8 (H, W, 3) — already Z-score → uint8
+            suffix = Path(str(img_path)).suffix.lower()
+            if suffix in {".fits", ".fit", ".fts"}:
+                loaded = loader.load(img_path)
+                arr = loaded["array"]  # uint8 (H, W, 3) — already normalised
+            else:
+                import mmcv
+                arr = mmcv.imread(str(img_path), channel_order="bgr")
+                if arr is None:
+                    raise FileNotFoundError(img_path)
         except Exception as exc:
-            logger.warning("Failed to load FITS %s: %s — using zeros", img_path, exc)
+            logger.warning("Failed to load image %s: %s — using zeros", img_path, exc)
             # Fall back to a zero image so training doesn't crash on a bad file
             arr = np.zeros((256, 256, 3), dtype=np.uint8)
 

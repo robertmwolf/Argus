@@ -1,12 +1,29 @@
 """FITS file loading and normalisation for ARGUS inference.
 
-Loads a FITS image, applies Z-score normalisation, and packages the
-result for downstream ML inference.
+Loads a FITS image, normalises it, and packages the result for downstream
+ML inference.
+
+Two normalisation modes are supported, selected by the ARGUS_NORM env var:
+
+  ARGUS_NORM=autostretch  (default for new training / cloud-trained Swin-L)
+      PixInsight AutoSTF: robust nMAD background removal + midtone transfer
+      function.  Sets the sky background median to ~0.25 regardless of
+      exposure or sky brightness.  Use this once the model has been trained
+      or fine-tuned with autostretch preprocessing.
+
+  ARGUS_NORM=zscore  (required for current dino_tiny.pth trained weights)
+      Z-score with 3-sigma clipping.  This is what all training runs up to
+      and including the local Swin-T baseline used.  Must match training to
+      avoid a domain shift that suppresses detection confidence.
+
+Set this to match whichever preprocessing was used during the training run
+whose weights are loaded.  Mismatch → very low detection scores.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -18,39 +35,74 @@ from astropy.wcs import WCS
 
 logger = logging.getLogger(__name__)
 
+# Match this to whatever normalisation the loaded model weights were trained with.
+# 'zscore'      — current dino_tiny.pth (trained on dev subset, CPU)
+# 'autostretch' — future cloud-trained Swin-L (retrain with ARGUS_NORM=autostretch)
+_NORM_MODE: str = os.environ.get("ARGUS_NORM", "zscore").lower()
+
+
+def _normalise_zscore(arr: np.ndarray) -> np.ndarray:
+    """Z-score normalisation with 3-sigma clipping → uint8 [0, 255].
+
+    Steps:
+      1. Compute mean and std of finite pixels.
+      2. Clip to [mean − 3σ, mean + 3σ].
+      3. Scale to [0, 255] uint8.
+    """
+    finite = arr[np.isfinite(arr)]
+    if finite.size == 0:
+        return np.zeros_like(arr, dtype=np.uint8)
+    mean = float(finite.mean())
+    std  = float(finite.std())
+    lo, hi = mean - 3.0 * std, mean + 3.0 * std
+    clipped = np.clip(arr, lo, hi)
+    rng = hi - lo
+    if rng == 0.0:
+        return np.zeros_like(arr, dtype=np.uint8)
+    return ((clipped - lo) / rng * 255.0).astype(np.uint8)
+
+
+def _normalise_autostretch(arr: np.ndarray) -> np.ndarray:
+    """PixInsight AutoSTF normalisation → uint8 [0, 255].
+
+    Delegates to inference.autostretch.autostretch() which applies nMAD
+    background removal and a midtone transfer function.
+    """
+    from inference.autostretch import autostretch  # local import — module optional
+    stretched = autostretch(arr)   # float32 in [0, 1]
+    return (stretched * 255.0).astype(np.uint8)
+
 
 class FITSLoader:
     """Load and normalise FITS images for ML inference.
 
-    Applies Z-score normalisation with 3-sigma clipping and returns a
-    uint8 (H, W, 3) array suitable for model input.
+    Normalisation mode is controlled by the ARGUS_NORM environment variable
+    (see module docstring).  The default is 'zscore' to match the current
+    trained weights.
     """
 
     def load(self, path: str | Path) -> dict[str, Any]:
         """Load a FITS file and return normalised data.
 
-        Normalisation: Z-score with 3-sigma clipping.
-          1. Extract float32 pixel data from hdul[0].data
-          2. Compute mean and std of finite pixel values
-          3. Clip to [mean - 3*std, mean + 3*std]
-          4. Scale clipped range to [0, 255] uint8
-          5. Stack grayscale to 3 channels: np.stack([arr, arr, arr], axis=-1)
-             Result shape: (H, W, 3)
+        Normalisation is selected by ARGUS_NORM (module-level constant):
+          'zscore'      — Z-score with 3-sigma clipping → uint8
+          'autostretch' — PixInsight AutoSTF → uint8
 
         Args:
             path: Path to the FITS file.
 
         Returns:
             Dictionary with keys:
-              array        — np.ndarray uint8 shape (H, W, 3)
-              wcs          — astropy.wcs.WCS or None if header has no WCS
-              exposure_time — float seconds or None (from EXPTIME header key)
-              filename     — str (basename only)
-              shape        — tuple (H, W)
-              obs_time     — datetime (UTC) or None (from DATE-OBS header key)
-              observer_lat  — float degrees or None (from SITELAT)
-              observer_lon  — float degrees or None (from SITELONG)
-              observer_alt_m — float metres or None (from SITEELEV)
+              array          — np.ndarray uint8 shape (H, W, 3)
+              wcs            — astropy.wcs.WCS or None
+              exposure_time  — float seconds or None
+              filename       — str (basename only)
+              shape          — tuple (H, W)
+              obs_time       — datetime (UTC) or None
+              observer_lat   — float degrees or None
+              observer_lon   — float degrees or None
+              observer_alt_m — float metres or None
+              norm_mode      — str, normalisation mode actually applied
 
         Raises:
             FileNotFoundError: If the file does not exist.
@@ -70,62 +122,62 @@ class FITSLoader:
                         f"Primary HDU in {path.name} contains no image data"
                     )
 
-                # --- Normalisation: Z-score with 3-sigma clipping ---
                 arr = raw.astype(np.float32)
-                finite_mask = np.isfinite(arr)
-                if not finite_mask.any():
+                if not np.isfinite(arr).any():
                     raise ValueError(
                         f"No finite pixel values found in {path.name}"
                     )
-                mean = float(arr[finite_mask].mean())
-                std = float(arr[finite_mask].std())
 
-                lo = mean - 3.0 * std
-                hi = mean + 3.0 * std
-                arr = np.clip(arr, lo, hi)
-
-                # Scale to [0, 255] uint8
-                rng = hi - lo
-                if rng == 0.0:
-                    arr_u8 = np.zeros_like(arr, dtype=np.uint8)
+                # --- Normalisation -------------------------------------------
+                norm = _NORM_MODE
+                if norm == "autostretch":
+                    arr_u8 = _normalise_autostretch(arr)
                 else:
-                    arr_u8 = ((arr - lo) / rng * 255.0).astype(np.uint8)
+                    if norm != "zscore":
+                        logger.warning(
+                            "Unknown ARGUS_NORM='%s'; falling back to zscore", norm
+                        )
+                        norm = "zscore"
+                    arr_u8 = _normalise_zscore(arr)
+
+                logger.debug("FITSLoader: norm=%s  shape=%s", norm, arr_u8.shape)
 
                 # Stack to 3-channel (H, W, 3)
                 array_3ch = np.stack([arr_u8, arr_u8, arr_u8], axis=-1)
 
-                # --- WCS ---
+                # --- WCS -----------------------------------------------------
                 try:
                     wcs = WCS(header)
-                    # WCS is considered valid only if it has celestial axes
                     if wcs.naxis == 0 or not wcs.has_celestial:
                         wcs = None
                 except Exception:
                     wcs = None
 
-                # --- Exposure time ---
+                # --- Exposure time (accept common header spellings) ----------
                 exposure_time: float | None = None
-                if "EXPTIME" in header:
-                    try:
-                        exposure_time = float(header["EXPTIME"])
-                    except (TypeError, ValueError):
-                        logger.warning("Could not parse EXPTIME in %s", path.name)
+                for _exp_key in ("EXPTIME", "EXPOSURE", "EXP_TIME"):
+                    if _exp_key in header:
+                        try:
+                            exposure_time = float(header[_exp_key])
+                            break
+                        except (TypeError, ValueError):
+                            logger.warning(
+                                "Could not parse %s in %s", _exp_key, path.name
+                            )
 
-                # --- Observation time (DATE-OBS) ---
+                # --- Observation time ----------------------------------------
                 obs_time = None
                 if "DATE-OBS" in header:
                     try:
                         from datetime import datetime, timezone
-                        date_str = str(header["DATE-OBS"])
-                        # Accept ISO 8601 with or without trailing 'Z'
-                        date_str = date_str.rstrip("Z")
+                        date_str = str(header["DATE-OBS"]).rstrip("Z")
                         obs_time = datetime.fromisoformat(date_str).replace(
                             tzinfo=timezone.utc
                         )
                     except (ValueError, TypeError):
                         logger.warning("Could not parse DATE-OBS in %s", path.name)
 
-                # --- Observer location ---
+                # --- Observer location ----------------------------------------
                 def _float_header(key: str) -> float | None:
                     val = header.get(key)
                     if val is None:
@@ -138,29 +190,24 @@ class FITSLoader:
                 h, w = arr_u8.shape
 
                 return {
-                    "array": array_3ch,
-                    "wcs": wcs,
-                    "exposure_time": exposure_time,
-                    "filename": path.name,
-                    "shape": (h, w),
-                    "obs_time": obs_time,
+                    "array":          array_3ch,
+                    "wcs":            wcs,
+                    "exposure_time":  exposure_time,
+                    "filename":       path.name,
+                    "shape":          (h, w),
+                    "obs_time":       obs_time,
                     "observer_lat":   _float_header("SITELAT"),
                     "observer_lon":   _float_header("SITELONG"),
                     "observer_alt_m": _float_header("SITEELEV"),
+                    "norm_mode":      norm,
                 }
         except fits.verify.VerifyError as exc:
-            raise ValueError(
-                f"Invalid FITS file {path.name}: {exc}"
-            ) from exc
+            raise ValueError(f"Invalid FITS file {path.name}: {exc}") from exc
         except OSError as exc:
-            raise ValueError(
-                f"Cannot open {path.name} as FITS: {exc}"
-            ) from exc
+            raise ValueError(f"Cannot open {path.name} as FITS: {exc}") from exc
 
     def fits_to_png(self, fits_path: str | Path, output_path: str | Path) -> None:
-        """Convert a FITS file to PNG.
-
-        Loads via load() and saves the resulting uint8 array with cv2.imwrite.
+        """Convert a FITS file to PNG using the active normalisation mode.
 
         Args:
             fits_path: Path to the source FITS file.
@@ -183,23 +230,17 @@ class FITSLoader:
             pixel_coords: List of (x, y) pixel coordinate tuples.
 
         Returns:
-            List of dicts, each with keys:
-              x_pix   — input x pixel coordinate
-              y_pix   — input y pixel coordinate
-              ra_deg  — right ascension in degrees
-              dec_deg — declination in degrees
+            List of dicts, each with keys: x_pix, y_pix, ra_deg, dec_deg.
         """
         results: list[dict[str, float]] = []
         for x, y in pixel_coords:
             sky = wcs.pixel_to_world(x, y)
-            results.append(
-                {
-                    "x_pix": float(x),
-                    "y_pix": float(y),
-                    "ra_deg": float(sky.ra.deg),
-                    "dec_deg": float(sky.dec.deg),
-                }
-            )
+            results.append({
+                "x_pix":   float(x),
+                "y_pix":   float(y),
+                "ra_deg":  float(sky.ra.deg),
+                "dec_deg": float(sky.dec.deg),
+            })
         return results
 
 
@@ -215,13 +256,12 @@ if __name__ == "__main__":
     data = loader.load(fits_path)
 
     print(f"\n=== {data['filename']} ===")
-    print(f"  shape          : {data['shape']}")
-    print(f"  array shape    : {data['array'].shape}")
-    print(f"  array dtype    : {data['array'].dtype}")
-    print(f"  exposure_time  : {data['exposure_time']} s")
-    print(f"  wcs            : {data['wcs']}")
+    print(f"  shape         : {data['shape']}")
+    print(f"  array shape   : {data['array'].shape}")
+    print(f"  norm_mode     : {data['norm_mode']}")
+    print(f"  exposure_time : {data['exposure_time']} s")
+    print(f"  wcs           : {data['wcs']}")
 
-    # Save PNG next to input
     png_out = fits_path.with_suffix(".png")
     loader.fits_to_png(fits_path, png_out)
     print(f"\nPNG saved to: {png_out}")

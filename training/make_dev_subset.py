@@ -272,9 +272,11 @@ def build_dev_subset(
         obs_time = base_time + timedelta(minutes=i * 5)
         _make_one(fits_dir, fname, has_streak=False,
                   width=width, height=height, obs_time=obs_time, seed=seed + i)
-        # file_name must be relative to annotations_path.parent so the
-        # FITSStreakDataset can find the FITS via (annotation_dir / file_name).
-        rel = Path(os.path.relpath(fits_dir, annotations_path.parent))
+        # MMDetection resolves COCO file_name relative to data_root.  The
+        # default annotations live in data/annotations, so make file_name
+        # relative to data/ rather than data/annotations.
+        data_root = annotations_path.parent.parent
+        rel = Path(os.path.relpath(fits_dir, data_root))
         coco_images.append({"id": img_id, "file_name": str(rel / fname),
                              "width": width, "height": height})
         img_id += 1

@@ -291,7 +291,7 @@ Argus/
 ├── tests/                     ← pytest — all offline, no credentials required
 ├── data/
 │   ├── sample/                ← synthetic FITS for smoke-testing
-│   ├── raw/                   ← MILAN FITS (gitignored, download separately)
+│   ├── GTImages/              ← labeled satellite streak observations (gitignored)
 │   ├── annotations/           ← COCO JSON label files
 │   └── catalogs/              ← TLE catalog files
 ├── weights/                   ← model weights (gitignored)
@@ -383,7 +383,7 @@ No real FITS files are required to develop and test the pipeline:
 
 ```bash
 python scripts/make_test_fits.py --small   # fast 512×512 images
-python scripts/make_test_fits.py           # full 3096×2080 MILAN resolution
+python scripts/make_test_fits.py           # full 3096×2080 images
 ```
 
 ## Downloading Pretrained Weights
@@ -458,15 +458,17 @@ bash scripts/fetch_weights.sh user@instance-ip
 
 The model requires annotated FITS images.  Two sources:
 
-| Dataset | Images | Format | Access |
-|---------|--------|--------|--------|
-| **SatStreaks** | 3,073 annotated | PNG + YOLO OBB labels | [GitHub](https://github.com/jijup/SatStreaks) — free |
-| **MILAN Sky Survey** | 50,068 raw FITS | FITS (needs annotation) | [Zenodo](https://zenodo.org/records/7049839) — free |
+| Dataset | Images | Format | Role |
+|---------|--------|--------|------|
+| **SatStreaks** | 3,073 annotated | PNG + YOLO OBB labels | Primary training corpus — [GitHub](https://github.com/jijup/SatStreaks) |
+| **GTImages** | 759 FITS (593 labeled + 93 negatives) | FITS + `.strk` annotations | Validation, negative examples, cross-ID benchmark — `data/GTImages/` |
 
 ```bash
-# Download one month of MILAN (2–5 GB):
-pip install zenodo_get
-zenodo_get 7049839 -o data/raw/milan_2022-08/
+# Convert GTImages .strk annotations to COCO JSON:
+python scripts/convert_gtimages.py \
+    --strk-dir data/GTImages \
+    --output data/annotations/gtimages.json \
+    --negatives-output data/annotations/gtimages_negatives.json
 ```
 
 ---

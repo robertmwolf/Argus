@@ -164,7 +164,7 @@ class TestOptionalFields:
         assert result.pixscale_arcsec == pytest.approx(2.0)
 
     def test_pixscale_from_pixsz_and_focal(self, tmp_path):
-        # MILAN/Stellina: PIXSZ=2.4 µm, FOCAL=400 mm → 206265*0.0024/400 ≈ 1.238 arcsec/px
+        # PIXSZ=2.4 µm, FOCAL=400 mm → 206265*0.0024/400 ≈ 1.238 arcsec/px
         f = _write_minimal_fits(tmp_path / "stellina.fits", {"PIXSZ": 2.4, "FOCAL": 400.0})
         result = parse_fits(f)
         assert result.pixscale_arcsec == pytest.approx(206265.0 * 0.0024 / 400.0, rel=1e-4)
@@ -175,8 +175,8 @@ class TestOptionalFields:
         assert result.pixscale_arcsec == pytest.approx(1.5)
 
     def test_exptime_from_exposure_milliseconds(self, tmp_path):
-        # MILAN: EXPOSURE in ms — should be converted to seconds
-        f = _write_minimal_fits(tmp_path / "milan_exp.fits", {"EXPOSURE": 10000})
+        # EXPOSURE header in ms — should be converted to seconds
+        f = _write_minimal_fits(tmp_path / "exposure_ms.fits", {"EXPOSURE": 10000})
         result = parse_fits(f)
         assert result.exptime_sec == pytest.approx(10.0)
 

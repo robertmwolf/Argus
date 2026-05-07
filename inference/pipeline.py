@@ -66,6 +66,14 @@ _patch_torch_load_weights_only()
 _DEFAULT_CONFIDENCE_THRESHOLD = 0.10  # raised to 0.30 once cloud-trained Swin-L is in use
 _FAST_IMAGE_SIZE = 256
 
+# Minimum inference resolution for large sensor images.
+# The device_config image_size (400 px on CPU/MPS) was chosen for training
+# memory budgets.  For inference on full-frame telescope images (typically
+# 4–6 k pixels wide) it produces a scale of ~6 %, shrinking a 500 px streak
+# to ~30 px — too small for reliable detection.  We clamp the inference size
+# to at least this value so a 500 px streak stays above ~80 px after scaling.
+_MIN_INFERENCE_IMAGE_SIZE = 1280
+
 
 # ---------------------------------------------------------------------------
 # Model config selection
@@ -360,10 +368,18 @@ def run(
           bbox              — [x1, y1, x2, y2] pixel coords
           obb               — {cx, cy, w, h, angle_deg}
           streak_length_px  — float, long axis of OBB
-          ra_deg            — float or None, sky coord of streak midpoint
-          dec_deg           — float or None
+          ra_tip1_deg       — float or None, sky RA of OBB tip 1
+          dec_tip1_deg      — float or None, sky Dec of OBB tip 1
+          ra_tip2_deg       — float or None, sky RA of OBB tip 2
+          dec_tip2_deg      — float or None, sky Dec of OBB tip 2
+          quality_flag      — int 0–4 (0=good, 1=edge, 2=low_conf,
+                               3=too_short, 4=no_wcs)
+          streak_direction_swapped — bool, True if tip1/tip2 were swapped
+                               to assign start→end direction (set only when
+                               exposure_time is in the FITS header)
           identifications   — list of up to 3 {satellite_name, norad_id,
-                               confidence, rank} dicts (empty in fast mode)
+                               confidence, separation_arcsec, atrk_arcsec,
+                               xtrk_arcsec, rank} dicts (empty in fast mode)
 
     Raises:
         FileNotFoundError: If the FITS file or model weights are not found.
@@ -398,7 +414,12 @@ def run(
     from inference.device import get_device, get_device_config
     device     = get_device()
     dev_config = get_device_config()
-    image_size = _FAST_IMAGE_SIZE if fast else dev_config["image_size"]
+    if fast:
+        image_size = _FAST_IMAGE_SIZE
+    else:
+        # Use at least _MIN_INFERENCE_IMAGE_SIZE so that streaks in large
+        # sensor images (~6 k px) are not crushed to ~30 px before detection.
+        image_size = max(dev_config["image_size"], _MIN_INFERENCE_IMAGE_SIZE)
 
     if model is None:
         config_path = _select_config(model_size)
@@ -431,7 +452,10 @@ def run(
 
     # --- 3. Postprocess: angle refinement + OBB + NMS -----------------------
     t2 = time.perf_counter()
-    from inference.postprocess import bbox_to_obb, refine_angle, nms_detections, extend_obb_to_streak_extent
+    from inference.postprocess import (
+        bbox_to_obb, refine_angle, nms_detections, extend_obb_to_streak_extent,
+        classify_detection_quality,
+    )
 
     h_img = array.shape[0]
     w_img = array.shape[1]
@@ -448,8 +472,9 @@ def run(
         crop = array[py1:py2, px1:px2]
         seed_angle = _angle_from_bbox(det["bbox"])
         initial_obb = bbox_to_obb(det["bbox"], seed_angle)
-        # Use ±45° search so diagonal streaks aren't missed by a coarse seed
-        angle = refine_angle(crop, initial_obb, angle_search_range=45.0)
+        # Axis-aligned bboxes encode slope magnitude but not slope sign.  Search
+        # ±90° so Radon can recover the mirrored streak orientation.
+        angle = refine_angle(crop, initial_obb, angle_search_range=90.0)
 
         obb = bbox_to_obb(det["bbox"], angle)
         # Extend OBB endpoints along the streak axis to the true streak tips —
@@ -462,13 +487,27 @@ def run(
     postprocess_ms = (time.perf_counter() - t2) * 1000
     logger.debug("postprocess_ms=%.1f  after_nms=%d", postprocess_ms, len(detections))
 
-    # --- 4. WCS: pixel → sky coordinates ------------------------------------
+    # --- 4. WCS: pixel → sky coordinates (both streak endpoints) ------------
     for det in detections:
-        cx = det["obb"]["cx"]
-        cy = det["obb"]["cy"]
-        ra, dec = _pixel_to_sky(cx, cy, wcs)
-        det["ra_deg"]  = ra
-        det["dec_deg"] = dec
+        obb = det["obb"]
+        cx, cy = obb["cx"], obb["cy"]
+        half   = obb["w"] / 2.0
+        angle_rad = math.radians(obb["angle_deg"])
+        cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
+
+        tip1_x = cx - half * cos_a
+        tip1_y = cy - half * sin_a
+        tip2_x = cx + half * cos_a
+        tip2_y = cy + half * sin_a
+
+        det["ra_tip1_deg"],  det["dec_tip1_deg"]  = _pixel_to_sky(tip1_x, tip1_y, wcs)
+        det["ra_tip2_deg"],  det["dec_tip2_deg"]  = _pixel_to_sky(tip2_x, tip2_y, wcs)
+
+        # Quality flag — assigned after sky coords are available
+        det["quality_flag"] = classify_detection_quality(
+            det,
+            image_shape=(array.shape[0], array.shape[1]),
+        )
 
     # --- 5. Cross-identification (skipped in fast mode) ----------------------
     t3 = time.perf_counter()
@@ -487,6 +526,7 @@ def run(
         cross_identify(
             detections, obs_time,
             observer_lat, observer_lon, observer_alt,
+            exposure_time=fits_data.get("exposure_time"),
         )
         crossid_ms = (time.perf_counter() - t3) * 1000
 
@@ -536,7 +576,8 @@ if __name__ == "__main__":
                 f"  [{i}] conf={det['confidence']:.3f}  "
                 f"len={det.get('streak_length_px', 0):.0f}px  "
                 f"angle={obb.get('angle_deg', 0):.1f}°  "
-                f"RA={det.get('ra_deg')}  Dec={det.get('dec_deg')}  "
+                f"Tip1 RA/Dec=({det.get('ra_tip1_deg')}, {det.get('dec_tip1_deg')})  "
+                f"Tip2 RA/Dec=({det.get('ra_tip2_deg')}, {det.get('dec_tip2_deg')})  "
                 f"best_id={best_id}"
             )
         if not results:

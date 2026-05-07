@@ -1,0 +1,5534 @@
+{
+  "info": {
+    "description": "ARGUS validation split (SatStreaks val + GTImages 20%)",
+    "version": "1.0"
+  },
+  "licenses": [],
+  "categories": [
+    {
+      "id": 1,
+      "name": "streak",
+      "supercategory": "satellite"
+    }
+  ],
+  "images": [
+    {
+      "id": 1000599,
+      "file_name": "GTImages/Streak_63594_211956.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:19:56.671"
+    },
+    {
+      "id": 1000222,
+      "file_name": "GTImages/Streak_48381_215349.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:53:49.691"
+    },
+    {
+      "id": 1000592,
+      "file_name": "GTImages/Streak_63594_211715.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:17:15.435"
+    },
+    {
+      "id": 1000659,
+      "file_name": "GTImages/Streak_66221_214524.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:45:24.807"
+    },
+    {
+      "id": 1000005,
+      "file_name": "GTImages/Streak_39012_210847.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:08:47.146"
+    },
+    {
+      "id": 1500609,
+      "file_name": "GTImages/Streak_63994_223152.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:31:52.669"
+    },
+    {
+      "id": 1000200,
+      "file_name": "GTImages/Streak_48093_210446.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:04:46.915"
+    },
+    {
+      "id": 1000521,
+      "file_name": "GTImages/Streak_59486_211750.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:17:50.777"
+    },
+    {
+      "id": 1500244,
+      "file_name": "GTImages/Streak_49022_221120.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:11:20.360"
+    },
+    {
+      "id": 1500651,
+      "file_name": "GTImages/Streak_47509_214326.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:43:26.731"
+    },
+    {
+      "id": 1500338,
+      "file_name": "GTImages/Streak_51771_223958.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:39:58.453"
+    },
+    {
+      "id": 1500120,
+      "file_name": "GTImages/Streak_44408_210447.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:04:48.014"
+    },
+    {
+      "id": 1000143,
+      "file_name": "GTImages/Streak_45081_214403.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:44:03.741"
+    },
+    {
+      "id": 1000013,
+      "file_name": "GTImages/Streak_39012_211036.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:10:36.525"
+    },
+    {
+      "id": 1000311,
+      "file_name": "GTImages/Streak_51137_210126.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:01:26.736"
+    },
+    {
+      "id": 1000630,
+      "file_name": "GTImages/Streak_65437_213028.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:30:28.014"
+    },
+    {
+      "id": 1000558,
+      "file_name": "GTImages/Streak_59552_220849.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:08:49.328"
+    },
+    {
+      "id": 1000458,
+      "file_name": "GTImages/Streak_57166_221853.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:18:53.884"
+    },
+    {
+      "id": 1000462,
+      "file_name": "GTImages/Streak_57166_221950.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:19:50.673"
+    },
+    {
+      "id": 1000072,
+      "file_name": "GTImages/Streak_42954_212109.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:21:09.685"
+    },
+    {
+      "id": 1500339,
+      "file_name": "GTImages/Streak_52153_211427.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:14:27.376"
+    },
+    {
+      "id": 1500340,
+      "file_name": "GTImages/Streak_52153_211438.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:14:38.923"
+    },
+    {
+      "id": 1000195,
+      "file_name": "GTImages/Streak_48093_210336.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:03:36.495"
+    },
+    {
+      "id": 1000136,
+      "file_name": "GTImages/Streak_44768_211935.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:19:35.971"
+    },
+    {
+      "id": 1000055,
+      "file_name": "GTImages/Streak_41188_213340.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:33:40.789"
+    },
+    {
+      "id": 1000101,
+      "file_name": "GTImages/Streak_43071_220456.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T02:04:56.114"
+    },
+    {
+      "id": 1000585,
+      "file_name": "GTImages/Streak_62895_212735.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:27:35.203"
+    },
+    {
+      "id": 1000602,
+      "file_name": "GTImages/Streak_63994_222946.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:29:46.690"
+    },
+    {
+      "id": 1000175,
+      "file_name": "GTImages/Streak_47772_214825.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:48:25.722"
+    },
+    {
+      "id": 1500109,
+      "file_name": "GTImages/Streak_43776_212500.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:25:00.943"
+    },
+    {
+      "id": 1500511,
+      "file_name": "GTImages/Streak_58932_212339.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:23:39.612"
+    },
+    {
+      "id": 1000476,
+      "file_name": "GTImages/Streak_57973_213613.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:36:13.607"
+    },
+    {
+      "id": 1000514,
+      "file_name": "GTImages/Streak_48381_215646.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:56:46.913"
+    },
+    {
+      "id": 1000323,
+      "file_name": "GTImages/Streak_51771_223608.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:36:09.001"
+    },
+    {
+      "id": 1000640,
+      "file_name": "GTImages/Streak_65437_213251.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:32:51.133"
+    },
+    {
+      "id": 1000299,
+      "file_name": "GTImages/Streak_51128_212642.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:26:42.519"
+    },
+    {
+      "id": 1500623,
+      "file_name": "GTImages/Streak_65437_212843.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:28:43.837"
+    },
+    {
+      "id": 1000325,
+      "file_name": "GTImages/Streak_51771_223638.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:36:38.175"
+    },
+    {
+      "id": 1000180,
+      "file_name": "GTImages/Streak_47799_215001.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:50:01.318"
+    },
+    {
+      "id": 1000546,
+      "file_name": "GTImages/Streak_59542_214149.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:41:49.310"
+    },
+    {
+      "id": 1000473,
+      "file_name": "GTImages/Streak_57166_222209.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:22:09.427"
+    },
+    {
+      "id": 1000591,
+      "file_name": "GTImages/Streak_63594_211702.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:17:02.600"
+    },
+    {
+      "id": 1000262,
+      "file_name": "GTImages/Streak_49436_205835.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T00:58:35.634"
+    },
+    {
+      "id": 1000388,
+      "file_name": "GTImages/Streak_53923_211105.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:11:05.578"
+    },
+    {
+      "id": 1000261,
+      "file_name": "GTImages/Streak_49436_205823.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T00:58:23.342"
+    },
+    {
+      "id": 1000074,
+      "file_name": "GTImages/Streak_42954_212137.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:21:37.108"
+    },
+    {
+      "id": 1000328,
+      "file_name": "GTImages/Streak_51771_223758.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:37:58.887"
+    },
+    {
+      "id": 1000478,
+      "file_name": "GTImages/Streak_57973_213637.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:36:37.038"
+    },
+    {
+      "id": 1000389,
+      "file_name": "GTImages/Streak_53923_211119.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:11:19.221"
+    },
+    {
+      "id": 1500563,
+      "file_name": "GTImages/Streak_57973_214027.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:40:27.076"
+    },
+    {
+      "id": 1000280,
+      "file_name": "GTImages/Streak_50193_205645.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T00:56:45.857"
+    },
+    {
+      "id": 1000064,
+      "file_name": "GTImages/Streak_41188_213614.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:36:14.403"
+    },
+    {
+      "id": 1000398,
+      "file_name": "GTImages/Streak_53923_211401.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:14:01.154"
+    },
+    {
+      "id": 1000269,
+      "file_name": "GTImages/Streak_49445_213825.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:38:25.600"
+    },
+    {
+      "id": 1000661,
+      "file_name": "GTImages/Streak_66494_220137.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:01:37.061"
+    },
+    {
+      "id": 1000330,
+      "file_name": "GTImages/Streak_51771_223832.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:38:32.318"
+    },
+    {
+      "id": 1000456,
+      "file_name": "GTImages/Streak_57166_221825.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:18:25.909"
+    },
+    {
+      "id": 1000550,
+      "file_name": "GTImages/Streak_59542_214249.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:42:49.221"
+    },
+    {
+      "id": 1000207,
+      "file_name": "GTImages/Streak_48093_210700.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:07:00.949"
+    },
+    {
+      "id": 1500625,
+      "file_name": "GTImages/Streak_65437_212908.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:29:08.202"
+    },
+    {
+      "id": 1000635,
+      "file_name": "GTImages/Streak_65437_213145.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:31:45.999"
+    },
+    {
+      "id": 1000215,
+      "file_name": "GTImages/Streak_48140_212535.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:25:35.333"
+    },
+    {
+      "id": 1000080,
+      "file_name": "GTImages/Streak_42954_212256.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:22:56.763"
+    },
+    {
+      "id": 1000327,
+      "file_name": "GTImages/Streak_51771_223710.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:37:10.935"
+    },
+    {
+      "id": 1000259,
+      "file_name": "GTImages/Streak_49436_205757.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T00:57:57.512"
+    },
+    {
+      "id": 1000429,
+      "file_name": "GTImages/Streak_55463_213808.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:38:08.945"
+    },
+    {
+      "id": 1000447,
+      "file_name": "GTImages/Streak_57166_221626.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:16:27.002"
+    },
+    {
+      "id": 1000206,
+      "file_name": "GTImages/Streak_48093_210648.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:06:48.463"
+    },
+    {
+      "id": 1000441,
+      "file_name": "GTImages/Streak_55489_220535.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:05:35.528"
+    },
+    {
+      "id": 1000541,
+      "file_name": "GTImages/Streak_59504_215218.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:52:18.785"
+    },
+    {
+      "id": 1500337,
+      "file_name": "GTImages/Streak_51771_223948.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:39:48.327"
+    },
+    {
+      "id": 1500308,
+      "file_name": "GTImages/Streak_51137_210036.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:00:36.205"
+    },
+    {
+      "id": 1000127,
+      "file_name": "GTImages/Streak_44768_211653.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:16:53.240"
+    },
+    {
+      "id": 1500513,
+      "file_name": "GTImages/Streak_58932_212401.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:24:01.485"
+    },
+    {
+      "id": 1000089,
+      "file_name": "GTImages/Streak_43071_220059.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T02:00:59.937"
+    },
+    {
+      "id": 1000362,
+      "file_name": "GTImages/Streak_52331_211459.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:14:59.364"
+    },
+    {
+      "id": 1000279,
+      "file_name": "GTImages/Streak_50193_205635.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T00:56:35.019"
+    },
+    {
+      "id": 1000053,
+      "file_name": "GTImages/Streak_41188_213316.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:33:16.197"
+    },
+    {
+      "id": 1000078,
+      "file_name": "GTImages/Streak_42954_212230.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:22:30.099"
+    },
+    {
+      "id": 1000236,
+      "file_name": "GTImages/Streak_48390_212209.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:22:09.606"
+    },
+    {
+      "id": 1500112,
+      "file_name": "GTImages/Streak_43778_213141.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:31:41.657"
+    },
+    {
+      "id": 1000436,
+      "file_name": "GTImages/Streak_55463_214104.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:41:04.083"
+    },
+    {
+      "id": 1000366,
+      "file_name": "GTImages/Streak_52334_210701.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:07:01.314"
+    },
+    {
+      "id": 1000656,
+      "file_name": "GTImages/Streak_66221_214439.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:44:39.990"
+    },
+    {
+      "id": 1000088,
+      "file_name": "GTImages/Streak_43071_220049.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T02:00:49.104"
+    },
+    {
+      "id": 1000455,
+      "file_name": "GTImages/Streak_57166_221812.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:18:12.526"
+    },
+    {
+      "id": 1000154,
+      "file_name": "GTImages/Streak_46146_212243.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:22:43.302"
+    },
+    {
+      "id": 1000638,
+      "file_name": "GTImages/Streak_65437_213225.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:32:25.896"
+    },
+    {
+      "id": 1000547,
+      "file_name": "GTImages/Streak_59542_214202.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:42:02.654"
+    },
+    {
+      "id": 1000051,
+      "file_name": "GTImages/Streak_41188_213253.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:32:53.066"
+    },
+    {
+      "id": 1000324,
+      "file_name": "GTImages/Streak_51771_223622.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:36:22.742"
+    },
+    {
+      "id": 1500245,
+      "file_name": "GTImages/Streak_49022_221129.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:11:29.852"
+    },
+    {
+      "id": 1000418,
+      "file_name": "GTImages/Streak_54068_222648.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:26:48.618"
+    },
+    {
+      "id": 1000433,
+      "file_name": "GTImages/Streak_55463_213903.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:39:03.078"
+    },
+    {
+      "id": 1000123,
+      "file_name": "GTImages/Streak_44768_211607.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:16:07.033"
+    },
+    {
+      "id": 1000457,
+      "file_name": "GTImages/Streak_57166_221839.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:18:39.923"
+    },
+    {
+      "id": 1000102,
+      "file_name": "GTImages/Streak_43071_220509.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T02:05:09.942"
+    },
+    {
+      "id": 1500612,
+      "file_name": "GTImages/Streak_64855_214529.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:45:29.555"
+    },
+    {
+      "id": 1000410,
+      "file_name": "GTImages/Streak_54062_225032.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:50:32.283"
+    },
+    {
+      "id": 1000265,
+      "file_name": "GTImages/Streak_49445_213734.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:37:34.661"
+    },
+    {
+      "id": 1000198,
+      "file_name": "GTImages/Streak_48093_210415.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:04:15.320"
+    },
+    {
+      "id": 1500342,
+      "file_name": "GTImages/Streak_52153_211502.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:15:02.063"
+    },
+    {
+      "id": 1000414,
+      "file_name": "GTImages/Streak_54068_222554.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:25:54.070"
+    },
+    {
+      "id": 1500600,
+      "file_name": "GTImages/Streak_63594_212008.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:20:08.639"
+    },
+    {
+      "id": 1000203,
+      "file_name": "GTImages/Streak_48093_210558.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:05:58.971"
+    },
+    {
+      "id": 1000008,
+      "file_name": "GTImages/Streak_39012_210932.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:09:32.966"
+    },
+    {
+      "id": 1000350,
+      "file_name": "GTImages/Streak_52331_211150.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:11:50.971"
+    },
+    {
+      "id": 1500151,
+      "file_name": "GTImages/Streak_46146_212201.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:22:01.733"
+    },
+    {
+      "id": 1000535,
+      "file_name": "GTImages/Streak_59504_215002.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:50:02.420"
+    },
+    {
+      "id": 1000270,
+      "file_name": "GTImages/Streak_49445_213842.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:38:42.036"
+    },
+    {
+      "id": 1000502,
+      "file_name": "GTImages/Streak_58932_212105.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:21:05.367"
+    },
+    {
+      "id": 1500611,
+      "file_name": "GTImages/Streak_64855_214517.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:45:17.007"
+    },
+    {
+      "id": 1000243,
+      "file_name": "GTImages/Streak_48390_212439.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:24:39.999"
+    },
+    {
+      "id": 1000665,
+      "file_name": "GTImages/Streak_66494_220225.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:02:25.525"
+    },
+    {
+      "id": 1000032,
+      "file_name": "GTImages/Streak_40358_213112.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:31:12.313"
+    },
+    {
+      "id": 1500201,
+      "file_name": "GTImages/Streak_48093_210518.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T01:05:18.231"
+    },
+    {
+      "id": 1000597,
+      "file_name": "GTImages/Streak_63594_211929.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:19:29.964"
+    },
+    {
+      "id": 1000284,
+      "file_name": "GTImages/Streak_50193_205733.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-12T00:57:33.932"
+    },
+    {
+      "id": 1000268,
+      "file_name": "GTImages/Streak_49445_213812.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:38:12.101"
+    },
+    {
+      "id": 1000103,
+      "file_name": "GTImages/Streak_43071_220523.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T02:05:23.599"
+    },
+    {
+      "id": 1000035,
+      "file_name": "GTImages/Streak_40358_213147.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:31:47.087"
+    },
+    {
+      "id": 1000037,
+      "file_name": "GTImages/Streak_40358_213211.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:32:11.645"
+    },
+    {
+      "id": 1000505,
+      "file_name": "GTImages/Streak_58932_212143.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-24T01:21:43.821"
+    },
+    {
+      "id": 1500155,
+      "file_name": "GTImages/Streak_46146_212323.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:23:23.593"
+    },
+    {
+      "id": 1000097,
+      "file_name": "GTImages/Streak_43071_220308.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T02:03:08.929"
+    },
+    {
+      "id": 1000648,
+      "file_name": "GTImages/Streak_65474_222348.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T02:23:48.978"
+    },
+    {
+      "id": 1000128,
+      "file_name": "GTImages/Streak_44768_211705.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:17:05.490"
+    },
+    {
+      "id": 1000176,
+      "file_name": "GTImages/Streak_47799_214913.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:49:13.405"
+    },
+    {
+      "id": 1000273,
+      "file_name": "GTImages/Streak_49445_213956.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:39:56.551"
+    },
+    {
+      "id": 1000297,
+      "file_name": "GTImages/Streak_51128_212618.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:26:18.070"
+    },
+    {
+      "id": 1000347,
+      "file_name": "GTImages/Streak_52331_211114.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:11:14.899"
+    },
+    {
+      "id": 1000030,
+      "file_name": "GTImages/Streak_40358_213048.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:30:48.635"
+    },
+    {
+      "id": 1000138,
+      "file_name": "GTImages/Streak_44768_212003.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-23T01:20:03.309"
+    },
+    {
+      "id": 1500551,
+      "file_name": "GTImages/Streak_59542_214321.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-04-27T01:43:21.034"
+    }
+  ],
+  "annotations": [
+    {
+      "id": 3,
+      "image_id": 1000005,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3773.6056302719894,
+          2109.9902736196973,
+          3307.6056302719894,
+          2086.9902736196973,
+          3308.3943697280106,
+          2071.0097263803027,
+          3774.3943697280106,
+          2094.0097263803027
+        ]
+      ],
+      "bbox": [
+        3307.6056302719894,
+        2071.0097263803027,
+        466.7887394560212,
+        38.98054723939458
+      ],
+      "area": 7465.0760210462695,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3541.0,
+        "cy": 2090.5,
+        "w": 466.56725131539184,
+        "h": 16.0,
+        "angle_deg": 2.8256103390498044
+      },
+      "attributes": {
+        "norad_id": 39012,
+        "satellite_name": "YAOGAN-16 01B",
+        "peak_snr": 97.0,
+        "mean_snr": 6.0,
+        "length_px": 467.0,
+        "elongation": 29.0,
+        "jd_mid": 2461142.547770787,
+        "datetime_utc": "2026-04-12T01:08:47.146"
+      }
+    },
+    {
+      "id": 6,
+      "image_id": 1000008,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3945.4943464347516,
+          2131.9840036618198,
+          3345.4943464347516,
+          2093.9840036618198,
+          3346.5056535652484,
+          2078.0159963381802,
+          3946.5056535652484,
+          2116.0159963381802
+        ]
+      ],
+      "bbox": [
+        3345.4943464347516,
+        2078.0159963381802,
+        601.0113071304968,
+        53.96800732363954
+      ],
+      "area": 9619.23406514261,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3646.0,
+        "cy": 2105.0,
+        "w": 601.2021290714131,
+        "h": 16.0,
+        "angle_deg": 3.6238925956693198
+      },
+      "attributes": {
+        "norad_id": 39012,
+        "satellite_name": "YAOGAN-16 01B",
+        "peak_snr": 38.0,
+        "mean_snr": 5.0,
+        "length_px": 601.0,
+        "elongation": 61.0,
+        "jd_mid": 2461142.5483011114,
+        "datetime_utc": "2026-04-12T01:09:32.966"
+      }
+    },
+    {
+      "id": 11,
+      "image_id": 1000013,
+      "category_id": 1,
+      "segmentation": [
+        [
+          4020.4182112552216,
+          2151.9788170712486,
+          3348.4182112552216,
+          2102.9788170712486,
+          3349.5817887447784,
+          2087.0211829287514,
+          4021.5817887447784,
+          2136.0211829287514
+        ]
+      ],
+      "bbox": [
+        3348.4182112552216,
+        2087.0211829287514,
+        673.1635774895567,
+        64.95763414249723
+      ],
+      "area": 10780.545440746493,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3685.0,
+        "cy": 2119.5,
+        "w": 673.7840900466558,
+        "h": 16.0,
+        "angle_deg": 4.170436524842112
+      },
+      "attributes": {
+        "norad_id": 39012,
+        "satellite_name": "YAOGAN-16 01B",
+        "peak_snr": 35.0,
+        "mean_snr": 5.0,
+        "length_px": 674.0,
+        "elongation": 72.0,
+        "jd_mid": 2461142.549036748,
+        "datetime_utc": "2026-04-12T01:10:36.525"
+      }
+    },
+    {
+      "id": 25,
+      "image_id": 1000030,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3216.9535144485994,
+          2061.068741084121,
+          3504.9535144485994,
+          2023.068741084121,
+          3507.0464855514006,
+          2038.931258915879,
+          3219.0464855514006,
+          2076.931258915879
+        ]
+      ],
+      "bbox": [
+        3216.9535144485994,
+        2023.068741084121,
+        290.09297110280113,
+        53.86251783175794
+      ],
+      "area": 4647.938037452737,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3362.0,
+        "cy": 2050.0,
+        "w": 290.4961273407961,
+        "h": 16.0,
+        "angle_deg": 172.48355828373053
+      },
+      "attributes": {
+        "norad_id": 40358,
+        "satellite_name": "COSMOS 2502",
+        "peak_snr": 478.0,
+        "mean_snr": 38.0,
+        "length_px": 290.0,
+        "elongation": 12.0,
+        "jd_mid": 2461157.5630657985,
+        "datetime_utc": "2026-04-27T01:30:48.635"
+      }
+    },
+    {
+      "id": 27,
+      "image_id": 1000032,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3236.88195217159,
+          2059.0785121944555,
+          3569.88195217159,
+          2012.0785121944557,
+          3572.11804782841,
+          2027.9214878055443,
+          3239.11804782841,
+          2074.9214878055445
+        ]
+      ],
+      "bbox": [
+        3236.88195217159,
+        2012.0785121944557,
+        335.23609565682,
+        62.84297561108883
+      ],
+      "area": 5380.80737436307,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3404.5,
+        "cy": 2043.5,
+        "w": 336.3004608976919,
+        "h": 16.0,
+        "angle_deg": 171.9662739712862
+      },
+      "attributes": {
+        "norad_id": 40358,
+        "satellite_name": "COSMOS 2502",
+        "peak_snr": 317.0,
+        "mean_snr": 31.0,
+        "length_px": 336.0,
+        "elongation": 15.0,
+        "jd_mid": 2461157.5633398495,
+        "datetime_utc": "2026-04-27T01:31:12.313"
+      }
+    },
+    {
+      "id": 30,
+      "image_id": 1000035,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3273.7907547888676,
+          2051.091920206564,
+          3685.7907547888676,
+          1988.0919202065638,
+          3688.2092452111324,
+          2003.9080797934362,
+          3276.2092452111324,
+          2066.908079793436
+        ]
+      ],
+      "bbox": [
+        3273.7907547888676,
+        1988.0919202065638,
+        414.41849042226477,
+        78.81615958687235
+      ],
+      "area": 6668.622646394081,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3481.0,
+        "cy": 2027.5,
+        "w": 416.78891539963007,
+        "h": 16.0,
+        "angle_deg": 171.3060958217437
+      },
+      "attributes": {
+        "norad_id": 40358,
+        "satellite_name": "COSMOS 2502",
+        "peak_snr": 528.0,
+        "mean_snr": 42.0,
+        "length_px": 417.0,
+        "elongation": 16.0,
+        "jd_mid": 2461157.5637423266,
+        "datetime_utc": "2026-04-27T01:31:47.087"
+      }
+    },
+    {
+      "id": 32,
+      "image_id": 1000037,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3299.724598250692,
+          2050.1023199369774,
+          3782.724598250692,
+          1972.102319936978,
+          3785.275401749308,
+          1987.8976800630226,
+          3302.275401749308,
+          2065.8976800630226
+        ]
+      ],
+      "bbox": [
+        3299.724598250692,
+        1972.102319936978,
+        485.550803498616,
+        93.79536012604467
+      ],
+      "area": 7828.121613771723,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3542.5,
+        "cy": 2019.0,
+        "w": 489.2576008607327,
+        "h": 16.0,
+        "angle_deg": 170.8264645577181
+      },
+      "attributes": {
+        "norad_id": 40358,
+        "satellite_name": "COSMOS 2502",
+        "peak_snr": 859.0,
+        "mean_snr": 74.0,
+        "length_px": 489.0,
+        "elongation": 13.0,
+        "jd_mid": 2461157.5640265625,
+        "datetime_utc": "2026-04-27T01:32:11.645"
+      }
+    },
+    {
+      "id": 44,
+      "image_id": 1000051,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3266.8417166086447,
+          2031.6498131982999,
+          3650.8417166086447,
+          1866.6498131982999,
+          3657.1582833913553,
+          1881.3501868017001,
+          3273.1582833913553,
+          2046.3501868017001
+        ]
+      ],
+      "bbox": [
+        3266.8417166086447,
+        1866.6498131982999,
+        390.31656678271065,
+        179.7003736034003
+      ],
+      "area": 6687.176982853079,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3462.0,
+        "cy": 1956.5,
+        "w": 417.9485614283174,
+        "h": 16.0,
+        "angle_deg": 156.7474078251384
+      },
+      "attributes": {
+        "norad_id": 41188,
+        "satellite_name": "ORBCOMM FM117",
+        "peak_snr": 48.0,
+        "mean_snr": 4.0,
+        "length_px": 418.0,
+        "elongation": 36.0,
+        "jd_mid": 2461153.5645059724,
+        "datetime_utc": "2026-04-23T01:32:53.066"
+      }
+    },
+    {
+      "id": 46,
+      "image_id": 1000053,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3275.6465267486947,
+          2020.736790161865,
+          3732.6465267486947,
+          1809.736790161865,
+          3739.3534732513053,
+          1824.263209838135,
+          3282.3534732513053,
+          2035.263209838135
+        ]
+      ],
+      "bbox": [
+        3275.6465267486947,
+        1809.736790161865,
+        463.70694650261066,
+        225.52641967627005
+      ],
+      "area": 8053.739504106152,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3507.5,
+        "cy": 1922.5,
+        "w": 503.3587190066345,
+        "h": 16.0,
+        "angle_deg": 155.21690941324863
+      },
+      "attributes": {
+        "norad_id": 41188,
+        "satellite_name": "ORBCOMM FM117",
+        "peak_snr": 19.0,
+        "mean_snr": 4.0,
+        "length_px": 503.0,
+        "elongation": 43.0,
+        "jd_mid": 2461153.5647736923,
+        "datetime_utc": "2026-04-23T01:33:16.197"
+      }
+    },
+    {
+      "id": 48,
+      "image_id": 1000055,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3297.1867597252754,
+          1996.967276586754,
+          3830.1867597252754,
+          1707.967276586754,
+          3837.8132402747246,
+          1722.032723413246,
+          3304.8132402747246,
+          2011.032723413246
+        ]
+      ],
+      "bbox": [
+        3297.1867597252754,
+        1707.967276586754,
+        540.6264805494493,
+        303.065446826492
+      ],
+      "area": 9700.93603731104,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3567.5,
+        "cy": 1859.5,
+        "w": 606.30850233194,
+        "h": 16.0,
+        "angle_deg": 151.53283604826507
+      },
+      "attributes": {
+        "norad_id": 41188,
+        "satellite_name": "ORBCOMM FM117",
+        "peak_snr": 46.0,
+        "mean_snr": 4.0,
+        "length_px": 606.0,
+        "elongation": 64.0,
+        "jd_mid": 2461153.5650583217,
+        "datetime_utc": "2026-04-23T01:33:40.789"
+      }
+    },
+    {
+      "id": 57,
+      "image_id": 1000064,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3589.903092792334,
+          2655.17954848429,
+          3222.903092792334,
+          2223.17954848429,
+          3235.096907207666,
+          2212.82045151571,
+          3602.096907207666,
+          2644.82045151571
+        ]
+      ],
+      "bbox": [
+        3222.903092792334,
+        2212.82045151571,
+        379.1938144153319,
+        442.35909696858016
+      ],
+      "area": 9069.516414892252,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3412.5,
+        "cy": 2434.0,
+        "w": 566.8447759307658,
+        "h": 16.0,
+        "angle_deg": 49.650866552954874
+      },
+      "attributes": {
+        "norad_id": 41188,
+        "satellite_name": "ORBCOMM FM117",
+        "peak_snr": 80.0,
+        "mean_snr": 11.0,
+        "length_px": 567.0,
+        "elongation": 40.0,
+        "jd_mid": 2461153.5668362617,
+        "datetime_utc": "2026-04-23T01:36:14.403"
+      }
+    },
+    {
+      "id": 65,
+      "image_id": 1000072,
+      "category_id": 1,
+      "segmentation": [
+        [
+          4418.47981701795,
+          2860.600601927763,
+          3720.47981701795,
+          2382.600601927763,
+          3729.52018298205,
+          2369.399398072237,
+          4427.52018298205,
+          2847.399398072237
+        ]
+      ],
+      "bbox": [
+        3720.47981701795,
+        2369.399398072237,
+        707.0403659640997,
+        491.2012038555258
+      ],
+      "area": 13535.735221996623,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 4074.0,
+        "cy": 2615.0,
+        "w": 845.983451374789,
+        "h": 16.0,
+        "angle_deg": 34.40387964941097
+      },
+      "attributes": {
+        "norad_id": 42954,
+        "satellite_name": "VRSS-2",
+        "peak_snr": 34.0,
+        "mean_snr": 6.0,
+        "length_px": 846.0,
+        "elongation": 79.0,
+        "jd_mid": 2461142.5563649884,
+        "datetime_utc": "2026-04-12T01:21:09.685"
+      }
+    },
+    {
+      "id": 67,
+      "image_id": 1000074,
+      "category_id": 1,
+      "segmentation": [
+        [
+          4530.137939953455,
+          3046.3529813555365,
+          3763.1379399534553,
+          2459.3529813555365,
+          3772.8620600465447,
+          2446.6470186444635,
+          4539.862060046545,
+          3033.6470186444635
+        ]
+      ],
+      "bbox": [
+        3763.1379399534553,
+        2446.6470186444635,
+        776.7241200930894,
+        599.705962711073
+      ],
+      "area": 15453.531894036392,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 4151.5,
+        "cy": 2746.5,
+        "w": 965.8457433772745,
+        "h": 16.0,
+        "angle_deg": 37.42753206504269
+      },
+      "attributes": {
+        "norad_id": 42954,
+        "satellite_name": "VRSS-2",
+        "peak_snr": 69.0,
+        "mean_snr": 5.0,
+        "length_px": 966.0,
+        "elongation": 98.0,
+        "jd_mid": 2461142.5566823846,
+        "datetime_utc": "2026-04-12T01:21:37.108"
+      }
+    },
+    {
+      "id": 71,
+      "image_id": 1000078,
+      "category_id": 1,
+      "segmentation": [
+        [
+          4063.5730408272007,
+          3243.7638425447503,
+          3556.5730408272007,
+          2559.7638425447503,
+          3569.4269591727993,
+          2550.2361574552497,
+          4076.4269591727993,
+          3234.2361574552497
+        ]
+      ],
+      "bbox": [
+        3556.5730408272007,
+        2550.2361574552497,
+        519.8539183455987,
+        693.5276850895007
+      ],
+      "area": 13622.616488766025,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3816.5,
+        "cy": 2897.0,
+        "w": 851.4135305478766,
+        "h": 16.0,
+        "angle_deg": 53.45311953518885
+      },
+      "attributes": {
+        "norad_id": 42954,
+        "satellite_name": "VRSS-2",
+        "peak_snr": 28.0,
+        "mean_snr": 5.0,
+        "length_px": 851.0,
+        "elongation": 93.0,
+        "jd_mid": 2461142.557295706,
+        "datetime_utc": "2026-04-12T01:22:30.099"
+      }
+    },
+    {
+      "id": 73,
+      "image_id": 1000080,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3610.5272422348803,
+          3167.8562022659194,
+          3365.5272422348803,
+          2526.8562022659194,
+          3380.4727577651197,
+          2521.1437977340806,
+          3625.4727577651197,
+          3162.1437977340806
+        ]
+      ],
+      "bbox": [
+        3365.5272422348803,
+        2521.1437977340806,
+        259.9455155302394,
+        646.7124045318387
+      ],
+      "area": 10979.61456518397,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3495.5,
+        "cy": 2844.5,
+        "w": 686.2259103239982,
+        "h": 16.0,
+        "angle_deg": 69.08237952885732
+      },
+      "attributes": {
+        "norad_id": 42954,
+        "satellite_name": "VRSS-2",
+        "peak_snr": 39.0,
+        "mean_snr": 6.0,
+        "length_px": 686.0,
+        "elongation": 58.0,
+        "jd_mid": 2461142.557604317,
+        "datetime_utc": "2026-04-12T01:22:56.763"
+      }
+    },
+    {
+      "id": 80,
+      "image_id": 1000088,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3467.5708666696887,
+          2137.9884819950234,
+          3225.5708666696887,
+          2124.9884819950234,
+          3226.4291333303113,
+          2109.0115180049766,
+          3468.4291333303113,
+          2122.0115180049766
+        ]
+      ],
+      "bbox": [
+        3225.5708666696887,
+        2109.0115180049766,
+        242.85826666062258,
+        28.976963990046897
+      ],
+      "area": 3877.582752179507,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3347.0,
+        "cy": 2123.5,
+        "w": 242.3489220112192,
+        "h": 16.0,
+        "angle_deg": 3.0749169306159243
+      },
+      "attributes": {
+        "norad_id": 43071,
+        "satellite_name": "IRIDIUM 138",
+        "peak_snr": 44.0,
+        "mean_snr": 6.0,
+        "length_px": 242.0,
+        "elongation": 18.0,
+        "jd_mid": 2461153.58390456,
+        "datetime_utc": "2026-04-23T02:00:49.104"
+      }
+    },
+    {
+      "id": 81,
+      "image_id": 1000089,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3503.33563616117,
+          2136.9723660659592,
+          3239.33563616117,
+          2114.9723660659592,
+          3240.66436383883,
+          2099.0276339340408,
+          3504.66436383883,
+          2121.0276339340408
+        ]
+      ],
+      "bbox": [
+        3239.33563616117,
+        2099.0276339340408,
+        265.32872767766,
+        37.9447321319185
+      ],
+      "area": 4238.641291734888,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3372.0,
+        "cy": 2118.0,
+        "w": 264.9150807334305,
+        "h": 16.0,
+        "angle_deg": 4.763641690726178
+      },
+      "attributes": {
+        "norad_id": 43071,
+        "satellite_name": "IRIDIUM 138",
+        "peak_snr": 66.0,
+        "mean_snr": 11.0,
+        "length_px": 265.0,
+        "elongation": 17.0,
+        "jd_mid": 2461153.5840299423,
+        "datetime_utc": "2026-04-23T02:00:59.937"
+      }
+    },
+    {
+      "id": 89,
+      "image_id": 1000097,
+      "category_id": 1,
+      "segmentation": [
+        [
+          2754.589084023362,
+          2053.8745994251685,
+          2101.589084023362,
+          1936.8745994251688,
+          2104.410915976638,
+          1921.1254005748312,
+          2757.410915976638,
+          2038.1254005748312
+        ]
+      ],
+      "bbox": [
+        2101.589084023362,
+        1921.1254005748312,
+        655.8218319532762,
+        132.74919885033728
+      ],
+      "area": 10614.381187803649,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 2429.5,
+        "cy": 1987.5,
+        "w": 663.398824237728,
+        "h": 16.0,
+        "angle_deg": 10.158073187182577
+      },
+      "attributes": {
+        "norad_id": 43071,
+        "satellite_name": "IRIDIUM 138",
+        "peak_snr": 93.0,
+        "mean_snr": 15.0,
+        "length_px": 663.0,
+        "elongation": 41.0,
+        "jd_mid": 2461153.585522905,
+        "datetime_utc": "2026-04-23T02:03:08.929"
+      }
+    },
+    {
+      "id": 93,
+      "image_id": 1000101,
+      "category_id": 1,
+      "segmentation": [
+        [
+          4278.898239901032,
+          2236.9237696006585,
+          3566.898239901032,
+          2137.9237696006585,
+          3569.101760098968,
+          2122.0762303993415,
+          4281.101760098968,
+          2221.0762303993415
+        ]
+      ],
+      "bbox": [
+        3566.898239901032,
+        2122.0762303993415,
+        714.2035201979361,
+        114.84753920131698
+      ],
+      "area": 11501.596410933571,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3924.0,
+        "cy": 2179.5,
+        "w": 718.8497756833482,
+        "h": 16.0,
+        "angle_deg": 7.915934590900499
+      },
+      "attributes": {
+        "norad_id": 43071,
+        "satellite_name": "IRIDIUM 138",
+        "peak_snr": 159.0,
+        "mean_snr": 23.0,
+        "length_px": 719.0,
+        "elongation": 35.0,
+        "jd_mid": 2461153.5867634723,
+        "datetime_utc": "2026-04-23T02:04:56.114"
+      }
+    },
+    {
+      "id": 94,
+      "image_id": 1000102,
+      "category_id": 1,
+      "segmentation": [
+        [
+          4184.995663695439,
+          2205.9367064067746,
+          3536.995663695439,
+          2123.9367064067746,
+          3539.004336304561,
+          2108.0632935932254,
+          4187.004336304561,
+          2190.0632935932254
+        ]
+      ],
+      "bbox": [
+        3536.995663695439,
+        2108.0632935932254,
+        650.0086726091217,
+        97.8734128135493
+      ],
+      "area": 10450.682657128193,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3862.0,
+        "cy": 2157.0,
+        "w": 653.167666070512,
+        "h": 16.0,
+        "angle_deg": 7.212058863805513
+      },
+      "attributes": {
+        "norad_id": 43071,
+        "satellite_name": "IRIDIUM 138",
+        "peak_snr": 193.0,
+        "mean_snr": 24.0,
+        "length_px": 653.0,
+        "elongation": 30.0,
+        "jd_mid": 2461153.5869235187,
+        "datetime_utc": "2026-04-23T02:05:09.942"
+      }
+    },
+    {
+      "id": 95,
+      "image_id": 1000103,
+      "category_id": 1,
+      "segmentation": [
+        [
+          4078.8535247104123,
+          2202.9174234704456,
+          3491.8535247104123,
+          2117.9174234704456,
+          3494.1464752895877,
+          2102.0825765295544,
+          4081.1464752895877,
+          2187.0825765295544
+        ]
+      ],
+      "bbox": [
+        3491.8535247104123,
+        2102.0825765295544,
+        589.2929505791753,
+        100.83484694089111
+      ],
+      "area": 9489.955953533188,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3786.5,
+        "cy": 2152.5,
+        "w": 593.1222470958243,
+        "h": 16.0,
+        "angle_deg": 8.239393169650274
+      },
+      "attributes": {
+        "norad_id": 43071,
+        "satellite_name": "IRIDIUM 138",
+        "peak_snr": 180.0,
+        "mean_snr": 25.0,
+        "length_px": 593.0,
+        "elongation": 28.0,
+        "jd_mid": 2461153.5870815855,
+        "datetime_utc": "2026-04-23T02:05:23.599"
+      }
+    },
+    {
+      "id": 99,
+      "image_id": 1000123,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3175.3559384988002,
+          2037.5439426879502,
+          3342.3559384988002,
+          1788.5439426879502,
+          3355.6440615011998,
+          1797.4560573120498,
+          3188.6440615011998,
+          2046.4560573120498
+        ]
+      ],
+      "bbox": [
+        3175.3559384988002,
+        1788.5439426879502,
+        180.28812300239952,
+        257.91211462409956
+      ],
+      "area": 4797.065769822215,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3265.5,
+        "cy": 1917.5,
+        "w": 299.81661061388843,
+        "h": 16.0,
+        "angle_deg": 123.84907483149486
+      },
+      "attributes": {
+        "norad_id": 44768,
+        "satellite_name": "STARLINK-1063",
+        "peak_snr": 16.0,
+        "mean_snr": 3.0,
+        "length_px": 300.0,
+        "elongation": 35.0,
+        "jd_mid": 2461153.552862072,
+        "datetime_utc": "2026-04-23T01:16:07.033"
+      }
+    },
+    {
+      "id": 103,
+      "image_id": 1000127,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3179.5448656256403,
+          1985.0981089854643,
+          3360.5448656256403,
+          1520.0981089854643,
+          3375.4551343743597,
+          1525.9018910145357,
+          3194.4551343743597,
+          1990.9018910145357
+        ]
+      ],
+      "bbox": [
+        3179.5448656256403,
+        1520.0981089854643,
+        195.91026874871932,
+        470.8037820290715
+      ],
+      "area": 7983.75951541628,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3277.5,
+        "cy": 1755.5,
+        "w": 498.9849697135175,
+        "h": 16.0,
+        "angle_deg": 111.26834169401576
+      },
+      "attributes": {
+        "norad_id": 44768,
+        "satellite_name": "STARLINK-1063",
+        "peak_snr": 18.0,
+        "mean_snr": 4.0,
+        "length_px": 499.0,
+        "elongation": 56.0,
+        "jd_mid": 2461153.553396875,
+        "datetime_utc": "2026-04-23T01:16:53.240"
+      }
+    },
+    {
+      "id": 104,
+      "image_id": 1000128,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3178.3746326199016,
+          1950.5805429703073,
+          3356.3746326199016,
+          1389.5805429703073,
+          3371.6253673800984,
+          1394.4194570296927,
+          3193.6253673800984,
+          1955.4194570296927
+        ]
+      ],
+      "bbox": [
+        3178.3746326199016,
+        1389.5805429703073,
+        193.2507347601968,
+        565.8389140593854
+      ],
+      "area": 9416.988903041141,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3275.0,
+        "cy": 1672.5,
+        "w": 588.5618064400713,
+        "h": 16.0,
+        "angle_deg": 107.6037411291909
+      },
+      "attributes": {
+        "norad_id": 44768,
+        "satellite_name": "STARLINK-1063",
+        "peak_snr": 16.0,
+        "mean_snr": 4.0,
+        "length_px": 589.0,
+        "elongation": 71.0,
+        "jd_mid": 2461153.5535386577,
+        "datetime_utc": "2026-04-23T01:17:05.490"
+      }
+    },
+    {
+      "id": 112,
+      "image_id": 1000136,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3573.614708756634,
+          2711.8195493292837,
+          3179.614708756634,
+          2189.8195493292837,
+          3192.385291243366,
+          2180.1804506707163,
+          3586.385291243366,
+          2702.1804506707163
+        ]
+      ],
+      "bbox": [
+        3179.614708756634,
+        2180.1804506707163,
+        406.77058248673166,
+        531.6390986585675
+      ],
+      "area": 10464.048929549212,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3383.0,
+        "cy": 2446.0,
+        "w": 654.0030580968257,
+        "h": 16.0,
+        "angle_deg": 52.95488644925065
+      },
+      "attributes": {
+        "norad_id": 44768,
+        "satellite_name": "STARLINK-1063",
+        "peak_snr": 58.0,
+        "mean_snr": 10.0,
+        "length_px": 654.0,
+        "elongation": 57.0,
+        "jd_mid": 2461153.5552803357,
+        "datetime_utc": "2026-04-23T01:19:35.971"
+      }
+    },
+    {
+      "id": 114,
+      "image_id": 1000138,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3411.5956606934237,
+          2510.7942088029454,
+          3146.5956606934237,
+          2156.7942088029454,
+          3159.4043393065763,
+          2147.2057911970546,
+          3424.4043393065763,
+          2501.2057911970546
+        ]
+      ],
+      "bbox": [
+        3146.5956606934237,
+        2147.2057911970546,
+        277.80867861315255,
+        363.58841760589075
+      ],
+      "area": 7075.202894617228,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3285.5,
+        "cy": 2329.0,
+        "w": 442.20018091357673,
+        "h": 16.0,
+        "angle_deg": 53.181930272641544
+      },
+      "attributes": {
+        "norad_id": 44768,
+        "satellite_name": "STARLINK-1063",
+        "peak_snr": 54.0,
+        "mean_snr": 9.0,
+        "length_px": 442.0,
+        "elongation": 34.0,
+        "jd_mid": 2461153.555596748,
+        "datetime_utc": "2026-04-23T01:20:03.309"
+      }
+    },
+    {
+      "id": 117,
+      "image_id": 1000143,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3389.0428161524414,
+          1685.0506211993184,
+          3691.0428161524414,
+          1153.0506211993184,
+          3704.9571838475586,
+          1160.9493788006816,
+          3402.9571838475586,
+          1692.9493788006816
+        ]
+      ],
+      "bbox": [
+        3389.0428161524414,
+        1153.0506211993184,
+        315.9143676951171,
+        539.8987576013633
+      ],
+      "area": 9787.868409413768,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3547.0,
+        "cy": 1423.0,
+        "w": 611.7417755883605,
+        "h": 16.0,
+        "angle_deg": 119.58224164594282
+      },
+      "attributes": {
+        "norad_id": 45081,
+        "satellite_name": "STARLINK-1151",
+        "peak_snr": 507.0,
+        "mean_snr": 39.0,
+        "length_px": 612.0,
+        "elongation": 22.0,
+        "jd_mid": 2461153.5722684143,
+        "datetime_utc": "2026-04-23T01:44:03.741"
+      }
+    },
+    {
+      "id": 127,
+      "image_id": 1000154,
+      "category_id": 1,
+      "segmentation": [
+        [
+          5007.61383948247,
+          813.3095892566703,
+          6000.61383948247,
+          162.30958925667076,
+          6009.38616051753,
+          175.6904107433298,
+          5016.38616051753,
+          826.6904107433293
+        ]
+      ],
+      "bbox": [
+        5007.61383948247,
+        162.30958925667076,
+        1001.7723210350596,
+        664.3808214866585
+      ],
+      "area": 18997.93673007677,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 5508.5,
+        "cy": 494.5,
+        "w": 1187.3710456297981,
+        "h": 16.0,
+        "angle_deg": 146.75158705827334
+      },
+      "attributes": {
+        "norad_id": 46146,
+        "satellite_name": "STARLINK-1608",
+        "peak_snr": 41.0,
+        "mean_snr": 8.0,
+        "length_px": 1187.0,
+        "elongation": 96.0,
+        "jd_mid": 2461153.5574485185,
+        "datetime_utc": "2026-04-23T01:22:43.302"
+      }
+    },
+    {
+      "id": 141,
+      "image_id": 1000175,
+      "category_id": 1,
+      "segmentation": [
+        [
+          2872.5962355687457,
+          1458.0305564252285,
+          2635.5962355687457,
+          879.0305564252285,
+          2650.4037644312543,
+          872.9694435747715,
+          2887.4037644312543,
+          1451.9694435747715
+        ]
+      ],
+      "bbox": [
+        2635.5962355687457,
+        872.9694435747715,
+        251.80752886250866,
+        585.061112850457
+      ],
+      "area": 10010.042956950785,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 2761.5,
+        "cy": 1165.5,
+        "w": 625.6276848094241,
+        "h": 16.0,
+        "angle_deg": 67.73941778343
+      },
+      "attributes": {
+        "norad_id": 47799,
+        "satellite_name": "STARLINK-2380",
+        "peak_snr": 24.0,
+        "mean_snr": 5.0,
+        "length_px": 626.0,
+        "elongation": 51.0,
+        "jd_mid": 2461153.575300602,
+        "datetime_utc": "2026-04-23T01:48:25.722"
+      }
+    },
+    {
+      "id": 142,
+      "image_id": 1000176,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3173.0164364491293,
+          1991.0623331417419,
+          3483.0164364491293,
+          1813.0623331417419,
+          3490.9835635508707,
+          1826.9376668582581,
+          3180.9835635508707,
+          2004.9376668582581
+        ]
+      ],
+      "bbox": [
+        3173.0164364491293,
+        1813.0623331417419,
+        317.9671271017414,
+        191.87533371651625
+      ],
+      "area": 5719.502076230063,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3332.0,
+        "cy": 1909.0,
+        "w": 357.4688797643789,
+        "h": 16.0,
+        "angle_deg": 150.13583550374804
+      },
+      "attributes": {
+        "norad_id": 47799,
+        "satellite_name": "STARLINK-2380",
+        "peak_snr": 91.0,
+        "mean_snr": 13.0,
+        "length_px": 357.0,
+        "elongation": 23.0,
+        "jd_mid": 2461153.5758524886,
+        "datetime_utc": "2026-04-23T01:49:13.405"
+      }
+    },
+    {
+      "id": 146,
+      "image_id": 1000180,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3147.546981212203,
+          1946.1464040026724,
+          3600.546981212203,
+          1524.1464040026724,
+          3611.453018787797,
+          1535.8535959973276,
+          3158.453018787797,
+          1957.8535959973276
+        ]
+      ],
+      "bbox": [
+        3147.546981212203,
+        1524.1464040026724,
+        463.9060375755944,
+        433.7071919946552
+      ],
+      "area": 9905.705830479725,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3379.5,
+        "cy": 1741.0,
+        "w": 619.1066144049828,
+        "h": 16.0,
+        "angle_deg": 137.0290589537804
+      },
+      "attributes": {
+        "norad_id": 47799,
+        "satellite_name": "STARLINK-2380",
+        "peak_snr": 97.0,
+        "mean_snr": 12.0,
+        "length_px": 619.0,
+        "elongation": 44.0,
+        "jd_mid": 2461153.576407037,
+        "datetime_utc": "2026-04-23T01:50:01.318"
+      }
+    },
+    {
+      "id": 156,
+      "image_id": 1000195,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3285.1106836216027,
+          1914.9333896377516,
+          3540.1106836216027,
+          1482.9333896377516,
+          3553.8893163783973,
+          1491.0666103622484,
+          3298.8893163783973,
+          1923.0666103622484
+        ]
+      ],
+      "bbox": [
+        3285.1106836216027,
+        1482.9333896377516,
+        268.77863275679465,
+        440.1332207244968
+      ],
+      "area": 8026.340635681991,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3419.5,
+        "cy": 1703.0,
+        "w": 501.64628973012447,
+        "h": 16.0,
+        "angle_deg": 120.55240928515973
+      },
+      "attributes": {
+        "norad_id": 48093,
+        "satellite_name": "STARLINK-2404",
+        "peak_snr": 30.0,
+        "mean_snr": 6.0,
+        "length_px": 502.0,
+        "elongation": 50.0,
+        "jd_mid": 2461142.5441752896,
+        "datetime_utc": "2026-04-12T01:03:36.495"
+      }
+    },
+    {
+      "id": 159,
+      "image_id": 1000198,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3241.1646912884808,
+          1808.3850890441906,
+          3403.1646912884808,
+          1022.3850890441907,
+          3418.8353087115192,
+          1025.6149109558094,
+          3256.8353087115192,
+          1811.6149109558094
+        ]
+      ],
+      "bbox": [
+        3241.1646912884808,
+        1022.3850890441907,
+        177.6706174230385,
+        789.2298219116186
+      ],
+      "area": 12840.336444190238,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3330.0,
+        "cy": 1417.0,
+        "w": 802.5210277618899,
+        "h": 16.0,
+        "angle_deg": 101.64597424848323
+      },
+      "attributes": {
+        "norad_id": 48093,
+        "satellite_name": "STARLINK-2404",
+        "peak_snr": 35.0,
+        "mean_snr": 4.0,
+        "length_px": 803.0,
+        "elongation": 77.0,
+        "jd_mid": 2461142.5446246527,
+        "datetime_utc": "2026-04-12T01:04:15.320"
+      }
+    },
+    {
+      "id": 161,
+      "image_id": 1000200,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3096.2506890716477,
+          1686.9870028021417,
+          2826.2506890716477,
+          633.9870028021417,
+          2841.7493109283523,
+          630.0129971978583,
+          3111.7493109283523,
+          1683.0129971978583
+        ]
+      ],
+      "bbox": [
+        2826.2506890716477,
+        630.0129971978583,
+        285.49862185670463,
+        1056.9740056042833
+      ],
+      "area": 17393.030328266548,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 2969.0,
+        "cy": 1158.5,
+        "w": 1087.0643955166593,
+        "h": 16.0,
+        "angle_deg": 75.6186054089094
+      },
+      "attributes": {
+        "norad_id": 48093,
+        "satellite_name": "STARLINK-2404",
+        "peak_snr": 35.0,
+        "mean_snr": 4.0,
+        "length_px": 1087.0,
+        "elongation": 123.0,
+        "jd_mid": 2461142.5449903356,
+        "datetime_utc": "2026-04-12T01:04:46.915"
+      }
+    },
+    {
+      "id": 163,
+      "image_id": 1000203,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3957.1801772641184,
+          3021.4890494006627,
+          3343.1801772641184,
+          2370.4890494006627,
+          3354.8198227358816,
+          2359.5109505993373,
+          3968.8198227358816,
+          3010.5109505993373
+        ]
+      ],
+      "bbox": [
+        3343.1801772641184,
+        2359.5109505993373,
+        625.6396454717633,
+        661.9780988013254
+      ],
+      "area": 14317.961866131645,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3656.0,
+        "cy": 2690.5,
+        "w": 894.8726166332278,
+        "h": 16.0,
+        "angle_deg": 46.675367281794905
+      },
+      "attributes": {
+        "norad_id": 48093,
+        "satellite_name": "STARLINK-2404",
+        "peak_snr": 57.0,
+        "mean_snr": 7.0,
+        "length_px": 895.0,
+        "elongation": 83.0,
+        "jd_mid": 2461142.5458243173,
+        "datetime_utc": "2026-04-12T01:05:58.971"
+      }
+    },
+    {
+      "id": 166,
+      "image_id": 1000206,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3520.26304513687,
+          2550.5756030076045,
+          3209.26304513687,
+          2230.5756030076045,
+          3220.73695486313,
+          2219.4243969923955,
+          3531.73695486313,
+          2539.4243969923955
+        ]
+      ],
+      "bbox": [
+        3209.26304513687,
+        2219.4243969923955,
+        322.47390972626,
+        331.151206015209
+      ],
+      "area": 7139.676183133238,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3370.5,
+        "cy": 2385.0,
+        "w": 446.22976144582736,
+        "h": 16.0,
+        "angle_deg": 45.81715856090989
+      },
+      "attributes": {
+        "norad_id": 48093,
+        "satellite_name": "STARLINK-2404",
+        "peak_snr": 54.0,
+        "mean_snr": 8.0,
+        "length_px": 446.0,
+        "elongation": 44.0,
+        "jd_mid": 2461142.546397141,
+        "datetime_utc": "2026-04-12T01:06:48.463"
+      }
+    },
+    {
+      "id": 167,
+      "image_id": 1000207,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3463.302303644036,
+          2494.6157151134325,
+          3189.302303644036,
+          2216.6157151134325,
+          3200.697696355964,
+          2205.3842848865675,
+          3474.697696355964,
+          2483.3842848865675
+        ]
+      ],
+      "bbox": [
+        3189.302303644036,
+        2205.3842848865675,
+        285.39539271192825,
+        289.2314302268651
+      ],
+      "area": 6245.331056077011,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3332.0,
+        "cy": 2350.0,
+        "w": 390.3331910048132,
+        "h": 16.0,
+        "angle_deg": 45.415179541144866
+      },
+      "attributes": {
+        "norad_id": 48093,
+        "satellite_name": "STARLINK-2404",
+        "peak_snr": 43.0,
+        "mean_snr": 7.0,
+        "length_px": 390.0,
+        "elongation": 33.0,
+        "jd_mid": 2461142.546541655,
+        "datetime_utc": "2026-04-12T01:07:00.949"
+      }
+    },
+    {
+      "id": 175,
+      "image_id": 1000215,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3648.9690317958075,
+          1760.0897687928125,
+          4164.9690317958075,
+          1459.0897687928125,
+          4173.0309682041925,
+          1472.9102312071875,
+          3657.0309682041925,
+          1773.9102312071875
+        ]
+      ],
+      "bbox": [
+        3648.9690317958075,
+        1459.0897687928125,
+        524.061936408385,
+        314.820462414375
+      ],
+      "area": 9558.001464741466,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3911.0,
+        "cy": 1616.5,
+        "w": 597.3750915463417,
+        "h": 16.0,
+        "angle_deg": 149.74356283647072
+      },
+      "attributes": {
+        "norad_id": 48140,
+        "satellite_name": "STARLINK-2483",
+        "peak_snr": 27.0,
+        "mean_snr": 3.0,
+        "length_px": 597.0,
+        "elongation": 73.0,
+        "jd_mid": 2461142.559439618,
+        "datetime_utc": "2026-04-12T01:25:35.333"
+      }
+    },
+    {
+      "id": 182,
+      "image_id": 1000222,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3159.0780216560097,
+          2060.6213224215135,
+          3555.0780216560097,
+          1624.6213224215137,
+          3566.9219783439903,
+          1635.3786775784863,
+          3170.9219783439903,
+          2071.3786775784865
+        ]
+      ],
+      "bbox": [
+        3159.0780216560097,
+        1624.6213224215137,
+        407.8439566879806,
+        446.75735515697284
+      ],
+      "area": 9423.877758120592,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3363.0,
+        "cy": 1848.0,
+        "w": 588.992359882537,
+        "h": 16.0,
+        "angle_deg": 132.24751459973132
+      },
+      "attributes": {
+        "norad_id": 48381,
+        "satellite_name": "STARLINK-2630",
+        "peak_snr": 43.0,
+        "mean_snr": 8.0,
+        "length_px": 589.0,
+        "elongation": 53.0,
+        "jd_mid": 2461157.5790502434,
+        "datetime_utc": "2026-04-27T01:53:49.691"
+      }
+    },
+    {
+      "id": 196,
+      "image_id": 1000236,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3569.814564590537,
+          1880.6615395857075,
+          4244.814564590537,
+          1587.6615395857075,
+          4251.185435409463,
+          1602.3384604142925,
+          3576.185435409463,
+          1895.3384604142925
+        ]
+      ],
+      "bbox": [
+        3569.814564590537,
+        1587.6615395857075,
+        681.370870818926,
+        307.676920828585
+      ],
+      "area": 11773.586709240308,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3910.5,
+        "cy": 1741.5,
+        "w": 735.8491693275192,
+        "h": 16.0,
+        "angle_deg": 156.53558515038264
+      },
+      "attributes": {
+        "norad_id": 48390,
+        "satellite_name": "STARLINK-2586",
+        "peak_snr": 30.0,
+        "mean_snr": 6.0,
+        "length_px": 736.0,
+        "elongation": 76.0,
+        "jd_mid": 2461157.5570585188,
+        "datetime_utc": "2026-04-27T01:22:09.606"
+      }
+    },
+    {
+      "id": 203,
+      "image_id": 1000243,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3628.3818838157026,
+          2835.494500881204,
+          3319.3818838157026,
+          2380.494500881204,
+          3332.6181161842974,
+          2371.505499118796,
+          3641.6181161842974,
+          2826.505499118796
+        ]
+      ],
+      "bbox": [
+        3319.3818838157026,
+        2371.505499118796,
+        322.23623236859476,
+        463.9890017624084
+      ],
+      "area": 8800.08727229452,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3480.5,
+        "cy": 2603.5,
+        "w": 550.0054545184075,
+        "h": 16.0,
+        "angle_deg": 55.818755272304955
+      },
+      "attributes": {
+        "norad_id": 48390,
+        "satellite_name": "STARLINK-2586",
+        "peak_snr": 22.0,
+        "mean_snr": 5.0,
+        "length_px": 550.0,
+        "elongation": 62.0,
+        "jd_mid": 2461157.5587991783,
+        "datetime_utc": "2026-04-27T01:24:39.999"
+      }
+    },
+    {
+      "id": 214,
+      "image_id": 1000259,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3553.707757778698,
+          2524.999347653793,
+          3010.707757778698,
+          2045.999347653793,
+          3021.292242221302,
+          2034.000652346207,
+          3564.292242221302,
+          2513.000652346207
+        ]
+      ],
+      "bbox": [
+        3010.707757778698,
+        2034.000652346207,
+        553.5844844426038,
+        490.9986953075859
+      ],
+      "area": 11585.259600026233,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3287.5,
+        "cy": 2279.5,
+        "w": 724.0787250016396,
+        "h": 16.0,
+        "angle_deg": 41.41668514507702
+      },
+      "attributes": {
+        "norad_id": 49436,
+        "satellite_name": "STARLINK-3049",
+        "peak_snr": 49.0,
+        "mean_snr": 8.0,
+        "length_px": 724.0,
+        "elongation": 65.0,
+        "jd_mid": 2461153.5402518753,
+        "datetime_utc": "2026-04-23T00:57:57.512"
+      }
+    },
+    {
+      "id": 216,
+      "image_id": 1000261,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3421.8311071721414,
+          2401.105943574429,
+          3017.8311071721414,
+          2059.105943574429,
+          3028.1688928278586,
+          2046.8940564255709,
+          3432.1688928278586,
+          2388.894056425571
+        ]
+      ],
+      "bbox": [
+        3017.8311071721414,
+        2046.8940564255709,
+        414.3377856557172,
+        354.2118871488583
+      ],
+      "area": 8469.12510239399,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3225.0,
+        "cy": 2224.0,
+        "w": 529.3203188996243,
+        "h": 16.0,
+        "angle_deg": 40.24907092932549
+      },
+      "attributes": {
+        "norad_id": 49436,
+        "satellite_name": "STARLINK-3049",
+        "peak_snr": 46.0,
+        "mean_snr": 8.0,
+        "length_px": 529.0,
+        "elongation": 49.0,
+        "jd_mid": 2461153.5405508336,
+        "datetime_utc": "2026-04-23T00:58:23.342"
+      }
+    },
+    {
+      "id": 217,
+      "image_id": 1000262,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3375.8371868066542,
+          2361.1110850043683,
+          3027.8371868066542,
+          2067.1110850043683,
+          3038.1628131933458,
+          2054.8889149956317,
+          3386.1628131933458,
+          2348.8889149956317
+        ]
+      ],
+      "bbox": [
+        3027.8371868066542,
+        2054.8889149956317,
+        358.3256263866915,
+        306.2221700087366
+      ],
+      "area": 7289.049320727635,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3207.0,
+        "cy": 2208.0,
+        "w": 455.5655825454772,
+        "h": 16.0,
+        "angle_deg": 40.19204603696953
+      },
+      "attributes": {
+        "norad_id": 49436,
+        "satellite_name": "STARLINK-3049",
+        "peak_snr": 45.0,
+        "mean_snr": 7.0,
+        "length_px": 456.0,
+        "elongation": 42.0,
+        "jd_mid": 2461153.540693102,
+        "datetime_utc": "2026-04-23T00:58:35.634"
+      }
+    },
+    {
+      "id": 220,
+      "image_id": 1000265,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3408.7511683557736,
+          1779.004791988103,
+          3667.7511683557736,
+          1455.004791988103,
+          3680.2488316442264,
+          1464.995208011897,
+          3421.2488316442264,
+          1788.995208011897
+        ]
+      ],
+      "bbox": [
+        3408.7511683557736,
+        1455.004791988103,
+        271.4976632884527,
+        333.99041602379384
+      ],
+      "area": 6636.760655621084,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3544.5,
+        "cy": 1622.0,
+        "w": 414.79754097631775,
+        "h": 16.0,
+        "angle_deg": 128.63823604896746
+      },
+      "attributes": {
+        "norad_id": 49445,
+        "satellite_name": "STARLINK-3122",
+        "peak_snr": 92.0,
+        "mean_snr": 14.0,
+        "length_px": 415.0,
+        "elongation": 28.0,
+        "jd_mid": 2461153.5677651735,
+        "datetime_utc": "2026-04-23T01:37:34.661"
+      }
+    },
+    {
+      "id": 223,
+      "image_id": 1000268,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3404.7955869090833,
+          1543.5220074733506,
+          3670.7955869090833,
+          992.5220074733506,
+          3685.2044130909167,
+          999.4779925266494,
+          3419.2044130909167,
+          1550.4779925266494
+        ]
+      ],
+      "bbox": [
+        3404.7955869090833,
+        992.5220074733506,
+        280.4088261818333,
+        557.9559850532987
+      ],
+      "area": 9789.555250367608,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3545.0,
+        "cy": 1271.5,
+        "w": 611.8472031479755,
+        "h": 16.0,
+        "angle_deg": 115.76932762433871
+      },
+      "attributes": {
+        "norad_id": 49445,
+        "satellite_name": "STARLINK-3122",
+        "peak_snr": 64.0,
+        "mean_snr": 11.0,
+        "length_px": 612.0,
+        "elongation": 43.0,
+        "jd_mid": 2461153.568198507,
+        "datetime_utc": "2026-04-23T01:38:12.101"
+      }
+    },
+    {
+      "id": 224,
+      "image_id": 1000269,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3353.4037178870713,
+          1414.490717620354,
+          3573.4037178870713,
+          748.490717620354,
+          3588.5962821129287,
+          753.509282379646,
+          3368.5962821129287,
+          1419.509282379646
+        ]
+      ],
+      "bbox": [
+        3353.4037178870713,
+        748.490717620354,
+        235.1925642258575,
+        671.0185647592921
+      ],
+      "area": 11222.332021465058,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3471.0,
+        "cy": 1084.0,
+        "w": 701.3957513415661,
+        "h": 16.0,
+        "angle_deg": 108.27995610942958
+      },
+      "attributes": {
+        "norad_id": 49445,
+        "satellite_name": "STARLINK-3122",
+        "peak_snr": 96.0,
+        "mean_snr": 10.0,
+        "length_px": 701.0,
+        "elongation": 45.0,
+        "jd_mid": 2461153.5683547454,
+        "datetime_utc": "2026-04-23T01:38:25.600"
+      }
+    },
+    {
+      "id": 225,
+      "image_id": 1000270,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3208.041266428499,
+          1274.188482940498,
+          3291.041266428499,
+          460.18848294049803,
+          3306.958733571501,
+          461.81151705950197,
+          3223.958733571501,
+          1275.811517059502
+        ]
+      ],
+      "bbox": [
+        3208.041266428499,
+        460.18848294049803,
+        98.91746714300189,
+        815.6230341190039
+      ],
+      "area": 13091.530086280976,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3257.5,
+        "cy": 868.0,
+        "w": 818.220630392561,
+        "h": 16.0,
+        "angle_deg": 95.82207694089242
+      },
+      "attributes": {
+        "norad_id": 49445,
+        "satellite_name": "STARLINK-3122",
+        "peak_snr": 55.0,
+        "mean_snr": 11.0,
+        "length_px": 818.0,
+        "elongation": 58.0,
+        "jd_mid": 2461153.568544977,
+        "datetime_utc": "2026-04-23T01:38:42.036"
+      }
+    },
+    {
+      "id": 228,
+      "image_id": 1000273,
+      "category_id": 1,
+      "segmentation": [
+        [
+          4658.085956920982,
+          3795.3874014570592,
+          3901.0859569209824,
+          2964.3874014570592,
+          3912.9140430790176,
+          2953.6125985429408,
+          4669.914043079018,
+          3784.6125985429408
+        ]
+      ],
+      "bbox": [
+        3901.0859569209824,
+        2953.6125985429408,
+        768.8280861580351,
+        841.7748029141185
+      ],
+      "area": 17985.665403314943,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 4285.5,
+        "cy": 3374.5,
+        "w": 1124.104087707184,
+        "h": 16.0,
+        "angle_deg": 47.66802436140555
+      },
+      "attributes": {
+        "norad_id": 49445,
+        "satellite_name": "STARLINK-3122",
+        "peak_snr": 148.0,
+        "mean_snr": 19.0,
+        "length_px": 1124.0,
+        "elongation": 63.0,
+        "jd_mid": 2461153.5694074193,
+        "datetime_utc": "2026-04-23T01:39:56.551"
+      }
+    },
+    {
+      "id": 233,
+      "image_id": 1000279,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3172.719583350525,
+          2014.2414473955662,
+          3412.719583350525,
+          1862.2414473955662,
+          3421.280416649475,
+          1875.7585526044338,
+          3181.280416649475,
+          2027.7585526044338
+        ]
+      ],
+      "bbox": [
+        3172.719583350525,
+        1862.2414473955662,
+        248.56083329894955,
+        165.51710520886763
+      ],
+      "area": 4545.351911568564,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3297.0,
+        "cy": 1945.0,
+        "w": 284.08449447303525,
+        "h": 16.0,
+        "angle_deg": 147.65255650055798
+      },
+      "attributes": {
+        "norad_id": 50193,
+        "satellite_name": "STARLINK-3261",
+        "peak_snr": 22.0,
+        "mean_snr": 3.0,
+        "length_px": 284.0,
+        "elongation": 42.0,
+        "jd_mid": 2461142.539297095,
+        "datetime_utc": "2026-04-12T00:56:35.019"
+      }
+    },
+    {
+      "id": 234,
+      "image_id": 1000280,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3210.72699144196,
+          1993.23676128893,
+          3449.72699144196,
+          1842.23676128893,
+          3458.27300855804,
+          1855.76323871107,
+          3219.27300855804,
+          2006.76323871107
+        ]
+      ],
+      "bbox": [
+        3210.72699144196,
+        1842.23676128893,
+        247.5460171160803,
+        164.52647742214003
+      ],
+      "area": 4523.27668841958,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3334.5,
+        "cy": 1924.5,
+        "w": 282.70479302622374,
+        "h": 16.0,
+        "angle_deg": 147.71533698889476
+      },
+      "attributes": {
+        "norad_id": 50193,
+        "satellite_name": "STARLINK-3261",
+        "peak_snr": 16.0,
+        "mean_snr": 3.0,
+        "length_px": 283.0,
+        "elongation": 39.0,
+        "jd_mid": 2461142.539422535,
+        "datetime_utc": "2026-04-12T00:56:45.857"
+      }
+    },
+    {
+      "id": 238,
+      "image_id": 1000284,
+      "category_id": 1,
+      "segmentation": [
+        [
+          2988.454309198442,
+          2118.4169387716174,
+          3631.454309198442,
+          1674.4169387716179,
+          3640.545690801558,
+          1687.5830612283826,
+          2997.545690801558,
+          2131.5830612283826
+        ]
+      ],
+      "bbox": [
+        2988.454309198442,
+        1674.4169387716179,
+        652.0913816031161,
+        457.1661224567647
+      ],
+      "area": 12502.390171483212,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3314.5,
+        "cy": 1903.0,
+        "w": 781.3993857177007,
+        "h": 16.0,
+        "angle_deg": 145.37440828749752
+      },
+      "attributes": {
+        "norad_id": 50193,
+        "satellite_name": "STARLINK-3261",
+        "peak_snr": 36.0,
+        "mean_snr": 5.0,
+        "length_px": 781.0,
+        "elongation": 86.0,
+        "jd_mid": 2461142.5399789587,
+        "datetime_utc": "2026-04-12T00:57:33.932"
+      }
+    },
+    {
+      "id": 250,
+      "image_id": 1000297,
+      "category_id": 1,
+      "segmentation": [
+        [
+          5276.8893648821895,
+          1750.0774694929532,
+          5704.8893648821895,
+          1690.0774694929532,
+          5707.1106351178105,
+          1705.9225305070468,
+          5279.1106351178105,
+          1765.9225305070468
+        ]
+      ],
+      "bbox": [
+        5276.8893648821895,
+        1690.0774694929532,
+        430.221270235621,
+        75.84506101409352
+      ],
+      "area": 6914.9623281692575,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 5492.0,
+        "cy": 1728.0,
+        "w": 432.1851455105786,
+        "h": 16.0,
+        "angle_deg": 172.01988625483148
+      },
+      "attributes": {
+        "norad_id": 51128,
+        "satellite_name": "STARLINK-3400",
+        "peak_snr": 27.0,
+        "mean_snr": 5.0,
+        "length_px": 432.0,
+        "elongation": 49.0,
+        "jd_mid": 2461153.5599342594,
+        "datetime_utc": "2026-04-23T01:26:18.070"
+      }
+    },
+    {
+      "id": 252,
+      "image_id": 1000299,
+      "category_id": 1,
+      "segmentation": [
+        [
+          5891.969118919871,
+          1684.066697774657,
+          6245.969118919871,
+          1638.066697774657,
+          6248.030881080129,
+          1653.933302225343,
+          5894.030881080129,
+          1699.933302225343
+        ]
+      ],
+      "bbox": [
+        5891.969118919871,
+        1638.066697774657,
+        356.0617621602578,
+        61.86660445068583
+      ],
+      "area": 5711.619034914706,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 6070.0,
+        "cy": 1669.0,
+        "w": 356.97618968216915,
+        "h": 16.0,
+        "angle_deg": 172.59627114721198
+      },
+      "attributes": {
+        "norad_id": 51128,
+        "satellite_name": "STARLINK-3400",
+        "peak_snr": 25.0,
+        "mean_snr": 5.0,
+        "length_px": 357.0,
+        "elongation": 35.0,
+        "jd_mid": 2461153.560217234,
+        "datetime_utc": "2026-04-23T01:26:42.519"
+      }
+    },
+    {
+      "id": 257,
+      "image_id": 1000311,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3154.007191914623,
+          2690.3391443797696,
+          3117.007191914623,
+          1818.3391443797696,
+          3132.992808085377,
+          1817.6608556202304,
+          3169.992808085377,
+          2689.6608556202304
+        ]
+      ],
+      "bbox": [
+        3117.007191914623,
+        1817.6608556202304,
+        52.98561617075393,
+        872.6782887595391
+      ],
+      "area": 13964.553985000739,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3143.5,
+        "cy": 2254.0,
+        "w": 872.7846240625462,
+        "h": 16.0,
+        "angle_deg": 87.57032917284376
+      },
+      "attributes": {
+        "norad_id": 51137,
+        "satellite_name": "STARLINK-3180",
+        "peak_snr": 15.0,
+        "mean_snr": 4.0,
+        "length_px": 873.0,
+        "elongation": 117.0,
+        "jd_mid": 2461153.542673449,
+        "datetime_utc": "2026-04-23T01:01:26.736"
+      }
+    },
+    {
+      "id": 269,
+      "image_id": 1000323,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3448.7307725061314,
+          2019.1013253283347,
+          4145.730772506131,
+          1907.1013253283347,
+          4148.269227493869,
+          1922.8986746716653,
+          3451.2692274938686,
+          2034.8986746716653
+        ]
+      ],
+      "bbox": [
+        3448.7307725061314,
+        1907.1013253283347,
+        699.5384549877376,
+        127.79734934333055
+      ],
+      "area": 11295.05945092809,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3798.5,
+        "cy": 1971.0,
+        "w": 705.9412156830057,
+        "h": 16.0,
+        "angle_deg": 170.87125448124533
+      },
+      "attributes": {
+        "norad_id": 51771,
+        "satellite_name": "STARLINK-3614",
+        "peak_snr": 40.0,
+        "mean_snr": 8.0,
+        "length_px": 706.0,
+        "elongation": 50.0,
+        "jd_mid": 2461157.608440405,
+        "datetime_utc": "2026-04-27T02:36:09.001"
+      }
+    },
+    {
+      "id": 270,
+      "image_id": 1000324,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3468.6351145251006,
+          2012.117291858732,
+          4265.6351145251,
+          1874.1172918587324,
+          4268.3648854749,
+          1889.882708141268,
+          3471.3648854748994,
+          2027.8827081412676
+        ]
+      ],
+      "bbox": [
+        3468.6351145251006,
+        1874.1172918587324,
+        799.7297709497993,
+        153.76541628253517
+      ],
+      "area": 12941.745168253005,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3868.5,
+        "cy": 1951.0,
+        "w": 808.8590730158128,
+        "h": 16.0,
+        "angle_deg": 170.17667257638863
+      },
+      "attributes": {
+        "norad_id": 51771,
+        "satellite_name": "STARLINK-3614",
+        "peak_snr": 51.0,
+        "mean_snr": 10.0,
+        "length_px": 809.0,
+        "elongation": 54.0,
+        "jd_mid": 2461157.6085994444,
+        "datetime_utc": "2026-04-27T02:36:22.742"
+      }
+    },
+    {
+      "id": 271,
+      "image_id": 1000325,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3521.437898878138,
+          1984.1539920924665,
+          4405.437898878138,
+          1808.1539920924665,
+          4408.562101121862,
+          1823.8460079075335,
+          3524.562101121862,
+          1999.8460079075335
+        ]
+      ],
+      "bbox": [
+        3521.437898878138,
+        1808.1539920924665,
+        887.1242022437236,
+        191.69201581506695
+      ],
+      "area": 14421.60157541457,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3965.0,
+        "cy": 1904.0,
+        "w": 901.3500984634106,
+        "h": 16.0,
+        "angle_deg": 168.73993329190378
+      },
+      "attributes": {
+        "norad_id": 51771,
+        "satellite_name": "STARLINK-3614",
+        "peak_snr": 77.0,
+        "mean_snr": 12.0,
+        "length_px": 901.0,
+        "elongation": 54.0,
+        "jd_mid": 2461157.6087780674,
+        "datetime_utc": "2026-04-27T02:36:38.175"
+      }
+    },
+    {
+      "id": 273,
+      "image_id": 1000327,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3513.892650138331,
+          1904.6281361354684,
+          4424.892650138331,
+          1520.6281361354684,
+          4431.107349861669,
+          1535.3718638645316,
+          3520.107349861669,
+          1919.3718638645316
+        ]
+      ],
+      "bbox": [
+        3513.892650138331,
+        1520.6281361354684,
+        917.2146997233376,
+        398.74372772906327
+      ],
+      "area": 15817.980654938228,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3972.5,
+        "cy": 1720.0,
+        "w": 988.6237909336393,
+        "h": 16.0,
+        "angle_deg": 157.1438559436386
+      },
+      "attributes": {
+        "norad_id": 51771,
+        "satellite_name": "STARLINK-3614",
+        "peak_snr": 78.0,
+        "mean_snr": 12.0,
+        "length_px": 989.0,
+        "elongation": 58.0,
+        "jd_mid": 2461157.609157234,
+        "datetime_utc": "2026-04-27T02:37:10.935"
+      }
+    },
+    {
+      "id": 274,
+      "image_id": 1000328,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3668.763061104407,
+          3298.409796976574,
+          3284.763061104407,
+          2483.409796976574,
+          3299.236938895593,
+          2476.590203023426,
+          3683.236938895593,
+          3291.590203023426
+        ]
+      ],
+      "bbox": [
+        3284.763061104407,
+        2476.590203023426,
+        398.47387779118617,
+        821.8195939531479
+      ],
+      "area": 14414.93447782542,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3484.0,
+        "cy": 2887.5,
+        "w": 900.9334048640887,
+        "h": 16.0,
+        "angle_deg": 64.77179735635771
+      },
+      "attributes": {
+        "norad_id": 51771,
+        "satellite_name": "STARLINK-3614",
+        "peak_snr": 50.0,
+        "mean_snr": 8.0,
+        "length_px": 901.0,
+        "elongation": 57.0,
+        "jd_mid": 2461157.6097122338,
+        "datetime_utc": "2026-04-27T02:37:58.887"
+      }
+    },
+    {
+      "id": 276,
+      "image_id": 1000330,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3854.335020377852,
+          2615.4990741744455,
+          3365.335020377852,
+          2264.4990741744455,
+          3374.664979622148,
+          2251.5009258255545,
+          3863.664979622148,
+          2602.5009258255545
+        ]
+      ],
+      "bbox": [
+        3365.335020377852,
+        2251.5009258255545,
+        498.32995924429633,
+        363.99814834889094
+      ],
+      "area": 9630.910237355552,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3614.5,
+        "cy": 2433.5,
+        "w": 601.931889834722,
+        "h": 16.0,
+        "angle_deg": 35.670460357301906
+      },
+      "attributes": {
+        "norad_id": 51771,
+        "satellite_name": "STARLINK-3614",
+        "peak_snr": 40.0,
+        "mean_snr": 7.0,
+        "length_px": 602.0,
+        "elongation": 44.0,
+        "jd_mid": 2461157.6100991666,
+        "datetime_utc": "2026-04-27T02:38:32.318"
+      }
+    },
+    {
+      "id": 281,
+      "image_id": 1000347,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3084.682901624068,
+          2168.765796642613,
+          3225.682901624068,
+          1849.7657966426132,
+          3240.317098375932,
+          1856.2342033573868,
+          3099.317098375932,
+          2175.234203357387
+        ]
+      ],
+      "bbox": [
+        3084.682901624068,
+        1849.7657966426132,
+        155.63419675186378,
+        325.46840671477366
+      ],
+      "area": 5580.354110627748,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3162.5,
+        "cy": 2012.5,
+        "w": 348.77213191423425,
+        "h": 16.0,
+        "angle_deg": 113.84572917795447
+      },
+      "attributes": {
+        "norad_id": 52331,
+        "satellite_name": "STARLINK-3889",
+        "peak_snr": 59.0,
+        "mean_snr": 10.0,
+        "length_px": 349.0,
+        "elongation": 31.0,
+        "jd_mid": 2461153.5494808913,
+        "datetime_utc": "2026-04-23T01:11:14.899"
+      }
+    },
+    {
+      "id": 284,
+      "image_id": 1000350,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3094.2379037233936,
+          2192.0635441154795,
+          3213.2379037233936,
+          1715.0635441154798,
+          3228.7620962766064,
+          1718.9364558845202,
+          3109.7620962766064,
+          2195.9364558845205
+        ]
+      ],
+      "bbox": [
+        3094.2379037233936,
+        1715.0635441154798,
+        134.52419255321274,
+        480.8729117690407
+      ],
+      "area": 7865.916348398323,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3161.5,
+        "cy": 1955.5,
+        "w": 491.6197717748952,
+        "h": 16.0,
+        "angle_deg": 104.00797717544262
+      },
+      "attributes": {
+        "norad_id": 52331,
+        "satellite_name": "STARLINK-3889",
+        "peak_snr": 38.0,
+        "mean_snr": 8.0,
+        "length_px": 492.0,
+        "elongation": 51.0,
+        "jd_mid": 2461153.549898391,
+        "datetime_utc": "2026-04-23T01:11:50.971"
+      }
+    },
+    {
+      "id": 296,
+      "image_id": 1000362,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3307.5756983718798,
+          2359.767425782425,
+          3002.5756983718798,
+          1948.767425782425,
+          3015.4243016281202,
+          1939.232574217575,
+          3320.4243016281202,
+          2350.232574217575
+        ]
+      ],
+      "bbox": [
+        3002.5756983718798,
+        1939.232574217575,
+        317.8486032562405,
+        420.5348515648502
+      ],
+      "area": 8188.905665594152,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3161.5,
+        "cy": 2149.5,
+        "w": 511.8066040996345,
+        "h": 16.0,
+        "angle_deg": 53.421168679375256
+      },
+      "attributes": {
+        "norad_id": 52331,
+        "satellite_name": "STARLINK-3889",
+        "peak_snr": 65.0,
+        "mean_snr": 11.0,
+        "length_px": 512.0,
+        "elongation": 37.0,
+        "jd_mid": 2461153.552078866,
+        "datetime_utc": "2026-04-23T01:14:59.364"
+      }
+    },
+    {
+      "id": 300,
+      "image_id": 1000366,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3129.0108228979357,
+          1907.5840081348724,
+          3168.0108228979357,
+          1158.5840081348724,
+          3183.9891771020643,
+          1159.4159918651276,
+          3144.9891771020643,
+          1908.4159918651276
+        ]
+      ],
+      "bbox": [
+        3129.0108228979357,
+        1158.5840081348724,
+        54.978354204128664,
+        749.8319837302552
+      ],
+      "area": 12000.234664372192,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3156.5,
+        "cy": 1533.5,
+        "w": 750.014666523262,
+        "h": 16.0,
+        "angle_deg": 92.98066653795458
+      },
+      "attributes": {
+        "norad_id": 52334,
+        "satellite_name": "STARLINK-3880",
+        "peak_snr": 17.0,
+        "mean_snr": 4.0,
+        "length_px": 750.0,
+        "elongation": 90.0,
+        "jd_mid": 2461153.54654588,
+        "datetime_utc": "2026-04-23T01:07:01.314"
+      }
+    },
+    {
+      "id": 322,
+      "image_id": 1000388,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3317.0635791051627,
+          1870.6372668386973,
+          3747.0635791051627,
+          1394.6372668386973,
+          3758.9364208948373,
+          1405.3627331613027,
+          3328.9364208948373,
+          1881.3627331613027
+        ]
+      ],
+      "bbox": [
+        3317.0635791051627,
+        1394.6372668386973,
+        441.87284178967457,
+        486.72546632260537
+      ],
+      "area": 10263.42321060571,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3538.0,
+        "cy": 1638.0,
+        "w": 641.4639506628569,
+        "h": 16.0,
+        "angle_deg": 132.09343861654062
+      },
+      "attributes": {
+        "norad_id": 53923,
+        "satellite_name": "STARLINK-5004",
+        "peak_snr": 39.0,
+        "mean_snr": 8.0,
+        "length_px": 641.0,
+        "elongation": 62.0,
+        "jd_mid": 2461154.5493730092,
+        "datetime_utc": "2026-04-24T01:11:05.578"
+      }
+    },
+    {
+      "id": 323,
+      "image_id": 1000389,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3323.0525475886543,
+          1851.6495037786408,
+          3807.0525475886543,
+          1313.6495037786408,
+          3818.9474524113457,
+          1324.3504962213592,
+          3334.9474524113457,
+          1862.3504962213592
+        ]
+      ],
+      "bbox": [
+        3323.0525475886543,
+        1313.6495037786408,
+        495.8949048226914,
+        548.7009924427184
+      ],
+      "area": 11578.739136883602,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3571.0,
+        "cy": 1588.0,
+        "w": 723.6711960552251,
+        "h": 16.0,
+        "angle_deg": 131.9754426152277
+      },
+      "attributes": {
+        "norad_id": 53923,
+        "satellite_name": "STARLINK-5004",
+        "peak_snr": 55.0,
+        "mean_snr": 9.0,
+        "length_px": 724.0,
+        "elongation": 67.0,
+        "jd_mid": 2461154.5495309145,
+        "datetime_utc": "2026-04-24T01:11:19.221"
+      }
+    },
+    {
+      "id": 332,
+      "image_id": 1000398,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3092.0329996265805,
+          2701.274117743755,
+          3133.0329996265805,
+          2251.274117743755,
+          3148.9670003734195,
+          2252.725882256245,
+          3107.9670003734195,
+          2702.725882256245
+        ]
+      ],
+      "bbox": [
+        3092.0329996265805,
+        2251.274117743755,
+        56.93400074683905,
+        451.4517645124897
+      ],
+      "area": 7229.822681089765,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3120.5,
+        "cy": 2477.0,
+        "w": 451.8639175681103,
+        "h": 16.0,
+        "angle_deg": 95.20590872715904
+      },
+      "attributes": {
+        "norad_id": 53923,
+        "satellite_name": "STARLINK-5004",
+        "peak_snr": 28.0,
+        "mean_snr": 6.0,
+        "length_px": 452.0,
+        "elongation": 42.0,
+        "jd_mid": 2461154.551405139,
+        "datetime_utc": "2026-04-24T01:14:01.154"
+      }
+    },
+    {
+      "id": 344,
+      "image_id": 1000410,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3461.261636385318,
+          2656.3121289169426,
+          3054.261636385318,
+          2020.3121289169426,
+          3067.738363614682,
+          2011.6878710830574,
+          3474.738363614682,
+          2647.6878710830574
+        ]
+      ],
+      "bbox": [
+        3054.261636385318,
+        2011.6878710830574,
+        420.47672722936386,
+        644.6242578338852
+      ],
+      "area": 12081.271456266513,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3264.5,
+        "cy": 2334.0,
+        "w": 755.0794660166571,
+        "h": 16.0,
+        "angle_deg": 57.38331340656351
+      },
+      "attributes": {
+        "norad_id": 54062,
+        "satellite_name": "STARLINK-5170",
+        "peak_snr": 39.0,
+        "mean_snr": 9.0,
+        "length_px": 755.0,
+        "elongation": 49.0,
+        "jd_mid": 2461157.618432095,
+        "datetime_utc": "2026-04-27T02:50:32.283"
+      }
+    },
+    {
+      "id": 348,
+      "image_id": 1000414,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3054.7600084799747,
+          2092.216013567959,
+          3502.7600084799747,
+          1812.2160135679594,
+          3511.2399915200253,
+          1825.7839864320406,
+          3063.2399915200253,
+          2105.783986432041
+        ]
+      ],
+      "bbox": [
+        3054.7600084799747,
+        1812.2160135679594,
+        456.4799830400507,
+        293.5679728640814
+      ],
+      "area": 8452.847094322717,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3283.0,
+        "cy": 1959.0,
+        "w": 528.3029433951698,
+        "h": 16.0,
+        "angle_deg": 147.9946167919165
+      },
+      "attributes": {
+        "norad_id": 54068,
+        "satellite_name": "STARLINK-5222",
+        "peak_snr": 46.0,
+        "mean_snr": 7.0,
+        "length_px": 528.0,
+        "elongation": 43.0,
+        "jd_mid": 2461157.6013231482,
+        "datetime_utc": "2026-04-27T02:25:54.070"
+      }
+    },
+    {
+      "id": 352,
+      "image_id": 1000418,
+      "category_id": 1,
+      "segmentation": [
+        [
+          2966.1194127478407,
+          2152.6612408095857,
+          3705.1194127478407,
+          1583.6612408095857,
+          3714.8805872521593,
+          1596.3387591904143,
+          2975.8805872521593,
+          2165.3387591904143
+        ]
+      ],
+      "bbox": [
+        2966.1194127478407,
+        1583.6612408095857,
+        748.7611745043187,
+        581.6775183808286
+      ],
+      "area": 14922.79437638943,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3340.5,
+        "cy": 1874.5,
+        "w": 932.6746485243394,
+        "h": 16.0,
+        "angle_deg": 142.40518907670977
+      },
+      "attributes": {
+        "norad_id": 54068,
+        "satellite_name": "STARLINK-5222",
+        "peak_snr": 57.0,
+        "mean_snr": 10.0,
+        "length_px": 933.0,
+        "elongation": 70.0,
+        "jd_mid": 2461157.601954491,
+        "datetime_utc": "2026-04-27T02:26:48.618"
+      }
+    },
+    {
+      "id": 363,
+      "image_id": 1000429,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3471.617947416721,
+          1705.1761628526385,
+          3762.617947416721,
+          1320.1761628526385,
+          3775.382052583279,
+          1329.8238371473615,
+          3484.382052583279,
+          1714.8238371473615
+        ]
+      ],
+      "bbox": [
+        3471.617947416721,
+        1320.1761628526385,
+        303.7641051665578,
+        394.64767429472295
+      ],
+      "area": 7721.653708889048,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3623.5,
+        "cy": 1517.5,
+        "w": 482.6033568055655,
+        "h": 16.0,
+        "angle_deg": 127.08359827760812
+      },
+      "attributes": {
+        "norad_id": 55463,
+        "satellite_name": "STARLINK-5677",
+        "peak_snr": 27.0,
+        "mean_snr": 5.0,
+        "length_px": 483.0,
+        "elongation": 43.0,
+        "jd_mid": 2461154.5681619793,
+        "datetime_utc": "2026-04-24T01:38:08.945"
+      }
+    },
+    {
+      "id": 367,
+      "image_id": 1000433,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3627.970747148432,
+          1301.1803659404698,
+          4034.970747148432,
+          552.1803659404698,
+          4049.029252851568,
+          559.8196340595302,
+          3642.029252851568,
+          1308.8196340595302
+        ]
+      ],
+      "bbox": [
+        3627.970747148432,
+        552.1803659404698,
+        421.0585057031358,
+        756.6392681190605
+      ],
+      "area": 13639.002896106445,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3838.5,
+        "cy": 930.5,
+        "w": 852.4376810066528,
+        "h": 16.0,
+        "angle_deg": 118.51926713443768
+      },
+      "attributes": {
+        "norad_id": 55463,
+        "satellite_name": "STARLINK-5677",
+        "peak_snr": 24.0,
+        "mean_snr": 6.0,
+        "length_px": 852.0,
+        "elongation": 119.0,
+        "jd_mid": 2461154.5687885187,
+        "datetime_utc": "2026-04-24T01:39:03.078"
+      }
+    },
+    {
+      "id": 370,
+      "image_id": 1000436,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3447.260463196082,
+          3418.0247395044307,
+          3278.260463196082,
+          2772.0247395044307,
+          3293.739536803918,
+          2767.9752604955693,
+          3462.739536803918,
+          3413.9752604955693
+        ]
+      ],
+      "bbox": [
+        3278.260463196082,
+        2767.9752604955693,
+        184.47907360783574,
+        650.0494790088615
+      ],
+      "area": 10683.843503159338,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3370.5,
+        "cy": 3093.0,
+        "w": 667.7402189474586,
+        "h": 16.0,
+        "angle_deg": 75.33941750117819
+      },
+      "attributes": {
+        "norad_id": 55463,
+        "satellite_name": "STARLINK-5677",
+        "peak_snr": 1124.0,
+        "mean_snr": 106.0,
+        "length_px": 667.0,
+        "elongation": 11.0,
+        "jd_mid": 2461154.570189039,
+        "datetime_utc": "2026-04-24T01:41:04.083"
+      }
+    },
+    {
+      "id": 373,
+      "image_id": 1000441,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3321.132113305113,
+          1680.8973018212164,
+          3594.132113305113,
+          1223.8973018212164,
+          3607.867886694887,
+          1232.1026981787836,
+          3334.867886694887,
+          1689.1026981787836
+        ]
+      ],
+      "bbox": [
+        3321.132113305113,
+        1223.8973018212164,
+        286.7357733897743,
+        465.2053963575672
+      ],
+      "area": 8517.321644742553,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3464.5,
+        "cy": 1456.5,
+        "w": 532.3326027964096,
+        "h": 16.0,
+        "angle_deg": 120.85300451889249
+      },
+      "attributes": {
+        "norad_id": 55489,
+        "satellite_name": "STARLINK-5371",
+        "peak_snr": 56.0,
+        "mean_snr": 9.0,
+        "length_px": 532.0,
+        "elongation": 40.0,
+        "jd_mid": 2461157.5872196527,
+        "datetime_utc": "2026-04-27T02:05:35.528"
+      }
+    },
+    {
+      "id": 379,
+      "image_id": 1000447,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3615.2955890814374,
+          2368.090651574181,
+          3303.2955890814374,
+          2205.090651574181,
+          3310.7044109185626,
+          2190.909348425819,
+          3622.7044109185626,
+          2353.909348425819
+        ]
+      ],
+      "bbox": [
+        3303.2955890814374,
+        2190.909348425819,
+        319.4088218371253,
+        177.18130314836162
+      ],
+      "area": 5632.204541740294,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3463.0,
+        "cy": 2279.5,
+        "w": 352.0127838587684,
+        "h": 16.0,
+        "angle_deg": 27.584182455926975
+      },
+      "attributes": {
+        "norad_id": 57166,
+        "satellite_name": "METEOR-M2 3",
+        "peak_snr": 114.0,
+        "mean_snr": 16.0,
+        "length_px": 352.0,
+        "elongation": 19.0,
+        "jd_mid": 2461157.594759861,
+        "datetime_utc": "2026-04-27T02:16:27.002"
+      }
+    },
+    {
+      "id": 387,
+      "image_id": 1000455,
+      "category_id": 1,
+      "segmentation": [
+        [
+          4076.762008365323,
+          2662.785235950533,
+          3466.762008365323,
+          2281.785235950533,
+          3475.237991634677,
+          2268.214764049467,
+          4085.237991634677,
+          2649.214764049467
+        ]
+      ],
+      "bbox": [
+        3466.762008365323,
+        2268.214764049467,
+        618.4759832693544,
+        394.5704719010664
+      ],
+      "area": 11507.337485274342,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3776.0,
+        "cy": 2465.5,
+        "w": 719.2085928296464,
+        "h": 16.0,
+        "angle_deg": 31.988494253668275
+      },
+      "attributes": {
+        "norad_id": 57166,
+        "satellite_name": "METEOR-M2 3",
+        "peak_snr": 116.0,
+        "mean_snr": 17.0,
+        "length_px": 719.0,
+        "elongation": 40.0,
+        "jd_mid": 2461157.595981204,
+        "datetime_utc": "2026-04-27T02:18:12.526"
+      }
+    },
+    {
+      "id": 388,
+      "image_id": 1000456,
+      "category_id": 1,
+      "segmentation": [
+        [
+          4139.638237269219,
+          2724.7063422131864,
+          3504.6382372692187,
+          2311.7063422131864,
+          3513.3617627307813,
+          2298.2936577868136,
+          4148.361762730781,
+          2711.2936577868136
+        ]
+      ],
+      "bbox": [
+        3504.6382372692187,
+        2298.2936577868136,
+        643.7235254615625,
+        426.41268442637283
+      ],
+      "area": 12119.870626372214,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3826.5,
+        "cy": 2511.5,
+        "w": 757.4919141482634,
+        "h": 16.0,
+        "angle_deg": 33.03972227328258
+      },
+      "attributes": {
+        "norad_id": 57166,
+        "satellite_name": "METEOR-M2 3",
+        "peak_snr": 117.0,
+        "mean_snr": 17.0,
+        "length_px": 757.0,
+        "elongation": 41.0,
+        "jd_mid": 2461157.5961360997,
+        "datetime_utc": "2026-04-27T02:18:25.909"
+      }
+    },
+    {
+      "id": 389,
+      "image_id": 1000457,
+      "category_id": 1,
+      "segmentation": [
+        [
+          4146.459092375035,
+          2774.586361510085,
+          3502.4590923750343,
+          2330.586361510085,
+          3511.5409076249657,
+          2317.413638489915,
+          4155.540907624965,
+          2761.413638489915
+        ]
+      ],
+      "bbox": [
+        3502.4590923750343,
+        2317.413638489915,
+        653.081815249931,
+        457.17272302017045
+      ],
+      "area": 12515.559595958945,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3829.0,
+        "cy": 2546.0,
+        "w": 782.222474747434,
+        "h": 16.0,
+        "angle_deg": 34.58397169242929
+      },
+      "attributes": {
+        "norad_id": 57166,
+        "satellite_name": "METEOR-M2 3",
+        "peak_snr": 116.0,
+        "mean_snr": 17.0,
+        "length_px": 782.0,
+        "elongation": 44.0,
+        "jd_mid": 2461157.596298299,
+        "datetime_utc": "2026-04-27T02:18:39.923"
+      }
+    },
+    {
+      "id": 390,
+      "image_id": 1000458,
+      "category_id": 1,
+      "segmentation": [
+        [
+          4125.2209089767775,
+          2812.41562849546,
+          3486.220908976778,
+          2336.41562849546,
+          3495.779091023222,
+          2323.58437150454,
+          4134.7790910232225,
+          2799.58437150454
+        ]
+      ],
+      "bbox": [
+        3486.220908976778,
+        2323.58437150454,
+        648.5581820464445,
+        488.83125699092034
+      ],
+      "area": 12748.86787130528,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3810.5,
+        "cy": 2568.0,
+        "w": 796.80424195658,
+        "h": 16.0,
+        "angle_deg": 36.68293918949236
+      },
+      "attributes": {
+        "norad_id": 57166,
+        "satellite_name": "METEOR-M2 3",
+        "peak_snr": 105.0,
+        "mean_snr": 16.0,
+        "length_px": 797.0,
+        "elongation": 44.0,
+        "jd_mid": 2461157.596459884,
+        "datetime_utc": "2026-04-27T02:18:53.884"
+      }
+    },
+    {
+      "id": 394,
+      "image_id": 1000462,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3690.375383235845,
+          2907.4849139041994,
+          3319.375383235845,
+          2359.4849139041994,
+          3332.624616764155,
+          2350.5150860958006,
+          3703.624616764155,
+          2898.5150860958006
+        ]
+      ],
+      "bbox": [
+        3319.375383235845,
+        2350.5150860958006,
+        384.24923352830956,
+        556.9698278083988
+      ],
+      "area": 10588.386090429456,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3511.5,
+        "cy": 2629.0,
+        "w": 661.774130651841,
+        "h": 16.0,
+        "angle_deg": 55.90171295586228
+      },
+      "attributes": {
+        "norad_id": 57166,
+        "satellite_name": "METEOR-M2 3",
+        "peak_snr": 107.0,
+        "mean_snr": 16.0,
+        "length_px": 662.0,
+        "elongation": 38.0,
+        "jd_mid": 2461157.5971171646,
+        "datetime_utc": "2026-04-27T02:19:50.673"
+      }
+    },
+    {
+      "id": 405,
+      "image_id": 1000473,
+      "category_id": 1,
+      "segmentation": [
+        [
+          2888.4178869308275,
+          2425.4529363821657,
+          3031.4178869308275,
+          2218.4529363821657,
+          3044.5821130691725,
+          2227.5470636178343,
+          2901.5821130691725,
+          2434.5470636178343
+        ]
+      ],
+      "bbox": [
+        2888.4178869308275,
+        2218.4529363821657,
+        156.16422613834493,
+        216.09412723566857
+      ],
+      "area": 4025.4550053379057,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 2966.5,
+        "cy": 2326.5,
+        "w": 251.5909378336191,
+        "h": 16.0,
+        "angle_deg": 124.63754090156814
+      },
+      "attributes": {
+        "norad_id": 57166,
+        "satellite_name": "METEOR-M2 3",
+        "peak_snr": 51.0,
+        "mean_snr": 7.0,
+        "length_px": 252.0,
+        "elongation": 14.0,
+        "jd_mid": 2461157.5987231135,
+        "datetime_utc": "2026-04-27T02:22:09.427"
+      }
+    },
+    {
+      "id": 408,
+      "image_id": 1000476,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3223.713877369479,
+          2004.0518021185428,
+          3456.713877369479,
+          1708.0518021185428,
+          3469.286122630521,
+          1717.9481978814572,
+          3236.286122630521,
+          2013.9481978814572
+        ]
+      ],
+      "bbox": [
+        3223.713877369479,
+        1708.0518021185428,
+        245.57224526104164,
+        305.8963957629144
+      ],
+      "area": 6027.244810027215,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3346.5,
+        "cy": 1861.0,
+        "w": 376.70280062670093,
+        "h": 16.0,
+        "angle_deg": 128.20848267583966
+      },
+      "attributes": {
+        "norad_id": 57973,
+        "satellite_name": "STARLINK-30502",
+        "peak_snr": 52.0,
+        "mean_snr": 7.0,
+        "length_px": 377.0,
+        "elongation": 35.0,
+        "jd_mid": 2461157.5668270485,
+        "datetime_utc": "2026-04-27T01:36:13.607"
+      }
+    },
+    {
+      "id": 410,
+      "image_id": 1000478,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3241.478968055232,
+          1979.365764100165,
+          3521.478968055232,
+          1585.365764100165,
+          3534.521031944768,
+          1594.634235899835,
+          3254.521031944768,
+          1988.634235899835
+        ]
+      ],
+      "bbox": [
+        3241.478968055232,
+        1585.365764100165,
+        293.0420638895357,
+        403.2684717996699
+      ],
+      "area": 7733.745276384528,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3388.0,
+        "cy": 1787.0,
+        "w": 483.359079774033,
+        "h": 16.0,
+        "angle_deg": 125.39988157012132
+      },
+      "attributes": {
+        "norad_id": 57973,
+        "satellite_name": "STARLINK-30502",
+        "peak_snr": 37.0,
+        "mean_snr": 6.0,
+        "length_px": 483.0,
+        "elongation": 43.0,
+        "jd_mid": 2461157.567098241,
+        "datetime_utc": "2026-04-27T01:36:37.038"
+      }
+    },
+    {
+      "id": 429,
+      "image_id": 1000502,
+      "category_id": 1,
+      "segmentation": [
+        [
+          2715.679674213903,
+          2061.006415610581,
+          3264.679674213903,
+          2039.0064156105814,
+          3265.320325786097,
+          2054.993584389419,
+          2716.320325786097,
+          2076.993584389419
+        ]
+      ],
+      "bbox": [
+        2715.679674213903,
+        2039.0064156105814,
+        549.6406515721937,
+        37.98716877883771
+      ],
+      "area": 8791.049994170207,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 2990.5,
+        "cy": 2058.0,
+        "w": 549.440624635638,
+        "h": 16.0,
+        "angle_deg": 177.7052220822315
+      },
+      "attributes": {
+        "norad_id": 58932,
+        "satellite_name": "STARLINK-31378",
+        "peak_snr": 33.0,
+        "mean_snr": 6.0,
+        "length_px": 549.0,
+        "elongation": 54.0,
+        "jd_mid": 2461154.556315012,
+        "datetime_utc": "2026-04-24T01:21:05.367"
+      }
+    },
+    {
+      "id": 432,
+      "image_id": 1000505,
+      "category_id": 1,
+      "segmentation": [
+        [
+          2472.7216572213933,
+          2055.0048436352004,
+          3305.7216572213933,
+          2026.0048436352004,
+          3306.2783427786067,
+          2041.9951563647996,
+          2473.2783427786067,
+          2070.9951563647996
+        ]
+      ],
+      "bbox": [
+        2472.7216572213933,
+        2026.0048436352004,
+        833.5566855572133,
+        44.99031272959928
+      ],
+      "area": 13336.074384915524,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 2889.5,
+        "cy": 2048.5,
+        "w": 833.5046490572203,
+        "h": 16.0,
+        "angle_deg": 178.00611427244772
+      },
+      "attributes": {
+        "norad_id": 58932,
+        "satellite_name": "STARLINK-31378",
+        "peak_snr": 50.0,
+        "mean_snr": 8.0,
+        "length_px": 834.0,
+        "elongation": 79.0,
+        "jd_mid": 2461154.556760081,
+        "datetime_utc": "2026-04-24T01:21:43.821"
+      }
+    },
+    {
+      "id": 438,
+      "image_id": 1000514,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3104.006793335266,
+          2622.67038323032,
+          3124.006793335266,
+          2137.67038323032,
+          3139.993206664734,
+          2138.32961676968,
+          3119.993206664734,
+          2623.32961676968
+        ]
+      ],
+      "bbox": [
+        3104.006793335266,
+        2137.67038323032,
+        35.98641332946772,
+        485.6592335393598
+      ],
+      "area": 7766.595135579039,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3122.0,
+        "cy": 2380.5,
+        "w": 485.41219597368996,
+        "h": 16.0,
+        "angle_deg": 92.36137465817562
+      },
+      "attributes": {
+        "norad_id": 59397,
+        "satellite_name": "STARLINK-31608",
+        "peak_snr": 26.0,
+        "mean_snr": 5.0,
+        "length_px": 485.0,
+        "elongation": 43.0,
+        "jd_mid": 2461157.5811014236,
+        "datetime_utc": "2026-04-27T01:56:46.913"
+      }
+    },
+    {
+      "id": 445,
+      "image_id": 1000521,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3282.715840845341,
+          1958.0493087635246,
+          3605.715840845341,
+          1548.0493087635246,
+          3618.284159154659,
+          1557.9506912364754,
+          3295.284159154659,
+          1967.9506912364754
+        ]
+      ],
+      "bbox": [
+        3282.715840845341,
+        1548.0493087635246,
+        335.5683183093179,
+        419.9013824729509
+      ],
+      "area": 8351.157045583564,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3450.5,
+        "cy": 1758.0,
+        "w": 521.9473153489728,
+        "h": 16.0,
+        "angle_deg": 128.23121227250925
+      },
+      "attributes": {
+        "norad_id": 59486,
+        "satellite_name": "STARLINK-31733",
+        "peak_snr": 22.0,
+        "mean_snr": 5.0,
+        "length_px": 522.0,
+        "elongation": 64.0,
+        "jd_mid": 2461157.5540628126,
+        "datetime_utc": "2026-04-27T01:17:50.777"
+      }
+    },
+    {
+      "id": 459,
+      "image_id": 1000535,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3379.7387022235653,
+          1796.0204267095648,
+          3717.7387022235653,
+          1371.0204267095648,
+          3730.2612977764347,
+          1380.9795732904352,
+          3392.2612977764347,
+          1805.9795732904352
+        ]
+      ],
+      "bbox": [
+        3379.7387022235653,
+        1371.0204267095648,
+        350.52259555286946,
+        434.9591465808703
+      ],
+      "area": 8688.29465430357,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3555.0,
+        "cy": 1588.5,
+        "w": 543.0184158939732,
+        "h": 16.0,
+        "angle_deg": 128.49502360773533
+      },
+      "attributes": {
+        "norad_id": 59504,
+        "satellite_name": "STARLINK-31535",
+        "peak_snr": 56.0,
+        "mean_snr": 8.0,
+        "length_px": 543.0,
+        "elongation": 45.0,
+        "jd_mid": 2461157.5764197917,
+        "datetime_utc": "2026-04-27T01:50:02.420"
+      }
+    },
+    {
+      "id": 464,
+      "image_id": 1000541,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3545.407089355307,
+          3517.51946580483,
+          3253.407089355307,
+          2637.51946580483,
+          3268.592910644693,
+          2632.48053419517,
+          3560.592910644693,
+          3512.48053419517
+        ]
+      ],
+      "bbox": [
+        3253.407089355307,
+        2632.48053419517,
+        307.1858212893858,
+        885.0389316096598
+      ],
+      "area": 14834.890764680405,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3407.0,
+        "cy": 3075.0,
+        "w": 927.1806727925253,
+        "h": 16.0,
+        "angle_deg": 71.64321726707377
+      },
+      "attributes": {
+        "norad_id": 59504,
+        "satellite_name": "STARLINK-31535",
+        "peak_snr": 55.0,
+        "mean_snr": 10.0,
+        "length_px": 927.0,
+        "elongation": 69.0,
+        "jd_mid": 2461157.5779980905,
+        "datetime_utc": "2026-04-27T01:52:18.785"
+      }
+    },
+    {
+      "id": 469,
+      "image_id": 1000546,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3210.5643342336075,
+          1950.247926121862,
+          3560.5643342336075,
+          1476.247926121862,
+          3573.4356657663925,
+          1485.752073878138,
+          3223.4356657663925,
+          1959.752073878138
+        ]
+      ],
+      "bbox": [
+        3210.5643342336075,
+        1476.247926121862,
+        362.871331532785,
+        483.50414775627587
+      ],
+      "area": 9427.462861236845,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3392.0,
+        "cy": 1718.0,
+        "w": 589.2164288273028,
+        "h": 16.0,
+        "angle_deg": 126.44203487654175
+      },
+      "attributes": {
+        "norad_id": 59542,
+        "satellite_name": "STARLINK-31540",
+        "peak_snr": 47.0,
+        "mean_snr": 9.0,
+        "length_px": 589.0,
+        "elongation": 50.0,
+        "jd_mid": 2461157.5707125003,
+        "datetime_utc": "2026-04-27T01:41:49.310"
+      }
+    },
+    {
+      "id": 470,
+      "image_id": 1000547,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3212.4303976631027,
+          1923.4348795048722,
+          3606.4303976631027,
+          1356.4348795048722,
+          3619.5696023368973,
+          1365.5651204951278,
+          3225.5696023368973,
+          1932.5651204951278
+        ]
+      ],
+      "bbox": [
+        3212.4303976631027,
+        1356.4348795048722,
+        407.13920467379467,
+        576.1302409902555
+      ],
+      "area": 11047.244000202041,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3416.0,
+        "cy": 1644.5,
+        "w": 690.4527500126276,
+        "h": 16.0,
+        "angle_deg": 124.79487128442662
+      },
+      "attributes": {
+        "norad_id": 59542,
+        "satellite_name": "STARLINK-31540",
+        "peak_snr": 56.0,
+        "mean_snr": 10.0,
+        "length_px": 690.0,
+        "elongation": 59.0,
+        "jd_mid": 2461157.5708669447,
+        "datetime_utc": "2026-04-27T01:42:02.654"
+      }
+    },
+    {
+      "id": 473,
+      "image_id": 1000550,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3176.3455159790265,
+          1819.6743013151613,
+          3485.3455159790265,
+          802.6743013151614,
+          3500.6544840209735,
+          807.3256986848386,
+          3191.6544840209735,
+          1824.3256986848387
+        ]
+      ],
+      "bbox": [
+        3176.3455159790265,
+        802.6743013151614,
+        324.3089680419471,
+        1021.6513973696773
+      ],
+      "area": 17006.502285890536,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3338.5,
+        "cy": 1313.5,
+        "w": 1062.9063928681585,
+        "h": 16.0,
+        "angle_deg": 106.90060732322125
+      },
+      "attributes": {
+        "norad_id": 59542,
+        "satellite_name": "STARLINK-31540",
+        "peak_snr": 53.0,
+        "mean_snr": 10.0,
+        "length_px": 1063.0,
+        "elongation": 83.0,
+        "jd_mid": 2461157.5714059146,
+        "datetime_utc": "2026-04-27T01:42:49.221"
+      }
+    },
+    {
+      "id": 479,
+      "image_id": 1000558,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3356.362612173373,
+          1765.5340081909005,
+          3646.362612173373,
+          1334.5340081909005,
+          3659.637387826627,
+          1343.4659918090995,
+          3369.637387826627,
+          1774.4659918090995
+        ]
+      ],
+      "bbox": [
+        3356.362612173373,
+        1334.5340081909005,
+        303.27477565325444,
+        439.93198361819896
+      ],
+      "area": 8311.703555830176,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3508.0,
+        "cy": 1554.5,
+        "w": 519.481472239386,
+        "h": 16.0,
+        "angle_deg": 123.9347890682957
+      },
+      "attributes": {
+        "norad_id": 59552,
+        "satellite_name": "STARLINK-31750",
+        "peak_snr": 33.0,
+        "mean_snr": 7.0,
+        "length_px": 519.0,
+        "elongation": 45.0,
+        "jd_mid": 2461157.589462708,
+        "datetime_utc": "2026-04-27T02:08:49.328"
+      }
+    },
+    {
+      "id": 505,
+      "image_id": 1000585,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3028.277032912602,
+          1960.087050398761,
+          2791.277032912602,
+          1083.087050398761,
+          2806.722967087398,
+          1078.912949601239,
+          3043.722967087398,
+          1955.912949601239
+        ]
+      ],
+      "bbox": [
+        2791.277032912602,
+        1078.912949601239,
+        252.4459341747961,
+        881.174100797522
+      ],
+      "area": 14535.34616030867,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 2917.5,
+        "cy": 1519.5,
+        "w": 908.4591350192919,
+        "h": 16.0,
+        "angle_deg": 74.87763822371211
+      },
+      "attributes": {
+        "norad_id": 62895,
+        "satellite_name": "STARLINK-32901",
+        "peak_snr": 35.0,
+        "mean_snr": 7.0,
+        "length_px": 908.0,
+        "elongation": 73.0,
+        "jd_mid": 2461154.5608270024,
+        "datetime_utc": "2026-04-24T01:27:35.203"
+      }
+    },
+    {
+      "id": 511,
+      "image_id": 1000591,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3432.647191660951,
+          1756.137713890842,
+          3768.647191660951,
+          1317.137713890842,
+          3781.352808339049,
+          1326.862286109158,
+          3445.352808339049,
+          1765.862286109158
+        ]
+      ],
+      "bbox": [
+        3432.647191660951,
+        1317.137713890842,
+        348.7056166780976,
+        448.7245722183161
+      ],
+      "area": 8845.221987039104,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3607.0,
+        "cy": 1541.5,
+        "w": 552.826374189944,
+        "h": 16.0,
+        "angle_deg": 127.42957088891086
+      },
+      "attributes": {
+        "norad_id": 63594,
+        "satellite_name": "STARLINK-33791",
+        "peak_snr": 16.0,
+        "mean_snr": 4.0,
+        "length_px": 553.0,
+        "elongation": 66.0,
+        "jd_mid": 2461154.5535052083,
+        "datetime_utc": "2026-04-24T01:17:02.600"
+      }
+    },
+    {
+      "id": 512,
+      "image_id": 1000592,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3474.519452172169,
+          1684.3093177627131,
+          3854.519452172169,
+          1159.3093177627131,
+          3867.480547827831,
+          1168.6906822372869,
+          3487.480547827831,
+          1693.6906822372869
+        ]
+      ],
+      "bbox": [
+        3474.519452172169,
+        1159.3093177627131,
+        392.96109565566167,
+        534.3813644745737
+      ],
+      "area": 10369.493719560276,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3671.0,
+        "cy": 1426.5,
+        "w": 648.0933574725173,
+        "h": 16.0,
+        "angle_deg": 125.89737751170809
+      },
+      "attributes": {
+        "norad_id": 63594,
+        "satellite_name": "STARLINK-33791",
+        "peak_snr": 28.0,
+        "mean_snr": 4.0,
+        "length_px": 648.0,
+        "elongation": 65.0,
+        "jd_mid": 2461154.5536537617,
+        "datetime_utc": "2026-04-24T01:17:15.435"
+      }
+    },
+    {
+      "id": 517,
+      "image_id": 1000597,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3539.4443049342276,
+          3425.6289678722,
+          3285.4443049342276,
+          2695.6289678722,
+          3300.5556950657724,
+          2690.3710321278,
+          3554.5556950657724,
+          3420.3710321278
+        ]
+      ],
+      "bbox": [
+        3285.4443049342276,
+        2690.3710321278,
+        269.1113901315448,
+        735.2579357444001
+      ],
+      "area": 12366.830475105577,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3420.0,
+        "cy": 3058.0,
+        "w": 772.9269046940985,
+        "h": 16.0,
+        "angle_deg": 70.81490380297502
+      },
+      "attributes": {
+        "norad_id": 63594,
+        "satellite_name": "STARLINK-33791",
+        "peak_snr": 50.0,
+        "mean_snr": 11.0,
+        "length_px": 773.0,
+        "elongation": 61.0,
+        "jd_mid": 2461154.55521081,
+        "datetime_utc": "2026-04-24T01:19:29.964"
+      }
+    },
+    {
+      "id": 519,
+      "image_id": 1000599,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3460.6610309679745,
+          2983.1842634229865,
+          3250.6610309679745,
+          2499.1842634229865,
+          3265.3389690320255,
+          2492.8157365770135,
+          3475.3389690320255,
+          2976.8157365770135
+        ]
+      ],
+      "bbox": [
+        3250.6610309679745,
+        2492.8157365770135,
+        224.67793806405098,
+        490.36852684597307
+      ],
+      "area": 8441.51266065508,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3363.0,
+        "cy": 2738.0,
+        "w": 527.5945412909425,
+        "h": 16.0,
+        "angle_deg": 66.54473523744342
+      },
+      "attributes": {
+        "norad_id": 63594,
+        "satellite_name": "STARLINK-33791",
+        "peak_snr": 13.0,
+        "mean_snr": 4.0,
+        "length_px": 528.0,
+        "elongation": 71.0,
+        "jd_mid": 2461154.555519919,
+        "datetime_utc": "2026-04-24T01:19:56.671"
+      }
+    },
+    {
+      "id": 521,
+      "image_id": 1000602,
+      "category_id": 1,
+      "segmentation": [
+        [
+          2721.980793718176,
+          2742.7303552551575,
+          2953.980793718176,
+          2477.7303552551575,
+          2966.019206281824,
+          2488.2696447448425,
+          2734.019206281824,
+          2753.2696447448425
+        ]
+      ],
+      "bbox": [
+        2721.980793718176,
+        2477.7303552551575,
+        244.0384125636483,
+        275.53928948968496
+      ],
+      "area": 5635.29449097383,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 2844.0,
+        "cy": 2615.5,
+        "w": 352.20590568586437,
+        "h": 16.0,
+        "angle_deg": 131.20122852525844
+      },
+      "attributes": {
+        "norad_id": 63994,
+        "satellite_name": "STARLINK-33871",
+        "peak_snr": 23.0,
+        "mean_snr": 4.0,
+        "length_px": 352.0,
+        "elongation": 36.0,
+        "jd_mid": 2461157.604015509,
+        "datetime_utc": "2026-04-27T02:29:46.690"
+      }
+    },
+    {
+      "id": 541,
+      "image_id": 1000630,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3021.572134744667,
+          1864.3371170443559,
+          3811.572134744667,
+          1339.3371170443559,
+          3820.427865255333,
+          1352.6628829556441,
+          3030.427865255333,
+          1877.6628829556441
+        ]
+      ],
+      "bbox": [
+        3021.572134744667,
+        1339.3371170443559,
+        798.855730510666,
+        538.3257659112883
+      ],
+      "area": 15176.613588017584,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3421.0,
+        "cy": 1608.5,
+        "w": 948.538349251099,
+        "h": 16.0,
+        "angle_deg": 146.39369817386176
+      },
+      "attributes": {
+        "norad_id": 65437,
+        "satellite_name": "STARLINK-35080",
+        "peak_snr": 52.0,
+        "mean_snr": 8.0,
+        "length_px": 949.0,
+        "elongation": 79.0,
+        "jd_mid": 2461154.56282713,
+        "datetime_utc": "2026-04-24T01:30:28.014"
+      }
+    },
+    {
+      "id": 546,
+      "image_id": 1000635,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3197.8452227163775,
+          1846.2956548066702,
+          3955.8452227163775,
+          1634.2956548066702,
+          3960.1547772836225,
+          1649.7043451933298,
+          3202.1547772836225,
+          1861.7043451933298
+        ]
+      ],
+      "bbox": [
+        3197.8452227163775,
+        1634.2956548066702,
+        762.309554567245,
+        227.4086903866596
+      ],
+      "area": 12593.41288134396,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3579.0,
+        "cy": 1748.0,
+        "w": 787.0883050839975,
+        "h": 16.0,
+        "angle_deg": 164.37457720273053
+      },
+      "attributes": {
+        "norad_id": 65437,
+        "satellite_name": "STARLINK-35080",
+        "peak_snr": 42.0,
+        "mean_snr": 7.0,
+        "length_px": 787.0,
+        "elongation": 63.0,
+        "jd_mid": 2461154.5637297337,
+        "datetime_utc": "2026-04-24T01:31:45.999"
+      }
+    },
+    {
+      "id": 549,
+      "image_id": 1000638,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3148.985750016421,
+          1895.2577266256187,
+          3640.985750016421,
+          1767.2577266256187,
+          3645.014249983579,
+          1782.7422733743813,
+          3153.014249983579,
+          1910.7422733743813
+        ]
+      ],
+      "bbox": [
+        3148.985750016421,
+        1767.2577266256187,
+        496.0284999671576,
+        143.48454674876257
+      ],
+      "area": 8134.044996187321,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3397.0,
+        "cy": 1839.0,
+        "w": 508.37781226170756,
+        "h": 16.0,
+        "angle_deg": 165.41705767051593
+      },
+      "attributes": {
+        "norad_id": 65437,
+        "satellite_name": "STARLINK-35080",
+        "peak_snr": 34.0,
+        "mean_snr": 6.0,
+        "length_px": 508.0,
+        "elongation": 47.0,
+        "jd_mid": 2461154.564191505,
+        "datetime_utc": "2026-04-24T01:32:25.896"
+      }
+    },
+    {
+      "id": 551,
+      "image_id": 1000640,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3122.8967886126256,
+          1922.2814184036172,
+          3500.8967886126256,
+          1819.2814184036172,
+          3505.1032113873744,
+          1834.7185815963828,
+          3127.1032113873744,
+          1937.7185815963828
+        ]
+      ],
+      "bbox": [
+        3122.8967886126256,
+        1819.2814184036172,
+        382.2064227747487,
+        118.43716319276564
+      ],
+      "area": 6268.5092326644935,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3314.0,
+        "cy": 1878.5,
+        "w": 391.78182704153085,
+        "h": 16.0,
+        "angle_deg": 164.75770775285358
+      },
+      "attributes": {
+        "norad_id": 65437,
+        "satellite_name": "STARLINK-35080",
+        "peak_snr": 25.0,
+        "mean_snr": 5.0,
+        "length_px": 392.0,
+        "elongation": 36.0,
+        "jd_mid": 2461154.5644835997,
+        "datetime_utc": "2026-04-24T01:32:51.133"
+      }
+    },
+    {
+      "id": 558,
+      "image_id": 1000648,
+      "category_id": 1,
+      "segmentation": [
+        [
+          2807.146893660361,
+          3528.4739853151673,
+          2937.146893660361,
+          2859.4739853151673,
+          2952.853106339639,
+          2862.5260146848327,
+          2822.853106339639,
+          3531.5260146848327
+        ]
+      ],
+      "bbox": [
+        2807.146893660361,
+        2859.4739853151673,
+        145.706212679278,
+        672.0520293696654
+      ],
+      "area": 10904.220100493203,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 2880.0,
+        "cy": 3195.5,
+        "w": 681.5137562808252,
+        "h": 16.0,
+        "angle_deg": 100.9966637077264
+      },
+      "attributes": {
+        "norad_id": 65474,
+        "satellite_name": "STARLINK-34998",
+        "peak_snr": 84.0,
+        "mean_snr": 13.0,
+        "length_px": 682.0,
+        "elongation": 43.0,
+        "jd_mid": 2461157.5998753244,
+        "datetime_utc": "2026-04-27T02:23:48.978"
+      }
+    },
+    {
+      "id": 565,
+      "image_id": 1000656,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3116.0892546420855,
+          2552.8083172056986,
+          3210.0892546420855,
+          1928.8083172056988,
+          3225.9107453579145,
+          1931.1916827943012,
+          3131.9107453579145,
+          2555.1916827943014
+        ]
+      ],
+      "bbox": [
+        3116.0892546420855,
+        1928.8083172056988,
+        109.82149071582899,
+        626.3833655886026
+      ],
+      "area": 10096.646572005975,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3171.0,
+        "cy": 2242.0,
+        "w": 631.0404107503734,
+        "h": 16.0,
+        "angle_deg": 98.56668209451682
+      },
+      "attributes": {
+        "norad_id": 66221,
+        "satellite_name": "STARLINK-35704",
+        "peak_snr": 34.0,
+        "mean_snr": 7.0,
+        "length_px": 631.0,
+        "elongation": 50.0,
+        "jd_mid": 2461154.572687963,
+        "datetime_utc": "2026-04-24T01:44:39.990"
+      }
+    },
+    {
+      "id": 568,
+      "image_id": 1000659,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3393.196471983458,
+          2854.762086971477,
+          3176.196471983458,
+          1893.7620869714772,
+          3191.803528016542,
+          1890.2379130285228,
+          3408.803528016542,
+          2851.237913028523
+        ]
+      ],
+      "bbox": [
+        3176.196471983458,
+        1890.2379130285228,
+        232.6070560330836,
+        964.5241739429541
+      ],
+      "area": 15763.126593414137,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3292.5,
+        "cy": 2372.5,
+        "w": 985.1954120883836,
+        "h": 16.0,
+        "angle_deg": 77.27564431457763
+      },
+      "attributes": {
+        "norad_id": 66221,
+        "satellite_name": "STARLINK-35704",
+        "peak_snr": 36.0,
+        "mean_snr": 7.0,
+        "length_px": 985.0,
+        "elongation": 81.0,
+        "jd_mid": 2461154.5732066785,
+        "datetime_utc": "2026-04-24T01:45:24.807"
+      }
+    },
+    {
+      "id": 570,
+      "image_id": 1000661,
+      "category_id": 1,
+      "segmentation": [
+        [
+          3027.9473605685207,
+          2390.76879020565,
+          3269.9473605685207,
+          2110.76879020565,
+          3282.0526394314793,
+          2121.23120979435,
+          3040.0526394314793,
+          2401.23120979435
+        ]
+      ],
+      "bbox": [
+        3027.9473605685207,
+        2110.76879020565,
+        254.10527886295858,
+        290.46241958869996
+      ],
+      "area": 5921.383622093742,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3155.0,
+        "cy": 2256.0,
+        "w": 370.08647638085887,
+        "h": 16.0,
+        "angle_deg": 130.83638737994673
+      },
+      "attributes": {
+        "norad_id": 66494,
+        "satellite_name": "STARLINK-35689",
+        "peak_snr": 38.0,
+        "mean_snr": 4.0,
+        "length_px": 370.0,
+        "elongation": 34.0,
+        "jd_mid": 2461157.584459618,
+        "datetime_utc": "2026-04-27T02:01:37.061"
+      }
+    },
+    {
+      "id": 574,
+      "image_id": 1000665,
+      "category_id": 1,
+      "segmentation": [
+        [
+          2890.514566172801,
+          2716.316075569245,
+          3267.514566172801,
+          2194.316075569245,
+          3280.485433827199,
+          2203.683924430755,
+          2903.485433827199,
+          2725.683924430755
+        ]
+      ],
+      "bbox": [
+        2890.514566172801,
+        2194.316075569245,
+        389.9708676543978,
+        531.3678488615096
+      ],
+      "area": 10302.471936384976,
+      "iscrowd": 0,
+      "obb": {
+        "cx": 3085.5,
+        "cy": 2460.0,
+        "w": 643.904496024061,
+        "h": 16.0,
+        "angle_deg": 125.8376529542783
+      },
+      "attributes": {
+        "norad_id": 66494,
+        "satellite_name": "STARLINK-35689",
+        "peak_snr": 39.0,
+        "mean_snr": 7.0,
+        "length_px": 644.0,
+        "elongation": 59.0,
+        "jd_mid": 2461157.585020544,
+        "datetime_utc": "2026-04-27T02:02:25.525"
+      }
+    }
+  ]
+}

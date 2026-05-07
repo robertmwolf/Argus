@@ -87,7 +87,7 @@ class FITSStreakDataset(Dataset):
         img_id: int = meta["id"]
         file_name: str = meta["file_name"]
 
-        fits_path = self.annotation_file.parent / file_name
+        fits_path = self._resolve_image_path(file_name)
         h: int = meta.get("height", 0)
         w: int = meta.get("width", 0)
 
@@ -139,7 +139,17 @@ class FITSStreakDataset(Dataset):
         for ann in anns:
             x1, y1, bw, bh = ann["bbox"]
             boxes_list.append([x1, y1, x1 + bw, y1 + bh])
-            obb_list.append(ann["obb"])
+            obb = ann["obb"]
+            if isinstance(obb, dict):
+                obb_list.append([
+                    obb["cx"],
+                    obb["cy"],
+                    obb["w"],
+                    obb["h"],
+                    obb["angle_deg"],
+                ])
+            else:
+                obb_list.append(obb)
 
         n = len(boxes_list)
         boxes = torch.tensor(boxes_list, dtype=torch.float32).reshape(n, 4)
@@ -157,6 +167,40 @@ class FITSStreakDataset(Dataset):
             img_tensor, target = self.transforms(img_tensor, target)
 
         return img_tensor, target
+
+    def _resolve_image_path(self, file_name: str) -> Path:
+        """Resolve an image path from COCO metadata.
+
+        COCO files in this project are used in two contexts:
+        generated dev subsets store paths relative to ``data/annotations/``,
+        while merged training splits store paths relative to ``data/``.  Older
+        GTImages conversion outputs used bare FITS filenames, so keep a final
+        fallback to ``data/GTImages`` for compatibility.
+
+        Args:
+            file_name: COCO ``images[].file_name`` value.
+
+        Returns:
+            Existing image path when found, otherwise the annotation-relative
+            candidate so callers get the usual missing-file warning.
+        """
+        raw_path = Path(file_name)
+        if raw_path.is_absolute():
+            return raw_path
+
+        candidates = [
+            self.annotation_file.parent / raw_path,
+            self.annotation_file.parent.parent / raw_path,
+            Path("data") / raw_path,
+        ]
+        if "/" not in file_name:
+            candidates.append(Path("data/GTImages") / raw_path)
+
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+
+        return candidates[0]
 
 
 if __name__ == "__main__":

@@ -206,8 +206,8 @@ train_dataloader = dict(
         type=dataset_type,
         data_root=data_root,
         metainfo=metainfo,
-        ann_file='annotations/dev_subset.json',   # 50-image dev subset
-        data_prefix=dict(img='raw/'),  # COCO file_names use relative ../dev_subset/ paths
+        ann_file='annotations/dev_subset.json',   # 50-image dev subset by default
+        data_prefix=dict(img=''),
         filter_cfg=dict(filter_empty_gt=False),
         pipeline=train_pipeline,
         backend_args=backend_args,
@@ -226,7 +226,7 @@ val_dataloader = dict(
         data_root=data_root,
         metainfo=metainfo,
         ann_file='annotations/dev_subset.json',
-        data_prefix=dict(img='raw/'),  # COCO file_names use relative ../dev_subset/ paths
+        data_prefix=dict(img=''),
         test_mode=True,
         pipeline=val_pipeline,
         backend_args=backend_args,

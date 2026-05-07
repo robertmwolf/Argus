@@ -35,7 +35,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-from eval.metrics import evaluate
+from eval.metrics import evaluate, confusion_matrix
 
 logger = logging.getLogger(__name__)
 
@@ -294,6 +294,17 @@ def run_benchmark(
     dino_metrics = evaluate(dino_predictions or [], ground_truth)
     yolo_metrics = evaluate(yolo_predictions, ground_truth) if yolo_predictions else None
 
+    # Confusion matrix — saved as PNG alongside the JSON output
+    cm_path = Path(output_path).parent / "confusion_matrix.png"
+    cm = confusion_matrix(
+        dino_predictions or [], ground_truth, iou_threshold=0.5,
+        save_path=cm_path,
+    )
+    logger.info(
+        "Confusion matrix: TP=%d  FP=%d  FN=%d  TN=%d  → %s",
+        cm[0, 0], cm[0, 1], cm[1, 0], cm[1, 1], cm_path,
+    )
+
     results = {
         "date_recorded": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "model": "dino_swin_l",
@@ -304,6 +315,13 @@ def run_benchmark(
         "f1": dino_metrics["f1"],
         "mean_angle_error_deg": dino_metrics["mean_angle_error_deg"],
         "per_band": dino_metrics["per_band"],
+        "confusion_matrix": {
+            "TP": int(cm[0, 0]),
+            "FP": int(cm[0, 1]),
+            "FN": int(cm[1, 0]),
+            "TN": int(cm[1, 1]),
+            "confusion_matrix_png": str(cm_path),
+        },
         "yolo_baseline": {
             "map_50": yolo_metrics["map_50"] if yolo_metrics else 0.0,
             "recall": yolo_metrics["recall"] if yolo_metrics else 0.0,

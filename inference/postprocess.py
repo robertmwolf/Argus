@@ -46,14 +46,12 @@ def bbox_to_obb(bbox: list[float], angle_deg: float) -> dict:
     cos_t = abs(math.cos(theta))
     sin_t = abs(math.sin(theta))
 
-    # Extent along the streak axis
+    # Extent along the Radon-refined streak axis (angle_deg must not change here —
+    # flipping it by 90° would cause extend_obb_to_streak_extent to scan
+    # perpendicular to the streak and miss all bright pixels).
     w = bw * cos_t + bh * sin_t
-    # Extent perpendicular to the streak (width of the streak itself)
+    # Extent perpendicular to the streak axis (approximates streak width)
     h = bw * sin_t + bh * cos_t
-    # Ensure w >= h (w is always the long axis)
-    if h > w:
-        w, h = h, w
-        angle_deg = (angle_deg + 90.0) % 180.0
 
     return {"cx": cx, "cy": cy, "w": w, "h": h, "angle_deg": angle_deg}
 
@@ -159,8 +157,8 @@ def refine_angle(
 def extend_obb_to_streak_extent(
     array: np.ndarray,
     obb: dict,
-    sample_halfwidth: int = 3,
-    threshold_sigma: float = 1.5,
+    sample_halfwidth: int = 8,
+    threshold_sigma: float = 3.0,
 ) -> dict:
     """Extend OBB w/cx/cy so endpoints cover the full streak, not just the bbox.
 
@@ -172,10 +170,13 @@ def extend_obb_to_streak_extent(
     Args:
         array: uint8 (H, W, 3) or (H, W) image array from FITSLoader.
         obb: OBB dict {cx, cy, w, h, angle_deg} — modified copy is returned.
-        sample_halfwidth: Pixels either side of the axis to average (robustness
-            against sub-pixel positioning). Default 3.
-        threshold_sigma: Multiplier on std above the image median to call a
-            pixel "streak". Lower values catch faint streaks; default 1.5.
+        sample_halfwidth: Half-width of the perpendicular sampling strip.
+            Must be large enough to cover the typical offset between the bbox
+            centre and the actual streak axis — default 8 px.
+        threshold_sigma: Multiplier on std above the image median.  Set higher
+            than the mean-based default (1.5) because we use the strip maximum
+            rather than the mean; default 3.0 keeps the background false-positive
+            rate below ~2 % for a 17-pixel strip.
 
     Returns:
         Updated OBB dict with corrected cx, cy, w.  h and angle_deg unchanged.
@@ -198,8 +199,13 @@ def extend_obb_to_streak_extent(
     perp_cos = -sin_a
     perp_sin = cos_a
 
-    def _strip_mean(t: float) -> float:
-        """Mean of a perpendicular strip of pixels at parameter t along axis."""
+    def _strip_signal(t: float) -> float:
+        """Max pixel value across a perpendicular strip at parameter t.
+
+        Using max rather than mean lets a 1–2 px wide streak clear the
+        threshold even when the bbox centre is offset from the streak axis
+        and most of the strip samples background.
+        """
         vals: list[float] = []
         xc = cx + t * cos_a
         yc = cy + t * sin_a
@@ -208,7 +214,7 @@ def extend_obb_to_streak_extent(
             yi = int(round(yc + s * perp_sin))
             if 0 <= xi < w_img and 0 <= yi < h_img:
                 vals.append(float(gray[yi, xi]))
-        return float(np.mean(vals)) if vals else bg
+        return max(vals) if vals else bg
 
     # Compute the t-range that keeps (x,y) inside the image
     eps = 1e-9
@@ -224,7 +230,7 @@ def extend_obb_to_streak_extent(
     # Collect all t values where the strip is above threshold
     streak_ts = [
         t for t in np.arange(t_lo, t_hi, 1.0)
-        if _strip_mean(t) > threshold
+        if _strip_signal(t) > threshold
     ]
 
     if not streak_ts:
@@ -255,6 +261,13 @@ def extend_obb_to_streak_extent(
         t_start, t_end = max(runs, key=lambda r: r[1] - r[0])
 
     new_w   = t_end - t_start
+    if new_w < float(obb["w"]):
+        logger.debug(
+            "extend_obb: candidate run would shrink OBB %.0f→%.0f px; keeping original",
+            obb["w"], new_w,
+        )
+        return dict(obb)
+
     new_cx  = cx + (t_start + t_end) / 2.0 * cos_a
     new_cy  = cy + (t_start + t_end) / 2.0 * sin_a
 
@@ -375,6 +388,84 @@ def nms_detections(
 
     logger.debug("NMS: kept %d / %d detections", len(kept), len(sorted_dets))
     return kept
+
+
+# ---------------------------------------------------------------------------
+# Detection quality classification
+# ---------------------------------------------------------------------------
+
+# Quality flag constants (mirrors SkyTrack convention: 0 = good)
+QUALITY_GOOD        = 0  # passes all checks
+QUALITY_EDGE        = 1  # streak centre or tip within edge_margin_px of image border
+QUALITY_LOW_CONF    = 2  # DINO detection confidence below threshold
+QUALITY_TOO_SHORT   = 3  # streak length below minimum
+QUALITY_NO_WCS      = 4  # no WCS plate solution — sky coords unavailable
+
+
+def classify_detection_quality(
+    det: dict,
+    image_shape: tuple[int, int],
+    edge_margin_px: int = 20,
+    min_confidence: float = 0.30,
+    min_length_px: float = 50.0,
+) -> int:
+    """Assign a quality flag to a detection, mirroring SkyTrack's reject codes.
+
+    Checks are applied in priority order; the first failing check wins.
+    Flag 0 means the detection passes all checks.
+
+    # Source: SkyTrack (colleague) — StreakProcess reject flags
+    # Ref: examples/streak_live.inc, line 295–323
+
+    Args:
+        det: Detection dict with keys: obb, confidence, streak_length_px,
+             ra_tip1_deg, dec_tip1_deg, ra_tip2_deg, dec_tip2_deg.
+        image_shape: (height, width) of the source image in pixels.
+        edge_margin_px: Pixels from any edge that counts as "on the edge".
+        min_confidence: DINO confidence threshold below which flag 2 is set.
+        min_length_px: Minimum streak length in pixels; shorter → flag 3.
+
+    Returns:
+        Integer quality flag (0–4).  See QUALITY_* constants.
+    """
+    h_img, w_img = image_shape
+    obb = det.get("obb") or {}
+
+    # --- Edge check (flag 1) -------------------------------------------------
+    cx = float(obb.get("cx", 0))
+    cy = float(obb.get("cy", 0))
+    half = float(obb.get("w", 0)) / 2.0
+    angle_rad = math.radians(float(obb.get("angle_deg", 0)))
+    cos_a = math.cos(angle_rad)
+    sin_a = math.sin(angle_rad)
+
+    tip1_x = cx - half * cos_a
+    tip1_y = cy - half * sin_a
+    tip2_x = cx + half * cos_a
+    tip2_y = cy + half * sin_a
+
+    m = edge_margin_px
+    for px, py in ((tip1_x, tip1_y), (tip2_x, tip2_y)):
+        if px < m or py < m or px > w_img - m or py > h_img - m:
+            return QUALITY_EDGE
+
+    # --- Low confidence (flag 2) ---------------------------------------------
+    if float(det.get("confidence", 1.0)) < min_confidence:
+        return QUALITY_LOW_CONF
+
+    # --- Too short (flag 3) --------------------------------------------------
+    if float(det.get("streak_length_px") or 0.0) < min_length_px:
+        return QUALITY_TOO_SHORT
+
+    # --- No WCS (flag 4) -----------------------------------------------------
+    has_sky = (
+        det.get("ra_tip1_deg") is not None
+        or det.get("ra_tip2_deg") is not None
+    )
+    if not has_sky:
+        return QUALITY_NO_WCS
+
+    return QUALITY_GOOD
 
 
 # ---------------------------------------------------------------------------
