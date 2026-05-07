@@ -33,6 +33,9 @@ import logging
 import random
 from pathlib import Path
 
+import numpy as np
+from PIL import Image
+
 logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -52,6 +55,49 @@ _GTIMAGES_ID_OFFSET = 1_000_000  # keeps GTImages IDs distinct from SatStreaks
 # ---------------------------------------------------------------------------
 # SatStreaks loader
 # ---------------------------------------------------------------------------
+
+def _image_size(image_path: Path) -> tuple[int, int]:
+    """Return image dimensions as ``(width, height)``.
+
+    Args:
+        image_path: Path to a SatStreaks JPEG/PNG image.
+
+    Returns:
+        Image width and height in pixels.
+    """
+    with Image.open(image_path) as img:
+        return img.size
+
+
+def _bbox_from_mask(mask_path: Path) -> tuple[list[float], float] | None:
+    """Derive a COCO bounding box from a SatStreaks segmentation mask.
+
+    Source: SatStreaks — segmentation masks converted to detection boxes for
+    DINO fine-tuning.
+    Ref: https://github.com/jijup/SatStreaks
+
+    Args:
+        mask_path: Path to the binary/object mask image.
+
+    Returns:
+        Tuple of ``([x, y, width, height], area)`` when the mask has foreground,
+        otherwise ``None``.
+    """
+    with Image.open(mask_path) as mask_img:
+        mask = np.asarray(mask_img.convert("L"))
+
+    ys, xs = np.nonzero(mask > 0)
+    if xs.size == 0 or ys.size == 0:
+        return None
+
+    x_min = int(xs.min())
+    x_max = int(xs.max())
+    y_min = int(ys.min())
+    y_max = int(ys.max())
+    width = x_max - x_min + 1
+    height = y_max - y_min + 1
+    area = float((mask > 0).sum())
+    return [float(x_min), float(y_min), float(width), float(height)], area
 
 def _load_satstreaks(
     labels_path: Path,
@@ -74,8 +120,6 @@ def _load_satstreaks(
         data = json.load(f)
 
     entries = data.get(split, [])
-    label_map: dict[str, int] = data.get("labels", {"0": 0, "1": 1})
-
     images: list[dict] = []
     annotations: list[dict] = []
     ann_id = ann_id_offset
@@ -98,30 +142,36 @@ def _load_satstreaks(
         if mask_rel and (mask_path is None or not mask_path.exists()):
             logger.debug("Skipping SatStreaks image with missing mask: %s", mask_path)
             continue
+        if mask_path is None:
+            logger.debug("Skipping SatStreaks entry without mask: %s", filename)
+            continue
+
+        bbox_area = _bbox_from_mask(mask_path)
+        if bbox_area is None:
+            logger.debug("Skipping SatStreaks image with empty mask: %s", mask_path)
+            continue
+        bbox, area = bbox_area
+        width, height = _image_size(img_path)
+        x, y, bw, bh = bbox
 
         images.append({
             "id": img_id,
             "file_name": img_rel,
-            "width": 0,
-            "height": 0,
+            "width": width,
+            "height": height,
         })
 
-        # Annotation: SatStreaks provides segmentation masks, not OBB coords.
-        # We record the mask path in a custom field; the DINO dataloader uses
-        # the bbox derived from the mask contour at load time.
-        # For images labelled as no-streak (label 0), we emit no annotation.
-        if mask_path:
-            annotations.append({
-                "id": ann_id,
-                "image_id": img_id,
-                "category_id": 1,
-                "iscrowd": 0,
-                "bbox": [0, 0, 0, 0],        # filled at load time
-                "area": 0,
-                "obb": [0, 0, 0, 0, 0.0],    # filled at load time
-                "segmentation_mask": str(Path("satstreaks/Data") / mask_rel),
-            })
-            ann_id += 1
+        annotations.append({
+            "id": ann_id,
+            "image_id": img_id,
+            "category_id": 1,
+            "iscrowd": 0,
+            "bbox": bbox,
+            "area": area,
+            "obb": [x + bw / 2.0, y + bh / 2.0, bw, bh, 0.0],
+            "segmentation_mask": str(Path("satstreaks/Data") / mask_rel),
+        })
+        ann_id += 1
 
     return images, annotations
 

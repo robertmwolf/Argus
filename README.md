@@ -72,7 +72,7 @@ FITS Image
     │   └── matching/                    — Space-Track → SGP4 → scorer → matcher
     │
     └─ Phase 2–8: ML path
-        ├── inference/fits_loader.py     — FITS → Z-score uint8 array + WCS
+        ├── inference/fits_loader.py     — FITS → normalised uint8 array + FITS/sidecar WCS
         ├── inference/device.py          — get_device(): CUDA → MPS → CPU
         ├── models/dino/                 — DINO Swin-T (dev) / Swin-L (cloud) configs
         ├── training/train_dino.py       — two-stage fine-tuning + cost guardrails
@@ -112,8 +112,11 @@ stage opens the FITS file with **astropy** and:
   then rescale to uint8 [0, 255] clipped at ±3σ.
 - Converts the single-channel science image to a 3-channel uint8 array
   `(H, W, 3)` so the DINO detector receives an RGB-like tensor.
-- Extracts the WCS solution from the FITS header for later pixel → RA/Dec
-  conversion, and the observation timestamp (`DATE-OBS`) for SGP4 propagation.
+- Extracts the WCS solution from the FITS header, or from a same-stem `.wcs`
+  sidecar when the FITS header has no celestial WCS. GTImages/SkyTrack uploads
+  rely on these sidecars for pixel → RA/Dec conversion.
+- Records `wcs_source` as `fits`, `sidecar`, or `null`, and reads the
+  observation timestamp (`DATE-OBS`) for SGP4 propagation.
 
 Timing logged: `fits_load_ms`.
 
@@ -227,7 +230,9 @@ Timing logged: `crossid_ms`.
 
 The worker updates the job status to `complete` in the database and stores the
 detection JSON.  The frontend polls `GET /api/result/{job_id}` until the job
-is done, then:
+is done. The result payload includes `image_width` and `image_height`, which
+the canvas uses to scale detections in original source-image coordinates even
+when the preview PNG has been resized. The browser then:
 
 - Loads the original (unmodified) FITS preview image from `GET /api/preview/{job_id}`.
 - Renders detection overlays on an HTML5 canvas:
@@ -245,7 +250,7 @@ is done, then:
 
 ```
 Argus/
-├── CLAUDE.md                  ← agent coding instructions
+├── AGENTS.md                  ← agent coding instructions
 ├── README.md
 ├── agent_docs/                ← read before writing any code
 │   ├── architecture.md
@@ -263,7 +268,7 @@ Argus/
 │   └── matching/              ← scorer, propagator, spatial_filter, matcher, spacetrack_query, tle_store
 ├── inference/                 ← ML inference modules
 │   ├── device.py              ← get_device() / get_device_config()
-│   ├── fits_loader.py         ← FITS → tensor, Z-score normalisation
+│   ├── fits_loader.py         ← FITS → tensor, normalisation + FITS/sidecar WCS
 │   ├── pipeline.py            ← inference orchestrator
 │   ├── postprocess.py         ← Radon angle refinement + streak extent + NMS
 │   └── crossid.py             ← satellite cross-matching
@@ -282,6 +287,7 @@ Argus/
 │   ├── download_weights.py         ← pretrained weight downloader
 │   ├── bootstrap_tle_catalog.py    ← one-time TLE catalog setup
 │   ├── update_tle_catalog.py       ← hourly TLE refresh (GP class)
+│   ├── merge_annotations.py        ← SatStreaks mask + GTImages COCO split merger
 │   └── prepare_cloud_training.py   ← go/no-go checklist before GPU rental
 ├── api/                       ← FastAPI application
 ├── frontend/                  ← React 18 + Vite + Tailwind
@@ -316,6 +322,10 @@ export DATABASE_URL=sqlite+aiosqlite:///./argus.db
 
 # Optional: lower the confidence threshold for locally-trained models
 export CONFIDENCE_THRESHOLD=0.10               # default; raise to 0.30 after cloud training
+
+# Match preprocessing to the loaded checkpoint:
+export ARGUS_NORM=zscore                       # current local Swin-T weights
+# export ARGUS_NORM=autostretch                # future autostretch-trained Swin-L weights
 
 # Bootstrap the local TLE catalog (one-time per environment):
 # 1. Download the 2025 annual bundle from Space-Track's cloud storage:
@@ -420,6 +430,14 @@ MODEL_SIZE=tiny python -m training.train_baseline
 PYTORCH_ENABLE_MPS_FALLBACK=1 MODEL_SIZE=tiny USE_DEV_SUBSET=true \
   python -m training.train_dino --work-dir weights/local_run
 
+# Optional: resume from an existing checkpoint or run a short timeboxed retrain
+python -m training.train_dino \
+  --work-dir weights/local_run \
+  --load-from weights/local_run/best_coco_bbox_mAP_epoch_50.pth \
+  --max-epochs 10 \
+  --val-interval 2 \
+  --checkpoint-interval 2
+
 # 6. Run inference with trained weights
 MODEL_WEIGHTS=weights/local_run/best_coco_bbox_mAP_epoch_50.pth \
   MODEL_SIZE=tiny PYTORCH_ENABLE_MPS_FALLBACK=1 \
@@ -447,7 +465,7 @@ MODEL_SIZE=large python scripts/prepare_cloud_training.py
 # On Lambda instance (run once):
 bash scripts/cloud_setup.sh
 
-# Full Swin-L training (~4–8 hrs):
+# Full Swin-L training (~4–8 hrs on A100; longer on smaller CUDA cards):
 MODEL_SIZE=large python -m training.train_dino --work-dir weights/run_001
 
 # Fetch weights back to Mac:
@@ -460,7 +478,7 @@ The model requires annotated FITS images.  Two sources:
 
 | Dataset | Images | Format | Role |
 |---------|--------|--------|------|
-| **SatStreaks** | 3,073 annotated | PNG + YOLO OBB labels | Primary training corpus — [GitHub](https://github.com/jijup/SatStreaks) |
+| **SatStreaks** | 3,073 annotated masks | PNG/JPEG + segmentation masks | Primary training corpus — [GitHub](https://github.com/jijup/SatStreaks) |
 | **GTImages** | 759 FITS (593 labeled + 93 negatives) | FITS + `.strk` annotations | Validation, negative examples, cross-ID benchmark — `data/GTImages/` |
 
 ```bash
@@ -469,7 +487,16 @@ python scripts/convert_gtimages.py \
     --strk-dir data/GTImages \
     --output data/annotations/gtimages.json \
     --negatives-output data/annotations/gtimages_negatives.json
+
+# Merge SatStreaks and GTImages into train/val/test splits.
+# SatStreaks segmentation masks are converted to real COCO bboxes at merge time.
+python scripts/merge_annotations.py --seed 42 --val-fraction 0.2
 ```
+
+For workstation handoff training, see
+[`agent_docs/Training_Handoff.md`](agent_docs/Training_Handoff.md). The staged
+data bundle should include `data/Manifest.txt` with dataset counts and the
+expected results branch.
 
 ---
 

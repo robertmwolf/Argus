@@ -19,7 +19,7 @@ the current one passes its gate.
 | `inference/device.py` | `get_device()` (CUDA→MPS→CPU), `get_device_config()`, `safe_autocast()` |
 | `models/dino/streak_codino_swin_t.py` | DINO Swin-T MMDet config — Mac dev (batch=1, workers=0, 400px, 300 queries) |
 | `models/dino/streak_codino_swin_l.py` | DINO Swin-L MMDet config — A100 cloud (batch=2, workers=4, 800px, 900 queries) |
-| `training/train_dino.py` | Two-stage training, Stage2UnfreezeHook (epoch 21), CostGuardrailHook, --smoke-test |
+| `training/train_dino.py` | Two-stage training, Stage2UnfreezeHook (epoch 21), CostGuardrailHook, --smoke-test, checkpoint/timebox overrides |
 | `scripts/download_weights.py` | Downloads Swin-T (~160 MB) or Swin-L (~828 MB) DINO COCO pretrain weights |
 | `scripts/make_test_fits.py` | Synthetic FITS generator (Poisson noise + stars + streak injection) |
 
@@ -34,8 +34,12 @@ the current one passes its gate.
   `Stage2UnfreezeHook` sets backbone `lr_mult=0.1` at epoch 21.
 - **Cost guardrail**: after epoch 1 prints estimated total time + Lambda cost
   ($1.29/hr), then `sleep(30)` before epoch 2.
-- **Swin-T weights**: using DINO R50 4-scale COCO checkpoint as placeholder;
-  replace with actual Swin-T checkpoint once identified/available.
+- **Swin-T/Swin-L weights**: `scripts/download_weights.py` downloads the
+  model-size-appropriate DINO COCO pretrain checkpoint. Local fine-tuned
+  Swin-T checkpoints can be selected with `MODEL_WEIGHTS`.
+- **Training overrides**: use `--resume` for interrupted runs, `--load-from`
+  to initialize a new run from a checkpoint, and `--max-epochs`,
+  `--val-interval`, / `--checkpoint-interval` for timeboxed retraining.
 
 ### Gate ✅ cleared
 - Both configs parse with mmengine: `DINO` model type, 1 class `streak`,
@@ -137,17 +141,19 @@ def cross_identify(
     observer_alt_m: float,
     epoch_window_days: int = 3,
 ) -> list[dict]:
-    """Cross-match detections against Space-Track GP_History TLEs.
+    """Cross-match detections against the local TLE catalog.
 
-    Fetches TLEs for the epoch window ending at obs_time from Space-Track
-    (cached to disk), propagates each to obs_time via SGP4, and scores
-    candidates using Gaussian position confidence.
+    Queries the local tle_catalog table for the epoch window around obs_time,
+    uses Space-Track GP/GP_History only as a fallback when local coverage is
+    missing, propagates candidates via SGP4, and scores candidates using
+    Gaussian position confidence.
     """
 ```
 
-TLE data source: Space-Track GP_History API (authoritative).
-Caching: disk cache in `data/cache/` via `diskcache` (TTL 48 h for historical,
-2 h for recent observations).  No local TLE file is maintained.
+TLE data source: local `tle_catalog` table in `argus.db` / PostgreSQL,
+bootstrapped from Space-Track annual bundles. Space-Track GP is used for
+current/recent fallback, and GP_History is used sparingly for archival gaps.
+API results are upserted into the local database for future runs.
 
 ### Tests to write
 
@@ -164,7 +170,7 @@ Caching: disk cache in `data/cache/` via `diskcache` (TTL 48 h for historical,
 - `cross_identify` with a known TLE returns top-3 candidates
 - Candidate with lowest angular separation has highest confidence
 - Missing sky coords → identifications empty list, no crash
-- `_fetch_tle_catalog` maps GP_History JSON fields to (name, line1, line2) tuples
+- local TLE catalog queries and fallback JSON mapping preserve (name, line1, line2)
 
 ### Gate condition for Phase 4
 `inference/pipeline.py --fast --image data/sample/synth_streak_000.fits`

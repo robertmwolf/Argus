@@ -13,6 +13,1668 @@
   ],
   "images": [
     {
+      "id": 2489,
+      "file_name": "satstreaks/Data/Images/jc2x01gcq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2490,
+      "file_name": "satstreaks/Data/Images/jd7e07s1q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2491,
+      "file_name": "satstreaks/Data/Images/j92qj5bgq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2492,
+      "file_name": "satstreaks/Data/Images/j8de39wtq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2493,
+      "file_name": "satstreaks/Data/Images/jdga0wefq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2494,
+      "file_name": "satstreaks/Data/Images/jdb622rrq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2495,
+      "file_name": "satstreaks/Data/Images/ibyn04bbq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2496,
+      "file_name": "satstreaks/Data/Images/ibkl02ikq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2497,
+      "file_name": "satstreaks/Data/Images/ic0k08gbq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2498,
+      "file_name": "satstreaks/Data/Images/idjy08biq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2499,
+      "file_name": "satstreaks/Data/Images/j991a1msq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2500,
+      "file_name": "satstreaks/Data/Images/j9cv19ahq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2501,
+      "file_name": "satstreaks/Data/Images/jbw906toq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2502,
+      "file_name": "satstreaks/Data/Images/j9ra0tgxq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2503,
+      "file_name": "satstreaks/Data/Images/ib6w11c0q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2504,
+      "file_name": "satstreaks/Data/Images/jb2u02alq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2505,
+      "file_name": "satstreaks/Data/Images/ibgr01t3q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2506,
+      "file_name": "satstreaks/Data/Images/j9r911o1q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2507,
+      "file_name": "satstreaks/Data/Images/jcoy03mzq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2508,
+      "file_name": "satstreaks/Data/Images/jbex12o4q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2509,
+      "file_name": "satstreaks/Data/Images/ja4tg4lsq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2510,
+      "file_name": "satstreaks/Data/Images/idgb41mkq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2511,
+      "file_name": "satstreaks/Data/Images/jdga27u6q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2512,
+      "file_name": "satstreaks/Data/Images/jc9107lqq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2513,
+      "file_name": "satstreaks/Data/Images/jd7e05rmq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2514,
+      "file_name": "satstreaks/Data/Images/icph6ypvq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2515,
+      "file_name": "satstreaks/Data/Images/jdxf47gmq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2516,
+      "file_name": "satstreaks/Data/Images/jbyp05teq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2517,
+      "file_name": "satstreaks/Data/Images/je4n0vrpq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2518,
+      "file_name": "satstreaks/Data/Images/j9cua1n3q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2519,
+      "file_name": "satstreaks/Data/Images/jbp330jmq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2520,
+      "file_name": "satstreaks/Data/Images/idxu8bowq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2521,
+      "file_name": "satstreaks/Data/Images/jc9n02g3q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2522,
+      "file_name": "satstreaks/Data/Images/jcau19haq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2523,
+      "file_name": "satstreaks/Data/Images/jcdu15hjq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2524,
+      "file_name": "satstreaks/Data/Images/jcnc02udq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2525,
+      "file_name": "satstreaks/Data/Images/jcmdp4e8q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2526,
+      "file_name": "satstreaks/Data/Images/j8oob1ocs_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2527,
+      "file_name": "satstreaks/Data/Images/j90l07muq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2528,
+      "file_name": "satstreaks/Data/Images/icdm21p3q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2529,
+      "file_name": "satstreaks/Data/Images/ibyn08vyq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2530,
+      "file_name": "satstreaks/Data/Images/j96301hfq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2531,
+      "file_name": "satstreaks/Data/Images/j9r206elq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2532,
+      "file_name": "satstreaks/Data/Images/ie2r03myq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2533,
+      "file_name": "satstreaks/Data/Images/jb6o26hfq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2534,
+      "file_name": "satstreaks/Data/Images/j9fva3ekq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2535,
+      "file_name": "satstreaks/Data/Images/jb5x66u9q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2536,
+      "file_name": "satstreaks/Data/Images/jd6i03alq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2537,
+      "file_name": "satstreaks/Data/Images/je3u01f2q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2538,
+      "file_name": "satstreaks/Data/Images/jdkq01dxq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2539,
+      "file_name": "satstreaks/Data/Images/jdll02dzq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2540,
+      "file_name": "satstreaks/Data/Images/j8pu0hcfq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2541,
+      "file_name": "satstreaks/Data/Images/jdkl44d8q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2542,
+      "file_name": "satstreaks/Data/Images/jdh957k0q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2543,
+      "file_name": "satstreaks/Data/Images/jb5v06izq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2544,
+      "file_name": "satstreaks/Data/Images/ie4l13itq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2545,
+      "file_name": "satstreaks/Data/Images/icn2d2oqq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2546,
+      "file_name": "satstreaks/Data/Images/ib4x06hgq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2547,
+      "file_name": "satstreaks/Data/Images/jd8109m9q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2548,
+      "file_name": "satstreaks/Data/Images/jdxf53jkq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2549,
+      "file_name": "satstreaks/Data/Images/j96e63uhq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2550,
+      "file_name": "satstreaks/Data/Images/j9cv87jqq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2551,
+      "file_name": "satstreaks/Data/Images/j9ez53juq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2552,
+      "file_name": "satstreaks/Data/Images/idgg45qnq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2553,
+      "file_name": "satstreaks/Data/Images/iecd60g3q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2554,
+      "file_name": "satstreaks/Data/Images/j9ek02g1q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2555,
+      "file_name": "satstreaks/Data/Images/jeex02rvq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2556,
+      "file_name": "satstreaks/Data/Images/jbkz4dd6q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2557,
+      "file_name": "satstreaks/Data/Images/j90r08sgq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2558,
+      "file_name": "satstreaks/Data/Images/jdhd58heq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2559,
+      "file_name": "satstreaks/Data/Images/jcn652gwq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2560,
+      "file_name": "satstreaks/Data/Images/jbgq14rtq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2561,
+      "file_name": "satstreaks/Data/Images/ic9l04ktq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2562,
+      "file_name": "satstreaks/Data/Images/jbg306stq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2563,
+      "file_name": "satstreaks/Data/Images/jdnb01nuq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2564,
+      "file_name": "satstreaks/Data/Images/jcow04twq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2565,
+      "file_name": "satstreaks/Data/Images/jby01xk4q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2566,
+      "file_name": "satstreaks/Data/Images/j6mf21uvq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2567,
+      "file_name": "satstreaks/Data/Images/j8fu01g7q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2568,
+      "file_name": "satstreaks/Data/Images/j8xicfr6q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2569,
+      "file_name": "satstreaks/Data/Images/jbtm8lqdq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2570,
+      "file_name": "satstreaks/Data/Images/jdtg19tzq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2571,
+      "file_name": "satstreaks/Data/Images/ic1d07gnq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2572,
+      "file_name": "satstreaks/Data/Images/je3u03p6q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2573,
+      "file_name": "satstreaks/Data/Images/j8ej04dvq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2574,
+      "file_name": "satstreaks/Data/Images/j8dni5hnq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2575,
+      "file_name": "satstreaks/Data/Images/j9ot08prq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2576,
+      "file_name": "satstreaks/Data/Images/jeaa02dpq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2577,
+      "file_name": "satstreaks/Data/Images/je4o05gvq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2578,
+      "file_name": "satstreaks/Data/Images/j8pu4neqq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2579,
+      "file_name": "satstreaks/Data/Images/jdgy01b0q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2580,
+      "file_name": "satstreaks/Data/Images/ic1344gmq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2581,
+      "file_name": "satstreaks/Data/Images/jdxf20hbq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2582,
+      "file_name": "satstreaks/Data/Images/id1k65lpq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2583,
+      "file_name": "satstreaks/Data/Images/j6fl7bpoq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2584,
+      "file_name": "satstreaks/Data/Images/jby209niq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2585,
+      "file_name": "satstreaks/Data/Images/jd8909fxq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2586,
+      "file_name": "satstreaks/Data/Images/jdkq09kjq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2587,
+      "file_name": "satstreaks/Data/Images/j95t16dqq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2588,
+      "file_name": "satstreaks/Data/Images/jebl11zgq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2589,
+      "file_name": "satstreaks/Data/Images/ichb06qjq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2590,
+      "file_name": "satstreaks/Data/Images/idgbp5k8q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2591,
+      "file_name": "satstreaks/Data/Images/jbtm8nryq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2592,
+      "file_name": "satstreaks/Data/Images/jcn0a6q3q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2593,
+      "file_name": "satstreaks/Data/Images/jc6hfsbtq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2594,
+      "file_name": "satstreaks/Data/Images/jbxfa5bkq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2595,
+      "file_name": "satstreaks/Data/Images/ibl72udlq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2596,
+      "file_name": "satstreaks/Data/Images/jdxr08baq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2597,
+      "file_name": "satstreaks/Data/Images/j8e618fiq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2598,
+      "file_name": "satstreaks/Data/Images/jdxf03q3q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2599,
+      "file_name": "satstreaks/Data/Images/jboi5hn9q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2600,
+      "file_name": "satstreaks/Data/Images/jdhd54qtq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2601,
+      "file_name": "satstreaks/Data/Images/iecd43leq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2602,
+      "file_name": "satstreaks/Data/Images/je0i01hqq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2603,
+      "file_name": "satstreaks/Data/Images/jbl79xb9q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2604,
+      "file_name": "satstreaks/Data/Images/j9epz2i5q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2605,
+      "file_name": "satstreaks/Data/Images/jd8d06eaq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2606,
+      "file_name": "satstreaks/Data/Images/jdrz5hvtq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2607,
+      "file_name": "satstreaks/Data/Images/id9r12ccq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2608,
+      "file_name": "satstreaks/Data/Images/j9p1b3y8q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2609,
+      "file_name": "satstreaks/Data/Images/j96114fmq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2610,
+      "file_name": "satstreaks/Data/Images/je4n44raq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2611,
+      "file_name": "satstreaks/Data/Images/jczgx3hyq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2612,
+      "file_name": "satstreaks/Data/Images/jd3204w3q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2613,
+      "file_name": "satstreaks/Data/Images/jeex08s7q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2614,
+      "file_name": "satstreaks/Data/Images/j9l901q3q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2615,
+      "file_name": "satstreaks/Data/Images/j8qc30nfq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2616,
+      "file_name": "satstreaks/Data/Images/idjs16iaq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2617,
+      "file_name": "satstreaks/Data/Images/jdjt11fyq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2618,
+      "file_name": "satstreaks/Data/Images/j90y01jiq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2619,
+      "file_name": "satstreaks/Data/Images/idq2atfxq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2620,
+      "file_name": "satstreaks/Data/Images/idpt01x8q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2621,
+      "file_name": "satstreaks/Data/Images/icmk57t9q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2622,
+      "file_name": "satstreaks/Data/Images/jbpb62noq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2623,
+      "file_name": "satstreaks/Data/Images/icdx8jjcq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2624,
+      "file_name": "satstreaks/Data/Images/jb2u72k9q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2625,
+      "file_name": "satstreaks/Data/Images/j9bk10f7q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2626,
+      "file_name": "satstreaks/Data/Images/icphewp2q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2627,
+      "file_name": "satstreaks/Data/Images/jbf714pzq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2628,
+      "file_name": "satstreaks/Data/Images/jb6e41h4q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2629,
+      "file_name": "satstreaks/Data/Images/j6la05t3q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2630,
+      "file_name": "satstreaks/Data/Images/j8pu3pl1q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2631,
+      "file_name": "satstreaks/Data/Images/j8mg04jaq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2632,
+      "file_name": "satstreaks/Data/Images/icxv01j6q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2633,
+      "file_name": "satstreaks/Data/Images/je0i03lgq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2634,
+      "file_name": "satstreaks/Data/Images/jcqt99lkq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2635,
+      "file_name": "satstreaks/Data/Images/jbl749pdq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2636,
+      "file_name": "satstreaks/Data/Images/iclk01ypq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2637,
+      "file_name": "satstreaks/Data/Images/j8q801mxq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2638,
+      "file_name": "satstreaks/Data/Images/id2t23mhq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2639,
+      "file_name": "satstreaks/Data/Images/j8lw03ssq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2640,
+      "file_name": "satstreaks/Data/Images/j6fl8bwhq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2641,
+      "file_name": "satstreaks/Data/Images/icah01tlq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2642,
+      "file_name": "satstreaks/Data/Images/jc8h13shq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2643,
+      "file_name": "satstreaks/Data/Images/jb5x4gtdq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2644,
+      "file_name": "satstreaks/Data/Images/jdn021soq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2645,
+      "file_name": "satstreaks/Data/Images/j9aj11rqq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2646,
+      "file_name": "satstreaks/Data/Images/j9ten2htq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2647,
+      "file_name": "satstreaks/Data/Images/jeea15qmq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2648,
+      "file_name": "satstreaks/Data/Images/jcnw11muq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2649,
+      "file_name": "satstreaks/Data/Images/j8dnf5puq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2650,
+      "file_name": "satstreaks/Data/Images/idq2clkcq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2651,
+      "file_name": "satstreaks/Data/Images/jbfg01cfq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2652,
+      "file_name": "satstreaks/Data/Images/icnk02msq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2653,
+      "file_name": "satstreaks/Data/Images/ibyp02sqq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2654,
+      "file_name": "satstreaks/Data/Images/idq2e2h7q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2655,
+      "file_name": "satstreaks/Data/Images/jcto02ifq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2656,
+      "file_name": "satstreaks/Data/Images/idan55eoq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2657,
+      "file_name": "satstreaks/Data/Images/jck805m5q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2658,
+      "file_name": "satstreaks/Data/Images/j8d703vrq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2659,
+      "file_name": "satstreaks/Data/Images/icy3xahlq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2660,
+      "file_name": "satstreaks/Data/Images/jb93a1ywq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2661,
+      "file_name": "satstreaks/Data/Images/ibyw03t0q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2662,
+      "file_name": "satstreaks/Data/Images/j8vza2igq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2663,
+      "file_name": "satstreaks/Data/Images/jcoi1tl7q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2664,
+      "file_name": "satstreaks/Data/Images/j9bb04wwq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2665,
+      "file_name": "satstreaks/Data/Images/jczf57j2q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2666,
+      "file_name": "satstreaks/Data/Images/jc8o01ivq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2667,
+      "file_name": "satstreaks/Data/Images/j9cu51duq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2668,
+      "file_name": "satstreaks/Data/Images/j8pu28jdq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2669,
+      "file_name": "satstreaks/Data/Images/jdn002bpq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2670,
+      "file_name": "satstreaks/Data/Images/idl867jfq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2671,
+      "file_name": "satstreaks/Data/Images/jbl79xb6q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2672,
+      "file_name": "satstreaks/Data/Images/j9eprafrq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2673,
+      "file_name": "satstreaks/Data/Images/icph7tr8q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2674,
+      "file_name": "satstreaks/Data/Images/jbfuw4vtq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2675,
+      "file_name": "satstreaks/Data/Images/jdho01b1q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2676,
+      "file_name": "satstreaks/Data/Images/ie4y4xccq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2677,
+      "file_name": "satstreaks/Data/Images/j8xi33kwq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2678,
+      "file_name": "satstreaks/Data/Images/jdfr19wvq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2679,
+      "file_name": "satstreaks/Data/Images/j9fz19d2q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2680,
+      "file_name": "satstreaks/Data/Images/ick802hoq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2681,
+      "file_name": "satstreaks/Data/Images/jc8mb7tcq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2682,
+      "file_name": "satstreaks/Data/Images/jboe6cfmq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2683,
+      "file_name": "satstreaks/Data/Images/j8m820m3q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2684,
+      "file_name": "satstreaks/Data/Images/ibq812w6q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2685,
+      "file_name": "satstreaks/Data/Images/jcxu01whq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2686,
+      "file_name": "satstreaks/Data/Images/idxb49aeq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2687,
+      "file_name": "satstreaks/Data/Images/j8qh01esq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2688,
+      "file_name": "satstreaks/Data/Images/j9qg08wxq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2689,
+      "file_name": "satstreaks/Data/Images/jbox2dovq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2690,
+      "file_name": "satstreaks/Data/Images/j9l920xaq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2691,
+      "file_name": "satstreaks/Data/Images/id9w16kfq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2692,
+      "file_name": "satstreaks/Data/Images/ibi701faq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2693,
+      "file_name": "satstreaks/Data/Images/jcwr03k5q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2694,
+      "file_name": "satstreaks/Data/Images/j91wc9rsq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2695,
+      "file_name": "satstreaks/Data/Images/j8xi6zwwq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2696,
+      "file_name": "satstreaks/Data/Images/jbpb31ehq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2697,
+      "file_name": "satstreaks/Data/Images/jb6103fhq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2698,
+      "file_name": "satstreaks/Data/Images/jbeofsmuq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2699,
+      "file_name": "satstreaks/Data/Images/jb6115j8q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2700,
+      "file_name": "satstreaks/Data/Images/j8xia9b4q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2701,
+      "file_name": "satstreaks/Data/Images/j8f649rpq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2702,
+      "file_name": "satstreaks/Data/Images/jcbo01e0q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2703,
+      "file_name": "satstreaks/Data/Images/jdxr30j1q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2704,
+      "file_name": "satstreaks/Data/Images/jd1w03l0q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2705,
+      "file_name": "satstreaks/Data/Images/idjf14h2q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2706,
+      "file_name": "satstreaks/Data/Images/jbeu7ji0q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2707,
+      "file_name": "satstreaks/Data/Images/j8f845jeq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2708,
+      "file_name": "satstreaks/Data/Images/jece69ctq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2709,
+      "file_name": "satstreaks/Data/Images/j8dni5hzq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2710,
+      "file_name": "satstreaks/Data/Images/idjt01ekq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2711,
+      "file_name": "satstreaks/Data/Images/jcn637vjq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2712,
+      "file_name": "satstreaks/Data/Images/jb2g06whq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2713,
+      "file_name": "satstreaks/Data/Images/jbew2pzaq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2714,
+      "file_name": "satstreaks/Data/Images/jc9709e9q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2715,
+      "file_name": "satstreaks/Data/Images/jbru01k5q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2716,
+      "file_name": "satstreaks/Data/Images/ibjm03lmq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2717,
+      "file_name": "satstreaks/Data/Images/icmk05iaq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2718,
+      "file_name": "satstreaks/Data/Images/jc2l03tzq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2719,
+      "file_name": "satstreaks/Data/Images/ic7y02erq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2720,
+      "file_name": "satstreaks/Data/Images/jcdm69j2q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2721,
+      "file_name": "satstreaks/Data/Images/jb3722jjq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2722,
+      "file_name": "satstreaks/Data/Images/j9h915siq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2723,
+      "file_name": "satstreaks/Data/Images/jbtmajbkq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2724,
+      "file_name": "satstreaks/Data/Images/jcc221ikq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2725,
+      "file_name": "satstreaks/Data/Images/je0y1hlyq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2726,
+      "file_name": "satstreaks/Data/Images/jboebluoq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2727,
+      "file_name": "satstreaks/Data/Images/j9epa4a8q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2728,
+      "file_name": "satstreaks/Data/Images/id6802lnq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2729,
+      "file_name": "satstreaks/Data/Images/idjf14haq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2730,
+      "file_name": "satstreaks/Data/Images/ic9709emq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2731,
+      "file_name": "satstreaks/Data/Images/j8xi8kgxq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2732,
+      "file_name": "satstreaks/Data/Images/jcuj01uhq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2733,
+      "file_name": "satstreaks/Data/Images/je4n07qcq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2734,
+      "file_name": "satstreaks/Data/Images/ibdm11s1q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2735,
+      "file_name": "satstreaks/Data/Images/j8pr01lyq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2736,
+      "file_name": "satstreaks/Data/Images/j8pu5yv2q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2737,
+      "file_name": "satstreaks/Data/Images/j8f837h8q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2738,
+      "file_name": "satstreaks/Data/Images/jcmx06tdq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2739,
+      "file_name": "satstreaks/Data/Images/jeex02qaq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2740,
+      "file_name": "satstreaks/Data/Images/jcnw30nxq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2741,
+      "file_name": "satstreaks/Data/Images/iciv01kmq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2742,
+      "file_name": "satstreaks/Data/Images/jdn019ukq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2743,
+      "file_name": "satstreaks/Data/Images/ibyq09dgq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2744,
+      "file_name": "satstreaks/Data/Images/j8n201piq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2745,
+      "file_name": "satstreaks/Data/Images/j8lw06qiq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2746,
+      "file_name": "satstreaks/Data/Images/jbew0msyq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2747,
+      "file_name": "satstreaks/Data/Images/j8pu74n1q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2748,
+      "file_name": "satstreaks/Data/Images/idxr26kkq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2749,
+      "file_name": "satstreaks/Data/Images/jbew06mfq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2750,
+      "file_name": "satstreaks/Data/Images/ie4n16l1q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2751,
+      "file_name": "satstreaks/Data/Images/j8xi8pwpq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2752,
+      "file_name": "satstreaks/Data/Images/ibq810lgq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2753,
+      "file_name": "satstreaks/Data/Images/jck301hhq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2754,
+      "file_name": "satstreaks/Data/Images/jdkq04rcq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2755,
+      "file_name": "satstreaks/Data/Images/idq26mdzq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2756,
+      "file_name": "satstreaks/Data/Images/jbsf03isq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2757,
+      "file_name": "satstreaks/Data/Images/ic2i03esq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2758,
+      "file_name": "satstreaks/Data/Images/jbp346wnq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2759,
+      "file_name": "satstreaks/Data/Images/ibig02asq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4102
+    },
+    {
+      "id": 2760,
+      "file_name": "satstreaks/Data/Images/jbp315ysq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2761,
+      "file_name": "satstreaks/Data/Images/j9cv55e2q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2762,
+      "file_name": "satstreaks/Data/Images/j8f849naq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2763,
+      "file_name": "satstreaks/Data/Images/jcu101flq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2764,
+      "file_name": "satstreaks/Data/Images/jdnn06v1q_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
+      "id": 2765,
+      "file_name": "satstreaks/Data/Images/j9op24ufq_flc.fits.jpg",
+      "width": 4096,
+      "height": 4096
+    },
+    {
       "id": 1000599,
       "file_name": "GTImages/Streak_63594_211956.fits",
       "width": 6248,
@@ -953,7 +2615,5824 @@
   ],
   "annotations": [
     {
-      "id": 3,
+      "id": 2488,
+      "image_id": 2489,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        3182.0,
+        1289.0,
+        914.0
+      ],
+      "area": 14116.0,
+      "obb": [
+        644.5,
+        3639.0,
+        1289.0,
+        914.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jc2x01gcq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2489,
+      "image_id": 2490,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        3356.0,
+        4096.0,
+        652.0
+      ],
+      "area": 194656.0,
+      "obb": [
+        2048.0,
+        3682.0,
+        4096.0,
+        652.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jd7e07s1q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2490,
+      "image_id": 2491,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1059.0,
+        903.0,
+        3037.0,
+        3193.0
+      ],
+      "area": 69870.0,
+      "obb": [
+        2577.5,
+        2499.5,
+        3037.0,
+        3193.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j92qj5bgq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2491,
+      "image_id": 2492,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2362.0,
+        0.0,
+        872.0,
+        4096.0
+      ],
+      "area": 64347.0,
+      "obb": [
+        2798.0,
+        2048.0,
+        872.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8de39wtq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2492,
+      "image_id": 2493,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3037.0,
+        0.0,
+        1059.0,
+        791.0
+      ],
+      "area": 13629.0,
+      "obb": [
+        3566.5,
+        395.5,
+        1059.0,
+        791.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdga0wefq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2493,
+      "image_id": 2494,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        3430.0,
+        1259.0,
+        666.0
+      ],
+      "area": 94940.0,
+      "obb": [
+        629.5,
+        3763.0,
+        1259.0,
+        666.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdb622rrq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2494,
+      "image_id": 2495,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2811.0,
+        1842.0,
+        1291.0
+      ],
+      "area": 22116.0,
+      "obb": [
+        921.0,
+        3456.5,
+        1842.0,
+        1291.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ibyn04bbq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2495,
+      "image_id": 2496,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3437.0,
+        3061.0,
+        659.0,
+        1041.0
+      ],
+      "area": 10285.0,
+      "obb": [
+        3766.5,
+        3581.5,
+        659.0,
+        1041.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ibkl02ikq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2496,
+      "image_id": 2497,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1249.0,
+        0.0,
+        751.0,
+        4102.0
+      ],
+      "area": 34435.0,
+      "obb": [
+        1624.5,
+        2051.0,
+        751.0,
+        4102.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ic0k08gbq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2497,
+      "image_id": 2498,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        805.0,
+        0.0,
+        878.0,
+        4102.0
+      ],
+      "area": 138214.0,
+      "obb": [
+        1244.0,
+        2051.0,
+        878.0,
+        4102.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idjy08biq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2498,
+      "image_id": 2499,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        10.0,
+        2045.0,
+        2489.0,
+        2051.0
+      ],
+      "area": 77816.0,
+      "obb": [
+        1254.5,
+        3070.5,
+        2489.0,
+        2051.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j991a1msq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2499,
+      "image_id": 2500,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        45.0,
+        4094.0,
+        3542.0
+      ],
+      "area": 375328.0,
+      "obb": [
+        2047.0,
+        1816.0,
+        4094.0,
+        3542.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9cv19ahq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2500,
+      "image_id": 2501,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        570.0,
+        0.0,
+        3526.0,
+        821.0
+      ],
+      "area": 52890.0,
+      "obb": [
+        2333.0,
+        410.5,
+        3526.0,
+        821.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbw906toq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2501,
+      "image_id": 2502,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        1295.0,
+        1799.0
+      ],
+      "area": 51433.0,
+      "obb": [
+        647.5,
+        899.5,
+        1295.0,
+        1799.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9ra0tgxq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2502,
+      "image_id": 2503,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1342.0,
+        1.0,
+        2392.0,
+        4101.0
+      ],
+      "area": 75875.0,
+      "obb": [
+        2538.0,
+        2051.5,
+        2392.0,
+        4101.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ib6w11c0q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2503,
+      "image_id": 2504,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3038.0,
+        0.0,
+        1056.0,
+        2422.0
+      ],
+      "area": 238515.0,
+      "obb": [
+        3566.0,
+        1211.0,
+        1056.0,
+        2422.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jb2u02alq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2504,
+      "image_id": 2505,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        853.0,
+        0.0,
+        1425.0,
+        4102.0
+      ],
+      "area": 76446.0,
+      "obb": [
+        1565.5,
+        2051.0,
+        1425.0,
+        4102.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ibgr01t3q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2505,
+      "image_id": 2506,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        1551.0,
+        3108.0
+      ],
+      "area": 85637.0,
+      "obb": [
+        775.5,
+        1554.0,
+        1551.0,
+        3108.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9r911o1q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2506,
+      "image_id": 2507,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2634.0,
+        0.0,
+        1462.0,
+        1151.0
+      ],
+      "area": 119660.0,
+      "obb": [
+        3365.0,
+        575.5,
+        1462.0,
+        1151.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcoy03mzq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2507,
+      "image_id": 2508,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        365.0,
+        2060.0,
+        3731.0,
+        2036.0
+      ],
+      "area": 67747.0,
+      "obb": [
+        2230.5,
+        3078.0,
+        3731.0,
+        2036.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbex12o4q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2508,
+      "image_id": 2509,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        236.0,
+        4096.0,
+        3843.0
+      ],
+      "area": 5003040.0,
+      "obb": [
+        2048.0,
+        2157.5,
+        4096.0,
+        3843.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ja4tg4lsq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2509,
+      "image_id": 2510,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        3499.0,
+        4096.0,
+        597.0
+      ],
+      "area": 80089.0,
+      "obb": [
+        2048.0,
+        3797.5,
+        4096.0,
+        597.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idgb41mkq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2510,
+      "image_id": 2511,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        344.0,
+        4096.0,
+        864.0
+      ],
+      "area": 105079.0,
+      "obb": [
+        2048.0,
+        776.0,
+        4096.0,
+        864.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdga27u6q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2511,
+      "image_id": 2512,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        1487.0,
+        1246.0
+      ],
+      "area": 36845.0,
+      "obb": [
+        743.5,
+        623.0,
+        1487.0,
+        1246.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jc9107lqq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2512,
+      "image_id": 2513,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2736.0,
+        1805.0,
+        1360.0
+      ],
+      "area": 51876.0,
+      "obb": [
+        902.5,
+        3416.0,
+        1805.0,
+        1360.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jd7e05rmq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2513,
+      "image_id": 2514,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2628.0,
+        0.0,
+        1468.0,
+        1663.0
+      ],
+      "area": 224012.0,
+      "obb": [
+        3362.0,
+        831.5,
+        1468.0,
+        1663.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/icph6ypvq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2514,
+      "image_id": 2515,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        604.0,
+        0.0,
+        818.0,
+        4096.0
+      ],
+      "area": 570504.0,
+      "obb": [
+        1013.0,
+        2048.0,
+        818.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdxf47gmq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2515,
+      "image_id": 2516,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2326.0,
+        0.0,
+        1770.0,
+        2791.0
+      ],
+      "area": 107621.0,
+      "obb": [
+        3211.0,
+        1395.5,
+        1770.0,
+        2791.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbyp05teq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2516,
+      "image_id": 2517,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        984.0,
+        0.0,
+        1675.0,
+        4096.0
+      ],
+      "area": 248987.0,
+      "obb": [
+        1821.5,
+        2048.0,
+        1675.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/je4n0vrpq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2517,
+      "image_id": 2518,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2763.0,
+        3599.0,
+        1333.0,
+        497.0
+      ],
+      "area": 71490.0,
+      "obb": [
+        3429.5,
+        3847.5,
+        1333.0,
+        497.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9cua1n3q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2518,
+      "image_id": 2519,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1528.0,
+        0.0,
+        1046.0,
+        4096.0
+      ],
+      "area": 34928.0,
+      "obb": [
+        2051.0,
+        2048.0,
+        1046.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbp330jmq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2519,
+      "image_id": 2520,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        607.0,
+        0.0,
+        1914.0,
+        4102.0
+      ],
+      "area": 199668.0,
+      "obb": [
+        1564.0,
+        2051.0,
+        1914.0,
+        4102.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idxu8bowq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2520,
+      "image_id": 2521,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1816.0,
+        0.0,
+        2280.0,
+        1502.0
+      ],
+      "area": 19160.0,
+      "obb": [
+        2956.0,
+        751.0,
+        2280.0,
+        1502.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jc9n02g3q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2521,
+      "image_id": 2522,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        3842.0,
+        4096.0,
+        155.0
+      ],
+      "area": 71469.0,
+      "obb": [
+        2048.0,
+        3919.5,
+        4096.0,
+        155.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcau19haq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2522,
+      "image_id": 2523,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1582.0,
+        2439.0,
+        2514.0
+      ],
+      "area": 62599.0,
+      "obb": [
+        1219.5,
+        2839.0,
+        2439.0,
+        2514.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcdu15hjq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2523,
+      "image_id": 2524,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2943.0,
+        524.0,
+        1153.0,
+        3572.0
+      ],
+      "area": 39337.0,
+      "obb": [
+        3519.5,
+        2310.0,
+        1153.0,
+        3572.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcnc02udq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2524,
+      "image_id": 2525,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        3340.0,
+        2198.0,
+        756.0
+      ],
+      "area": 28978.0,
+      "obb": [
+        1099.0,
+        3718.0,
+        2198.0,
+        756.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcmdp4e8q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2525,
+      "image_id": 2526,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1802.0,
+        0.0,
+        2294.0,
+        3868.0
+      ],
+      "area": 68705.0,
+      "obb": [
+        2949.0,
+        1934.0,
+        2294.0,
+        3868.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8oob1ocs_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2526,
+      "image_id": 2527,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        1086.0,
+        1378.0
+      ],
+      "area": 29291.0,
+      "obb": [
+        543.0,
+        689.0,
+        1086.0,
+        1378.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j90l07muq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2527,
+      "image_id": 2528,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        3210.0,
+        748.0,
+        892.0
+      ],
+      "area": 22594.0,
+      "obb": [
+        374.0,
+        3656.0,
+        748.0,
+        892.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/icdm21p3q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2528,
+      "image_id": 2529,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1614.0,
+        0.0,
+        2482.0,
+        3209.0
+      ],
+      "area": 55629.0,
+      "obb": [
+        2855.0,
+        1604.5,
+        2482.0,
+        3209.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ibyn08vyq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2529,
+      "image_id": 2530,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        885.0,
+        4096.0,
+        413.0
+      ],
+      "area": 48033.0,
+      "obb": [
+        2048.0,
+        1091.5,
+        4096.0,
+        413.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j96301hfq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2530,
+      "image_id": 2531,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2500.0,
+        3710.0,
+        1596.0,
+        386.0
+      ],
+      "area": 144655.0,
+      "obb": [
+        3298.0,
+        3903.0,
+        1596.0,
+        386.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9r206elq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2531,
+      "image_id": 2532,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        409.0,
+        4096.0,
+        3631.0
+      ],
+      "area": 93625.0,
+      "obb": [
+        2048.0,
+        2224.5,
+        4096.0,
+        3631.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ie2r03myq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2532,
+      "image_id": 2533,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1906.0,
+        4096.0,
+        656.0
+      ],
+      "area": 54211.0,
+      "obb": [
+        2048.0,
+        2234.0,
+        4096.0,
+        656.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jb6o26hfq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2533,
+      "image_id": 2534,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2958.0,
+        3.0,
+        933.0,
+        4088.0
+      ],
+      "area": 151642.0,
+      "obb": [
+        3424.5,
+        2047.0,
+        933.0,
+        4088.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9fva3ekq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2534,
+      "image_id": 2535,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1714.0,
+        4096.0,
+        1049.0
+      ],
+      "area": 50674.0,
+      "obb": [
+        2048.0,
+        2238.5,
+        4096.0,
+        1049.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jb5x66u9q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2535,
+      "image_id": 2536,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        890.0,
+        0.0,
+        318.0,
+        4096.0
+      ],
+      "area": 87328.0,
+      "obb": [
+        1049.0,
+        2048.0,
+        318.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jd6i03alq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2536,
+      "image_id": 2537,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2109.0,
+        4096.0,
+        583.0
+      ],
+      "area": 364021.0,
+      "obb": [
+        2048.0,
+        2400.5,
+        4096.0,
+        583.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/je3u01f2q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2537,
+      "image_id": 2538,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2071.0,
+        0.0,
+        2025.0,
+        1525.0
+      ],
+      "area": 20016.0,
+      "obb": [
+        3083.5,
+        762.5,
+        2025.0,
+        1525.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdkq01dxq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2538,
+      "image_id": 2539,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        3218.0,
+        1667.0
+      ],
+      "area": 26206.0,
+      "obb": [
+        1609.0,
+        833.5,
+        3218.0,
+        1667.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdll02dzq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2539,
+      "image_id": 2540,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2932.0,
+        4096.0,
+        137.0
+      ],
+      "area": 120421.0,
+      "obb": [
+        2048.0,
+        3000.5,
+        4096.0,
+        137.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8pu0hcfq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2540,
+      "image_id": 2541,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1001.0,
+        0.0,
+        3095.0,
+        692.0
+      ],
+      "area": 100252.0,
+      "obb": [
+        2548.5,
+        346.0,
+        3095.0,
+        692.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdkl44d8q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2541,
+      "image_id": 2542,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1963.0,
+        0.0,
+        1037.0,
+        4096.0
+      ],
+      "area": 188669.0,
+      "obb": [
+        2481.5,
+        2048.0,
+        1037.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdh957k0q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2542,
+      "image_id": 2543,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1331.0,
+        2044.0,
+        2765.0,
+        2052.0
+      ],
+      "area": 61445.0,
+      "obb": [
+        2713.5,
+        3070.0,
+        2765.0,
+        2052.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jb5v06izq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2543,
+      "image_id": 2544,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1808.0,
+        4096.0,
+        1969.0
+      ],
+      "area": 107816.0,
+      "obb": [
+        2048.0,
+        2792.5,
+        4096.0,
+        1969.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ie4l13itq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2544,
+      "image_id": 2545,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1569.0,
+        0.0,
+        1286.0,
+        4102.0
+      ],
+      "area": 59376.0,
+      "obb": [
+        2212.0,
+        2051.0,
+        1286.0,
+        4102.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/icn2d2oqq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2545,
+      "image_id": 2546,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2972.0,
+        0.0,
+        1061.0,
+        4102.0
+      ],
+      "area": 74286.0,
+      "obb": [
+        3502.5,
+        2051.0,
+        1061.0,
+        4102.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ib4x06hgq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2546,
+      "image_id": 2547,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        2818.0,
+        3906.0
+      ],
+      "area": 367134.0,
+      "obb": [
+        1409.0,
+        1953.0,
+        2818.0,
+        3906.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jd8109m9q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2547,
+      "image_id": 2548,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1762.0,
+        4095.0,
+        837.0
+      ],
+      "area": 101585.0,
+      "obb": [
+        2047.5,
+        2180.5,
+        4095.0,
+        837.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdxf53jkq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2548,
+      "image_id": 2549,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1135.0,
+        0.0,
+        628.0,
+        4096.0
+      ],
+      "area": 38250.0,
+      "obb": [
+        1449.0,
+        2048.0,
+        628.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j96e63uhq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2549,
+      "image_id": 2550,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        245.0,
+        0.0,
+        3330.0,
+        4096.0
+      ],
+      "area": 66184.0,
+      "obb": [
+        1910.0,
+        2048.0,
+        3330.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9cv87jqq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2550,
+      "image_id": 2551,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        4096.0,
+        1090.0
+      ],
+      "area": 50924.0,
+      "obb": [
+        2048.0,
+        545.0,
+        4096.0,
+        1090.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9ez53juq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2551,
+      "image_id": 2552,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        2285.0,
+        673.0
+      ],
+      "area": 50508.0,
+      "obb": [
+        1142.5,
+        336.5,
+        2285.0,
+        673.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idgg45qnq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2552,
+      "image_id": 2553,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2462.0,
+        0.0,
+        64.0,
+        4102.0
+      ],
+      "area": 33941.0,
+      "obb": [
+        2494.0,
+        2051.0,
+        64.0,
+        4102.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/iecd60g3q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2553,
+      "image_id": 2554,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2232.0,
+        4088.0,
+        1559.0
+      ],
+      "area": 96703.0,
+      "obb": [
+        2044.0,
+        3011.5,
+        4088.0,
+        1559.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9ek02g1q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2554,
+      "image_id": 2555,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1648.0,
+        0.0,
+        2448.0,
+        2287.0
+      ],
+      "area": 49667.0,
+      "obb": [
+        2872.0,
+        1143.5,
+        2448.0,
+        2287.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jeex02rvq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2555,
+      "image_id": 2556,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        1749.0,
+        296.0
+      ],
+      "area": 101118.0,
+      "obb": [
+        874.5,
+        148.0,
+        1749.0,
+        296.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbkz4dd6q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2556,
+      "image_id": 2557,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        631.0,
+        4096.0,
+        1041.0
+      ],
+      "area": 75081.0,
+      "obb": [
+        2048.0,
+        1151.5,
+        4096.0,
+        1041.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j90r08sgq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2557,
+      "image_id": 2558,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        453.0,
+        4096.0,
+        1581.0
+      ],
+      "area": 111742.0,
+      "obb": [
+        2048.0,
+        1243.5,
+        4096.0,
+        1581.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdhd58heq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2558,
+      "image_id": 2559,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3559.0,
+        0.0,
+        537.0,
+        2490.0
+      ],
+      "area": 37191.0,
+      "obb": [
+        3827.5,
+        1245.0,
+        537.0,
+        2490.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcn652gwq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2559,
+      "image_id": 2560,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2038.0,
+        0.0,
+        1611.0,
+        4096.0
+      ],
+      "area": 398671.0,
+      "obb": [
+        2843.5,
+        2048.0,
+        1611.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbgq14rtq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2560,
+      "image_id": 2561,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1608.0,
+        4096.0,
+        167.0
+      ],
+      "area": 87304.0,
+      "obb": [
+        2048.0,
+        1691.5,
+        4096.0,
+        167.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ic9l04ktq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2561,
+      "image_id": 2562,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1859.0,
+        0.0,
+        2091.0,
+        4096.0
+      ],
+      "area": 111879.0,
+      "obb": [
+        2904.5,
+        2048.0,
+        2091.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbg306stq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2562,
+      "image_id": 2563,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        420.0,
+        2941.0,
+        3676.0
+      ],
+      "area": 38413.0,
+      "obb": [
+        1470.5,
+        2258.0,
+        2941.0,
+        3676.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdnb01nuq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2563,
+      "image_id": 2564,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        868.0,
+        4096.0,
+        2245.0
+      ],
+      "area": 78196.0,
+      "obb": [
+        2048.0,
+        1990.5,
+        4096.0,
+        2245.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcow04twq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2564,
+      "image_id": 2565,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        861.0,
+        0.0,
+        1337.0,
+        4096.0
+      ],
+      "area": 41186.0,
+      "obb": [
+        1529.5,
+        2048.0,
+        1337.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jby01xk4q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2565,
+      "image_id": 2566,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        1757.0,
+        1372.0
+      ],
+      "area": 61084.0,
+      "obb": [
+        878.5,
+        686.0,
+        1757.0,
+        1372.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j6mf21uvq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2566,
+      "image_id": 2567,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3.0,
+        0.0,
+        1760.0,
+        3542.0
+      ],
+      "area": 407371.0,
+      "obb": [
+        883.0,
+        1771.0,
+        1760.0,
+        3542.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8fu01g7q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2567,
+      "image_id": 2568,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        103.0,
+        4096.0,
+        290.0
+      ],
+      "area": 84841.0,
+      "obb": [
+        2048.0,
+        248.0,
+        4096.0,
+        290.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8xicfr6q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2568,
+      "image_id": 2569,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        3864.0,
+        1956.0
+      ],
+      "area": 192478.0,
+      "obb": [
+        1932.0,
+        978.0,
+        3864.0,
+        1956.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbtm8lqdq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2569,
+      "image_id": 2570,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2848.0,
+        0.0,
+        905.0,
+        4096.0
+      ],
+      "area": 24752.0,
+      "obb": [
+        3300.5,
+        2048.0,
+        905.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdtg19tzq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2570,
+      "image_id": 2571,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        903.0,
+        1755.0,
+        3199.0
+      ],
+      "area": 301885.0,
+      "obb": [
+        877.5,
+        2502.5,
+        1755.0,
+        3199.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ic1d07gnq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2571,
+      "image_id": 2572,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1983.0,
+        1694.0,
+        2113.0,
+        1198.0
+      ],
+      "area": 102437.0,
+      "obb": [
+        3039.5,
+        2293.0,
+        2113.0,
+        1198.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/je3u03p6q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2572,
+      "image_id": 2573,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3.0,
+        2751.0,
+        4093.0,
+        1331.0
+      ],
+      "area": 530646.0,
+      "obb": [
+        2049.5,
+        3416.5,
+        4093.0,
+        1331.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8ej04dvq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2573,
+      "image_id": 2574,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        1815.0,
+        1515.0
+      ],
+      "area": 26545.0,
+      "obb": [
+        907.5,
+        757.5,
+        1815.0,
+        1515.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8dni5hnq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2574,
+      "image_id": 2575,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1069.0,
+        0.0,
+        2899.0,
+        4096.0
+      ],
+      "area": 47803.0,
+      "obb": [
+        2518.5,
+        2048.0,
+        2899.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9ot08prq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2575,
+      "image_id": 2576,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1305.0,
+        0.0,
+        2327.0,
+        4094.0
+      ],
+      "area": 104490.0,
+      "obb": [
+        2468.5,
+        2047.0,
+        2327.0,
+        4094.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jeaa02dpq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2576,
+      "image_id": 2577,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        784.0,
+        4096.0,
+        2676.0
+      ],
+      "area": 55512.0,
+      "obb": [
+        2048.0,
+        2122.0,
+        4096.0,
+        2676.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/je4o05gvq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2577,
+      "image_id": 2578,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        75.0,
+        4096.0,
+        3815.0
+      ],
+      "area": 53035.0,
+      "obb": [
+        2048.0,
+        1982.5,
+        4096.0,
+        3815.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8pu4neqq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2578,
+      "image_id": 2579,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3850.0,
+        0.0,
+        246.0,
+        266.0
+      ],
+      "area": 11201.0,
+      "obb": [
+        3973.0,
+        133.0,
+        246.0,
+        266.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdgy01b0q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2579,
+      "image_id": 2580,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3673.0,
+        3919.0,
+        421.0,
+        181.0
+      ],
+      "area": 24831.0,
+      "obb": [
+        3883.5,
+        4009.5,
+        421.0,
+        181.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ic1344gmq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2580,
+      "image_id": 2581,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        176.0,
+        2754.0,
+        3920.0
+      ],
+      "area": 120190.0,
+      "obb": [
+        1377.0,
+        2136.0,
+        2754.0,
+        3920.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdxf20hbq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2581,
+      "image_id": 2582,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        2382.0,
+        1861.0
+      ],
+      "area": 99287.0,
+      "obb": [
+        1191.0,
+        930.5,
+        2382.0,
+        1861.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/id1k65lpq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2582,
+      "image_id": 2583,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1097.0,
+        2835.0,
+        1961.0,
+        1261.0
+      ],
+      "area": 27593.0,
+      "obb": [
+        2077.5,
+        3465.5,
+        1961.0,
+        1261.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j6fl7bpoq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2583,
+      "image_id": 2584,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        991.0,
+        4095.0,
+        2900.0
+      ],
+      "area": 206358.0,
+      "obb": [
+        2047.5,
+        2441.0,
+        4095.0,
+        2900.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jby209niq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2584,
+      "image_id": 2585,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3146.0,
+        3.0,
+        800.0,
+        4092.0
+      ],
+      "area": 76211.0,
+      "obb": [
+        3546.0,
+        2049.0,
+        800.0,
+        4092.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jd8909fxq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2585,
+      "image_id": 2586,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3193.0,
+        0.0,
+        85.0,
+        274.0
+      ],
+      "area": 3824.0,
+      "obb": [
+        3235.5,
+        137.0,
+        85.0,
+        274.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdkq09kjq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2586,
+      "image_id": 2587,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        486.0,
+        2659.0,
+        3610.0
+      ],
+      "area": 206104.0,
+      "obb": [
+        1329.5,
+        2291.0,
+        2659.0,
+        3610.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j95t16dqq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2587,
+      "image_id": 2588,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        273.0,
+        2047.0,
+        1717.0,
+        2049.0
+      ],
+      "area": 49028.0,
+      "obb": [
+        1131.5,
+        3071.5,
+        1717.0,
+        2049.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jebl11zgq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2588,
+      "image_id": 2589,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2038.0,
+        4096.0,
+        1536.0
+      ],
+      "area": 110629.0,
+      "obb": [
+        2048.0,
+        2806.0,
+        4096.0,
+        1536.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ichb06qjq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2589,
+      "image_id": 2590,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        689.0,
+        2050.0,
+        2225.0,
+        2051.0
+      ],
+      "area": 60421.0,
+      "obb": [
+        1801.5,
+        3075.5,
+        2225.0,
+        2051.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idgbp5k8q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2590,
+      "image_id": 2591,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2733.0,
+        4096.0,
+        270.0
+      ],
+      "area": 44168.0,
+      "obb": [
+        2048.0,
+        2868.0,
+        4096.0,
+        270.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbtm8nryq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2591,
+      "image_id": 2592,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        370.0,
+        0.0,
+        1164.0,
+        4096.0
+      ],
+      "area": 73820.0,
+      "obb": [
+        952.0,
+        2048.0,
+        1164.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcn0a6q3q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2592,
+      "image_id": 2593,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        365.0,
+        3715.0,
+        3731.0,
+        381.0
+      ],
+      "area": 36688.0,
+      "obb": [
+        2230.5,
+        3905.5,
+        3731.0,
+        381.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jc6hfsbtq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2593,
+      "image_id": 2594,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        297.0,
+        0.0,
+        2935.0,
+        4096.0
+      ],
+      "area": 234414.0,
+      "obb": [
+        1764.5,
+        2048.0,
+        2935.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbxfa5bkq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2594,
+      "image_id": 2595,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        1109.0,
+        3972.0
+      ],
+      "area": 31047.0,
+      "obb": [
+        554.5,
+        1986.0,
+        1109.0,
+        3972.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ibl72udlq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2595,
+      "image_id": 2596,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3.0,
+        5.0,
+        4093.0,
+        4091.0
+      ],
+      "area": 902737.0,
+      "obb": [
+        2049.5,
+        2050.5,
+        4093.0,
+        4091.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdxr08baq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2596,
+      "image_id": 2597,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2130.0,
+        0.0,
+        590.0,
+        4096.0
+      ],
+      "area": 246457.0,
+      "obb": [
+        2425.0,
+        2048.0,
+        590.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8e618fiq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2597,
+      "image_id": 2598,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        774.0,
+        441.0
+      ],
+      "area": 60708.0,
+      "obb": [
+        387.0,
+        220.5,
+        774.0,
+        441.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdxf03q3q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2598,
+      "image_id": 2599,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3106.0,
+        558.0,
+        990.0,
+        3538.0
+      ],
+      "area": 148438.0,
+      "obb": [
+        3601.0,
+        2327.0,
+        990.0,
+        3538.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jboi5hn9q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2599,
+      "image_id": 2600,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2286.0,
+        0.0,
+        1810.0,
+        931.0
+      ],
+      "area": 74189.0,
+      "obb": [
+        3191.0,
+        465.5,
+        1810.0,
+        931.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdhd54qtq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2600,
+      "image_id": 2601,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2734.0,
+        0.0,
+        1362.0,
+        1733.0
+      ],
+      "area": 185187.0,
+      "obb": [
+        3415.0,
+        866.5,
+        1362.0,
+        1733.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/iecd43leq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2601,
+      "image_id": 2602,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2686.0,
+        0.0,
+        1410.0,
+        3549.0
+      ],
+      "area": 23530.0,
+      "obb": [
+        3391.0,
+        1774.5,
+        1410.0,
+        3549.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/je0i01hqq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2602,
+      "image_id": 2603,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2584.0,
+        4096.0,
+        134.0
+      ],
+      "area": 265951.0,
+      "obb": [
+        2048.0,
+        2651.0,
+        4096.0,
+        134.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbl79xb9q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2603,
+      "image_id": 2604,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        885.0,
+        0.0,
+        262.0,
+        4096.0
+      ],
+      "area": 64824.0,
+      "obb": [
+        1016.0,
+        2048.0,
+        262.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9epz2i5q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2604,
+      "image_id": 2605,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        642.0,
+        0.0,
+        527.0,
+        4096.0
+      ],
+      "area": 35896.0,
+      "obb": [
+        905.5,
+        2048.0,
+        527.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jd8d06eaq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2605,
+      "image_id": 2606,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2573.0,
+        0.0,
+        1523.0,
+        864.0
+      ],
+      "area": 161455.0,
+      "obb": [
+        3334.5,
+        432.0,
+        1523.0,
+        864.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdrz5hvtq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2606,
+      "image_id": 2607,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2021.0,
+        265.0,
+        2075.0,
+        3837.0
+      ],
+      "area": 376530.0,
+      "obb": [
+        3058.5,
+        2183.5,
+        2075.0,
+        3837.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/id9r12ccq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2607,
+      "image_id": 2608,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1186.0,
+        4095.0,
+        2906.0
+      ],
+      "area": 383403.0,
+      "obb": [
+        2047.5,
+        2639.0,
+        4095.0,
+        2906.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9p1b3y8q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2608,
+      "image_id": 2609,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        4096.0,
+        4096.0
+      ],
+      "area": 114467.0,
+      "obb": [
+        2048.0,
+        2048.0,
+        4096.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j96114fmq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2609,
+      "image_id": 2610,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1611.0,
+        4096.0,
+        2102.0
+      ],
+      "area": 215135.0,
+      "obb": [
+        2048.0,
+        2662.0,
+        4096.0,
+        2102.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/je4n44raq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2610,
+      "image_id": 2611,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        728.0,
+        4096.0,
+        461.0
+      ],
+      "area": 31203.0,
+      "obb": [
+        2048.0,
+        958.5,
+        4096.0,
+        461.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jczgx3hyq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2611,
+      "image_id": 2612,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3.0,
+        650.0,
+        4093.0,
+        1336.0
+      ],
+      "area": 226999.0,
+      "obb": [
+        2049.5,
+        1318.0,
+        4093.0,
+        1336.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jd3204w3q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2612,
+      "image_id": 2613,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        3613.0,
+        2724.0
+      ],
+      "area": 76489.0,
+      "obb": [
+        1806.5,
+        1362.0,
+        3613.0,
+        2724.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jeex08s7q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2613,
+      "image_id": 2614,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1785.0,
+        4096.0,
+        269.0
+      ],
+      "area": 128764.0,
+      "obb": [
+        2048.0,
+        1919.5,
+        4096.0,
+        269.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9l901q3q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2614,
+      "image_id": 2615,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2188.0,
+        0.0,
+        1908.0,
+        2008.0
+      ],
+      "area": 22244.0,
+      "obb": [
+        3142.0,
+        1004.0,
+        1908.0,
+        2008.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8qc30nfq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2615,
+      "image_id": 2616,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1693.0,
+        2350.0,
+        2403.0,
+        1752.0
+      ],
+      "area": 271950.0,
+      "obb": [
+        2894.5,
+        3226.0,
+        2403.0,
+        1752.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idjs16iaq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2616,
+      "image_id": 2617,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2826.0,
+        4096.0,
+        1115.0
+      ],
+      "area": 101347.0,
+      "obb": [
+        2048.0,
+        3383.5,
+        4096.0,
+        1115.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdjt11fyq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2617,
+      "image_id": 2618,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3280.0,
+        1565.0,
+        816.0,
+        2531.0
+      ],
+      "area": 43281.0,
+      "obb": [
+        3688.0,
+        2830.5,
+        816.0,
+        2531.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j90y01jiq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2618,
+      "image_id": 2619,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        251.0,
+        2438.0,
+        3851.0
+      ],
+      "area": 54216.0,
+      "obb": [
+        1219.0,
+        2176.5,
+        2438.0,
+        3851.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idq2atfxq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2619,
+      "image_id": 2620,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        673.0,
+        1781.0,
+        3429.0
+      ],
+      "area": 146096.0,
+      "obb": [
+        890.5,
+        2387.5,
+        1781.0,
+        3429.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idpt01x8q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2620,
+      "image_id": 2621,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        328.0,
+        4096.0,
+        933.0
+      ],
+      "area": 311948.0,
+      "obb": [
+        2048.0,
+        794.5,
+        4096.0,
+        933.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/icmk57t9q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2621,
+      "image_id": 2622,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2904.0,
+        4096.0,
+        1070.0
+      ],
+      "area": 75260.0,
+      "obb": [
+        2048.0,
+        3439.0,
+        4096.0,
+        1070.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbpb62noq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2622,
+      "image_id": 2623,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1722.0,
+        0.0,
+        1441.0,
+        4102.0
+      ],
+      "area": 54615.0,
+      "obb": [
+        2442.5,
+        2051.0,
+        1441.0,
+        4102.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/icdx8jjcq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2623,
+      "image_id": 2624,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1833.0,
+        3476.0,
+        2263.0,
+        620.0
+      ],
+      "area": 24160.0,
+      "obb": [
+        2964.5,
+        3786.0,
+        2263.0,
+        620.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jb2u72k9q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2624,
+      "image_id": 2625,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        640.0,
+        4096.0,
+        965.0
+      ],
+      "area": 386993.0,
+      "obb": [
+        2048.0,
+        1122.5,
+        4096.0,
+        965.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9bk10f7q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2625,
+      "image_id": 2626,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2972.0,
+        1977.0,
+        1124.0,
+        2125.0
+      ],
+      "area": 118820.0,
+      "obb": [
+        3534.0,
+        3039.5,
+        1124.0,
+        2125.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/icphewp2q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2626,
+      "image_id": 2627,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        2141.0,
+        2677.0
+      ],
+      "area": 59255.0,
+      "obb": [
+        1070.5,
+        1338.5,
+        2141.0,
+        2677.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbf714pzq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2627,
+      "image_id": 2628,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2576.0,
+        4096.0,
+        139.0
+      ],
+      "area": 67545.0,
+      "obb": [
+        2048.0,
+        2645.5,
+        4096.0,
+        139.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jb6e41h4q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2628,
+      "image_id": 2629,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        635.0,
+        2374.0,
+        2232.0
+      ],
+      "area": 399558.0,
+      "obb": [
+        1187.0,
+        1751.0,
+        2374.0,
+        2232.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j6la05t3q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2629,
+      "image_id": 2630,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2749.0,
+        0.0,
+        1347.0,
+        1844.0
+      ],
+      "area": 25780.0,
+      "obb": [
+        3422.5,
+        922.0,
+        1347.0,
+        1844.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8pu3pl1q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2630,
+      "image_id": 2631,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        1506.0,
+        1617.0
+      ],
+      "area": 26803.0,
+      "obb": [
+        753.0,
+        808.5,
+        1506.0,
+        1617.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8mg04jaq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2631,
+      "image_id": 2632,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3014.0,
+        0.0,
+        1082.0,
+        867.0
+      ],
+      "area": 28837.0,
+      "obb": [
+        3555.0,
+        433.5,
+        1082.0,
+        867.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/icxv01j6q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2632,
+      "image_id": 2633,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        996.0,
+        0.0,
+        1471.0,
+        4096.0
+      ],
+      "area": 122298.0,
+      "obb": [
+        1731.5,
+        2048.0,
+        1471.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/je0i03lgq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2633,
+      "image_id": 2634,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        1047.0,
+        3722.0
+      ],
+      "area": 71530.0,
+      "obb": [
+        523.5,
+        1861.0,
+        1047.0,
+        3722.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcqt99lkq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2634,
+      "image_id": 2635,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        3590.0,
+        2932.0
+      ],
+      "area": 103843.0,
+      "obb": [
+        1795.0,
+        1466.0,
+        3590.0,
+        2932.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbl749pdq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2635,
+      "image_id": 2636,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        3334.0,
+        959.0,
+        768.0
+      ],
+      "area": 21198.0,
+      "obb": [
+        479.5,
+        3718.0,
+        959.0,
+        768.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/iclk01ypq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2636,
+      "image_id": 2637,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        799.0,
+        827.0
+      ],
+      "area": 10189.0,
+      "obb": [
+        399.5,
+        413.5,
+        799.0,
+        827.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8q801mxq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2637,
+      "image_id": 2638,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1123.0,
+        4096.0,
+        397.0
+      ],
+      "area": 32353.0,
+      "obb": [
+        2048.0,
+        1321.5,
+        4096.0,
+        397.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/id2t23mhq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2638,
+      "image_id": 2639,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1405.0,
+        938.0,
+        2691.0,
+        3158.0
+      ],
+      "area": 57750.0,
+      "obb": [
+        2750.5,
+        2517.0,
+        2691.0,
+        3158.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8lw03ssq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2639,
+      "image_id": 2640,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        357.0,
+        0.0,
+        3739.0,
+        3900.0
+      ],
+      "area": 110527.0,
+      "obb": [
+        2226.5,
+        1950.0,
+        3739.0,
+        3900.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j6fl8bwhq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2640,
+      "image_id": 2641,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        17.0,
+        4084.0,
+        2866.0
+      ],
+      "area": 203125.0,
+      "obb": [
+        2042.0,
+        1450.0,
+        4084.0,
+        2866.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/icah01tlq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2641,
+      "image_id": 2642,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        1300.0,
+        1792.0
+      ],
+      "area": 24009.0,
+      "obb": [
+        650.0,
+        896.0,
+        1300.0,
+        1792.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jc8h13shq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2642,
+      "image_id": 2643,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3272.0,
+        444.0,
+        824.0,
+        3652.0
+      ],
+      "area": 59650.0,
+      "obb": [
+        3684.0,
+        2270.0,
+        824.0,
+        3652.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jb5x4gtdq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2643,
+      "image_id": 2644,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2163.0,
+        0.0,
+        203.0,
+        4096.0
+      ],
+      "area": 39743.0,
+      "obb": [
+        2264.5,
+        2048.0,
+        203.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdn021soq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2644,
+      "image_id": 2645,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        3395.0,
+        894.0,
+        701.0
+      ],
+      "area": 12282.0,
+      "obb": [
+        447.0,
+        3745.5,
+        894.0,
+        701.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9aj11rqq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2645,
+      "image_id": 2646,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2635.0,
+        1697.0,
+        1461.0
+      ],
+      "area": 52967.0,
+      "obb": [
+        848.5,
+        3365.5,
+        1697.0,
+        1461.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9ten2htq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2646,
+      "image_id": 2647,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        269.0,
+        2097.0,
+        3827.0,
+        1999.0
+      ],
+      "area": 47947.0,
+      "obb": [
+        2182.5,
+        3096.5,
+        3827.0,
+        1999.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jeea15qmq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2647,
+      "image_id": 2648,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3687.0,
+        3514.0,
+        409.0,
+        582.0
+      ],
+      "area": 39087.0,
+      "obb": [
+        3891.5,
+        3805.0,
+        409.0,
+        582.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcnw11muq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2648,
+      "image_id": 2649,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1296.0,
+        4096.0,
+        351.0
+      ],
+      "area": 254725.0,
+      "obb": [
+        2048.0,
+        1471.5,
+        4096.0,
+        351.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8dnf5puq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2649,
+      "image_id": 2650,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        2496.0,
+        3292.0
+      ],
+      "area": 34342.0,
+      "obb": [
+        1248.0,
+        1646.0,
+        2496.0,
+        3292.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idq2clkcq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2650,
+      "image_id": 2651,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        791.0,
+        4096.0,
+        767.0
+      ],
+      "area": 347762.0,
+      "obb": [
+        2048.0,
+        1174.5,
+        4096.0,
+        767.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbfg01cfq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2651,
+      "image_id": 2652,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        999.0,
+        4096.0,
+        2238.0
+      ],
+      "area": 32156.0,
+      "obb": [
+        2048.0,
+        2118.0,
+        4096.0,
+        2238.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/icnk02msq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2652,
+      "image_id": 2653,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3550.0,
+        0.0,
+        546.0,
+        3044.0
+      ],
+      "area": 46763.0,
+      "obb": [
+        3823.0,
+        1522.0,
+        546.0,
+        3044.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ibyp02sqq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2653,
+      "image_id": 2654,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        813.0,
+        0.0,
+        3283.0,
+        4102.0
+      ],
+      "area": 130412.0,
+      "obb": [
+        2454.5,
+        2051.0,
+        3283.0,
+        4102.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idq2e2h7q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2654,
+      "image_id": 2655,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        516.0,
+        3491.0,
+        3579.0
+      ],
+      "area": 273721.0,
+      "obb": [
+        1745.5,
+        2305.5,
+        3491.0,
+        3579.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcto02ifq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2655,
+      "image_id": 2656,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        289.0,
+        4096.0,
+        3130.0
+      ],
+      "area": 131485.0,
+      "obb": [
+        2048.0,
+        1854.0,
+        4096.0,
+        3130.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idan55eoq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2656,
+      "image_id": 2657,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3558.0,
+        0.0,
+        538.0,
+        370.0
+      ],
+      "area": 52361.0,
+      "obb": [
+        3827.0,
+        185.0,
+        538.0,
+        370.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jck805m5q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2657,
+      "image_id": 2658,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2539.0,
+        1516.0,
+        1557.0
+      ],
+      "area": 39744.0,
+      "obb": [
+        758.0,
+        3317.5,
+        1516.0,
+        1557.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8d703vrq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2658,
+      "image_id": 2659,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2512.0,
+        4096.0,
+        193.0
+      ],
+      "area": 27658.0,
+      "obb": [
+        2048.0,
+        2608.5,
+        4096.0,
+        193.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/icy3xahlq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2659,
+      "image_id": 2660,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3649.0,
+        3751.0,
+        447.0,
+        345.0
+      ],
+      "area": 22477.0,
+      "obb": [
+        3872.5,
+        3923.5,
+        447.0,
+        345.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jb93a1ywq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2660,
+      "image_id": 2661,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        367.0,
+        2866.0,
+        3735.0
+      ],
+      "area": 52544.0,
+      "obb": [
+        1433.0,
+        2234.5,
+        2866.0,
+        3735.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ibyw03t0q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2661,
+      "image_id": 2662,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        657.0,
+        4096.0,
+        3193.0
+      ],
+      "area": 100237.0,
+      "obb": [
+        2048.0,
+        2253.5,
+        4096.0,
+        3193.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8vza2igq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2662,
+      "image_id": 2663,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        3209.0,
+        1811.0,
+        887.0
+      ],
+      "area": 18720.0,
+      "obb": [
+        905.5,
+        3652.5,
+        1811.0,
+        887.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcoi1tl7q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2663,
+      "image_id": 2664,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        3196.0,
+        788.0
+      ],
+      "area": 629262.0,
+      "obb": [
+        1598.0,
+        394.0,
+        3196.0,
+        788.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9bb04wwq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2664,
+      "image_id": 2665,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        705.0,
+        375.0
+      ],
+      "area": 6555.0,
+      "obb": [
+        352.5,
+        187.5,
+        705.0,
+        375.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jczf57j2q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2665,
+      "image_id": 2666,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2006.0,
+        0.0,
+        1611.0,
+        4096.0
+      ],
+      "area": 32806.0,
+      "obb": [
+        2811.5,
+        2048.0,
+        1611.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jc8o01ivq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2666,
+      "image_id": 2667,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        476.0,
+        0.0,
+        3620.0,
+        1557.0
+      ],
+      "area": 84846.0,
+      "obb": [
+        2286.0,
+        778.5,
+        3620.0,
+        1557.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9cu51duq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2667,
+      "image_id": 2668,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2526.0,
+        0.0,
+        1570.0,
+        2680.0
+      ],
+      "area": 34413.0,
+      "obb": [
+        3311.0,
+        1340.0,
+        1570.0,
+        2680.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8pu28jdq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2668,
+      "image_id": 2669,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3866.0,
+        3773.0,
+        230.0,
+        323.0
+      ],
+      "area": 10145.0,
+      "obb": [
+        3981.0,
+        3934.5,
+        230.0,
+        323.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdn002bpq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2669,
+      "image_id": 2670,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3464.0,
+        0.0,
+        371.0,
+        4102.0
+      ],
+      "area": 33173.0,
+      "obb": [
+        3649.5,
+        2051.0,
+        371.0,
+        4102.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idl867jfq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2670,
+      "image_id": 2671,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1079.0,
+        4096.0,
+        1425.0
+      ],
+      "area": 348809.0,
+      "obb": [
+        2048.0,
+        1791.5,
+        4096.0,
+        1425.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbl79xb6q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2671,
+      "image_id": 2672,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        352.0,
+        4096.0,
+        2370.0
+      ],
+      "area": 43561.0,
+      "obb": [
+        2048.0,
+        1537.0,
+        4096.0,
+        2370.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9eprafrq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2672,
+      "image_id": 2673,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3056.0,
+        0.0,
+        1040.0,
+        2317.0
+      ],
+      "area": 19159.0,
+      "obb": [
+        3576.0,
+        1158.5,
+        1040.0,
+        2317.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/icph7tr8q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2673,
+      "image_id": 2674,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        580.0,
+        0.0,
+        3264.0,
+        4096.0
+      ],
+      "area": 170693.0,
+      "obb": [
+        2212.0,
+        2048.0,
+        3264.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbfuw4vtq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2674,
+      "image_id": 2675,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        775.0,
+        448.0
+      ],
+      "area": 15350.0,
+      "obb": [
+        387.5,
+        224.0,
+        775.0,
+        448.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdho01b1q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2675,
+      "image_id": 2676,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        1719.0,
+        1935.0
+      ],
+      "area": 462239.0,
+      "obb": [
+        859.5,
+        967.5,
+        1719.0,
+        1935.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ie4y4xccq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2676,
+      "image_id": 2677,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        3198.0,
+        4096.0,
+        715.0
+      ],
+      "area": 62904.0,
+      "obb": [
+        2048.0,
+        3555.5,
+        4096.0,
+        715.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8xi33kwq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2677,
+      "image_id": 2678,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2575.0,
+        3554.0,
+        1521.0,
+        542.0
+      ],
+      "area": 17618.0,
+      "obb": [
+        3335.5,
+        3825.0,
+        1521.0,
+        542.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdfr19wvq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2678,
+      "image_id": 2679,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        2072.0,
+        2479.0
+      ],
+      "area": 93366.0,
+      "obb": [
+        1036.0,
+        1239.5,
+        2072.0,
+        2479.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9fz19d2q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2679,
+      "image_id": 2680,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2453.0,
+        1268.0,
+        1649.0
+      ],
+      "area": 114246.0,
+      "obb": [
+        634.0,
+        3277.5,
+        1268.0,
+        1649.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ick802hoq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2680,
+      "image_id": 2681,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1096.0,
+        4096.0,
+        1304.0
+      ],
+      "area": 310820.0,
+      "obb": [
+        2048.0,
+        1748.0,
+        4096.0,
+        1304.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jc8mb7tcq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2681,
+      "image_id": 2682,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1003.0,
+        4096.0,
+        2097.0
+      ],
+      "area": 47344.0,
+      "obb": [
+        2048.0,
+        2051.5,
+        4096.0,
+        2097.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jboe6cfmq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2682,
+      "image_id": 2683,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        523.0,
+        4096.0,
+        3350.0
+      ],
+      "area": 58396.0,
+      "obb": [
+        2048.0,
+        2198.0,
+        4096.0,
+        3350.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8m820m3q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2683,
+      "image_id": 2684,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2767.0,
+        3.0,
+        1329.0,
+        347.0
+      ],
+      "area": 92232.0,
+      "obb": [
+        3431.5,
+        176.5,
+        1329.0,
+        347.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ibq812w6q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2684,
+      "image_id": 2685,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2470.0,
+        968.0,
+        1626.0
+      ],
+      "area": 20953.0,
+      "obb": [
+        484.0,
+        3283.0,
+        968.0,
+        1626.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcxu01whq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2685,
+      "image_id": 2686,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        665.0,
+        2198.0,
+        3427.0,
+        1904.0
+      ],
+      "area": 108404.0,
+      "obb": [
+        2378.5,
+        3150.0,
+        3427.0,
+        1904.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idxb49aeq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2686,
+      "image_id": 2687,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1137.0,
+        3987.0,
+        2959.0
+      ],
+      "area": 204475.0,
+      "obb": [
+        1993.5,
+        2616.5,
+        3987.0,
+        2959.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8qh01esq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2687,
+      "image_id": 2688,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        118.0,
+        4096.0,
+        2571.0
+      ],
+      "area": 79495.0,
+      "obb": [
+        2048.0,
+        1403.5,
+        4096.0,
+        2571.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9qg08wxq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2688,
+      "image_id": 2689,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        18.0,
+        253.0,
+        4050.0,
+        1309.0
+      ],
+      "area": 356179.0,
+      "obb": [
+        2043.0,
+        907.5,
+        4050.0,
+        1309.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbox2dovq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2689,
+      "image_id": 2690,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3678.0,
+        0.0,
+        418.0,
+        930.0
+      ],
+      "area": 24390.0,
+      "obb": [
+        3887.0,
+        465.0,
+        418.0,
+        930.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9l920xaq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2690,
+      "image_id": 2691,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2.0,
+        0.0,
+        2053.0,
+        2630.0
+      ],
+      "area": 82993.0,
+      "obb": [
+        1028.5,
+        1315.0,
+        2053.0,
+        2630.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/id9w16kfq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2691,
+      "image_id": 2692,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        268.0,
+        4096.0,
+        2413.0
+      ],
+      "area": 391592.0,
+      "obb": [
+        2048.0,
+        1474.5,
+        4096.0,
+        2413.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ibi701faq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2692,
+      "image_id": 2693,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2219.0,
+        4096.0,
+        1877.0
+      ],
+      "area": 67169.0,
+      "obb": [
+        2048.0,
+        3157.5,
+        4096.0,
+        1877.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcwr03k5q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2693,
+      "image_id": 2694,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3073.0,
+        0.0,
+        876.0,
+        4096.0
+      ],
+      "area": 27122.0,
+      "obb": [
+        3511.0,
+        2048.0,
+        876.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j91wc9rsq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2694,
+      "image_id": 2695,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        539.0,
+        4096.0,
+        787.0
+      ],
+      "area": 236817.0,
+      "obb": [
+        2048.0,
+        932.5,
+        4096.0,
+        787.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8xi6zwwq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2695,
+      "image_id": 2696,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2113.0,
+        0.0,
+        1983.0,
+        2685.0
+      ],
+      "area": 222606.0,
+      "obb": [
+        3104.5,
+        1342.5,
+        1983.0,
+        2685.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbpb31ehq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2696,
+      "image_id": 2697,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        751.0,
+        0.0,
+        2129.0,
+        4096.0
+      ],
+      "area": 94366.0,
+      "obb": [
+        1815.5,
+        2048.0,
+        2129.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jb6103fhq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2697,
+      "image_id": 2698,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1511.0,
+        4048.0,
+        2585.0
+      ],
+      "area": 92319.0,
+      "obb": [
+        2024.0,
+        2803.5,
+        4048.0,
+        2585.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbeofsmuq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2698,
+      "image_id": 2699,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        3500.0,
+        822.0,
+        596.0
+      ],
+      "area": 58614.0,
+      "obb": [
+        411.0,
+        3798.0,
+        822.0,
+        596.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jb6115j8q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2699,
+      "image_id": 2700,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3538.0,
+        0.0,
+        558.0,
+        1015.0
+      ],
+      "area": 63802.0,
+      "obb": [
+        3817.0,
+        507.5,
+        558.0,
+        1015.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8xia9b4q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2700,
+      "image_id": 2701,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1421.0,
+        0.0,
+        195.0,
+        4096.0
+      ],
+      "area": 53954.0,
+      "obb": [
+        1518.5,
+        2048.0,
+        195.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8f649rpq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2701,
+      "image_id": 2702,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2338.0,
+        4096.0,
+        58.0
+      ],
+      "area": 208955.0,
+      "obb": [
+        2048.0,
+        2367.0,
+        4096.0,
+        58.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcbo01e0q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2702,
+      "image_id": 2703,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3728.0,
+        0.0,
+        368.0,
+        366.0
+      ],
+      "area": 31074.0,
+      "obb": [
+        3912.0,
+        183.0,
+        368.0,
+        366.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdxr30j1q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2703,
+      "image_id": 2704,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        517.0,
+        1210.0,
+        3577.0
+      ],
+      "area": 249513.0,
+      "obb": [
+        605.0,
+        2305.5,
+        1210.0,
+        3577.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jd1w03l0q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2704,
+      "image_id": 2705,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        4095.0,
+        3801.0
+      ],
+      "area": 356601.0,
+      "obb": [
+        2047.5,
+        1900.5,
+        4095.0,
+        3801.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idjf14h2q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2705,
+      "image_id": 2706,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1436.0,
+        4096.0,
+        389.0
+      ],
+      "area": 92776.0,
+      "obb": [
+        2048.0,
+        1630.5,
+        4096.0,
+        389.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbeu7ji0q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2706,
+      "image_id": 2707,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1563.0,
+        0.0,
+        150.0,
+        4096.0
+      ],
+      "area": 364799.0,
+      "obb": [
+        1638.0,
+        2048.0,
+        150.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8f845jeq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2707,
+      "image_id": 2708,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        719.0,
+        4096.0,
+        88.0
+      ],
+      "area": 63623.0,
+      "obb": [
+        2048.0,
+        763.0,
+        4096.0,
+        88.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jece69ctq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2708,
+      "image_id": 2709,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        3480.0,
+        2826.0,
+        616.0
+      ],
+      "area": 144084.0,
+      "obb": [
+        1413.0,
+        3788.0,
+        2826.0,
+        616.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8dni5hzq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2709,
+      "image_id": 2710,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        710.0,
+        3113.0,
+        3392.0
+      ],
+      "area": 46740.0,
+      "obb": [
+        1556.5,
+        2406.0,
+        3113.0,
+        3392.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idjt01ekq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2710,
+      "image_id": 2711,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1885.0,
+        0.0,
+        795.0,
+        4096.0
+      ],
+      "area": 63848.0,
+      "obb": [
+        2282.5,
+        2048.0,
+        795.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcn637vjq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2711,
+      "image_id": 2712,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1133.0,
+        4096.0,
+        1798.0
+      ],
+      "area": 45387.0,
+      "obb": [
+        2048.0,
+        2032.0,
+        4096.0,
+        1798.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jb2g06whq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2712,
+      "image_id": 2713,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3169.0,
+        0.0,
+        550.0,
+        4096.0
+      ],
+      "area": 46194.0,
+      "obb": [
+        3444.0,
+        2048.0,
+        550.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbew2pzaq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2713,
+      "image_id": 2714,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1023.0,
+        4096.0,
+        992.0
+      ],
+      "area": 80079.0,
+      "obb": [
+        2048.0,
+        1519.0,
+        4096.0,
+        992.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jc9709e9q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2714,
+      "image_id": 2715,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2.0,
+        3363.0,
+        2497.0,
+        732.0
+      ],
+      "area": 57459.0,
+      "obb": [
+        1250.5,
+        3729.0,
+        2497.0,
+        732.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbru01k5q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2715,
+      "image_id": 2716,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3343.0,
+        3142.0,
+        753.0,
+        960.0
+      ],
+      "area": 11428.0,
+      "obb": [
+        3719.5,
+        3622.0,
+        753.0,
+        960.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ibjm03lmq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2716,
+      "image_id": 2717,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2671.0,
+        865.0,
+        1431.0
+      ],
+      "area": 18384.0,
+      "obb": [
+        432.5,
+        3386.5,
+        865.0,
+        1431.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/icmk05iaq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2717,
+      "image_id": 2718,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2581.0,
+        4096.0,
+        1393.0
+      ],
+      "area": 328722.0,
+      "obb": [
+        2048.0,
+        3277.5,
+        4096.0,
+        1393.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jc2l03tzq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2718,
+      "image_id": 2719,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3007.0,
+        3966.0,
+        1089.0,
+        136.0
+      ],
+      "area": 13186.0,
+      "obb": [
+        3551.5,
+        4034.0,
+        1089.0,
+        136.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ic7y02erq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2719,
+      "image_id": 2720,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        1636.0,
+        738.0
+      ],
+      "area": 80905.0,
+      "obb": [
+        818.0,
+        369.0,
+        1636.0,
+        738.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcdm69j2q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2720,
+      "image_id": 2721,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2520.0,
+        2409.0,
+        1576.0
+      ],
+      "area": 63723.0,
+      "obb": [
+        1204.5,
+        3308.0,
+        2409.0,
+        1576.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jb3722jjq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2721,
+      "image_id": 2722,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1035.0,
+        0.0,
+        196.0,
+        4096.0
+      ],
+      "area": 74032.0,
+      "obb": [
+        1133.0,
+        2048.0,
+        196.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9h915siq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2722,
+      "image_id": 2723,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2935.0,
+        1879.0,
+        1161.0,
+        2217.0
+      ],
+      "area": 25479.0,
+      "obb": [
+        3515.5,
+        2987.5,
+        1161.0,
+        2217.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbtmajbkq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2723,
+      "image_id": 2724,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1188.0,
+        0.0,
+        890.0,
+        4096.0
+      ],
+      "area": 208367.0,
+      "obb": [
+        1633.0,
+        2048.0,
+        890.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcc221ikq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2724,
+      "image_id": 2725,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2788.0,
+        0.0,
+        1308.0,
+        428.0
+      ],
+      "area": 32066.0,
+      "obb": [
+        3442.0,
+        214.0,
+        1308.0,
+        428.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/je0y1hlyq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2725,
+      "image_id": 2726,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3375.0,
+        2542.0,
+        721.0,
+        1554.0
+      ],
+      "area": 117296.0,
+      "obb": [
+        3735.5,
+        3319.0,
+        721.0,
+        1554.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jboebluoq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2726,
+      "image_id": 2727,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3300.0,
+        3592.0,
+        796.0,
+        504.0
+      ],
+      "area": 53636.0,
+      "obb": [
+        3698.0,
+        3844.0,
+        796.0,
+        504.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9epa4a8q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2727,
+      "image_id": 2728,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1491.0,
+        0.0,
+        539.0,
+        4102.0
+      ],
+      "area": 239094.0,
+      "obb": [
+        1760.5,
+        2051.0,
+        539.0,
+        4102.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/id6802lnq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2728,
+      "image_id": 2729,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2149.0,
+        777.0,
+        1947.0,
+        3325.0
+      ],
+      "area": 33996.0,
+      "obb": [
+        3122.5,
+        2439.5,
+        1947.0,
+        3325.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idjf14haq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2729,
+      "image_id": 2730,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2253.0,
+        3446.0,
+        1849.0
+      ],
+      "area": 25849.0,
+      "obb": [
+        1723.0,
+        3177.5,
+        3446.0,
+        1849.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ic9709emq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2730,
+      "image_id": 2731,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        742.0,
+        571.0
+      ],
+      "area": 10615.0,
+      "obb": [
+        371.0,
+        285.5,
+        742.0,
+        571.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8xi8kgxq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2731,
+      "image_id": 2732,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1137.0,
+        911.0,
+        2959.0,
+        3185.0
+      ],
+      "area": 54185.0,
+      "obb": [
+        2616.5,
+        2503.5,
+        2959.0,
+        3185.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcuj01uhq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2732,
+      "image_id": 2733,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2269.0,
+        3441.0,
+        1827.0,
+        655.0
+      ],
+      "area": 11225.0,
+      "obb": [
+        3182.5,
+        3768.5,
+        1827.0,
+        655.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/je4n07qcq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2733,
+      "image_id": 2734,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        925.0,
+        0.0,
+        3171.0,
+        2729.0
+      ],
+      "area": 56920.0,
+      "obb": [
+        2510.5,
+        1364.5,
+        3171.0,
+        2729.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ibdm11s1q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2734,
+      "image_id": 2735,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2761.0,
+        2541.0,
+        1335.0,
+        1555.0
+      ],
+      "area": 198223.0,
+      "obb": [
+        3428.5,
+        3318.5,
+        1335.0,
+        1555.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8pr01lyq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2735,
+      "image_id": 2736,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        344.0,
+        754.0,
+        3752.0,
+        3342.0
+      ],
+      "area": 119337.0,
+      "obb": [
+        2220.0,
+        2425.0,
+        3752.0,
+        3342.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8pu5yv2q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2736,
+      "image_id": 2737,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2000.0,
+        4096.0,
+        1647.0
+      ],
+      "area": 330225.0,
+      "obb": [
+        2048.0,
+        2823.5,
+        4096.0,
+        1647.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8f837h8q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2737,
+      "image_id": 2738,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1193.0,
+        0.0,
+        2075.0,
+        4096.0
+      ],
+      "area": 524982.0,
+      "obb": [
+        2230.5,
+        2048.0,
+        2075.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcmx06tdq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2738,
+      "image_id": 2739,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1927.0,
+        4096.0,
+        477.0
+      ],
+      "area": 32910.0,
+      "obb": [
+        2048.0,
+        2165.5,
+        4096.0,
+        477.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jeex02qaq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2739,
+      "image_id": 2740,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        387.0,
+        0.0,
+        1703.0,
+        4096.0
+      ],
+      "area": 274739.0,
+      "obb": [
+        1238.5,
+        2048.0,
+        1703.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcnw30nxq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2740,
+      "image_id": 2741,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3394.0,
+        0.0,
+        702.0,
+        1123.0
+      ],
+      "area": 33618.0,
+      "obb": [
+        3745.0,
+        561.5,
+        702.0,
+        1123.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/iciv01kmq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2741,
+      "image_id": 2742,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        186.0,
+        4096.0,
+        2983.0
+      ],
+      "area": 147236.0,
+      "obb": [
+        2048.0,
+        1677.5,
+        4096.0,
+        2983.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdn019ukq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2742,
+      "image_id": 2743,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2616.0,
+        0.0,
+        1480.0,
+        1027.0
+      ],
+      "area": 27849.0,
+      "obb": [
+        3356.0,
+        513.5,
+        1480.0,
+        1027.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ibyq09dgq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2743,
+      "image_id": 2744,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1.0,
+        1031.0,
+        1022.0
+      ],
+      "area": 40229.0,
+      "obb": [
+        515.5,
+        512.0,
+        1031.0,
+        1022.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8n201piq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2744,
+      "image_id": 2745,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1211.0,
+        3544.0,
+        2885.0
+      ],
+      "area": 51603.0,
+      "obb": [
+        1772.0,
+        2653.5,
+        3544.0,
+        2885.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8lw06qiq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2745,
+      "image_id": 2746,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        2335.0,
+        1742.0,
+        1761.0
+      ],
+      "area": 20607.0,
+      "obb": [
+        871.0,
+        3215.5,
+        1742.0,
+        1761.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbew0msyq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2746,
+      "image_id": 2747,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        8.0,
+        1445.0,
+        4088.0,
+        2317.0
+      ],
+      "area": 457082.0,
+      "obb": [
+        2052.0,
+        2603.5,
+        4088.0,
+        2317.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8pu74n1q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2747,
+      "image_id": 2748,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2842.0,
+        1683.0,
+        1254.0,
+        2419.0
+      ],
+      "area": 110919.0,
+      "obb": [
+        3469.0,
+        2892.5,
+        1254.0,
+        2419.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idxr26kkq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2748,
+      "image_id": 2749,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2804.0,
+        0.0,
+        1292.0,
+        1400.0
+      ],
+      "area": 24517.0,
+      "obb": [
+        3450.0,
+        700.0,
+        1292.0,
+        1400.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbew06mfq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2749,
+      "image_id": 2750,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3126.0,
+        3607.0,
+        970.0,
+        495.0
+      ],
+      "area": 8738.0,
+      "obb": [
+        3611.0,
+        3854.5,
+        970.0,
+        495.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ie4n16l1q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2750,
+      "image_id": 2751,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        1806.0,
+        1659.0
+      ],
+      "area": 49883.0,
+      "obb": [
+        903.0,
+        829.5,
+        1806.0,
+        1659.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8xi8pwpq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2751,
+      "image_id": 2752,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        363.0,
+        0.0,
+        1985.0,
+        4102.0
+      ],
+      "area": 120119.0,
+      "obb": [
+        1355.5,
+        2051.0,
+        1985.0,
+        4102.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ibq810lgq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2752,
+      "image_id": 2753,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3307.0,
+        3734.0,
+        789.0,
+        362.0
+      ],
+      "area": 9363.0,
+      "obb": [
+        3701.5,
+        3915.0,
+        789.0,
+        362.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jck301hhq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2753,
+      "image_id": 2754,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2274.0,
+        0.0,
+        1822.0,
+        2482.0
+      ],
+      "area": 68453.0,
+      "obb": [
+        3185.0,
+        1241.0,
+        1822.0,
+        2482.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdkq04rcq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2754,
+      "image_id": 2755,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1141.0,
+        1437.0,
+        2961.0
+      ],
+      "area": 43985.0,
+      "obb": [
+        718.5,
+        2621.5,
+        1437.0,
+        2961.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/idq26mdzq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2755,
+      "image_id": 2756,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        6.0,
+        0.0,
+        2765.0,
+        4096.0
+      ],
+      "area": 43883.0,
+      "obb": [
+        1388.5,
+        2048.0,
+        2765.0,
+        4096.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbsf03isq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2756,
+      "image_id": 2757,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        3784.0,
+        3808.0,
+        312.0,
+        294.0
+      ],
+      "area": 5901.0,
+      "obb": [
+        3940.0,
+        3955.0,
+        312.0,
+        294.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ic2i03esq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2757,
+      "image_id": 2758,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1248.0,
+        2744.0,
+        2848.0
+      ],
+      "area": 138116.0,
+      "obb": [
+        1372.0,
+        2672.0,
+        2744.0,
+        2848.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbp346wnq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2758,
+      "image_id": 2759,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        1177.0,
+        0.0,
+        2919.0,
+        1505.0
+      ],
+      "area": 87519.0,
+      "obb": [
+        2636.5,
+        752.5,
+        2919.0,
+        1505.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/ibig02asq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2759,
+      "image_id": 2760,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        0.0,
+        4096.0,
+        2912.0
+      ],
+      "area": 696736.0,
+      "obb": [
+        2048.0,
+        1456.0,
+        4096.0,
+        2912.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jbp315ysq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2760,
+      "image_id": 2761,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        4.0,
+        1738.0,
+        1314.0,
+        2358.0
+      ],
+      "area": 136785.0,
+      "obb": [
+        661.0,
+        2917.0,
+        1314.0,
+        2358.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9cv55e2q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2761,
+      "image_id": 2762,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        2426.0,
+        1661.0,
+        1670.0,
+        2435.0
+      ],
+      "area": 29991.0,
+      "obb": [
+        3261.0,
+        2878.5,
+        1670.0,
+        2435.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j8f849naq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2762,
+      "image_id": 2763,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        1044.0,
+        1942.0,
+        3052.0
+      ],
+      "area": 75915.0,
+      "obb": [
+        971.0,
+        2570.0,
+        1942.0,
+        3052.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jcu101flq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2763,
+      "image_id": 2764,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        687.0,
+        4096.0,
+        1001.0
+      ],
+      "area": 180645.0,
+      "obb": [
+        2048.0,
+        1187.5,
+        4096.0,
+        1001.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/jdnn06v1q_flc.fits_all_objects.png"
+    },
+    {
+      "id": 2764,
+      "image_id": 2765,
+      "category_id": 1,
+      "iscrowd": 0,
+      "bbox": [
+        0.0,
+        760.0,
+        4096.0,
+        311.0
+      ],
+      "area": 457135.0,
+      "obb": [
+        2048.0,
+        915.5,
+        4096.0,
+        311.0,
+        0.0
+      ],
+      "segmentation_mask": "satstreaks/Data/Masks/j9op24ufq_flc.fits_all_objects.png"
+    },
+    {
+      "id": 3076,
       "image_id": 1000005,
       "category_id": 1,
       "segmentation": [
@@ -995,7 +8474,7 @@
       }
     },
     {
-      "id": 6,
+      "id": 3079,
       "image_id": 1000008,
       "category_id": 1,
       "segmentation": [
@@ -1037,7 +8516,7 @@
       }
     },
     {
-      "id": 11,
+      "id": 3084,
       "image_id": 1000013,
       "category_id": 1,
       "segmentation": [
@@ -1079,7 +8558,7 @@
       }
     },
     {
-      "id": 25,
+      "id": 3098,
       "image_id": 1000030,
       "category_id": 1,
       "segmentation": [
@@ -1121,7 +8600,7 @@
       }
     },
     {
-      "id": 27,
+      "id": 3100,
       "image_id": 1000032,
       "category_id": 1,
       "segmentation": [
@@ -1163,7 +8642,7 @@
       }
     },
     {
-      "id": 30,
+      "id": 3103,
       "image_id": 1000035,
       "category_id": 1,
       "segmentation": [
@@ -1205,7 +8684,7 @@
       }
     },
     {
-      "id": 32,
+      "id": 3105,
       "image_id": 1000037,
       "category_id": 1,
       "segmentation": [
@@ -1247,7 +8726,7 @@
       }
     },
     {
-      "id": 44,
+      "id": 3117,
       "image_id": 1000051,
       "category_id": 1,
       "segmentation": [
@@ -1289,7 +8768,7 @@
       }
     },
     {
-      "id": 46,
+      "id": 3119,
       "image_id": 1000053,
       "category_id": 1,
       "segmentation": [
@@ -1331,7 +8810,7 @@
       }
     },
     {
-      "id": 48,
+      "id": 3121,
       "image_id": 1000055,
       "category_id": 1,
       "segmentation": [
@@ -1373,7 +8852,7 @@
       }
     },
     {
-      "id": 57,
+      "id": 3130,
       "image_id": 1000064,
       "category_id": 1,
       "segmentation": [
@@ -1415,7 +8894,7 @@
       }
     },
     {
-      "id": 65,
+      "id": 3138,
       "image_id": 1000072,
       "category_id": 1,
       "segmentation": [
@@ -1457,7 +8936,7 @@
       }
     },
     {
-      "id": 67,
+      "id": 3140,
       "image_id": 1000074,
       "category_id": 1,
       "segmentation": [
@@ -1499,7 +8978,7 @@
       }
     },
     {
-      "id": 71,
+      "id": 3144,
       "image_id": 1000078,
       "category_id": 1,
       "segmentation": [
@@ -1541,7 +9020,7 @@
       }
     },
     {
-      "id": 73,
+      "id": 3146,
       "image_id": 1000080,
       "category_id": 1,
       "segmentation": [
@@ -1583,7 +9062,7 @@
       }
     },
     {
-      "id": 80,
+      "id": 3153,
       "image_id": 1000088,
       "category_id": 1,
       "segmentation": [
@@ -1625,7 +9104,7 @@
       }
     },
     {
-      "id": 81,
+      "id": 3154,
       "image_id": 1000089,
       "category_id": 1,
       "segmentation": [
@@ -1667,7 +9146,7 @@
       }
     },
     {
-      "id": 89,
+      "id": 3162,
       "image_id": 1000097,
       "category_id": 1,
       "segmentation": [
@@ -1709,7 +9188,7 @@
       }
     },
     {
-      "id": 93,
+      "id": 3166,
       "image_id": 1000101,
       "category_id": 1,
       "segmentation": [
@@ -1751,7 +9230,7 @@
       }
     },
     {
-      "id": 94,
+      "id": 3167,
       "image_id": 1000102,
       "category_id": 1,
       "segmentation": [
@@ -1793,7 +9272,7 @@
       }
     },
     {
-      "id": 95,
+      "id": 3168,
       "image_id": 1000103,
       "category_id": 1,
       "segmentation": [
@@ -1835,7 +9314,7 @@
       }
     },
     {
-      "id": 99,
+      "id": 3172,
       "image_id": 1000123,
       "category_id": 1,
       "segmentation": [
@@ -1877,7 +9356,7 @@
       }
     },
     {
-      "id": 103,
+      "id": 3176,
       "image_id": 1000127,
       "category_id": 1,
       "segmentation": [
@@ -1919,7 +9398,7 @@
       }
     },
     {
-      "id": 104,
+      "id": 3177,
       "image_id": 1000128,
       "category_id": 1,
       "segmentation": [
@@ -1961,7 +9440,7 @@
       }
     },
     {
-      "id": 112,
+      "id": 3185,
       "image_id": 1000136,
       "category_id": 1,
       "segmentation": [
@@ -2003,7 +9482,7 @@
       }
     },
     {
-      "id": 114,
+      "id": 3187,
       "image_id": 1000138,
       "category_id": 1,
       "segmentation": [
@@ -2045,7 +9524,7 @@
       }
     },
     {
-      "id": 117,
+      "id": 3190,
       "image_id": 1000143,
       "category_id": 1,
       "segmentation": [
@@ -2087,7 +9566,7 @@
       }
     },
     {
-      "id": 127,
+      "id": 3200,
       "image_id": 1000154,
       "category_id": 1,
       "segmentation": [
@@ -2129,7 +9608,7 @@
       }
     },
     {
-      "id": 141,
+      "id": 3214,
       "image_id": 1000175,
       "category_id": 1,
       "segmentation": [
@@ -2171,7 +9650,7 @@
       }
     },
     {
-      "id": 142,
+      "id": 3215,
       "image_id": 1000176,
       "category_id": 1,
       "segmentation": [
@@ -2213,7 +9692,7 @@
       }
     },
     {
-      "id": 146,
+      "id": 3219,
       "image_id": 1000180,
       "category_id": 1,
       "segmentation": [
@@ -2255,7 +9734,7 @@
       }
     },
     {
-      "id": 156,
+      "id": 3229,
       "image_id": 1000195,
       "category_id": 1,
       "segmentation": [
@@ -2297,7 +9776,7 @@
       }
     },
     {
-      "id": 159,
+      "id": 3232,
       "image_id": 1000198,
       "category_id": 1,
       "segmentation": [
@@ -2339,7 +9818,7 @@
       }
     },
     {
-      "id": 161,
+      "id": 3234,
       "image_id": 1000200,
       "category_id": 1,
       "segmentation": [
@@ -2381,7 +9860,7 @@
       }
     },
     {
-      "id": 163,
+      "id": 3236,
       "image_id": 1000203,
       "category_id": 1,
       "segmentation": [
@@ -2423,7 +9902,7 @@
       }
     },
     {
-      "id": 166,
+      "id": 3239,
       "image_id": 1000206,
       "category_id": 1,
       "segmentation": [
@@ -2465,7 +9944,7 @@
       }
     },
     {
-      "id": 167,
+      "id": 3240,
       "image_id": 1000207,
       "category_id": 1,
       "segmentation": [
@@ -2507,7 +9986,7 @@
       }
     },
     {
-      "id": 175,
+      "id": 3248,
       "image_id": 1000215,
       "category_id": 1,
       "segmentation": [
@@ -2549,7 +10028,7 @@
       }
     },
     {
-      "id": 182,
+      "id": 3255,
       "image_id": 1000222,
       "category_id": 1,
       "segmentation": [
@@ -2591,7 +10070,7 @@
       }
     },
     {
-      "id": 196,
+      "id": 3269,
       "image_id": 1000236,
       "category_id": 1,
       "segmentation": [
@@ -2633,7 +10112,7 @@
       }
     },
     {
-      "id": 203,
+      "id": 3276,
       "image_id": 1000243,
       "category_id": 1,
       "segmentation": [
@@ -2675,7 +10154,7 @@
       }
     },
     {
-      "id": 214,
+      "id": 3287,
       "image_id": 1000259,
       "category_id": 1,
       "segmentation": [
@@ -2717,7 +10196,7 @@
       }
     },
     {
-      "id": 216,
+      "id": 3289,
       "image_id": 1000261,
       "category_id": 1,
       "segmentation": [
@@ -2759,7 +10238,7 @@
       }
     },
     {
-      "id": 217,
+      "id": 3290,
       "image_id": 1000262,
       "category_id": 1,
       "segmentation": [
@@ -2801,7 +10280,7 @@
       }
     },
     {
-      "id": 220,
+      "id": 3293,
       "image_id": 1000265,
       "category_id": 1,
       "segmentation": [
@@ -2843,7 +10322,7 @@
       }
     },
     {
-      "id": 223,
+      "id": 3296,
       "image_id": 1000268,
       "category_id": 1,
       "segmentation": [
@@ -2885,7 +10364,7 @@
       }
     },
     {
-      "id": 224,
+      "id": 3297,
       "image_id": 1000269,
       "category_id": 1,
       "segmentation": [
@@ -2927,7 +10406,7 @@
       }
     },
     {
-      "id": 225,
+      "id": 3298,
       "image_id": 1000270,
       "category_id": 1,
       "segmentation": [
@@ -2969,7 +10448,7 @@
       }
     },
     {
-      "id": 228,
+      "id": 3301,
       "image_id": 1000273,
       "category_id": 1,
       "segmentation": [
@@ -3011,7 +10490,7 @@
       }
     },
     {
-      "id": 233,
+      "id": 3306,
       "image_id": 1000279,
       "category_id": 1,
       "segmentation": [
@@ -3053,7 +10532,7 @@
       }
     },
     {
-      "id": 234,
+      "id": 3307,
       "image_id": 1000280,
       "category_id": 1,
       "segmentation": [
@@ -3095,7 +10574,7 @@
       }
     },
     {
-      "id": 238,
+      "id": 3311,
       "image_id": 1000284,
       "category_id": 1,
       "segmentation": [
@@ -3137,7 +10616,7 @@
       }
     },
     {
-      "id": 250,
+      "id": 3323,
       "image_id": 1000297,
       "category_id": 1,
       "segmentation": [
@@ -3179,7 +10658,7 @@
       }
     },
     {
-      "id": 252,
+      "id": 3325,
       "image_id": 1000299,
       "category_id": 1,
       "segmentation": [
@@ -3221,7 +10700,7 @@
       }
     },
     {
-      "id": 257,
+      "id": 3330,
       "image_id": 1000311,
       "category_id": 1,
       "segmentation": [
@@ -3263,7 +10742,7 @@
       }
     },
     {
-      "id": 269,
+      "id": 3342,
       "image_id": 1000323,
       "category_id": 1,
       "segmentation": [
@@ -3305,7 +10784,7 @@
       }
     },
     {
-      "id": 270,
+      "id": 3343,
       "image_id": 1000324,
       "category_id": 1,
       "segmentation": [
@@ -3347,7 +10826,7 @@
       }
     },
     {
-      "id": 271,
+      "id": 3344,
       "image_id": 1000325,
       "category_id": 1,
       "segmentation": [
@@ -3389,7 +10868,7 @@
       }
     },
     {
-      "id": 273,
+      "id": 3346,
       "image_id": 1000327,
       "category_id": 1,
       "segmentation": [
@@ -3431,7 +10910,7 @@
       }
     },
     {
-      "id": 274,
+      "id": 3347,
       "image_id": 1000328,
       "category_id": 1,
       "segmentation": [
@@ -3473,7 +10952,7 @@
       }
     },
     {
-      "id": 276,
+      "id": 3349,
       "image_id": 1000330,
       "category_id": 1,
       "segmentation": [
@@ -3515,7 +10994,7 @@
       }
     },
     {
-      "id": 281,
+      "id": 3354,
       "image_id": 1000347,
       "category_id": 1,
       "segmentation": [
@@ -3557,7 +11036,7 @@
       }
     },
     {
-      "id": 284,
+      "id": 3357,
       "image_id": 1000350,
       "category_id": 1,
       "segmentation": [
@@ -3599,7 +11078,7 @@
       }
     },
     {
-      "id": 296,
+      "id": 3369,
       "image_id": 1000362,
       "category_id": 1,
       "segmentation": [
@@ -3641,7 +11120,7 @@
       }
     },
     {
-      "id": 300,
+      "id": 3373,
       "image_id": 1000366,
       "category_id": 1,
       "segmentation": [
@@ -3683,7 +11162,7 @@
       }
     },
     {
-      "id": 322,
+      "id": 3395,
       "image_id": 1000388,
       "category_id": 1,
       "segmentation": [
@@ -3725,7 +11204,7 @@
       }
     },
     {
-      "id": 323,
+      "id": 3396,
       "image_id": 1000389,
       "category_id": 1,
       "segmentation": [
@@ -3767,7 +11246,7 @@
       }
     },
     {
-      "id": 332,
+      "id": 3405,
       "image_id": 1000398,
       "category_id": 1,
       "segmentation": [
@@ -3809,7 +11288,7 @@
       }
     },
     {
-      "id": 344,
+      "id": 3417,
       "image_id": 1000410,
       "category_id": 1,
       "segmentation": [
@@ -3851,7 +11330,7 @@
       }
     },
     {
-      "id": 348,
+      "id": 3421,
       "image_id": 1000414,
       "category_id": 1,
       "segmentation": [
@@ -3893,7 +11372,7 @@
       }
     },
     {
-      "id": 352,
+      "id": 3425,
       "image_id": 1000418,
       "category_id": 1,
       "segmentation": [
@@ -3935,7 +11414,7 @@
       }
     },
     {
-      "id": 363,
+      "id": 3436,
       "image_id": 1000429,
       "category_id": 1,
       "segmentation": [
@@ -3977,7 +11456,7 @@
       }
     },
     {
-      "id": 367,
+      "id": 3440,
       "image_id": 1000433,
       "category_id": 1,
       "segmentation": [
@@ -4019,7 +11498,7 @@
       }
     },
     {
-      "id": 370,
+      "id": 3443,
       "image_id": 1000436,
       "category_id": 1,
       "segmentation": [
@@ -4061,7 +11540,7 @@
       }
     },
     {
-      "id": 373,
+      "id": 3446,
       "image_id": 1000441,
       "category_id": 1,
       "segmentation": [
@@ -4103,7 +11582,7 @@
       }
     },
     {
-      "id": 379,
+      "id": 3452,
       "image_id": 1000447,
       "category_id": 1,
       "segmentation": [
@@ -4145,7 +11624,7 @@
       }
     },
     {
-      "id": 387,
+      "id": 3460,
       "image_id": 1000455,
       "category_id": 1,
       "segmentation": [
@@ -4187,7 +11666,7 @@
       }
     },
     {
-      "id": 388,
+      "id": 3461,
       "image_id": 1000456,
       "category_id": 1,
       "segmentation": [
@@ -4229,7 +11708,7 @@
       }
     },
     {
-      "id": 389,
+      "id": 3462,
       "image_id": 1000457,
       "category_id": 1,
       "segmentation": [
@@ -4271,7 +11750,7 @@
       }
     },
     {
-      "id": 390,
+      "id": 3463,
       "image_id": 1000458,
       "category_id": 1,
       "segmentation": [
@@ -4313,7 +11792,7 @@
       }
     },
     {
-      "id": 394,
+      "id": 3467,
       "image_id": 1000462,
       "category_id": 1,
       "segmentation": [
@@ -4355,7 +11834,7 @@
       }
     },
     {
-      "id": 405,
+      "id": 3478,
       "image_id": 1000473,
       "category_id": 1,
       "segmentation": [
@@ -4397,7 +11876,7 @@
       }
     },
     {
-      "id": 408,
+      "id": 3481,
       "image_id": 1000476,
       "category_id": 1,
       "segmentation": [
@@ -4439,7 +11918,7 @@
       }
     },
     {
-      "id": 410,
+      "id": 3483,
       "image_id": 1000478,
       "category_id": 1,
       "segmentation": [
@@ -4481,7 +11960,7 @@
       }
     },
     {
-      "id": 429,
+      "id": 3502,
       "image_id": 1000502,
       "category_id": 1,
       "segmentation": [
@@ -4523,7 +12002,7 @@
       }
     },
     {
-      "id": 432,
+      "id": 3505,
       "image_id": 1000505,
       "category_id": 1,
       "segmentation": [
@@ -4565,7 +12044,7 @@
       }
     },
     {
-      "id": 438,
+      "id": 3511,
       "image_id": 1000514,
       "category_id": 1,
       "segmentation": [
@@ -4607,7 +12086,7 @@
       }
     },
     {
-      "id": 445,
+      "id": 3518,
       "image_id": 1000521,
       "category_id": 1,
       "segmentation": [
@@ -4649,7 +12128,7 @@
       }
     },
     {
-      "id": 459,
+      "id": 3532,
       "image_id": 1000535,
       "category_id": 1,
       "segmentation": [
@@ -4691,7 +12170,7 @@
       }
     },
     {
-      "id": 464,
+      "id": 3537,
       "image_id": 1000541,
       "category_id": 1,
       "segmentation": [
@@ -4733,7 +12212,7 @@
       }
     },
     {
-      "id": 469,
+      "id": 3542,
       "image_id": 1000546,
       "category_id": 1,
       "segmentation": [
@@ -4775,7 +12254,7 @@
       }
     },
     {
-      "id": 470,
+      "id": 3543,
       "image_id": 1000547,
       "category_id": 1,
       "segmentation": [
@@ -4817,7 +12296,7 @@
       }
     },
     {
-      "id": 473,
+      "id": 3546,
       "image_id": 1000550,
       "category_id": 1,
       "segmentation": [
@@ -4859,7 +12338,7 @@
       }
     },
     {
-      "id": 479,
+      "id": 3552,
       "image_id": 1000558,
       "category_id": 1,
       "segmentation": [
@@ -4901,7 +12380,7 @@
       }
     },
     {
-      "id": 505,
+      "id": 3578,
       "image_id": 1000585,
       "category_id": 1,
       "segmentation": [
@@ -4943,7 +12422,7 @@
       }
     },
     {
-      "id": 511,
+      "id": 3584,
       "image_id": 1000591,
       "category_id": 1,
       "segmentation": [
@@ -4985,7 +12464,7 @@
       }
     },
     {
-      "id": 512,
+      "id": 3585,
       "image_id": 1000592,
       "category_id": 1,
       "segmentation": [
@@ -5027,7 +12506,7 @@
       }
     },
     {
-      "id": 517,
+      "id": 3590,
       "image_id": 1000597,
       "category_id": 1,
       "segmentation": [
@@ -5069,7 +12548,7 @@
       }
     },
     {
-      "id": 519,
+      "id": 3592,
       "image_id": 1000599,
       "category_id": 1,
       "segmentation": [
@@ -5111,7 +12590,7 @@
       }
     },
     {
-      "id": 521,
+      "id": 3594,
       "image_id": 1000602,
       "category_id": 1,
       "segmentation": [
@@ -5153,7 +12632,7 @@
       }
     },
     {
-      "id": 541,
+      "id": 3614,
       "image_id": 1000630,
       "category_id": 1,
       "segmentation": [
@@ -5195,7 +12674,7 @@
       }
     },
     {
-      "id": 546,
+      "id": 3619,
       "image_id": 1000635,
       "category_id": 1,
       "segmentation": [
@@ -5237,7 +12716,7 @@
       }
     },
     {
-      "id": 549,
+      "id": 3622,
       "image_id": 1000638,
       "category_id": 1,
       "segmentation": [
@@ -5279,7 +12758,7 @@
       }
     },
     {
-      "id": 551,
+      "id": 3624,
       "image_id": 1000640,
       "category_id": 1,
       "segmentation": [
@@ -5321,7 +12800,7 @@
       }
     },
     {
-      "id": 558,
+      "id": 3631,
       "image_id": 1000648,
       "category_id": 1,
       "segmentation": [
@@ -5363,7 +12842,7 @@
       }
     },
     {
-      "id": 565,
+      "id": 3638,
       "image_id": 1000656,
       "category_id": 1,
       "segmentation": [
@@ -5405,7 +12884,7 @@
       }
     },
     {
-      "id": 568,
+      "id": 3641,
       "image_id": 1000659,
       "category_id": 1,
       "segmentation": [
@@ -5447,7 +12926,7 @@
       }
     },
     {
-      "id": 570,
+      "id": 3643,
       "image_id": 1000661,
       "category_id": 1,
       "segmentation": [
@@ -5489,7 +12968,7 @@
       }
     },
     {
-      "id": 574,
+      "id": 3647,
       "image_id": 1000665,
       "category_id": 1,
       "segmentation": [

@@ -23,8 +23,9 @@ def load(path: str) -> dict:
     """Load a FITS file and normalize for model input.
 
     Returns dict with keys:
-      array       — np.ndarray uint8 H×W×3 (Z-score normalized, 3-channel)
-      wcs         — astropy.wcs.WCS object (or None if header has no WCS)
+      array       — np.ndarray uint8 H×W×3 (ARGUS_NORM normalized, 3-channel)
+      wcs         — astropy.wcs.WCS object (or None if no FITS/sidecar WCS)
+      wcs_source  — "fits", "sidecar", or None
       exposure_time — float seconds (or None)
       filename    — str basename
       shape       — tuple (H, W)
@@ -40,7 +41,8 @@ def extract_wcs_metadata(wcs: WCS, pixel_coords: list[tuple]) -> list[dict]:
     """
 ```
 
-**Normalization rule:** Z-score, NOT min-max.
+**Normalization rule:** Use `ARGUS_NORM` and match training preprocessing.
+The current local Swin-T weights use Z-score, NOT min-max.
 - Clip pixel values to ±3σ from the image mean
 - Scale clipped range to [0, 255] uint8
 - Stack grayscale to 3 channels (shape H×W×3)
@@ -55,6 +57,7 @@ streaks into noise. Z-score preserves relative contrast.
 - [ ] `extract_wcs_metadata()` returns correct RA/Dec for image center pixel
 - [ ] Corrupted FITS file raises a clear exception, not a cryptic crash
 - [ ] Missing WCS header → `wcs` key is None, no crash
+- [ ] Same-stem `.wcs` sidecar loads when FITS header has no celestial WCS
 
 ---
 

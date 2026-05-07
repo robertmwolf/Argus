@@ -198,7 +198,14 @@ function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
  *   highlightIndex   — index of the detection to highlight (or null)
  *   onHover(index)   — called when mouse enters an OBB (null = leave)
  */
-export default function ResultViewer({ jobId, detections, highlightIndex, onHover }) {
+export default function ResultViewer({
+  jobId,
+  detections,
+  imageWidth,
+  imageHeight,
+  highlightIndex,
+  onHover,
+}) {
   const canvasRef = useRef(null)
   const imgRef = useRef(null)
   const [imgLoaded, setImgLoaded] = useState(false)
@@ -223,8 +230,10 @@ export default function ResultViewer({ jobId, detections, highlightIndex, onHove
     canvas.height = Math.round((canvas.clientWidth / img.naturalWidth) * img.naturalHeight)
 
     const ctx = canvas.getContext('2d')
-    const scaleX = canvas.width / img.naturalWidth
-    const scaleY = canvas.height / img.naturalHeight
+    const coordWidth = imageWidth || img.naturalWidth
+    const coordHeight = imageHeight || img.naturalHeight
+    const scaleX = canvas.width / coordWidth
+    const scaleY = canvas.height / coordHeight
 
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
@@ -245,15 +254,17 @@ export default function ResultViewer({ jobId, detections, highlightIndex, onHove
         drawLabel(ctx, det.obb, i, colour, alpha, scaleX, scaleY)
       }
     })
-  }, [imgLoaded, detections, highlightIndex])
+  }, [imgLoaded, detections, highlightIndex, imageWidth, imageHeight])
 
   const onMouseMove = (e) => {
     if (!canvasRef.current || !imgRef.current) return
     const rect = canvasRef.current.getBoundingClientRect()
     const mx = e.clientX - rect.left
     const my = e.clientY - rect.top
-    const scaleX = canvasRef.current.width / imgRef.current.naturalWidth
-    const scaleY = canvasRef.current.height / imgRef.current.naturalHeight
+    const coordWidth = imageWidth || imgRef.current.naturalWidth
+    const coordHeight = imageHeight || imgRef.current.naturalHeight
+    const scaleX = canvasRef.current.width / coordWidth
+    const scaleY = canvasRef.current.height / coordHeight
 
     let hit = null
     detections.forEach((det, i) => {

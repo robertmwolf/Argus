@@ -37,6 +37,24 @@ def _make_app(tmp_path: Path):
     return engine, queue, storage
 
 
+def test_copy_matching_wcs_sidecar_from_upload_storage(tmp_path, monkeypatch):
+    """Temporary pipeline FITS files should receive the uploaded .wcs sidecar."""
+    from api.main import _copy_matching_wcs_sidecar
+
+    monkeypatch.chdir(tmp_path)
+    job_id = "job-1"
+    upload_dir = tmp_path / "data" / "uploads" / job_id
+    upload_dir.mkdir(parents=True)
+    (upload_dir / "image.wcs").write_text("WCS SIDE")
+    temp_fits = tmp_path / "tmpabc.fits"
+    temp_fits.write_bytes(_FITS_MAGIC_BYTES)
+
+    copied = _copy_matching_wcs_sidecar("image.fits", temp_fits, job_id)
+
+    assert copied == temp_fits.with_suffix(".wcs")
+    assert copied.read_text() == "WCS SIDE"
+
+
 @pytest_asyncio.fixture
 async def client(tmp_path):
     """Async HTTP client with a fully isolated app instance."""
@@ -158,5 +176,7 @@ async def test_full_upload_poll_result_cycle(client, tmp_path):
     # Result should now be complete
     body = (await client.get(f"/api/result/{job_id}")).json()
     assert body["status"] == "complete"
+    assert body["image_width"] is not None
+    assert body["image_height"] is not None
     assert len(body["detections"]) == 1
     assert body["detections"][0]["confidence"] == pytest.approx(0.92)

@@ -1,5 +1,23 @@
 import { useEffect, useState } from 'react'
 
+const DEFAULT_COLUMN_WIDTHS = {
+  key: 140,
+  value: 320,
+  comment: 260,
+}
+
+const MIN_COLUMN_WIDTHS = {
+  key: 120,
+  value: 240,
+  comment: 220,
+}
+
+const MAX_COLUMN_WIDTHS = {
+  key: 320,
+  value: 720,
+  comment: 560,
+}
+
 // Fields shown in the collapsed summary view, in display order
 const SUMMARY_KEYS = [
   'DATE-OBS', 'DATE', 'OBJECT', 'EXPTIME', 'FILTER',
@@ -23,6 +41,8 @@ export default function FitsHeaderPanel({ jobId }) {
   const [cards, setCards] = useState(null)   // null = loading, [] = no header
   const [expanded, setExpanded] = useState(false)
   const [search, setSearch] = useState('')
+  const [columnWidths, setColumnWidths] = useState(DEFAULT_COLUMN_WIDTHS)
+  const [activeResize, setActiveResize] = useState(null)
 
   useEffect(() => {
     if (!jobId) return
@@ -33,6 +53,59 @@ export default function FitsHeaderPanel({ jobId }) {
       .catch(() => { if (!cancelled) setCards([]) })
     return () => { cancelled = true }
   }, [jobId])
+
+  useEffect(() => {
+    if (!activeResize) return undefined
+
+    const handlePointerMove = (event) => {
+      const deltaX = event.clientX - activeResize.startX
+      const minWidth = MIN_COLUMN_WIDTHS[activeResize.column]
+      const maxWidth = MAX_COLUMN_WIDTHS[activeResize.column]
+      const nextWidth = Math.min(
+        Math.max(activeResize.startWidth + deltaX, minWidth),
+        maxWidth
+      )
+
+      setColumnWidths((widths) => ({
+        ...widths,
+        [activeResize.column]: nextWidth,
+      }))
+    }
+
+    const handlePointerUp = () => {
+      setActiveResize(null)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerUp, { once: true })
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [activeResize])
+
+  const startColumnResize = (event, column) => {
+    event.preventDefault()
+    setActiveResize({
+      column,
+      startX: event.clientX,
+      startWidth: columnWidths[column],
+    })
+  }
+
+  const resetColumnWidth = (column) => {
+    setColumnWidths((widths) => ({
+      ...widths,
+      [column]: DEFAULT_COLUMN_WIDTHS[column],
+    }))
+  }
 
   if (cards === null) {
     return (
@@ -68,6 +141,8 @@ export default function FitsHeaderPanel({ jobId }) {
       : cards
     : summaryCards
 
+  const tableWidth = columnWidths.key + columnWidths.value + columnWidths.comment
+
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-900/50 overflow-hidden flex flex-col">
       {/* Panel header */}
@@ -96,25 +171,53 @@ export default function FitsHeaderPanel({ jobId }) {
       )}
 
       {/* Card table */}
-      <div className={`overflow-y-auto ${expanded ? 'max-h-72' : 'max-h-56'}`}>
+      <div className={`overflow-auto ${expanded ? 'max-h-72' : 'max-h-56'}`}>
         {filteredCards.length === 0 ? (
           <p className="px-4 py-4 text-xs text-slate-500 text-center">No matching keys.</p>
         ) : (
-          <table className="w-full text-xs">
+          <table
+            className="text-xs table-fixed"
+            style={{ width: `${tableWidth}px`, minWidth: '100%' }}
+          >
+            <colgroup>
+              <col style={{ width: `${columnWidths.key}px` }} />
+              <col style={{ width: `${columnWidths.value}px` }} />
+              <col style={{ width: `${columnWidths.comment}px` }} />
+            </colgroup>
+            <thead className="sticky top-0 z-10 bg-slate-900">
+              <tr className="border-b border-slate-700 text-left text-[0.65rem] uppercase text-slate-500">
+                <ResizableHeader
+                  label="Key"
+                  column="key"
+                  onResizeStart={startColumnResize}
+                  onReset={resetColumnWidth}
+                />
+                <ResizableHeader
+                  label="Value"
+                  column="value"
+                  onResizeStart={startColumnResize}
+                  onReset={resetColumnWidth}
+                />
+                <ResizableHeader
+                  label="Comment"
+                  column="comment"
+                  onResizeStart={startColumnResize}
+                  onReset={resetColumnWidth}
+                />
+              </tr>
+            </thead>
             <tbody>
               {filteredCards.map((card, i) => (
                 <tr key={i} className="border-b border-slate-800/60 hover:bg-slate-800/40 group">
-                  <td className="px-3 py-1.5 font-mono text-cyan-400 font-semibold whitespace-nowrap align-top w-24">
+                  <td className="px-3 py-1.5 font-mono text-cyan-400 font-semibold whitespace-nowrap align-top">
                     {card.key}
                   </td>
-                  <td className="px-3 py-1.5 font-mono text-slate-200 break-all align-top">
+                  <td className="px-3 py-1.5 font-mono text-slate-200 break-words align-top">
                     {formatValue(card.key, card.value)}
                   </td>
-                  {card.comment && (
-                    <td className="px-3 py-1.5 text-slate-500 align-top hidden xl:table-cell max-w-[12rem] truncate">
-                      {card.comment}
-                    </td>
-                  )}
+                  <td className="px-3 py-1.5 text-slate-500 align-top break-words">
+                    {card.comment ?? ''}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -136,5 +239,21 @@ export default function FitsHeaderPanel({ jobId }) {
         {expanded ? 'Show summary' : `Show all ${cards.length} header fields`}
       </button>
     </div>
+  )
+}
+
+function ResizableHeader({ label, column, onResizeStart, onReset }) {
+  return (
+    <th className="relative px-3 py-2 font-semibold tracking-wide">
+      {label}
+      <button
+        type="button"
+        aria-label={`Resize ${label} column`}
+        title={`Resize ${label} column`}
+        onPointerDown={(event) => onResizeStart(event, column)}
+        onDoubleClick={() => onReset(column)}
+        className="absolute right-0 top-0 h-full w-3 cursor-col-resize touch-none border-r border-slate-700/80 hover:border-cyan-500 focus:outline-none focus:border-cyan-400"
+      />
+    </th>
   )
 }

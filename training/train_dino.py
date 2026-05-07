@@ -308,6 +308,10 @@ def train(
     work_dir: Path,
     resume: bool = False,
     smoke_test: bool = False,
+    max_epochs: int | None = None,
+    val_interval: int | None = None,
+    checkpoint_interval: int | None = None,
+    load_from: str | None = None,
 ) -> None:
     """Launch DINO training with two-stage fine-tuning and cost guardrails.
 
@@ -316,6 +320,10 @@ def train(
         work_dir: Directory for checkpoints, logs, and val results.
         resume: If True, resume from the latest checkpoint in work_dir.
         smoke_test: If True, run 2-epoch sanity check and exit.
+        max_epochs: Optional override for local timeboxed retraining.
+        val_interval: Optional validation interval override, in epochs.
+        checkpoint_interval: Optional checkpoint interval override, in epochs.
+        load_from: Optional checkpoint to initialise training from.
     """
     try:
         from mmengine.config import Config
@@ -353,6 +361,18 @@ def train(
     cfg = Config.fromfile(config_path)
     cfg.work_dir = str(work_dir)
     cfg.resume = resume
+    if max_epochs is not None:
+        cfg.train_cfg.max_epochs = max_epochs
+        logger.info("Overriding max_epochs=%d", max_epochs)
+    if val_interval is not None:
+        cfg.train_cfg.val_interval = val_interval
+        logger.info("Overriding val_interval=%d", val_interval)
+    if checkpoint_interval is not None:
+        cfg.default_hooks.checkpoint.interval = checkpoint_interval
+        logger.info("Overriding checkpoint_interval=%d", checkpoint_interval)
+    if load_from:
+        cfg.load_from = load_from
+        logger.info("Initialising from checkpoint: %s", load_from)
     if os.environ.get("USE_DEV_SUBSET", "true").lower() in {"0", "false", "no"}:
         cfg.train_dataloader.dataset.ann_file = "annotations/train.json"
         cfg.val_dataloader.dataset.ann_file = "annotations/val.json"
@@ -433,6 +453,29 @@ def _parse_args() -> argparse.Namespace:
             "Completes in <5 minutes on an A100."
         ),
     )
+    parser.add_argument(
+        "--max-epochs",
+        type=int,
+        default=None,
+        help="Override config max_epochs, useful for local timeboxed retraining.",
+    )
+    parser.add_argument(
+        "--val-interval",
+        type=int,
+        default=None,
+        help="Override config validation interval in epochs.",
+    )
+    parser.add_argument(
+        "--checkpoint-interval",
+        type=int,
+        default=None,
+        help="Override config checkpoint interval in epochs.",
+    )
+    parser.add_argument(
+        "--load-from",
+        default=None,
+        help="Initial checkpoint path for fine-tuning.",
+    )
     return parser.parse_args()
 
 
@@ -466,6 +509,10 @@ if __name__ == "__main__":
             work_dir=work_dir,
             resume=args.resume,
             smoke_test=args.smoke_test,
+            max_epochs=args.max_epochs,
+            val_interval=args.val_interval,
+            checkpoint_interval=args.checkpoint_interval,
+            load_from=args.load_from,
         )
     except RuntimeError as exc:
         logger.error("%s", exc)

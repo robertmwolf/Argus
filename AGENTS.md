@@ -23,10 +23,11 @@ Progress:
 - ✅ Phase 8 (Evaluation): `eval/metrics.py`, `eval/benchmark.py` — mAP, angle error, per-band, DINO vs YOLO
 - ✅ Local training: Swin-T DINO (50 epochs, CPU) + YOLO11-OBB baseline — results in `results/phase8_benchmark.json`
 
-## Next Step: Cloud GPU Training (Lambda A100)
+## Next Step: Cloud GPU / Workstation Training
 Local dev results: Swin-T DINO mAP@0.5=0.657, precision=0.667, recall=0.733 (50-image dev subset, CPU).
 Phase 8 targets (≥94% precision, ≥97% recall) require Swin-L training on the full SatStreaks dataset.
 Run `scripts/prepare_cloud_training.py` before renting the GPU.
+For the current RTX 5070 Ti workstation handoff, follow `agent_docs/Training_Handoff.md`.
 See **Phase Sequencing** table below for the cloud training handoff checklist.
 
 ## Hardware
@@ -46,6 +47,7 @@ Always read the relevant agent_docs file before writing code:
 - `agent_docs/service_roadmap.md`    — Docker, deployment, cloud scale path
 - `agent_docs/test_strategy.md`      — how to measure and record baseline accuracy
 - `agent_docs/spacetrack.md`         — Space-Track API policy, TLE catalog setup, rate limits
+- `agent_docs/Training_Handoff.md`   — current RTX 5070 Ti Swin-L training handoff
 
 ## Stack
 - Python 3.11, conda environment named `satid`
@@ -70,7 +72,7 @@ Argus/
 │   ├── astrometry/plate_solver.py
 │   └── matching/            ← scorer, spacetrack_query, tle_store, spatial_filter, propagator, matcher
 ├── inference/               ← ML inference modules
-│   ├── fits_loader.py       ← FITS→tensor, Z-score normalisation (Phase 1 ✅)
+│   ├── fits_loader.py       ← FITS→tensor, normalisation + FITS/sidecar WCS (Phase 1 ✅)
 │   ├── device.py            ← get_device() helper — CPU/MPS/CUDA (Phase 2, next)
 │   ├── pipeline.py          ← main inference orchestrator (Phase 2)
 │   ├── postprocess.py       ← Radon angle refinement + NMS (Phase 3)
@@ -79,7 +81,7 @@ Argus/
 │   ├── convert_labels.py    ← OBB YOLO labels → COCO JSON (Phase 1 ✅)
 │   ├── dataset.py           ← FITSStreakDataset (Phase 1 ✅)
 │   ├── augmentations.py     ← albumentations pipeline + SyntheticStreakInject (Phase 1 ✅)
-│   ├── train_dino.py        ← Co-DINO training script (Phase 2)
+│   ├── train_dino.py        ← Co-DINO training script + checkpoint/timebox CLI overrides (Phase 2)
 │   └── train_baseline.py    ← YOLO11-OBB training script (Phase 2)
 ├── models/
 │   ├── dino/                ← MMDetection configs: streak_codino_swin_t.py, _swin_l.py
