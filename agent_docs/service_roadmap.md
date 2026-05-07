@@ -55,6 +55,14 @@ Queue: `asyncio.Queue`, worker runs as a background task in the same process.
 
 **Done when:** `curl -F file=@image.fits http://localhost:8000/api/upload`
 returns a job_id and polling `/api/result/{job_id}` eventually shows results.
+The result payload also returns `image_width` and `image_height` when the source
+dimensions can be read, allowing the frontend to scale detection overlays
+against the original FITS/PNG coordinate system.
+
+When a FITS image depends on an ASTAP/SkyTrack same-stem `.wcs` sidecar, the
+local upload workflow must keep the sidecar in upload storage or one of the
+known data locations so `api/main.py` can copy it beside the temporary FITS
+before inference.
 
 ---
 

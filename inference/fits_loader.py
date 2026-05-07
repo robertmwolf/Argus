@@ -25,13 +25,14 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import warnings
 from pathlib import Path
 from typing import Any
 
 import cv2
 import numpy as np
 from astropy.io import fits
-from astropy.wcs import WCS
+from astropy.wcs import FITSFixedWarning, WCS
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,37 @@ logger = logging.getLogger(__name__)
 # 'zscore'      — current dino_tiny.pth (trained on dev subset, CPU)
 # 'autostretch' — future cloud-trained Swin-L (retrain with ARGUS_NORM=autostretch)
 _NORM_MODE: str = os.environ.get("ARGUS_NORM", "zscore").lower()
+
+
+def _valid_celestial_wcs(header: fits.Header) -> WCS | None:
+    """Return a celestial WCS from *header*, or None if unavailable."""
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FITSFixedWarning)
+            wcs = WCS(header)
+        if wcs.naxis == 0 or not wcs.has_celestial:
+            return None
+        return wcs
+    except Exception:
+        return None
+
+
+def _load_sidecar_wcs(path: Path) -> WCS | None:
+    """Load same-stem ASTAP/SkyTrack .wcs sidecar if the FITS lacks WCS."""
+    for suffix in (".wcs", ".WCS"):
+        sidecar = path.with_suffix(suffix)
+        if not sidecar.exists():
+            continue
+        try:
+            header = fits.Header.fromtextfile(sidecar)
+        except Exception as exc:
+            logger.warning("Could not read WCS sidecar %s: %s", sidecar.name, exc)
+            continue
+        wcs = _valid_celestial_wcs(header)
+        if wcs is not None:
+            logger.debug("Loaded WCS from sidecar %s", sidecar)
+            return wcs
+    return None
 
 
 def _normalise_zscore(arr: np.ndarray) -> np.ndarray:
@@ -103,6 +135,7 @@ class FITSLoader:
               observer_lon   — float degrees or None
               observer_alt_m — float metres or None
               norm_mode      — str, normalisation mode actually applied
+              wcs_source     — 'fits', 'sidecar', or None
 
         Raises:
             FileNotFoundError: If the file does not exist.
@@ -146,12 +179,11 @@ class FITSLoader:
                 array_3ch = np.stack([arr_u8, arr_u8, arr_u8], axis=-1)
 
                 # --- WCS -----------------------------------------------------
-                try:
-                    wcs = WCS(header)
-                    if wcs.naxis == 0 or not wcs.has_celestial:
-                        wcs = None
-                except Exception:
-                    wcs = None
+                wcs = _valid_celestial_wcs(header)
+                wcs_source = "fits" if wcs is not None else None
+                if wcs is None:
+                    wcs = _load_sidecar_wcs(path)
+                    wcs_source = "sidecar" if wcs is not None else None
 
                 # --- Exposure time (accept common header spellings) ----------
                 exposure_time: float | None = None
@@ -200,6 +232,7 @@ class FITSLoader:
                     "observer_lon":   _float_header("SITELONG"),
                     "observer_alt_m": _float_header("SITEELEV"),
                     "norm_mode":      norm,
+                    "wcs_source":     wcs_source,
                 }
         except fits.verify.VerifyError as exc:
             raise ValueError(f"Invalid FITS file {path.name}: {exc}") from exc

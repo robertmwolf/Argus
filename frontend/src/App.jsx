@@ -137,6 +137,8 @@ export default function App() {
                 <ResultViewer
                   jobId={result.jobId}
                   detections={result.detections}
+                  imageWidth={result.image_width}
+                  imageHeight={result.image_height}
                   highlightIndex={highlightIndex}
                   onHover={setHighlightIndex}
                 />

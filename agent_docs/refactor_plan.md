@@ -97,7 +97,7 @@ can understand the structure without reading any documentation first.
 ## Issue 1 — `src/` should be renamed `classical/`
 
 **Why it matters:**
-`src/` is the Phase 0 classical ASTRiDE + SGP4 pipeline.  CLAUDE.md says it is
+`src/` is the Phase 0 classical ASTRiDE + SGP4 pipeline.  AGENTS.md says it is
 "complete, do not modify."  The name `src/` communicates nothing about this.
 Renaming to `classical/` makes the purpose and status of the package
 immediately legible — it is the classical detection baseline, frozen as a
@@ -110,7 +110,7 @@ research reference.
   (only two locations: `src/matching/matcher.py` and `inference/crossid.py`)
 - Rename test files: `tests/test_classical_detector.py` etc. already use
   descriptive names; only the `from src.` import lines need updating
-- Update CLAUDE.md: replace all `src/` references with `classical/`
+- Update AGENTS.md: replace all `src/` references with `classical/`
 - Update `agent_docs/architecture.md` (will become `docs/architecture.md`)
 
 **Effort:** 30 minutes.  Pure rename — zero logic changes.
@@ -128,7 +128,7 @@ project's documentation root and should be called `docs/`.
 
 **Changes required:**
 - Rename directory: `agent_docs/` → `docs/`
-- Update CLAUDE.md: replace `agent_docs/` references with `docs/`
+- Update AGENTS.md: replace `agent_docs/` references with `docs/`
 - Update any script or test that references the path directly
 
 **Effort:** 15 minutes.
@@ -152,7 +152,7 @@ ecosystem.
   (`models/dino/...` → `configs/dino/...`)
 - Update `models/dino/streak_codino_swin_t.py` `custom_imports` path if it
   references a path rather than a module
-- Update CLAUDE.md and docs references
+- Update AGENTS.md and docs references
 
 **Effort:** 20 minutes.
 
@@ -329,7 +329,7 @@ are broken across commits.
 2. **Issue 8** — Fix `requirements.txt` header (2 min)
 3. **Issues 1–3** — Directory renames: `src/` → `classical/`, `agent_docs/` → `docs/`, `models/` → `configs/`
    - Update all internal references in the same commit
-   - Update `CLAUDE.md` in the same commit
+   - Update `AGENTS.md` in the same commit
 4. **Issue 4** — Create `common/`, move shared modules, update all callers
 5. **Issue 5** — Add `pyproject.toml`, verify `pip install -e .` works
 6. **Issue 6** — Add `scripts/run_classical.py` CLI entry point

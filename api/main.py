@@ -17,6 +17,7 @@ import io
 import json
 import logging
 import os
+import shutil
 import tempfile
 import uuid
 from contextlib import asynccontextmanager
@@ -36,6 +37,48 @@ _MAX_UPLOAD_BYTES = 300 * 1024 * 1024  # 100 MB
 _ALLOWED_EXTENSIONS = {".fits", ".fit", ".fts", ".png"}
 # FITS magic: first 8 bytes are "SIMPLE  " (with trailing spaces)
 _FITS_MAGIC = b"SIMPLE  "
+
+
+def _copy_matching_wcs_sidecar(filename: str, fits_path: Path, job_id: str | None = None) -> Path | None:
+    """Copy a same-stem WCS sidecar beside a temporary FITS path if available.
+
+    API uploads are processed from a temporary file, which breaks the normal
+    same-directory ``.wcs`` lookup used by ``FITSLoader``.  For local research
+    workflows, recover the sidecar from common ARGUS data locations and place it
+    next to the temp FITS so pixel-to-sky conversion still works.
+
+    Args:
+        filename: Original uploaded filename.
+        fits_path: Temporary FITS path passed to the inference pipeline.
+        job_id: Optional observation/job UUID for local upload storage lookup.
+
+    Returns:
+        Path to the copied sidecar, or None if no sidecar was found.
+    """
+    stem = Path(filename).stem
+    original = Path(filename)
+    candidates: list[Path] = []
+
+    for suffix in (".wcs", ".WCS"):
+        if original.parent != Path("."):
+            candidates.append(original.with_suffix(suffix))
+        if job_id:
+            candidates.append(Path("data/uploads") / job_id / f"{stem}{suffix}")
+        candidates.extend(
+            [
+                Path("data/GTImages") / f"{stem}{suffix}",
+                Path("data/raw") / f"{stem}{suffix}",
+                Path("data/sample") / f"{stem}{suffix}",
+            ]
+        )
+
+    for candidate in candidates:
+        if candidate.exists():
+            dest = fits_path.with_suffix(candidate.suffix)
+            shutil.copyfile(candidate, dest)
+            logger.debug("Copied WCS sidecar %s → %s", candidate, dest)
+            return dest
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -129,6 +172,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
         with tempfile.NamedTemporaryFile(suffix=Path(filename).suffix, delete=False) as f:
             f.write(fits_data)
             tmp_path = Path(f.name)
+        sidecar_path = _copy_matching_wcs_sidecar(filename, tmp_path, job_id)
 
         # pipeline_run is patched in tests via unittest.mock.
         # Set FAST_MODE=true in the environment to skip Radon + cross-ID.
@@ -196,6 +240,8 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
                 obs.status = "failed"
                 await session.commit()
     finally:
+        if "sidecar_path" in locals() and sidecar_path is not None:
+            sidecar_path.unlink(missing_ok=True)
         if tmp_path and tmp_path.exists():
             tmp_path.unlink(missing_ok=True)
 
@@ -237,6 +283,40 @@ def _extract_fits_header(data: bytes) -> list[dict] | None:
     except Exception:
         logger.exception("FITS header extraction failed")
         return None
+
+
+def _extract_image_shape(data: bytes, filename: str) -> tuple[int, int] | None:
+    """Return original image dimensions as ``(width, height)``.
+
+    Args:
+        data: Raw uploaded FITS or PNG bytes.
+        filename: Original upload filename, used to select the parser.
+
+    Returns:
+        ``(width, height)`` in source-image pixels, or None on failure.
+    """
+    try:
+        ext = Path(filename).suffix.lower()
+        if ext in {".fits", ".fit", ".fts"}:
+            from astropy.io import fits as afits
+
+            with afits.open(io.BytesIO(data)) as hdul:
+                for hdu in hdul:
+                    if hdu.data is None or hdu.data.ndim < 2:
+                        continue
+                    img_data = hdu.data
+                    while img_data.ndim > 2:
+                        img_data = img_data[0]
+                    height, width = img_data.shape[:2]
+                    return int(width), int(height)
+        if ext == ".png":
+            from PIL import Image
+
+            with Image.open(io.BytesIO(data)) as img:
+                return int(img.width), int(img.height)
+    except Exception:
+        logger.exception("Image shape extraction failed")
+    return None
 
 
 def _render_fits_preview(data: bytes) -> bytes | None:
@@ -424,6 +504,7 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
         obs = await session.get(Observation, job_id)
         if obs is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+        filename = obs.filename
 
         det_rows = (
             await session.execute(
@@ -466,11 +547,20 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
                 ],
             })
 
+        image_shape = None
+        try:
+            upload_bytes = await request.app.state.storage.load_upload(job_id, filename)
+            image_shape = _extract_image_shape(upload_bytes, filename)
+        except Exception:
+            logger.exception("Could not determine source image dimensions for job %s", job_id)
+
         return {
             "job_id": job_id,
             "status": obs.status,
-            "filename": obs.filename,
+            "filename": filename,
             "obs_epoch": obs.obs_epoch,
+            "image_width": image_shape[0] if image_shape else None,
+            "image_height": image_shape[1] if image_shape else None,
             "detections": detections,
         }
 

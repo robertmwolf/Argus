@@ -117,14 +117,55 @@ print(result[0]['OBJECT_NAME'])  # Should print: ISS (ZARYA)
 **What it is:** 3,073 densely annotated real images of satellite streaks
 from Hubble Space Telescope (114,607 images scanned via citizen science)
 and NASA Satellite Streak Watcher project (233 ground-based images).
-Includes segmentation masks and bounding boxes.
+Includes processed PNG/JPEG images and segmentation masks.
 
 **GitHub:** https://github.com/jijup/SatStreaks
 **Paper:** CRV 2024 — "SatStreaks: Towards Supervised Learning for
 Delineating Satellite Streaks from Astronomical Images"
 
 **Note:** These are not FITS files — they are processed PNG/JPEG.
-Use for Phase 2 YOLO-OBB annotation training only, not Phase 1.
+Use for DINO/YOLO training only, not Phase 1 FITS parsing.
+
+ARGUS converts SatStreaks masks into detector annotations during split merge:
+
+```bash
+python scripts/merge_annotations.py --seed 42 --val-fraction 0.2
+```
+
+The merge script reads each image size, computes the foreground mask bounding
+box and pixel area, and writes real COCO `bbox` values into
+`data/annotations/train.json`, `val.json`, and `test.json`. Entries with
+missing or empty masks are skipped. GTImages labeled and negative examples are
+merged into the train/validation pool unless `--satstreaks-only` is supplied.
+
+---
+
+## Combined Training Splits
+
+Current training split generation uses:
+
+```bash
+python scripts/convert_gtimages.py \
+    --strk-dir data/GTImages \
+    --output data/annotations/gtimages.json \
+    --negatives-output data/annotations/gtimages_negatives.json
+
+python scripts/merge_annotations.py --seed 42 --val-fraction 0.2
+```
+
+Outputs:
+
+```text
+data/annotations/train.json
+data/annotations/val.json
+data/annotations/test.json
+```
+
+SatStreaks keeps its provided train/val/test split. GTImages labeled and
+negative images are shuffled with the configured seed and split according to
+`--val-fraction`; GTImages does not enter the held-out SatStreaks test split.
+The optional handoff manifest at `data/Manifest.txt` records the staged dataset
+counts used for external workstation training.
 
 ---
 

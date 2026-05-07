@@ -101,6 +101,31 @@ class TestFITSLoaderLoad:
         result = FITSLoader().load(fits_path)
         assert result["wcs"] is not None
         assert isinstance(result["wcs"], WCS)
+        assert result["wcs_source"] == "fits"
+
+    def test_wcs_loaded_from_sidecar_when_fits_header_has_none(self, tmp_path: Path) -> None:
+        fits_path = _make_fits(tmp_path, with_wcs=False)
+        sidecar_header = fits.Header()
+        sidecar_header["SIMPLE"] = True
+        sidecar_header["BITPIX"] = 16
+        sidecar_header["NAXIS"] = 0
+        sidecar_header["CTYPE1"] = "RA---TAN"
+        sidecar_header["CTYPE2"] = "DEC--TAN"
+        sidecar_header["CRVAL1"] = 180.0
+        sidecar_header["CRVAL2"] = 45.0
+        sidecar_header["CRPIX1"] = 32.0
+        sidecar_header["CRPIX2"] = 32.0
+        sidecar_header["CDELT1"] = -0.001
+        sidecar_header["CDELT2"] = 0.001
+        fits_path.with_suffix(".wcs").write_text(
+            sidecar_header.tostring(sep="\n", endcard=True, padding=False)
+        )
+
+        result = FITSLoader().load(fits_path)
+
+        assert result["wcs"] is not None
+        assert isinstance(result["wcs"], WCS)
+        assert result["wcs_source"] == "sidecar"
 
     def test_nonexistent_path_raises(self, tmp_path: Path) -> None:
         loader = FITSLoader()

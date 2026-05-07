@@ -47,6 +47,7 @@ Argus/
 │   ├── dataset.py         ← FITSStreakDataset (PyTorch Dataset)
 │   ├── augmentations.py   ← Albumentations + synthetic streak injection
 │   ├── make_dev_subset.py ← 50-image reproducible dev subset
+│   ├── merge_annotations.py ← SatStreaks masks + GTImages → COCO splits
 │   └── train_dino.py      ← training entry point
 ├── eval/
 │   └── benchmark.py       ← reproduces StreakMind paper metrics
@@ -224,6 +225,38 @@ USE_DEV_SUBSET=true   # local dev (default)
 USE_DEV_SUBSET=false  # cloud training
 ```
 
+`scripts/merge_annotations.py` builds the current full split files from
+SatStreaks and GTImages:
+
+```bash
+python scripts/convert_gtimages.py \
+  --strk-dir data/GTImages \
+  --output data/annotations/gtimages.json \
+  --negatives-output data/annotations/gtimages_negatives.json
+
+python scripts/merge_annotations.py --seed 42 --val-fraction 0.2
+```
+
+SatStreaks entries now require a real mask file. The merge script reads image
+dimensions with Pillow, converts each foreground mask into a COCO `bbox`,
+records mask foreground pixel count as `area`, and stores a coarse `obb` using
+the mask bbox center. Empty or missing masks are skipped. GTImages IDs are
+offset by `1_000_000` so they cannot collide with SatStreaks IDs.
+
+---
+
+## FITS WCS Loading
+
+`inference/fits_loader.py` returns both `wcs` and `wcs_source`. WCS lookup order:
+
+1. Celestial WCS in the FITS header.
+2. Same-stem `.wcs` / `.WCS` sidecar, especially ASTAP/SkyTrack GTImages files.
+3. `None` when no valid WCS is available.
+
+API upload processing copies an available sidecar next to the temporary FITS
+path before running inference, preserving RA/Dec conversion even though the
+uploaded file is processed outside its original directory.
+
 ---
 
 ## MPS Compatibility Rules
@@ -277,6 +310,21 @@ def safe_nms(boxes, scores, iou_threshold):
 Checkpoints saved every 5 epochs to `weights/checkpoints/`.
 Best checkpoint (highest val mAP) saved to `weights/best.pth`.
 
+Training CLI overrides are available for checkpoint-initialised or timeboxed
+runs:
+
+```bash
+python -m training.train_dino \
+  --work-dir weights/local_run \
+  --load-from weights/local_run/best_coco_bbox_mAP_epoch_50.pth \
+  --max-epochs 10 \
+  --val-interval 2 \
+  --checkpoint-interval 2
+```
+
+Use `--resume` to resume an interrupted run from the work directory. Use
+`--load-from` when starting a new run initialized from an existing checkpoint.
+
 **Cost guardrail** — after epoch 1, print:
 ```
 Epoch 1/50 complete in Xm Ys.
@@ -311,11 +359,10 @@ When `FAST_MODE=true`:
 
 ---
 
-## Not Yet Implemented (stubs)
+## Deferred Work (stubs)
 
 Leave these as `raise NotImplementedError(...)` until Phase 7 weights exist:
 
-- Satellite cross-identification with live Space-Track API
 - Multi-frame tracklet association (DB schema defined, logic stubbed)
 - Swin-L → Swin-T weight distillation
 

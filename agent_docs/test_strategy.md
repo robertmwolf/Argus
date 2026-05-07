@@ -31,6 +31,7 @@ tests/
 ├── test_crossid.py              ← Phase 3: TLE cross-identification
 ├── test_db.py                   ← Phase 4: async ORM models
 ├── test_api.py                  ← Phase 5: FastAPI endpoints
+│                                  includes source image dimensions and WCS sidecar copy
 ├── test_eval.py                 ← Phase 8: metrics + benchmark
 └── test_real_images.py          ← real FITS images (auto-skipped when dir empty)
 ```
@@ -116,6 +117,14 @@ pytest tests/ -k "streak" -v
 # Live Space-Track API tests (requires SPACETRACK_USER + SPACETRACK_PASS):
 pytest tests/ -m integration -v
 ```
+
+Recent API/FITS loader coverage to preserve:
+
+- Same-stem `.wcs` sidecars are loaded when the FITS header lacks celestial WCS.
+- API upload processing copies matching sidecars from local upload storage or
+  known data locations before running the pipeline.
+- `/api/result/{job_id}` includes `image_width` and `image_height` so frontend
+  overlays can scale original pixel coordinates onto preview images.
 
 ---
 

@@ -1,0 +1,10 @@
+ARGUS training handoff
+Source repo: https://github.com/robertmwolf/Argus
+Target machine: NVIDIA RTX 5070 Ti 16 GB, 24-core i9
+Dataset contents:
+- SatStreaks Data/Images: 3,074 files
+- SatStreaks Data/Masks: 3,073 files
+- GTImages: full local copy
+- annotations: train/val/test/dev/gtimages JSON files
+Expected model: Swin-L DINO
+Expected output branch: codex/5070ti-swin-l-training-results

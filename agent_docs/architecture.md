@@ -180,6 +180,27 @@ The lookup path in `crossid.py` is:
 Bootstrap the DB once per environment with `scripts/bootstrap_tle_catalog.py`. Keep it
 current with `scripts/update_tle_catalog.py` (hourly cron or manual).
 
+### ML FITS Loading and WCS Sidecars
+`inference/fits_loader.py` normalises FITS image data for the DINO path and
+loads celestial WCS in this order:
+
+1. FITS header WCS, when `astropy.wcs.WCS(header).has_celestial` is true.
+2. Same-stem `.wcs` or `.WCS` sidecar, for ASTAP/SkyTrack solves such as the
+   GTImages dataset.
+3. `None`, leaving RA/Dec outputs null while preserving pixel-space detections.
+
+The loader returns `wcs_source` as `fits`, `sidecar`, or `None`. API uploads are
+processed from temporary files, so `api/main.py` copies a matching sidecar next
+to the temporary FITS before calling the inference pipeline. The lookup checks
+local upload storage plus common ARGUS data locations (`data/GTImages/`,
+`data/raw/`, and `data/sample/`).
+
+### API Result Coordinate Contract
+`GET /api/result/{job_id}` returns source image dimensions as `image_width` and
+`image_height` when they can be recovered from the uploaded FITS or PNG. The
+frontend treats all detection coordinates as original source-image pixels and
+uses those dimensions to scale overlays onto the rendered preview image.
+
 ### Historical Image Support
 The pipeline is identical for current and archival images. For a 6-month-old image,
 `query_tles_for_window()` filters the local DB by the obs_time epoch from the FITS header.
@@ -244,8 +265,8 @@ weighted_score = (
 [FITS or PNG Upload]
         ↓
 [inference/fits_loader.py — FITSLoader]
-   Z-score normalize → 3-channel uint8 array
-   Extract WCS metadata
+   ARGUS_NORM-selected normalization → 3-channel uint8 array
+   Extract FITS-header or sidecar WCS metadata
         ↓
 [Co-DINO inference — inference/pipeline.py]
    pipeline.load_model()  — load once for batch eval
