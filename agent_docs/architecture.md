@@ -25,11 +25,11 @@
              → sky cone (FOV center + radius)
              → observer ECEF coords
                       ↓
-           [4. Local TLE Catalog Query (DB-first, API fallback)]
+           [4. Local TLE Catalog Query (DB-only)]
              src/matching/tle_store.py          — primary: SQLite tle_catalog table
-             src/matching/spacetrack_query.py   — fallback: GP class (live) or GP_History (archive)
              → filtered by epoch range (obs_time ± epoch_window_days)
-             → DB hit returns instantly; API results stored immediately for future queries
+             → DB hit returns instantly
+             → DB miss leaves object unidentified/unknown; no Space-Track call
              → returns ~5,000–15,000 candidate TLEs
                       ↓
            [5. Spatial Cone Filter]
@@ -172,13 +172,13 @@ Position scores are penalized for stale TLEs using a Gaussian decay:
 TLE data is stored permanently in the local `argus.db` SQLite database (`tle_catalog` table).
 The lookup path in `crossid.py` is:
 1. **DB first**: `query_tles_for_window()` — epoch-range filter, returns in milliseconds
-2. **API fallback**: only if DB returns nothing
-   - obs_time < 2 hours old → `query_gp_current()` (GP class, ≤ once/hour rate limit)
-   - obs_time ≥ 2 hours old → `query_gp_history()` (GP_History, use sparingly)
-3. **Store immediately**: API results are written to DB via `upsert_tles()` before returning
+2. **No inference API fallback**: if DB returns nothing, detections remain
+   unidentified/unknown for that observation
+3. **Explicit maintenance only**: Space-Track GP/GP_History helpers exist for
+   operator-run catalog maintenance or diagnostics, not automatic inference
 
-Bootstrap the DB once per environment with `scripts/bootstrap_tle_catalog.py`. Keep it
-current with `scripts/update_tle_catalog.py` (hourly cron or manual).
+Bootstrap the DB once per environment with `scripts/bootstrap_tle_catalog.py`.
+Current/live Space-Track integration is intentionally not automatic.
 
 ### ML FITS Loading and WCS Sidecars
 `inference/fits_loader.py` normalises FITS image data for the DINO path and
@@ -205,8 +205,8 @@ uses those dimensions to scale overlays onto the rendered preview image.
 The pipeline is identical for current and archival images. For a 6-month-old image,
 `query_tles_for_window()` filters the local DB by the obs_time epoch from the FITS header.
 No API call is needed once historical data is bootstrapped. If the local DB lacks coverage
-for that period, `query_gp_history()` is called as a one-time fallback and the results
-are stored locally for all future queries.
+for that period, cross-identification is skipped and the detection is reported as
+unknown. Broad `gp_history` calls are never made from inference.
 
 ### Spatial Filtering
 Never run full SGP4 on the entire TLE window. Always:
@@ -281,7 +281,7 @@ weighted_score = (
         ↓
 [inference/crossid.py — SatelliteCrossIdentifier]
    WCS → RA/Dec for streak midpoints
-   DB-first TLE lookup (src/matching/tle_store.py), API fallback
+   Local TLE lookup (src/matching/tle_store.py); missing coverage → unknown
    SGP4 propagate candidate TLEs to obs epoch
    Gaussian confidence score per candidate
    Top-3 identifications per detection

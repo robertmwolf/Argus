@@ -275,29 +275,24 @@ class TestFetchTleCatalogDbFirst:
                        {"object_name": "ISS (ZARYA)",
                         "tle_line1": _ISS_RECORD["TLE_LINE1"],
                         "tle_line2": _ISS_RECORD["TLE_LINE2"]},
-                   ]) as mock_db, \
-             patch("inference.crossid.query_gp_current") as mock_gp_current, \
-             patch("inference.crossid.query_gp_history") as mock_gp_history:
+                   ]) as mock_db:
+
+            catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=3)
+
+        mock_db.assert_called_once()
+        assert len(catalog) == 1
+
+    def test_db_miss_returns_empty_catalog_without_api(self, monkeypatch):
+        """When the DB is empty, inference leaves objects unknown without API calls."""
+        from inference.crossid import _fetch_tle_catalog
+
+        with patch("inference.crossid.query_tles_for_window", return_value=[]) as mock_db, \
+             patch("src.matching.spacetrack_query.query_gp_current") as mock_gp_current, \
+             patch("src.matching.spacetrack_query.query_gp_history") as mock_gp_history:
 
             catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=3)
 
         mock_db.assert_called_once()
         mock_gp_current.assert_not_called()
         mock_gp_history.assert_not_called()
-        assert len(catalog) == 1
-
-    def test_db_miss_falls_back_to_api_and_stores(self, monkeypatch):
-        """When the DB is empty, the API is called and results are stored."""
-        from inference.crossid import _fetch_tle_catalog
-
-        fake_api_records = [_ISS_RECORD]
-
-        with patch("inference.crossid.query_tles_for_window", return_value=[]) as mock_db, \
-             patch("inference.crossid.query_gp_history", return_value=fake_api_records), \
-             patch("inference.crossid.upsert_tles") as mock_upsert:
-
-            catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=3)
-
-        mock_db.assert_called_once()
-        mock_upsert.assert_called_once_with(fake_api_records)
-        assert len(catalog) == 1
+        assert catalog == []

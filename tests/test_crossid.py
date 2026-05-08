@@ -34,22 +34,22 @@ _OBS_LAT, _OBS_LON, _OBS_ALT = 49.61, 6.13, 280.0
 
 
 # ---------------------------------------------------------------------------
-# _fetch_tle_catalog — unit tests against the Space-Track adapter
+# _fetch_tle_catalog — local catalog behavior
 # ---------------------------------------------------------------------------
 
 class TestFetchTleCatalog:
-    def test_maps_json_fields_to_tuples(self):
-        """GP_History JSON records with TLE_LINE1/TLE_LINE2 become (name, l1, l2)."""
+    def test_maps_db_fields_to_tuples(self):
+        """Local DB rows with tle_line1/tle_line2 become (name, l1, l2)."""
         from inference.crossid import _fetch_tle_catalog
 
-        fake_records = [
+        fake_rows = [
             {
-                "OBJECT_NAME": _TEST_TLE_NAME,
-                "TLE_LINE1": _TEST_TLE_LINE1,
-                "TLE_LINE2": _TEST_TLE_LINE2,
+                "object_name": _TEST_TLE_NAME,
+                "tle_line1": _TEST_TLE_LINE1,
+                "tle_line2": _TEST_TLE_LINE2,
             }
         ]
-        with patch("inference.crossid.query_gp_history", return_value=fake_records):
+        with patch("inference.crossid.query_tles_for_window", return_value=fake_rows):
             catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=1)
 
         assert len(catalog) == 1
@@ -62,11 +62,11 @@ class TestFetchTleCatalog:
         """Records missing TLE_LINE1 or TLE_LINE2 are silently dropped."""
         from inference.crossid import _fetch_tle_catalog
 
-        fake_records = [
-            {"OBJECT_NAME": "DEBRIS", "TLE_LINE1": "", "TLE_LINE2": ""},
-            {"OBJECT_NAME": _TEST_TLE_NAME, "TLE_LINE1": _TEST_TLE_LINE1, "TLE_LINE2": _TEST_TLE_LINE2},
+        fake_rows = [
+            {"object_name": "DEBRIS", "tle_line1": "", "tle_line2": ""},
+            {"object_name": _TEST_TLE_NAME, "tle_line1": _TEST_TLE_LINE1, "tle_line2": _TEST_TLE_LINE2},
         ]
-        with patch("inference.crossid.query_gp_history", return_value=fake_records):
+        with patch("inference.crossid.query_tles_for_window", return_value=fake_rows):
             catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=1)
 
         assert len(catalog) == 1
@@ -75,50 +75,30 @@ class TestFetchTleCatalog:
     def test_empty_response_returns_empty_list(self):
         from inference.crossid import _fetch_tle_catalog
 
-        with patch("inference.crossid.query_gp_history", return_value=[]):
+        with patch("inference.crossid.query_tles_for_window", return_value=[]):
             catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=1)
 
         assert catalog == []
 
-    def test_recent_obs_routes_to_gp_current(self):
-        """obs_time within the last 2 hours must use query_gp_current, not gp_history."""
+    def test_recent_obs_does_not_call_gp_current(self):
+        """Inference never calls Space-Track GP directly when local DB misses."""
         from datetime import timedelta
         from inference.crossid import _fetch_tle_catalog
 
         recent = datetime.now(tz=timezone.utc) - timedelta(minutes=30)
-        fake_records = [
-            {
-                "OBJECT_NAME": _TEST_TLE_NAME,
-                "TLE_LINE1": _TEST_TLE_LINE1,
-                "TLE_LINE2": _TEST_TLE_LINE2,
-            }
-        ]
-        with patch("inference.crossid.query_gp_current", return_value=fake_records) as mock_current, \
-             patch("inference.crossid.query_gp_history") as mock_history:
+        with patch("inference.crossid.query_tles_for_window", return_value=[]):
             catalog = _fetch_tle_catalog(recent, epoch_window_days=1)
 
-        mock_current.assert_called_once()
-        mock_history.assert_not_called()
-        assert len(catalog) == 1
+        assert catalog == []
 
-    def test_historical_obs_routes_to_gp_history(self):
-        """obs_time older than 2 hours must use query_gp_history, not gp_current."""
+    def test_historical_obs_does_not_call_gp_history(self):
+        """Inference treats missing historical catalog coverage as unknown."""
         from inference.crossid import _fetch_tle_catalog
 
-        fake_records = [
-            {
-                "OBJECT_NAME": _TEST_TLE_NAME,
-                "TLE_LINE1": _TEST_TLE_LINE1,
-                "TLE_LINE2": _TEST_TLE_LINE2,
-            }
-        ]
-        with patch("inference.crossid.query_gp_history", return_value=fake_records) as mock_history, \
-             patch("inference.crossid.query_gp_current") as mock_current:
+        with patch("inference.crossid.query_tles_for_window", return_value=[]):
             catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=1)
 
-        mock_history.assert_called_once()
-        mock_current.assert_not_called()
-        assert len(catalog) == 1
+        assert catalog == []
 
 
 # ---------------------------------------------------------------------------

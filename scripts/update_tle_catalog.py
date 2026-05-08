@@ -1,16 +1,17 @@
-"""Incrementally update the local TLE catalog using the Space-Track GP class.
+"""Explicitly update the local TLE catalog using the Space-Track GP class.
 
-Run this script at most once per hour (the GP class rate limit).  Fetches the
-latest active TLEs and inserts any new records into ``tle_catalog``.
+This is an operator-run maintenance tool, not part of the inference path.
+Run it at most once per hour if ARGUS is deliberately configured to ingest
+current/live TLEs.  It fetches the latest active TLEs and inserts any new
+records into ``tle_catalog``.
 
-Typical usage — run from cron or manually:
+Manual usage:
 
     python scripts/update_tle_catalog.py
 
 The script self-enforces the one-hour limit via the 55-minute disk cache in
-:func:`src.matching.spacetrack_query.query_gp_current`.  Running it more
-frequently than once per hour is harmless: the cached result is returned and
-no HTTP request is made.
+:func:`src.matching.spacetrack_query.query_gp_current`.  Inference never invokes
+this script or the GP class automatically.
 
 Schedule recommendation: run at HH:12 and HH:48 (10–20 min off the hour)
 to avoid Space-Track peak load periods.

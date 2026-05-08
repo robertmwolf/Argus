@@ -25,10 +25,10 @@ Usage
     # Load zips for specific years found in a directory:
     python scripts/bootstrap_tle_catalog.py --zip-dir data/tle_zips/ --years 2023 2024 2025
 
-    # After loading zips, also pull the latest TLEs via the GP class:
+    # Optional explicit maintenance only: pull the latest TLEs via the GP class:
     python scripts/bootstrap_tle_catalog.py --zip-dir data/tle_zips/ --update-current
 
-Environment variables required for --update-current:
+Environment variables required only for --update-current:
     SPACETRACK_USER, SPACETRACK_PASS
 """
 
@@ -180,8 +180,9 @@ def main() -> None:
     parser.add_argument(
         "--update-current",
         action="store_true",
-        help="After loading zips, also fetch the latest TLEs via the GP class "
-             "(requires SPACETRACK_USER and SPACETRACK_PASS).",
+        help="Optional explicit maintenance: after loading zips, also fetch "
+             "the latest TLEs via the GP class (requires SPACETRACK_USER and "
+             "SPACETRACK_PASS). Inference never does this automatically.",
     )
     parser.add_argument(
         "--force",
