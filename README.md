@@ -250,9 +250,11 @@ when the preview PNG has been resized. The browser then:
 
 ```
 Argus/
-├── AGENTS.md                  ← agent coding instructions
+├── AGENTS.md                  ← Codex entry point; points to assistant guide
+├── CLAUDE.md                  ← Claude Code entry point; points to assistant guide
 ├── README.md
-├── agent_docs/                ← read before writing any code
+├── agent_docs/                ← shared assistant guide + reference docs
+│   ├── assistant_guide.md     ← canonical assistant instructions
 │   ├── architecture.md
 │   ├── streakmind_phases.md   ← Phases 2–8 spec
 │   ├── phase1_goals.md        ← Phase 1 (complete, reference only)
