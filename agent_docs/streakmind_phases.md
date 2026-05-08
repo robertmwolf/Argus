@@ -123,11 +123,11 @@ def nms_detections(
 
 #### `inference/crossid.py`
 
-Satellite ephemeris cross-matching against Space-Track GP_History TLEs.
-Delegates TLE fetching to `src.matching.spacetrack_query.query_gp_history`,
-which handles authentication, rate limiting, and disk caching.
+Satellite ephemeris cross-matching against the local `tle_catalog` table.
+Inference does not query Space-Track directly; missing local coverage leaves
+the object unidentified/unknown.
 
-Requires `SPACETRACK_USER` and `SPACETRACK_PASS` environment variables.
+Does not require `SPACETRACK_USER` or `SPACETRACK_PASS` for inference.
 
 ```python
 # Source: Danarianto et al. — Gaussian confidence scoring approach
@@ -144,16 +144,16 @@ def cross_identify(
     """Cross-match detections against the local TLE catalog.
 
     Queries the local tle_catalog table for the epoch window around obs_time,
-    uses Space-Track GP/GP_History only as a fallback when local coverage is
-    missing, propagates candidates via SGP4, and scores candidates using
-    Gaussian position confidence.
+    leaves detections unidentified when local coverage is missing, propagates
+    candidates via SGP4, and scores candidates using Gaussian position
+    confidence.
     """
 ```
 
 TLE data source: local `tle_catalog` table in `argus.db` / PostgreSQL,
-bootstrapped from Space-Track annual bundles. Space-Track GP is used for
-current/recent fallback, and GP_History is used sparingly for archival gaps.
-API results are upserted into the local database for future runs.
+bootstrapped from Space-Track annual bundles. Space-Track GP/GP_History helpers
+are reserved for explicit maintenance or diagnostics, not automatic inference
+fallbacks.
 
 ### Tests to write
 
@@ -170,7 +170,8 @@ API results are upserted into the local database for future runs.
 - `cross_identify` with a known TLE returns top-3 candidates
 - Candidate with lowest angular separation has highest confidence
 - Missing sky coords → identifications empty list, no crash
-- local TLE catalog queries and fallback JSON mapping preserve (name, line1, line2)
+- local TLE catalog queries preserve (name, line1, line2)
+- missing local TLE coverage returns empty identifications without Space-Track calls
 
 ### Gate condition for Phase 4
 `inference/pipeline.py --fast --image data/sample/synth_streak_000.fits`
