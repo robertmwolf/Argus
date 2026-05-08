@@ -25,6 +25,7 @@ services:
       STORAGE_BACKEND: local
       QUEUE_BACKEND: memory
       FAST_MODE: "true"
+      ARGUS_ENV: development
     env_file:
       - path: .env
         required: false
@@ -57,6 +58,7 @@ services:
       STORAGE_BACKEND: local
       QUEUE_BACKEND: memory
       MODEL_SIZE: large
+      ARGUS_ENV: development
     env_file:
       - path: .env
         required: false

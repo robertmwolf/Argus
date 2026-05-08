@@ -31,7 +31,7 @@ export default function DetectionTable({ detections, highlightIndex, onRowClick 
         <table className="w-full text-sm text-left">
           <thead className="bg-slate-800/40 text-slate-400 text-xs uppercase tracking-wider">
             <tr>
-              {['#', 'Confidence', 'Length (px)', 'Angle (°)', 'Sky Position', 'Best Match', 'Match Conf'].map((h) => (
+              {['#', 'Method', 'Confidence', 'Length (px)', 'Angle (°)', 'Sky Position', 'Best Match', 'Match Conf'].map((h) => (
                 <th key={h} className="px-4 py-2.5 whitespace-nowrap font-medium">{h}</th>
               ))}
             </tr>
@@ -59,6 +59,18 @@ export default function DetectionTable({ detections, highlightIndex, onRowClick 
                       isHighlighted ? 'bg-orange-500/20 text-orange-300' : 'bg-slate-800 text-slate-400'
                     }`}>
                       {i + 1}
+                    </span>
+                  </td>
+
+                  {/* Detection method */}
+                  <td className="px-4 py-2.5">
+                    <span className={[
+                      'inline-flex items-center rounded border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide',
+                      det.method === 'classical'
+                        ? 'border-amber-600/60 bg-amber-950/40 text-amber-300'
+                        : 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300',
+                    ].join(' ')}>
+                      {det.method === 'classical' ? 'Classical' : 'ML'}
                     </span>
                   </td>
 

@@ -20,25 +20,32 @@ export default function App() {
   useEffect(() => {
     if (!jobId || jobStatus === 'complete' || jobStatus === 'failed') return
 
-    const poll = setInterval(async () => {
+    let cancelled = false
+
+    const pollOnce = async () => {
       try {
         const res = await fetch(`/api/result/${jobId}`)
         if (!res.ok) return
         const data = await res.json()
+        if (cancelled) return
         setJobStatus(data.status)
         if (data.status === 'complete') {
-          clearInterval(poll)
           setResult({ ...data, jobId })
         } else if (data.status === 'failed') {
-          clearInterval(poll)
           setError('Processing failed on the server.')
         }
       } catch {
         // transient network error — keep polling
       }
-    }, POLL_INTERVAL_MS)
+    }
 
-    return () => clearInterval(poll)
+    pollOnce()
+    const poll = setInterval(pollOnce, POLL_INTERVAL_MS)
+
+    return () => {
+      cancelled = true
+      clearInterval(poll)
+    }
   }, [jobId, jobStatus])
 
   const handleQueued = (newJobId, newFilename) => {

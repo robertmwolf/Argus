@@ -27,6 +27,7 @@ import os
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 import diskcache as dc
 import spacetrack.operators as op
@@ -37,15 +38,82 @@ logger = logging.getLogger(__name__)
 _CACHE_DIR = Path("data/cache")
 _RATE_LIMIT_SECONDS = 3.0
 _last_request_time: float = 0.0
+_SPACETRACK_PROD_BASE_URL = "https://www.space-track.org/"
+_SPACETRACK_TEST_BASE_URL = "https://for-testing-only.space-track.org/"
+_PRODUCTION_ENV_NAMES = {"prod", "production"}
 
 # GP current: minimum interval between live queries (seconds).
 # Space-Track policy: at most once per hour.
 _GP_CURRENT_MIN_INTERVAL_S = 3600
-# Cache key used to persist the GP-current result and enforce the hour lock.
+# Cache key stem used to persist the GP-current result and enforce the hour lock.
 _GP_CURRENT_CACHE_KEY = "gp_current_active_v1"
 # Cache TTL for GP-current results (55 min — slightly under the 1-hour floor so
 # that the next call always finds a slightly-stale entry and can re-fetch).
 _GP_CURRENT_TTL_S = 55 * 60
+
+
+def _is_development_env() -> bool:
+    """Return True when ARGUS should use development service defaults."""
+    env_name = (
+        os.environ.get("ARGUS_ENV")
+        or os.environ.get("APP_ENV")
+        or os.environ.get("ENVIRONMENT")
+        or "development"
+    ).strip().lower()
+    return env_name not in _PRODUCTION_ENV_NAMES
+
+
+def _normalise_base_url(base_url: str) -> str:
+    """Validate and normalise a Space-Track base URL.
+
+    Args:
+        base_url: Candidate base URL from environment or defaults.
+
+    Returns:
+        URL with a trailing slash.
+
+    Raises:
+        ValueError: If the URL is not an HTTPS URL.
+    """
+    base_url = base_url.strip()
+    parsed = urlparse(base_url)
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise ValueError(
+            "SPACETRACK_BASE_URL must be an HTTPS URL, for example "
+            "https://for-testing-only.space-track.org/"
+        )
+    return base_url if base_url.endswith("/") else f"{base_url}/"
+
+
+def _space_track_base_url() -> str:
+    """Return the Space-Track base URL for the current runtime environment.
+
+    ``SPACETRACK_BASE_URL`` wins when set.  Otherwise local/development runs use
+    Space-Track's test site, while ``ARGUS_ENV=production`` uses the official
+    production service.
+    """
+    configured = os.environ.get("SPACETRACK_BASE_URL")
+    if configured:
+        return _normalise_base_url(configured)
+    if _is_development_env():
+        return _SPACETRACK_TEST_BASE_URL
+    return _SPACETRACK_PROD_BASE_URL
+
+
+def _space_track_cache_namespace(base_url: str | None = None) -> str:
+    """Return a short cache namespace so test/prod responses never mix."""
+    base_url = _normalise_base_url(base_url) if base_url else _space_track_base_url()
+    if base_url == _SPACETRACK_TEST_BASE_URL:
+        return "test"
+    if base_url == _SPACETRACK_PROD_BASE_URL:
+        return "prod"
+    parsed = urlparse(base_url)
+    return parsed.netloc.lower().replace(".", "_").replace("-", "_")
+
+
+def _gp_current_cache_key() -> str:
+    """Return the environment-specific GP current cache key."""
+    return f"{_GP_CURRENT_CACHE_KEY}_{_space_track_cache_namespace()}"
 
 
 def _get_client() -> SpaceTrackClient:
@@ -66,7 +134,9 @@ def _get_client() -> SpaceTrackClient:
             "SPACETRACK_PASS environment variable is not set. "
             "Export your Space-Track password before running."
         )
-    return SpaceTrackClient(identity=user, password=password)
+    base_url = _space_track_base_url()
+    logger.info("Using Space-Track base URL: %s", base_url)
+    return SpaceTrackClient(identity=user, password=password, base_url=base_url)
 
 
 def _cache_ttl(obs_time: datetime) -> int | None:
@@ -99,7 +169,11 @@ def _cache_key(obs_time: datetime, epoch_window_days: int, min_mean_motion: floa
     Returns:
         Cache key string.
     """
-    return f"gp_history_{obs_time.strftime('%Y%m%d%H')}_{epoch_window_days}d_mm{min_mean_motion:.2f}"
+    namespace = _space_track_cache_namespace()
+    return (
+        f"gp_history_{namespace}_{obs_time.strftime('%Y%m%d%H')}_"
+        f"{epoch_window_days}d_mm{min_mean_motion:.2f}"
+    )
 
 
 def _rate_limit() -> None:
@@ -139,7 +213,8 @@ def query_gp_current() -> list[dict]:
     _CACHE_DIR.mkdir(parents=True, exist_ok=True)
     cache = dc.Cache(str(_CACHE_DIR))
 
-    cached = cache.get(_GP_CURRENT_CACHE_KEY)
+    cache_key = _gp_current_cache_key()
+    cached = cache.get(cache_key)
     if cached is not None:
         logger.debug("GP current cache hit (%d TLEs)", len(cached))
         return cached
@@ -162,7 +237,7 @@ def query_gp_current() -> list[dict]:
     )
 
     logger.info("GP current: %d active TLEs returned", len(results))
-    cache.set(_GP_CURRENT_CACHE_KEY, results, expire=_GP_CURRENT_TTL_S)
+    cache.set(cache_key, results, expire=_GP_CURRENT_TTL_S)
     return results
 
 

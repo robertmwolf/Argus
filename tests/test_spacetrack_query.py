@@ -13,6 +13,9 @@ from src.matching.spacetrack_query import (
     _GP_CURRENT_TTL_S,
     _cache_key,
     _cache_ttl,
+    _gp_current_cache_key,
+    _space_track_base_url,
+    _space_track_cache_namespace,
     query_gp_current,
     query_gp_history,
 )
@@ -24,6 +27,28 @@ _OBS_TIME = datetime(2024, 4, 2, 2, 55, 24, tzinfo=timezone.utc)
 
 
 class TestCacheKey:
+    def test_development_default_uses_test_site(self, monkeypatch):
+        monkeypatch.delenv("SPACETRACK_BASE_URL", raising=False)
+        monkeypatch.delenv("ARGUS_ENV", raising=False)
+        monkeypatch.delenv("APP_ENV", raising=False)
+        monkeypatch.delenv("ENVIRONMENT", raising=False)
+        assert _space_track_base_url() == "https://for-testing-only.space-track.org/"
+
+    def test_production_env_uses_official_site(self, monkeypatch):
+        monkeypatch.delenv("SPACETRACK_BASE_URL", raising=False)
+        monkeypatch.setenv("ARGUS_ENV", "production")
+        assert _space_track_base_url() == "https://www.space-track.org/"
+
+    def test_base_url_override_wins(self, monkeypatch):
+        monkeypatch.setenv("ARGUS_ENV", "production")
+        monkeypatch.setenv("SPACETRACK_BASE_URL", "https://for-testing-only.space-track.org")
+        assert _space_track_base_url() == "https://for-testing-only.space-track.org/"
+
+    def test_base_url_must_be_https(self, monkeypatch):
+        monkeypatch.setenv("SPACETRACK_BASE_URL", "http://for-testing-only.space-track.org")
+        with pytest.raises(ValueError, match="HTTPS"):
+            _space_track_base_url()
+
     def test_key_includes_hour(self):
         obs = datetime(2024, 4, 2, 14, 30, 0, tzinfo=timezone.utc)
         key = _cache_key(obs, epoch_window_days=3)
@@ -37,6 +62,28 @@ class TestCacheKey:
     def test_key_has_gp_history_prefix(self):
         obs = datetime(2024, 4, 2, 0, 0, 0, tzinfo=timezone.utc)
         assert _cache_key(obs, 3).startswith("gp_history_")
+
+    def test_history_cache_key_includes_space_track_namespace(self, monkeypatch):
+        obs = datetime(2024, 4, 2, 0, 0, 0, tzinfo=timezone.utc)
+
+        monkeypatch.setenv("SPACETRACK_BASE_URL", "https://for-testing-only.space-track.org/")
+        test_key = _cache_key(obs, 3)
+
+        monkeypatch.setenv("SPACETRACK_BASE_URL", "https://www.space-track.org/")
+        prod_key = _cache_key(obs, 3)
+
+        assert test_key != prod_key
+        assert "gp_history_test_" in test_key
+        assert "gp_history_prod_" in prod_key
+
+    def test_gp_current_cache_key_includes_space_track_namespace(self, monkeypatch):
+        monkeypatch.setenv("SPACETRACK_BASE_URL", "https://for-testing-only.space-track.org/")
+        assert _space_track_cache_namespace() == "test"
+        assert _gp_current_cache_key() == f"{_GP_CURRENT_CACHE_KEY}_test"
+
+        monkeypatch.setenv("SPACETRACK_BASE_URL", "https://www.space-track.org/")
+        assert _space_track_cache_namespace() == "prod"
+        assert _gp_current_cache_key() == f"{_GP_CURRENT_CACHE_KEY}_prod"
 
     def test_different_windows_give_different_keys(self):
         obs = datetime(2024, 4, 2, 0, 0, 0, tzinfo=timezone.utc)
@@ -182,10 +229,9 @@ class TestQueryGpCurrent:
             query_gp_current()
 
         cache = dc.Cache(str(cache_dir))
-        _, expire = cache.get(_GP_CURRENT_CACHE_KEY, expire_time=True)
+        _, expire = cache.get(_gp_current_cache_key(), expire_time=True)
         assert expire is not None, "GP-current cache entry must have a finite TTL"
         # Expiry should be within a minute of now + 55 min
         import time
         expected = time.time() + _GP_CURRENT_TTL_S
         assert abs(expire - expected) < 60, f"Unexpected TTL expire time: {expire}"
-

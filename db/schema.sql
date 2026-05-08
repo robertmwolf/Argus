@@ -15,6 +15,7 @@ CREATE TABLE observations (
 CREATE TABLE detections (
     id               TEXT PRIMARY KEY,
     observation_id   TEXT REFERENCES observations(id),
+    method           TEXT DEFAULT 'ml',
     confidence       REAL NOT NULL,
     bbox_x1          REAL, bbox_y1 REAL,
     bbox_x2          REAL, bbox_y2 REAL,

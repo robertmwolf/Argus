@@ -122,6 +122,7 @@ async def test_detection_references_observation(session):
     fetched = await session.get(Detection, det_id)
     assert fetched is not None
     assert fetched.observation_id == obs_id
+    assert fetched.method == "ml"
     assert fetched.confidence == pytest.approx(0.93)
     assert fetched.ra_tip1_deg == pytest.approx(123.45)
 

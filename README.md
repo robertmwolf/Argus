@@ -125,12 +125,14 @@ Timing logged: `fits_load_ms`.
 The normalised array is passed to a Co-DINO transformer model (Swin-T backbone
 for local dev, Swin-L for cloud training).
 
-- The image is rescaled so its longest edge equals `image_size` (400 px on Mac,
-  256 px in fast mode).
+- The image is rescaled so its longest edge is at least 1280 px for normal
+  inference (256 px in fast mode).
 - MMDetection's `inference_detector` runs a forward pass.
 - Every predicted bounding box with score ≥ `CONFIDENCE_THRESHOLD` (default
-  0.10 for locally-trained Swin-T; raise to 0.30 for cloud Swin-L) is kept.
+  0.01 for local development; raise after cloud Swin-L calibration) is kept.
 - Bounding boxes are scaled back to original image pixel coordinates.
+- A bounded classical line detector also runs on every image so obvious bright
+  streaks are still returned when the local Swin-T model is underconfident.
 
 DINO can return multiple overlapping detections for the same physical streak
 (common for long streaks that span multiple attention heads).  These are
@@ -323,7 +325,7 @@ export PYTORCH_ENABLE_MPS_FALLBACK=1            # required on Apple Silicon
 export DATABASE_URL=sqlite+aiosqlite:///./argus.db
 
 # Optional: lower the confidence threshold for locally-trained models
-export CONFIDENCE_THRESHOLD=0.10               # default; raise to 0.30 after cloud training
+export CONFIDENCE_THRESHOLD=0.01               # local dev; raise after cloud calibration
 
 # Match preprocessing to the loaded checkpoint:
 export ARGUS_NORM=zscore                       # current local Swin-T weights
@@ -338,6 +340,9 @@ python scripts/bootstrap_tle_catalog.py --zip-dir data/tle_zips/ --years 2025
 # Space-Track credentials (only needed for live TLE maintenance, not inference):
 export SPACETRACK_USER=your@email.com
 export SPACETRACK_PASS=yourpassword
+# Local development uses the Space-Track test site for live fallback/update calls.
+export ARGUS_ENV=development
+export SPACETRACK_BASE_URL=https://for-testing-only.space-track.org/
 
 # Update the catalog with the latest active satellites (≤ once/hour):
 python scripts/update_tle_catalog.py
