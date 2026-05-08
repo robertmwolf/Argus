@@ -63,7 +63,7 @@ _patch_torch_load_weights_only()
 # Constants / defaults
 # ---------------------------------------------------------------------------
 
-_DEFAULT_CONFIDENCE_THRESHOLD = 0.10  # raised to 0.30 once cloud-trained Swin-L is in use
+_DEFAULT_CONFIDENCE_THRESHOLD = 0.01  # keep low-confidence dev proposals visible
 _FAST_IMAGE_SIZE = 256
 
 # Minimum inference resolution for large sensor images.
@@ -222,11 +222,102 @@ def _run_inference(
         detections.append({
             "bbox": [x1, y1, x2, y2],
             "confidence": float(score),
+            "method": "ml",
         })
 
     logger.debug("DINO: %d raw detections above threshold %.2f",
                  len(detections), confidence_threshold)
     return detections
+
+
+def _run_classical_detector(
+    array: "np.ndarray",
+    min_length_px: float = 80.0,
+    min_aspect_ratio: float = 5.0,
+    max_detections: int = 20,
+) -> list[dict]:
+    """Find bright elongated streaks with classical image processing.
+
+    This bounded detector complements the DINO model in local development.  It
+    uses no learned weights: threshold the bright tail of the normalised image,
+    close short gaps, then keep elongated connected components.
+
+    Args:
+        array: uint8 RGB image produced by ``FITSLoader``.
+        min_length_px: Minimum long-axis component length to keep.
+        min_aspect_ratio: Minimum long/short axis ratio to keep.
+        max_detections: Maximum number of classical detections to return.
+
+    Returns:
+        Detection dictionaries compatible with the rest of the pipeline.
+    """
+    import cv2
+    import numpy as np
+
+    gray = cv2.cvtColor(array, cv2.COLOR_RGB2GRAY) if array.ndim == 3 else array
+    finite = gray[np.isfinite(gray)]
+    if finite.size == 0:
+        return []
+
+    threshold = max(float(np.percentile(finite, 99.5)), 180.0)
+    mask = (gray >= threshold).astype("uint8") * 255
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 3))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+
+    n_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask, 8)
+    detections: list[dict] = []
+
+    for label in range(1, n_labels):
+        x, y, w, h, area = stats[label]
+        if area < 20:
+            continue
+
+        long_axis = float(max(w, h))
+        short_axis = float(max(1, min(w, h)))
+        aspect = long_axis / short_axis
+        if long_axis < min_length_px or aspect < min_aspect_ratio:
+            continue
+
+        ys, xs = np.where(labels == label)
+        if xs.size < 2:
+            continue
+
+        coords = np.column_stack((xs.astype(np.float64), ys.astype(np.float64)))
+        center = coords.mean(axis=0)
+        centered = coords - center
+        _, _, vt = np.linalg.svd(centered, full_matrices=False)
+        direction = vt[0]
+        projections = centered @ direction
+        proj_min = float(projections.min())
+        proj_max = float(projections.max())
+        length = proj_max - proj_min
+        if length < min_length_px:
+            continue
+
+        start = center + proj_min * direction
+        end = center + proj_max * direction
+        angle = math.degrees(math.atan2(direction[1], direction[0])) % 180.0
+        area_width = max(3.0, float(area) / max(length, 1.0))
+        confidence = min(0.99, max(0.2, aspect / 20.0))
+
+        detections.append({
+            "bbox": [float(x), float(y), float(x + w), float(y + h)],
+            "confidence": confidence,
+            "method": "classical",
+            "obb": {
+                "cx": float((start[0] + end[0]) / 2.0),
+                "cy": float((start[1] + end[1]) / 2.0),
+                "w": float(length),
+                "h": float(area_width),
+                "angle_deg": float(angle),
+            },
+            "streak_length_px": float(length),
+        })
+
+    detections.sort(key=lambda d: d["confidence"], reverse=True)
+    logger.debug("Classical detector: %d candidate streak(s)", len(detections))
+    return detections[:max_detections]
 
 
 # ---------------------------------------------------------------------------
@@ -446,9 +537,7 @@ def run(
     logger.debug("inference_ms=%.1f  raw_dets=%d  threshold=%.2f",
                  inference_ms, len(raw_dets), confidence_threshold)
 
-    if not raw_dets:
-        logger.debug("No detections above threshold — returning empty list")
-        return []
+    classical_dets = _run_classical_detector(array)
 
     # --- 3. Postprocess: angle refinement + OBB + NMS -----------------------
     t2 = time.perf_counter()
@@ -461,6 +550,7 @@ def run(
     w_img = array.shape[1]
 
     for det in raw_dets:
+        det.setdefault("method", "ml")
         x1, y1, x2, y2 = det["bbox"]
 
         # Always run Radon refinement — it operates on a small crop and is fast.
@@ -483,7 +573,7 @@ def run(
         det["obb"] = obb
         det["streak_length_px"] = float(obb["w"])
 
-    detections = nms_detections(raw_dets, iou_threshold=0.5)
+    detections = nms_detections(raw_dets + classical_dets, iou_threshold=0.5)
     postprocess_ms = (time.perf_counter() - t2) * 1000
     logger.debug("postprocess_ms=%.1f  after_nms=%d", postprocess_ms, len(detections))
 

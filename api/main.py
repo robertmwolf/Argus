@@ -102,6 +102,8 @@ async def lifespan(app: FastAPI):
     app.state.storage = storage
     app.state.queue = queue
     app.state.model_loaded = False
+    app.state.pipeline_model = None
+    app.state.pipeline_device = None
 
     worker_task = asyncio.create_task(_worker_loop(app))
 
@@ -177,6 +179,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
         # pipeline_run is patched in tests via unittest.mock.
         # Set FAST_MODE=true in the environment to skip Radon + cross-ID.
         try:
+            from inference.pipeline import load_model as pipeline_load_model
             from inference.pipeline import run as pipeline_run
         except ImportError as exc:
             raise RuntimeError(
@@ -184,10 +187,22 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
                 "Run the API directly with the satid conda env for local inference, "
                 "or use the GPU worker container for Docker deployments."
             ) from exc
-        detections = pipeline_run(fits_path=tmp_path)
+
+        if app.state.pipeline_model is None:
+            model, inference_device = await asyncio.to_thread(pipeline_load_model)
+            app.state.pipeline_model = model
+            app.state.pipeline_device = inference_device
+            app.state.model_loaded = True
+
+        detections = await asyncio.to_thread(
+            pipeline_run,
+            fits_path=tmp_path,
+            model=app.state.pipeline_model,
+            inference_device=app.state.pipeline_device,
+        )
         app.state.model_loaded = True
 
-        png_bytes = _render_png(tmp_path, detections)
+        png_bytes = await asyncio.to_thread(_render_png, tmp_path, detections)
         await storage.save_image(job_id, png_bytes)
 
         async with session_factory() as session:
@@ -197,6 +212,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
                 det = Detection(
                     id=str(uuid.uuid4()),
                     observation_id=job_id,
+                    method=det_dict.get("method") or "ml",
                     confidence=float(det_dict.get("confidence", 0.0)),
                     bbox_x1=bbox[0] if len(bbox) > 0 else None,
                     bbox_y1=bbox[1] if len(bbox) > 1 else None,
@@ -521,6 +537,7 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
             ).scalars().all()
 
             detections.append({
+                "method": det.method,
                 "confidence": det.confidence,
                 "bbox": [det.bbox_x1, det.bbox_y1, det.bbox_x2, det.bbox_y2],
                 "obb": {

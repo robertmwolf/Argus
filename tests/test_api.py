@@ -71,6 +71,8 @@ async def client(tmp_path):
     app.state.queue = queue
     app.state.storage = storage
     app.state.model_loaded = False
+    app.state.pipeline_model = None
+    app.state.pipeline_device = None
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
@@ -148,6 +150,7 @@ async def test_full_upload_poll_result_cycle(client, tmp_path):
         pytest.skip("data/sample/synth_streak_000.fits not found")
 
     fake_detection = {
+        "method": "ml",
         "confidence": 0.92,
         "bbox": [10.0, 20.0, 300.0, 40.0],
         "obb": {"cx": 155.0, "cy": 30.0, "w": 295.0, "h": 12.0, "angle_deg": 5.0},
@@ -169,7 +172,8 @@ async def test_full_upload_poll_result_cycle(client, tmp_path):
     # Drain the queue and run the worker synchronously inside the mock context
     from api.main import _process_job, app as _app
 
-    with patch("inference.pipeline.run", return_value=[fake_detection]):
+    with patch("inference.pipeline.load_model", return_value=(object(), object())), \
+         patch("inference.pipeline.run", return_value=[fake_detection]):
         queued_id = await _app.state.queue.dequeue()
         await _process_job(queued_id, _app)
 
@@ -179,4 +183,5 @@ async def test_full_upload_poll_result_cycle(client, tmp_path):
     assert body["image_width"] is not None
     assert body["image_height"] is not None
     assert len(body["detections"]) == 1
+    assert body["detections"][0]["method"] == "ml"
     assert body["detections"][0]["confidence"] == pytest.approx(0.92)

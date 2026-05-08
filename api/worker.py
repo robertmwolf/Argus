@@ -43,6 +43,8 @@ async def _main() -> None:
     app.state.storage = storage
     app.state.queue = queue
     app.state.model_loaded = False
+    app.state.pipeline_model = None
+    app.state.pipeline_device = None
 
     logger.info("Worker started — waiting for jobs (QUEUE_BACKEND=%s)", os.environ.get("QUEUE_BACKEND", "memory"))
 

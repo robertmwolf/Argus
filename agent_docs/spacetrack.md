@@ -11,7 +11,22 @@ Always use environment variables. Never hardcode.
 ```bash
 export SPACETRACK_USER=your@email.com
 export SPACETRACK_PASS=yourpassword
+# Local development defaults to the Space-Track test site. Production defaults
+# to the official site when ARGUS_ENV=production.
+export ARGUS_ENV=development
+export SPACETRACK_BASE_URL=https://for-testing-only.space-track.org/
 ```
+
+ARGUS chooses the Space-Track endpoint in this order:
+
+1. `SPACETRACK_BASE_URL` when set.
+2. `https://for-testing-only.space-track.org/` for development/local runs.
+3. `https://www.space-track.org/` when `ARGUS_ENV=production`.
+
+The test server API is identical to production and uses the same credentials,
+but Space-Track usage guidelines still apply.  Test-site and production
+responses are cached under separate keys so data from the two hosts is never
+mixed.
 
 ---
 

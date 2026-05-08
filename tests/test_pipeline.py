@@ -17,6 +17,7 @@ _SYNTH_FITS = Path("data/sample/synth_streak_000.fits")
 
 # Required keys in every detection dict returned by run()
 _REQUIRED_KEYS = {
+    "method",
     "confidence",
     "bbox",
     "obb",
@@ -104,6 +105,7 @@ class TestRunFastMode:
 
         with patch.object(pl, "_load_model", return_value=mock_model), \
              patch.object(pl, "_run_inference", return_value=list(fake_dets)), \
+             patch.object(pl, "_run_classical_detector", return_value=[]), \
              patch.dict(os.environ, extra_env, clear=False):
             return pl.run(_SYNTH_FITS, fast=fast)
 
@@ -132,9 +134,35 @@ class TestRunFastMode:
         for det in self._run_patched():
             assert 0.0 <= det["confidence"] <= 1.0
 
+    def test_ml_detections_have_method(self):
+        for det in self._run_patched():
+            assert det["method"] == "ml"
+
     def test_empty_detections_returns_empty_list(self):
         result = self._run_patched(n_dets=0)
         assert result == []
+
+    def test_classical_detections_are_included_when_ml_is_empty(self):
+        import inference.pipeline as pl
+
+        classical = {
+            "method": "classical",
+            "confidence": 0.75,
+            "bbox": [40.0, 50.0, 220.0, 60.0],
+            "obb": {"cx": 130.0, "cy": 55.0, "w": 180.0, "h": 4.0, "angle_deg": 0.0},
+            "streak_length_px": 180.0,
+        }
+
+        with patch.object(pl, "_load_model", return_value=MagicMock()), \
+             patch.object(pl, "_run_inference", return_value=[]), \
+             patch.object(pl, "_run_classical_detector", return_value=[classical]), \
+             patch.dict(os.environ,
+                        {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS)},
+                        clear=False):
+            result = pl.run(_SYNTH_FITS, fast=True)
+
+        assert len(result) == 1
+        assert result[0]["method"] == "classical"
 
     def test_missing_weights_raises_file_not_found(self, tmp_path):
         from inference.pipeline import _load_model
@@ -148,6 +176,7 @@ class TestRunFastMode:
 
         with patch.object(pl, "_load_model", return_value=MagicMock()), \
              patch.object(pl, "_run_inference", return_value=list(_FAKE_DETS[:1])), \
+             patch.object(pl, "_run_classical_detector", return_value=[]), \
              patch.dict(os.environ,
                         {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS),
                          "FAST_MODE": "true"},
@@ -177,6 +206,7 @@ class TestAngleRefinement:
              patch.object(pl, "_run_inference", return_value=[
                  {"bbox": [50.0, 60.0, 200.0, 80.0], "confidence": 0.92},
              ]), \
+             patch.object(pl, "_run_classical_detector", return_value=[]), \
              patch.object(pp, "refine_angle", return_value=45.0) as mock_refine, \
              patch.dict(os.environ,
                         {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS)},
@@ -194,6 +224,7 @@ class TestAngleRefinement:
              patch.object(pl, "_run_inference", return_value=[
                  {"bbox": [50.0, 60.0, 200.0, 80.0], "confidence": 0.92},
              ]), \
+             patch.object(pl, "_run_classical_detector", return_value=[]), \
              patch.object(pp, "refine_angle", return_value=45.0) as mock_refine, \
              patch.object(crossid, "cross_identify", return_value=None), \
              patch.dict(os.environ,

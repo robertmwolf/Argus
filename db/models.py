@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 from typing import AsyncGenerator
 
-from sqlalchemy import Float, ForeignKey, Integer, Text
+from sqlalchemy import Float, ForeignKey, Integer, Text, inspect
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -95,6 +95,7 @@ class Detection(Base):
     observation_id: Mapped[str | None] = mapped_column(
         Text, ForeignKey("observations.id")
     )
+    method: Mapped[str] = mapped_column(Text, default="ml", nullable=False)
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
     bbox_x1: Mapped[float | None] = mapped_column(Float)
     bbox_y1: Mapped[float | None] = mapped_column(Float)
@@ -194,6 +195,14 @@ async def init_db(engine: AsyncEngine) -> None:
     """
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(_migrate_existing_tables)
+
+
+def _migrate_existing_tables(sync_conn) -> None:
+    """Apply lightweight schema additions for existing local databases."""
+    columns = {col["name"] for col in inspect(sync_conn).get_columns("detections")}
+    if "method" not in columns:
+        sync_conn.exec_driver_sql("ALTER TABLE detections ADD COLUMN method TEXT DEFAULT 'ml'")
 
 
 if __name__ == "__main__":

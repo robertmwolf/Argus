@@ -176,6 +176,10 @@ export AWS_REGION=
 # NOT required for day-to-day inference once the TLE catalog is bootstrapped.
 export SPACETRACK_USER=your@email.com
 export SPACETRACK_PASS=yourpassword
+# Dev/local fallback calls use Space-Track's test site by default.
+# Production uses the official site when ARGUS_ENV=production.
+export ARGUS_ENV=development
+export SPACETRACK_BASE_URL=https://for-testing-only.space-track.org/
 ```
 
 ## TLE Catalog Setup (one-time per environment)
