@@ -11,35 +11,51 @@ Give the colleague's Codex this instruction:
 ```text
 Check out repo at https://github.com/robertmwolf/Argus.git
 Read instructions at agent_docs/Training_Handoff.md
-Follow that document exactly to stage data, run Swin-L training, evaluate
+Follow that document exactly to download data, run Swin-L training, evaluate
 results, and check the outputs back into GitHub.
 ```
 
 ## Current Handoff Scope
 
 This handoff is for workstation training on an NVIDIA RTX 5070 Ti 16 GB GPU.
-The historical Lambda A100 path remains valid, but the staged data bundle and
+The historical Lambda A100 path remains valid, but the data download flow and
 expected output branch below are tailored to the 5070 Ti run.
 
-## Shared Data Location
+## Data Sources
 
-Shared OneDrive folder:
+The big datasets should be downloaded directly on the training workstation.
+Do not copy the full local data tree through the shared handoff folder.
+
+GTImages direct download:
+
+```text
+https://1drv.ms/u/c/f9b9ba14546c7993/IQDsL-bDtjgrSZK8oBfpozNyAT1gfpMbgM3YUjbMJeZLMDU?e=puwV4T
+```
+
+SatStreaks upstream source:
+
+```text
+https://github.com/jijup/SatStreaks
+```
+
+SatStreaks dataset folder link from the upstream README:
+
+```text
+https://smuhalifax-my.sharepoint.com/:f:/g/personal/susrita_chatterjee_smu_ca/EsbHlOO3pMRKiN6yIZT54CoBaIaZSsHhYgRZswt-erqxmg?e=pcQ8Xk
+```
+
+ARGUS lightweight handoff folder:
 
 ```text
 https://1drv.ms/f/c/f9b9ba14546c7993/IgBKfTqYuQuWTZcfBhvDWoARAUD1kC9YfTDE70F9rHKH-o8?e=w4EplD
 ```
 
-The owner should stage the dataset in that folder using this structure:
+The ARGUS lightweight handoff folder should contain only small project-specific
+files that are inconvenient to regenerate, not the full image datasets:
 
 ```text
 Argus-training-handoff/
 |-- data/
-|   |-- satstreaks/
-|   |   `-- Data/
-|   |       |-- Images/
-|   |       |-- Masks/
-|   |       `-- labels.json
-|   |-- GTImages/
 |   |-- annotations/
 |   |   |-- train.json
 |   |   |-- val.json
@@ -62,13 +78,13 @@ data/satstreaks/Data/Images/
 data/satstreaks/Data/Masks/
 data/satstreaks/Data/labels.json
 data/GTImages/
-data/annotations/
-data/Manifest.txt
 ```
 
-Optional inputs:
+Small optional handoff inputs:
 
 ```text
+data/annotations/
+data/Manifest.txt
 data/catalogs/active_sats.tle
 data/tle_zips/
 optional_weights/co_dino_swin_l_coco.pth
@@ -94,13 +110,42 @@ git clone https://github.com/robertmwolf/Argus.git
 cd Argus
 ```
 
-Copy the OneDrive handoff data into the repo root so the paths match exactly:
+Download GTImages from the direct OneDrive file link and extract it so the
+files land here:
+
+```text
+Argus/data/GTImages/
+```
+
+Expected GTImages contents include `.fits`, `.wcs`, `.ini`, and `.strk` files.
+If the archive extracts with an extra top-level folder, move the contents so
+`data/GTImages/*.fits` exists.
+
+Download SatStreaks from the upstream dataset source. Start from the upstream
+repo and README:
+
+```bash
+git clone https://github.com/jijup/SatStreaks.git /tmp/SatStreaks
+```
+
+Then use the "Entire Dataset" link in `/tmp/SatStreaks/README.md`, or the
+SharePoint link listed in this document, to download the full dataset. Extract
+or copy it so these paths exist in ARGUS:
 
 ```text
 Argus/data/satstreaks/Data/Images/
 Argus/data/satstreaks/Data/Masks/
 Argus/data/satstreaks/Data/labels.json
-Argus/data/GTImages/
+```
+
+The SatStreaks source should provide about 3,074 image files and 3,073 mask
+files. If those counts are materially different, stop and record the discrepancy
+before training.
+
+Copy any small files from the ARGUS lightweight handoff folder into the repo
+root so these paths match exactly when present:
+
+```text
 Argus/data/annotations/
 Argus/data/catalogs/
 Argus/data/tle_zips/
