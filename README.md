@@ -290,7 +290,7 @@ Argus/
 │   ├── make_test_fits.py           ← synthetic FITS generator
 │   ├── download_weights.py         ← pretrained weight downloader
 │   ├── bootstrap_tle_catalog.py    ← one-time TLE catalog setup
-│   ├── update_tle_catalog.py       ← hourly TLE refresh (GP class)
+│   ├── update_tle_catalog.py       ← optional explicit GP-class maintenance
 │   ├── merge_annotations.py        ← SatStreaks mask + GTImages COCO split merger
 │   └── prepare_cloud_training.py   ← go/no-go checklist before GPU rental
 ├── api/                       ← FastAPI application
@@ -337,16 +337,18 @@ export ARGUS_NORM=zscore                       # current local Swin-T weights
 #    Place the file in data/tle_zips/
 python scripts/bootstrap_tle_catalog.py --zip-dir data/tle_zips/ --years 2025
 
-# Space-Track credentials (only needed for live TLE maintenance, not inference):
+# Space-Track credentials (only needed for explicit TLE maintenance/diagnostics,
+# not inference):
 export SPACETRACK_USER=your@email.com
 export SPACETRACK_PASS=yourpassword
-# Local development uses the Space-Track test site for live fallback/update calls.
+# Local development uses the Space-Track test site for maintenance calls.
 export ARGUS_ENV=development
 export SPACETRACK_BASE_URL=https://for-testing-only.space-track.org/
-
-# Update the catalog with the latest active satellites (≤ once/hour):
-python scripts/update_tle_catalog.py
 ```
+
+Inference reads only from the local `tle_catalog`. If the catalog has no
+coverage for an observation time window, ARGUS leaves the object unidentified
+(`unknown`) rather than calling Space-Track automatically.
 
 ## Running Locally (Dev)
 

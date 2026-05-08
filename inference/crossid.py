@@ -18,8 +18,10 @@ Enhancements adapted from SkyTrack (colleague's pipeline):
     factor.
 
 TLE source routing (Space-Track API policy compliance):
-  - obs_time within last 2 hours → query_gp_current() [GP class, ≤1/hr]
-  - obs_time older than 2 hours  → query_gp_history() [GP_History, cached permanently]
+  - inference reads only from the local tle_catalog table
+  - if local coverage is missing, objects are left unidentified/unknown
+  - Space-Track current/history calls are explicit maintenance tasks, never
+    automatic inference fallbacks
 
 # Source: Danarianto et al. — Gaussian confidence scoring for satellite crossID
 # Ref: cite per published paper
@@ -36,8 +38,7 @@ import math
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from src.matching.spacetrack_query import query_gp_current, query_gp_history
-from src.matching.tle_store import query_tles_for_window, upsert_tles
+from src.matching.tle_store import query_tles_for_window
 
 logger = logging.getLogger(__name__)
 
@@ -58,16 +59,12 @@ def _fetch_tle_catalog(
 ) -> list[tuple[str, str, str]]:
     """Return TLEs for the observation window, querying the local DB first.
 
-    Lookup order:
-      1. Local ``tle_catalog`` DB table — populated at environment setup by
-         ``scripts/bootstrap_tle_catalog.py`` and kept current by
-         ``scripts/update_tle_catalog.py``.  Zero Space-Track calls when the
-         DB has coverage.
-      2. Space-Track API fallback (only when the DB is empty for this window):
-         - obs_time < 2 hours old → GP class via query_gp_current() (≤ 1/hr)
-         - obs_time ≥ 2 hours old → GP_History via query_gp_history() (one-time)
-         API results are stored in the DB before returning so the same window
-         is never re-fetched from Space-Track.
+    Lookup is intentionally local-only.  The ``tle_catalog`` table is populated
+    at environment setup from Space-Track bulk files.  If the table has no
+    coverage for the requested window, ARGUS skips cross-identification and the
+    detected object remains unknown.  This avoids accidental broad GP_History
+    queries during inference and keeps Space-Track access as an explicit
+    operator/admin action.
 
     Args:
         obs_time: UTC observation time.
@@ -79,42 +76,29 @@ def _fetch_tle_catalog(
     if obs_time.tzinfo is None:
         obs_time = obs_time.replace(tzinfo=timezone.utc)
 
-    db_rows = query_tles_for_window(obs_time, epoch_window_days)
-    if db_rows:
-        logger.debug("TLE catalog DB hit: %d records for window", len(db_rows))
-        return [
-            (r["object_name"], r["tle_line1"], r["tle_line2"])
-            for r in db_rows
-        ]
-
     age_hours = (datetime.now(tz=timezone.utc) - obs_time).total_seconds() / 3600
-    if age_hours < 2:
-        logger.info(
-            "DB empty for window; obs_time %.1f h old — falling back to GP class",
+
+    db_rows = query_tles_for_window(obs_time, epoch_window_days)
+    if not db_rows:
+        logger.warning(
+            "No local TLE coverage for obs_time=%s, window=%dd, age=%.1fh; "
+            "skipping cross-identification and leaving detections unknown",
+            obs_time.isoformat(),
+            epoch_window_days,
             age_hours,
         )
-        api_records = query_gp_current()
-    else:
-        logger.info(
-            "DB empty for window; obs_time %.1f h old — falling back to GP_History",
-            age_hours,
-        )
-        api_records = query_gp_history(obs_time, epoch_window_days=epoch_window_days)
+        return []
 
-    if api_records:
-        stored = upsert_tles(api_records)
-        logger.info("Stored %d new TLE records from API into local DB", stored)
-
-    catalog: list[tuple[str, str, str]] = []
-    for rec in api_records:
-        name  = rec.get("OBJECT_NAME", "UNKNOWN")
-        line1 = rec.get("TLE_LINE1", "")
-        line2 = rec.get("TLE_LINE2", "")
-        if line1 and line2:
-            catalog.append((name, line1, line2))
+    logger.debug("TLE catalog DB hit: %d records for window", len(db_rows))
+    catalog = [
+        (r["object_name"], r["tle_line1"], r["tle_line2"])
+        for r in db_rows
+        if r.get("tle_line1") and r.get("tle_line2")
+    ]
     logger.debug(
-        "API returned %d records; %d have TLE lines",
-        len(api_records), len(catalog),
+        "Local DB returned %d records; %d have TLE lines",
+        len(db_rows),
+        len(catalog),
     )
     return catalog
 

@@ -170,13 +170,11 @@ export QUEUE_BACKEND=memory    # or sqs
 export S3_BUCKET=
 export AWS_REGION=
 
-# Space-Track credentials — only needed for TLE catalog maintenance:
-#   scripts/bootstrap_tle_catalog.py --update-current
-#   scripts/update_tle_catalog.py  (hourly GP-class updater)
-# NOT required for day-to-day inference once the TLE catalog is bootstrapped.
+# Space-Track credentials — only needed for explicit catalog maintenance or
+# diagnostics. Day-to-day inference never queries Space-Track directly.
 export SPACETRACK_USER=your@email.com
 export SPACETRACK_PASS=yourpassword
-# Dev/local fallback calls use Space-Track's test site by default.
+# Dev/local maintenance calls use Space-Track's test site by default.
 # Production uses the official site when ARGUS_ENV=production.
 export ARGUS_ENV=development
 export SPACETRACK_BASE_URL=https://for-testing-only.space-track.org/
@@ -195,10 +193,11 @@ time.  This must be bootstrapped once per environment.
 
 # 2. Load into the database (idempotent — safe to re-run):
 python scripts/bootstrap_tle_catalog.py --zip-dir data/tle_zips/ --years 2025
-
-# 3. Keep current TLEs fresh (run at most once/hour, e.g. via cron at HH:12 and HH:48):
-python scripts/update_tle_catalog.py
 ```
+
+If `tle_catalog` does not contain records for an observation's time window,
+ARGUS skips cross-identification and leaves the object unknown. It does not
+fall back to broad `gp_history` or hourly `gp` calls during inference.
 
 See `agent_docs/spacetrack.md` for full API policy details.
 

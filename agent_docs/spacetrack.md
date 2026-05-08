@@ -63,11 +63,12 @@ time.sleep(3)  # between Space-Track calls
 
 ## Key API Classes
 
-### GP class — use this for current/live TLEs
-For active-satellite TLEs (live inference pipeline).
-Call at most **once per hour**.  Time your calls 10–20 minutes off the top and
-bottom of the hour (e.g. HH:12 or HH:48, **never** HH:00 or HH:30) to avoid
-peak load periods.
+### GP class — explicit current/live catalog maintenance only
+ARGUS inference does **not** call this class automatically.  Use it only for a
+deliberate current-catalog maintenance workflow if/when ARGUS is configured to
+ingest live data.  Call at most **once per hour**.  Time calls 10–20 minutes off
+the top and bottom of the hour (e.g. HH:12 or HH:48, **never** HH:00 or HH:30)
+to avoid peak load periods.
 
 Space-Track's recommended query:
 ```
@@ -88,13 +89,16 @@ results = st.gp(
 )
 ```
 
-In ARGUS code, call `query_gp_current()` from `src/matching/spacetrack_query.py`.
-It enforces the one-hour rate limit internally via a 55-minute disk cache.
+In ARGUS code, `query_gp_current()` remains available from
+`src/matching/spacetrack_query.py` for explicit maintenance scripts. It is not
+used as an inference fallback.
 
 ### GP_History class — one-time ad-hoc historical queries only
-For cross-identifying objects in **archival images** (obs_time > 2 hours ago).
+For explicit historical diagnostics or approved backfills only.
 
-**Do not poll this class.**  Fetch the data once, cache it permanently.
+**Do not poll this class.**  Do not use broad `gp_history` windows from
+inference.  Fetch targeted or approved data once, store it locally, and do not
+download it again.
 
 ```python
 import spacetrack.operators as op
@@ -113,8 +117,9 @@ results = st.gp_history(
 )
 ```
 
-In ARGUS code, call `query_gp_history()` from `src/matching/spacetrack_query.py`.
-It caches results **permanently** (TTL=None) for observations older than 2 hours.
+In ARGUS code, `query_gp_history()` remains available from
+`src/matching/spacetrack_query.py` for explicit diagnostics/backfills. It is not
+used by the normal inference path.
 
 **For large date ranges**: do not use `gp_history` — download the annual zip
 bundles from:
@@ -124,12 +129,16 @@ https://ln5.sync.com/dl/afd354190/c5cd2q72-a5qjzp4q-nbjdiqkr-cenajuqu
 
 ## Routing in ARGUS
 
-`inference/crossid.py → _fetch_tle_catalog()` routes automatically:
+`inference/crossid.py → _fetch_tle_catalog()` is local-catalog only:
 
-| obs_time age | API class used | Cache TTL |
+| Local TLE coverage | Inference behavior | Space-Track call |
 |---|---|---|
-| < 2 hours | `GP` via `query_gp_current()` | 55 minutes |
-| ≥ 2 hours | `GP_History` via `query_gp_history()` | **Permanent** |
+| Present for obs_time window | Cross-identify against local `tle_catalog` | None |
+| Missing for obs_time window | Leave detections unidentified/unknown | None |
+
+This is intentional. Missing historical coverage is accepted as an unknown
+object rather than triggering broad `gp_history` requests. Current/live
+Space-Track integration is a future operator decision, not automatic behavior.
 
 ---
 
@@ -220,12 +229,13 @@ except requests.exceptions.ConnectionError:
 iss = st.gp(norad_cat_id=25544, format='json')
 print(iss[0]['OBJECT_NAME'])  # Should print: ISS (ZARYA)
 
-# Fetch all active TLEs (GP class, ≤ once/hour):
+# Explicit maintenance only: fetch all active TLEs (GP class, ≤ once/hour):
 from src.matching.spacetrack_query import query_gp_current
 tles = query_gp_current()
 print(f"Active objects: {len(tles)}")
 
-# Fetch historical TLEs for a specific archival observation (cached permanently):
+# Explicit diagnostic/backfill only: fetch historical TLEs for a specific query.
+# Prefer targeted NORAD filters or Space-Track-approved bulk files.
 from src.matching.spacetrack_query import query_gp_history
 from datetime import datetime, timezone
 obs = datetime(2024, 4, 2, 2, 55, 24, tzinfo=timezone.utc)
