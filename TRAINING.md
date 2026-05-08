@@ -251,7 +251,7 @@ python -m eval.benchmark \
     --output results/gtimages_crossid.json
 ```
 
-This requires Space-Track credentials (see CLAUDE.md for setup).
+This requires Space-Track credentials (see `agent_docs/assistant_guide.md` for setup).
 
 ---
 

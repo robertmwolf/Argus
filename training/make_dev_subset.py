@@ -3,7 +3,7 @@
 Generates synthetic FITS images with known streak positions, writes YOLO OBB
 label files, and produces data/annotations/dev_subset.json in COCO format.
 
-Subset composition (matches CLAUDE.md spec):
+Subset composition (matches agent_docs/assistant_guide.md spec):
   20 images  — no streak (background only)
   20 images  — short streak  (<269 px)
   10 images  — long  streak  (≥269 px)
@@ -38,7 +38,7 @@ from astropy.io import fits
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Constants matching CLAUDE.md spec
+# Constants matching agent_docs/assistant_guide.md spec
 # ---------------------------------------------------------------------------
 _N_BLANK = 20
 _N_SHORT = 20   # streak length < 269 px
