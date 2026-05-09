@@ -286,3 +286,124 @@ class TestBenchmarkHelpers:
         assert saved["precision"] == pytest.approx(1.0)
         assert saved["recall"] == pytest.approx(1.0)
         assert "yolo_baseline" in saved
+
+
+# ---------------------------------------------------------------------------
+# evaluate_crossid
+# Source: SkyTrack (colleague) — ComputeRMSResidual
+# ---------------------------------------------------------------------------
+
+def _make_crossid_det(
+    identified: bool = True,
+    atrk: float | None = 0.0,
+    xtrk: float | None = 0.0,
+    confidence: float = 0.85,
+) -> dict:
+    """Build a minimal detection with identification data for evaluate_crossid tests."""
+    identifications = []
+    if identified:
+        identifications.append({
+            "rank": 1,
+            "satellite_name": "STARLINK-1007",
+            "norad_id": 44713,
+            "confidence": confidence,
+            "atrk_arcsec": atrk,
+            "xtrk_arcsec": xtrk,
+        })
+    return {"identifications": identifications}
+
+
+class TestEvaluateCrossid:
+    def test_returns_required_keys(self):
+        from eval.metrics import evaluate_crossid
+        result = evaluate_crossid([_make_crossid_det()])
+        for key in (
+            "n_detections", "n_identified", "identification_rate",
+            "n_with_residuals", "atrk_rms_arcsec", "xtrk_rms_arcsec",
+            "total_rms_arcsec", "top1_confidence_mean",
+        ):
+            assert key in result, f"Missing key: {key}"
+
+    def test_empty_input(self):
+        from eval.metrics import evaluate_crossid
+        result = evaluate_crossid([])
+        assert result["n_detections"] == 0
+        assert result["identification_rate"] == pytest.approx(0.0)
+
+    def test_all_identified(self):
+        from eval.metrics import evaluate_crossid
+        dets = [_make_crossid_det(identified=True) for _ in range(4)]
+        result = evaluate_crossid(dets)
+        assert result["n_detections"] == 4
+        assert result["n_identified"] == 4
+        assert result["identification_rate"] == pytest.approx(1.0)
+
+    def test_none_identified(self):
+        from eval.metrics import evaluate_crossid
+        dets = [_make_crossid_det(identified=False) for _ in range(3)]
+        result = evaluate_crossid(dets)
+        assert result["n_identified"] == 0
+        assert result["identification_rate"] == pytest.approx(0.0)
+
+    def test_partial_identification(self):
+        from eval.metrics import evaluate_crossid
+        dets = [_make_crossid_det(identified=True), _make_crossid_det(identified=False)]
+        result = evaluate_crossid(dets)
+        assert result["identification_rate"] == pytest.approx(0.5)
+
+    def test_atrk_xtrk_rms_zero_residuals(self):
+        """Perfect prediction → both RMS residuals are zero."""
+        from eval.metrics import evaluate_crossid
+        dets = [_make_crossid_det(atrk=0.0, xtrk=0.0) for _ in range(3)]
+        result = evaluate_crossid(dets)
+        assert result["atrk_rms_arcsec"] == pytest.approx(0.0)
+        assert result["xtrk_rms_arcsec"] == pytest.approx(0.0)
+
+    def test_atrk_rms_known_value(self):
+        """3 detections with Atrk=[3,4,0], Xtrk=0 → atrk_rms = sqrt((9+16+0)/3) ≈ 2.89.
+
+        evaluate_crossid rounds results to 2 decimal places, so use abs=0.01 tolerance.
+        """
+        from eval.metrics import evaluate_crossid
+        import math
+        dets = [
+            _make_crossid_det(atrk=3.0, xtrk=0.0),
+            _make_crossid_det(atrk=4.0, xtrk=0.0),
+            _make_crossid_det(atrk=0.0, xtrk=0.0),
+        ]
+        result = evaluate_crossid(dets)
+        expected = math.sqrt((9 + 16 + 0) / 3)
+        assert result["atrk_rms_arcsec"] == pytest.approx(expected, abs=0.01)
+
+    def test_total_rms_combines_both_axes(self):
+        """total_rms = sqrt((atrk² + xtrk²) / n)."""
+        from eval.metrics import evaluate_crossid
+        import math
+        dets = [_make_crossid_det(atrk=3.0, xtrk=4.0)]
+        result = evaluate_crossid(dets)
+        assert result["total_rms_arcsec"] == pytest.approx(5.0, rel=1e-4)
+
+    def test_none_residuals_excluded(self):
+        """Identifications without atrk/xtrk keys are excluded from RMS computation."""
+        from eval.metrics import evaluate_crossid
+        det_no_resid = {"identifications": [{"rank": 1, "confidence": 0.9}]}
+        dets = [_make_crossid_det(atrk=4.0, xtrk=3.0), det_no_resid]
+        result = evaluate_crossid(dets)
+        assert result["n_with_residuals"] == 1
+        assert result["total_rms_arcsec"] == pytest.approx(5.0, rel=1e-4)
+
+    def test_top1_confidence_mean(self):
+        from eval.metrics import evaluate_crossid
+        dets = [
+            _make_crossid_det(confidence=0.8),
+            _make_crossid_det(confidence=0.6),
+        ]
+        result = evaluate_crossid(dets)
+        assert result["top1_confidence_mean"] == pytest.approx(0.7, abs=1e-6)
+
+    def test_det_without_identifications_key_handled(self):
+        """Detections missing the 'identifications' key entirely should not crash."""
+        from eval.metrics import evaluate_crossid
+        dets = [{"confidence": 0.9, "obb": {}}, _make_crossid_det()]
+        result = evaluate_crossid(dets)
+        assert result["n_detections"] == 2
