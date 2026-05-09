@@ -1,0 +1,13 @@
+{
+  "checkpoint": "weights/gtimages_tiny/best_coco_bbox_mAP_epoch_30.pth",
+  "config": "models/dino/streak_codino_swin_t.py",
+  "metrics": {
+    "coco/bbox_mAP": 0.0,
+    "coco/bbox_mAP_50": 0.0,
+    "coco/bbox_mAP_75": 0.0,
+    "coco/bbox_mAP_l": 0.0,
+    "coco/bbox_mAP_m": 0.129,
+    "coco/bbox_mAP_s": -1.0
+  },
+  "split": "test"
+}
