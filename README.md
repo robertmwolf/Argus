@@ -2,29 +2,20 @@
 ### Automated Recognition and Grading of Unidentified Streaks
 
 ARGUS is an academic research pipeline for automated satellite streak detection
-and identification in FITS telescope images.  It detects satellite streaks using
-a Co-DINO transformer model (Swin backbone), refines streak orientation via the
-Radon transform, traces each streak to its true endpoints across the full image,
-and cross-identifies detected objects against a local TLE catalog — sourced once
-from Space-Track and stored in the ARGUS database — using SGP4 propagation and
-multi-factor confidence scoring.  Results are served through a FastAPI backend
-and React frontend.
+and identification in FITS telescope images.  It runs a hybrid detection stage —
+a bounded classical line detector (ASTRiDE-derived) and a Co-DINO transformer
+model (Swin backbone) — then refines streak orientation via the Radon transform,
+traces each streak to its true endpoints across the full image, and
+cross-identifies detected objects against a local TLE catalog using SGP4
+propagation and multi-factor confidence scoring.  Results are served through a
+FastAPI backend and React frontend.
 
----
+> **Space-Track integration status:** Cross-identification reads exclusively from
+> a local `tle_catalog` database table.  Live Space-Track API queries are
+> **not currently active** — integration is pending evaluation for compliance
+> with Space-Track's API terms of use.  The TLE catalog must be bootstrapped
+> once from an offline bundle (see Setup below).
 
-## Status
-
-| Phase | Description | Status |
-|-------|-------------|--------|
-| 0 — Classical baseline | ASTRiDE detection, SGP4 matching | ✅ Complete |
-| 1 — Data pipeline | FITS loader, COCO labels, augmentations | ✅ Complete |
-| 2 — DINO model | device.py, MMDet configs, train script | ✅ Complete |
-| 3 — Inference pipeline | orchestrator, Radon postprocess, crossid | ✅ Complete |
-| 4 — Database | SQLAlchemy schema, async models | ✅ Complete |
-| 5 — API | FastAPI upload / result endpoints | ✅ Complete |
-| 6 — Frontend | React + Vite, canvas OBB rendering | ✅ Complete |
-| 7 — Docker | docker-compose with GPU worker | ✅ Complete |
-| 8 — Evaluation | mAP, angle error, DINO vs ASTRiDE | ✅ Complete |
 
 ---
 
@@ -61,27 +52,6 @@ Code derived from or substantially adapting these works is annotated with
 ---
 
 ## Architecture
-
-```
-FITS Image
-    │
-    ├─ Phase 0/3: Classical path (src/)
-    │   ├── ingest/fits_parser.py        — FITS → FITSImage dataclass
-    │   ├── detection/classical_detector.py  — ASTRiDE streak extraction
-    │   ├── astrometry/plate_solver.py   — pixel → RA/Dec (WCS)
-    │   └── matching/                    — Space-Track → SGP4 → scorer → matcher
-    │
-    └─ Phase 2–8: ML path
-        ├── inference/fits_loader.py     — FITS → normalised uint8 array + FITS/sidecar WCS
-        ├── inference/device.py          — get_device(): CUDA → MPS → CPU
-        ├── models/dino/                 — DINO Swin-T (dev) / Swin-L (cloud) configs
-        ├── training/train_dino.py       — two-stage fine-tuning + cost guardrails
-        ├── inference/pipeline.py        — end-to-end orchestrator
-        ├── inference/postprocess.py     — Radon angle refinement + extent tracing + NMS
-        ├── inference/crossid.py         — TLE cross-identification
-        ├── api/main.py                  — FastAPI: upload / queue / result endpoints
-        └── frontend/                    — React 18 + Vite: canvas OBB overlay
-```
 
 Full design: [`agent_docs/architecture.md`](agent_docs/architecture.md)
 
@@ -120,23 +90,29 @@ stage opens the FITS file with **astropy** and:
 
 Timing logged: `fits_load_ms`.
 
-### 3. DINO Detection (`inference/pipeline.py` + MMDetection)
+### 3. Hybrid Detection (`inference/pipeline.py` + MMDetection)
 
-The normalised array is passed to a Co-DINO transformer model (Swin-T backbone
-for local dev, Swin-L for cloud training).
+Two detectors run on every image and their results are merged before downstream
+processing:
 
+**Classical detector (ASTRiDE-derived, always active)**
+- A bounded classical line detector runs first, ensuring obvious bright streaks
+  are captured even when the ML model is underconfident (e.g. with a locally
+  trained Swin-T checkpoint).
+
+**Co-DINO transformer (primary ML detector)**
+- The normalised array is passed to a Co-DINO model (Swin-T backbone for local
+  dev, Swin-L for cloud training).
 - The image is rescaled so its longest edge is at least 1280 px for normal
   inference (256 px in fast mode).
 - MMDetection's `inference_detector` runs a forward pass.
 - Every predicted bounding box with score ≥ `CONFIDENCE_THRESHOLD` (default
   0.01 for local development; raise after cloud Swin-L calibration) is kept.
 - Bounding boxes are scaled back to original image pixel coordinates.
-- A bounded classical line detector also runs on every image so obvious bright
-  streaks are still returned when the local Swin-T model is underconfident.
 
 DINO can return multiple overlapping detections for the same physical streak
-(common for long streaks that span multiple attention heads).  These are
-deduplicated in stage 5.
+(common for long streaks that span multiple attention heads).  Classical and
+DINO detections are pooled and deduplicated together in stage 5.
 
 Timing logged: `inference_ms`.
 
@@ -219,12 +195,18 @@ astropy's `all_pix2world` with the FITS header WCS.  If no WCS is present
 For each detection:
 
 1. The local `tle_catalog` table in the ARGUS database is queried for all
-   active satellites whose TLE epoch is within ±3 days of the observation time.
+   satellites whose TLE epoch is within ±3 days of the observation time.
+   Space-Track is **not queried at inference time** — the catalog must be
+   pre-loaded (see Setup).
 2. SGP4 propagation (via **sgp4** / **skyfield**) computes each candidate
    satellite's sky position at the observation epoch.
 3. Angular separation and velocity-vector angle are compared against the
    detected streak's RA/Dec and `angle_deg`.
 4. Up to 3 candidates are returned, ranked by a multi-factor confidence score.
+
+If the local catalog has no coverage for the observation time window, ARGUS
+leaves the object unidentified (`unknown`) rather than falling back to a live
+Space-Track query.
 
 Timing logged: `crossid_ms`.
 
@@ -332,23 +314,22 @@ export ARGUS_NORM=zscore                       # current local Swin-T weights
 # export ARGUS_NORM=autostretch                # future autostretch-trained Swin-L weights
 
 # Bootstrap the local TLE catalog (one-time per environment):
-# 1. Download the 2025 annual bundle from Space-Track's cloud storage:
-#    https://ln5.sync.com/dl/afd354190/c5cd2q72-a5qjzp4q-nbjdiqkr-cenajuqu
-#    Place the file in data/tle_zips/
+# Download a TLE bundle and place it in data/tle_zips/, then run:
 python scripts/bootstrap_tle_catalog.py --zip-dir data/tle_zips/ --years 2025
 
-# Space-Track credentials (only needed for explicit TLE maintenance/diagnostics,
-# not inference):
-export SPACETRACK_USER=your@email.com
-export SPACETRACK_PASS=yourpassword
-# Local development uses the Space-Track test site for maintenance calls.
-export ARGUS_ENV=development
-export SPACETRACK_BASE_URL=https://for-testing-only.space-track.org/
+# Space-Track credentials — NOT currently used.
+# Live Space-Track API integration is pending evaluation for compliance with
+# their terms of use.  The variables below are defined for future use only;
+# do not set them in production until the integration is cleared.
+# export SPACETRACK_USER=your@email.com
+# export SPACETRACK_PASS=yourpassword
+# export ARGUS_ENV=development
+# export SPACETRACK_BASE_URL=https://for-testing-only.space-track.org/
 ```
 
 Inference reads only from the local `tle_catalog`. If the catalog has no
 coverage for an observation time window, ARGUS leaves the object unidentified
-(`unknown`) rather than calling Space-Track automatically.
+(`unknown`) rather than querying Space-Track.
 
 ## Running Locally (Dev)
 
