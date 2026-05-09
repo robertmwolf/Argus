@@ -235,3 +235,143 @@ class TestAngularSeparation:
         sep_ab = _angular_separation_arcsec(10.0, 5.0, 15.0, 10.0)
         sep_ba = _angular_separation_arcsec(15.0, 10.0, 10.0, 5.0)
         assert sep_ab == pytest.approx(sep_ba, rel=1e-9)
+
+
+# ---------------------------------------------------------------------------
+# _streak_mid_radec
+# ---------------------------------------------------------------------------
+
+class TestStreakMidRadec:
+    def test_both_tips_averages_ra_dec(self):
+        from inference.crossid import _streak_mid_radec
+        det = {"ra_tip1_deg": 10.0, "dec_tip1_deg": 20.0,
+               "ra_tip2_deg": 12.0, "dec_tip2_deg": 22.0}
+        mid = _streak_mid_radec(det)
+        assert mid is not None
+        assert mid[0] == pytest.approx(11.0, abs=1e-6)
+        assert mid[1] == pytest.approx(21.0, abs=1e-6)
+
+    def test_only_tip1_returns_tip1(self):
+        from inference.crossid import _streak_mid_radec
+        det = {"ra_tip1_deg": 10.0, "dec_tip1_deg": 20.0,
+               "ra_tip2_deg": None, "dec_tip2_deg": None}
+        mid = _streak_mid_radec(det)
+        assert mid == pytest.approx((10.0, 20.0))
+
+    def test_only_tip2_returns_tip2(self):
+        from inference.crossid import _streak_mid_radec
+        det = {"ra_tip1_deg": None, "dec_tip1_deg": None,
+               "ra_tip2_deg": 15.0, "dec_tip2_deg": 5.0}
+        mid = _streak_mid_radec(det)
+        assert mid == pytest.approx((15.0, 5.0))
+
+    def test_no_tips_returns_none(self):
+        from inference.crossid import _streak_mid_radec
+        det = {"ra_tip1_deg": None, "dec_tip1_deg": None,
+               "ra_tip2_deg": None, "dec_tip2_deg": None}
+        assert _streak_mid_radec(det) is None
+
+    def test_ra_wrap_around_360(self):
+        """RA near 0°/360° wrap should average correctly."""
+        from inference.crossid import _streak_mid_radec
+        det = {"ra_tip1_deg": 359.0, "dec_tip1_deg": 0.0,
+               "ra_tip2_deg":   1.0, "dec_tip2_deg": 0.0}
+        mid = _streak_mid_radec(det)
+        assert mid is not None
+        # midpoint should be near 0°, not 180°
+        assert mid[0] == pytest.approx(0.0, abs=1.0)
+
+
+# ---------------------------------------------------------------------------
+# _plate_scale_from_det
+# ---------------------------------------------------------------------------
+
+class TestPlateScaleFromDet:
+    def test_known_geometry_returns_correct_scale(self):
+        """1° separation across 3600 px streak → 1 arcsec/px."""
+        from inference.crossid import _plate_scale_from_det
+        det = {
+            "ra_tip1_deg": 0.0, "dec_tip1_deg": 0.0,
+            "ra_tip2_deg": 1.0, "dec_tip2_deg": 0.0,
+            "obb": {"cx": 1800.0, "cy": 1800.0, "w": 3600.0, "h": 5.0, "angle_deg": 0.0},
+        }
+        scale = _plate_scale_from_det(det)
+        assert scale == pytest.approx(1.0, rel=1e-3)
+
+    def test_missing_sky_coords_returns_none(self):
+        from inference.crossid import _plate_scale_from_det
+        det = {"ra_tip1_deg": None, "dec_tip1_deg": None,
+               "ra_tip2_deg": None, "dec_tip2_deg": None,
+               "obb": {"w": 200.0}}
+        assert _plate_scale_from_det(det) is None
+
+    def test_too_short_streak_returns_none(self):
+        """OBB width < 10 px → cannot derive a reliable plate scale."""
+        from inference.crossid import _plate_scale_from_det
+        det = {"ra_tip1_deg": 0.0, "dec_tip1_deg": 0.0,
+               "ra_tip2_deg": 0.01, "dec_tip2_deg": 0.0,
+               "obb": {"cx": 50.0, "cy": 50.0, "w": 5.0, "h": 5.0, "angle_deg": 0.0}}
+        assert _plate_scale_from_det(det) is None
+
+    def test_missing_obb_returns_none(self):
+        from inference.crossid import _plate_scale_from_det
+        det = {"ra_tip1_deg": 0.0, "dec_tip1_deg": 0.0,
+               "ra_tip2_deg": 1.0, "dec_tip2_deg": 0.0}
+        assert _plate_scale_from_det(det) is None
+
+
+# ---------------------------------------------------------------------------
+# _atrk_xtrk — along-track / cross-track residual decomposition
+# Source: SkyTrack (colleague) — ComputeOneResidual
+# ---------------------------------------------------------------------------
+
+class TestAtrkXtrk:
+    def test_zero_residual(self):
+        """Observed equals predicted → both residuals are zero."""
+        from inference.crossid import _atrk_xtrk
+        atrk, xtrk = _atrk_xtrk(
+            obs_ra=10.0, obs_dec=20.0,
+            pred_ra=10.0, pred_dec=20.0,
+            start_ra=9.0, start_dec=20.0,
+            end_ra=11.0, end_dec=20.0,
+        )
+        assert atrk == pytest.approx(0.0, abs=1e-6)
+        assert xtrk == pytest.approx(0.0, abs=1e-6)
+
+    def test_pure_along_track_error(self):
+        """Error purely along track direction → Xtrk ≈ 0, |Atrk| > 0."""
+        from inference.crossid import _atrk_xtrk
+        # Track runs East (RA increases); shift observation +0.1 deg in RA
+        atrk, xtrk = _atrk_xtrk(
+            obs_ra=10.1, obs_dec=20.0,
+            pred_ra=10.0, pred_dec=20.0,
+            start_ra=9.0, start_dec=20.0,
+            end_ra=11.0, end_dec=20.0,
+        )
+        assert abs(atrk) > 10.0            # significant along-track component
+        assert abs(xtrk) == pytest.approx(0.0, abs=1.0)  # near-zero cross-track
+
+    def test_pure_cross_track_error(self):
+        """Error purely across track direction → Atrk ≈ 0, |Xtrk| > 0."""
+        from inference.crossid import _atrk_xtrk
+        # Track runs East; shift observation +0.1 deg in Dec (cross-track)
+        atrk, xtrk = _atrk_xtrk(
+            obs_ra=10.0, obs_dec=20.1,
+            pred_ra=10.0, pred_dec=20.0,
+            start_ra=9.0, start_dec=20.0,
+            end_ra=11.0, end_dec=20.0,
+        )
+        assert abs(atrk) == pytest.approx(0.0, abs=1.0)
+        assert abs(xtrk) > 10.0
+
+    def test_degenerate_track_returns_zeros(self):
+        """Zero-length track vector → both residuals are zero (no crash)."""
+        from inference.crossid import _atrk_xtrk
+        atrk, xtrk = _atrk_xtrk(
+            obs_ra=10.0, obs_dec=20.0,
+            pred_ra=10.0, pred_dec=20.0,
+            start_ra=10.0, start_dec=20.0,
+            end_ra=10.0, end_dec=20.0,   # zero-length
+        )
+        assert atrk == pytest.approx(0.0, abs=1e-9)
+        assert xtrk == pytest.approx(0.0, abs=1e-9)

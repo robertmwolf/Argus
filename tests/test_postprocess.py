@@ -222,3 +222,105 @@ class TestNmsDetections:
         det_with_obb = _make_det(0.9)
         result = nms_detections([det_no_obb, det_with_obb])
         assert len(result) == 2
+
+
+# ---------------------------------------------------------------------------
+# classify_detection_quality
+# Source: SkyTrack (colleague) — StreakProcess reject flags
+# ---------------------------------------------------------------------------
+
+def _make_quality_det(
+    cx: float = 256.0,
+    cy: float = 256.0,
+    w: float = 200.0,
+    angle_deg: float = 0.0,
+    confidence: float = 0.85,
+    streak_length_px: float = 200.0,
+    ra_tip1: float | None = 10.0,
+    dec_tip1: float | None = 20.0,
+    ra_tip2: float | None = 10.1,
+    dec_tip2: float | None = 20.1,
+) -> dict:
+    """Build a minimal detection dict for quality classification tests."""
+    return {
+        "obb": {"cx": cx, "cy": cy, "w": w, "h": 8.0, "angle_deg": angle_deg},
+        "confidence": confidence,
+        "streak_length_px": streak_length_px,
+        "ra_tip1_deg": ra_tip1,
+        "dec_tip1_deg": dec_tip1,
+        "ra_tip2_deg": ra_tip2,
+        "dec_tip2_deg": dec_tip2,
+    }
+
+
+class TestClassifyDetectionQuality:
+    IMAGE_SHAPE = (512, 512)
+
+    def test_good_detection_returns_zero(self):
+        from inference.postprocess import classify_detection_quality, QUALITY_GOOD
+        det = _make_quality_det()
+        assert classify_detection_quality(det, self.IMAGE_SHAPE) == QUALITY_GOOD
+
+    def test_tip_on_left_edge_returns_edge_flag(self):
+        """Tip within edge_margin_px of left border → QUALITY_EDGE."""
+        from inference.postprocess import classify_detection_quality, QUALITY_EDGE
+        # angle=0 → tip1_x = cx - w/2 = 5 (inside 20 px margin)
+        det = _make_quality_det(cx=105.0, cy=256.0, w=200.0, angle_deg=0.0)
+        assert classify_detection_quality(det, self.IMAGE_SHAPE, edge_margin_px=20) == QUALITY_EDGE
+
+    def test_tip_on_right_edge_returns_edge_flag(self):
+        from inference.postprocess import classify_detection_quality, QUALITY_EDGE
+        # tip2_x = cx + w/2 = 402 + 100 = 502 > 512-20=492
+        det = _make_quality_det(cx=402.0, cy=256.0, w=200.0, angle_deg=0.0)
+        assert classify_detection_quality(det, self.IMAGE_SHAPE, edge_margin_px=20) == QUALITY_EDGE
+
+    def test_tip_on_top_edge_returns_edge_flag(self):
+        from inference.postprocess import classify_detection_quality, QUALITY_EDGE
+        # vertical streak: angle=90 → tip_y = cy ± w/2 = 50 ± 100 → tip1_y = -50 (off edge)
+        det = _make_quality_det(cx=256.0, cy=50.0, w=200.0, angle_deg=90.0)
+        assert classify_detection_quality(det, self.IMAGE_SHAPE, edge_margin_px=20) == QUALITY_EDGE
+
+    def test_low_confidence_returns_flag_two(self):
+        from inference.postprocess import classify_detection_quality, QUALITY_LOW_CONF
+        det = _make_quality_det(confidence=0.10)
+        assert classify_detection_quality(det, self.IMAGE_SHAPE, min_confidence=0.30) == QUALITY_LOW_CONF
+
+    def test_confidence_exactly_at_threshold_is_low_conf(self):
+        """Confidence strictly below threshold → flag 2."""
+        from inference.postprocess import classify_detection_quality, QUALITY_LOW_CONF
+        det = _make_quality_det(confidence=0.299)
+        assert classify_detection_quality(det, self.IMAGE_SHAPE, min_confidence=0.30) == QUALITY_LOW_CONF
+
+    def test_confidence_at_threshold_is_good(self):
+        """Confidence exactly equal to threshold passes."""
+        from inference.postprocess import classify_detection_quality, QUALITY_GOOD
+        det = _make_quality_det(confidence=0.30)
+        assert classify_detection_quality(det, self.IMAGE_SHAPE, min_confidence=0.30) == QUALITY_GOOD
+
+    def test_short_streak_returns_flag_three(self):
+        from inference.postprocess import classify_detection_quality, QUALITY_TOO_SHORT
+        det = _make_quality_det(streak_length_px=10.0)
+        assert classify_detection_quality(det, self.IMAGE_SHAPE, min_length_px=50.0) == QUALITY_TOO_SHORT
+
+    def test_no_sky_coords_returns_flag_four(self):
+        from inference.postprocess import classify_detection_quality, QUALITY_NO_WCS
+        det = _make_quality_det(ra_tip1=None, dec_tip1=None, ra_tip2=None, dec_tip2=None)
+        assert classify_detection_quality(det, self.IMAGE_SHAPE) == QUALITY_NO_WCS
+
+    def test_only_tip1_sky_coords_is_good(self):
+        """If either tip has sky coords, WCS is present → not QUALITY_NO_WCS."""
+        from inference.postprocess import classify_detection_quality, QUALITY_GOOD
+        det = _make_quality_det(ra_tip2=None, dec_tip2=None)
+        assert classify_detection_quality(det, self.IMAGE_SHAPE) == QUALITY_GOOD
+
+    def test_edge_check_takes_priority_over_low_confidence(self):
+        """Edge failure (flag 1) should be returned even if confidence is also low."""
+        from inference.postprocess import classify_detection_quality, QUALITY_EDGE
+        det = _make_quality_det(cx=105.0, cy=256.0, w=200.0, angle_deg=0.0, confidence=0.05)
+        assert classify_detection_quality(det, self.IMAGE_SHAPE) == QUALITY_EDGE
+
+    def test_low_conf_takes_priority_over_too_short(self):
+        """Flag 2 returned before flag 3 when both conditions fail."""
+        from inference.postprocess import classify_detection_quality, QUALITY_LOW_CONF
+        det = _make_quality_det(confidence=0.05, streak_length_px=5.0)
+        assert classify_detection_quality(det, self.IMAGE_SHAPE) == QUALITY_LOW_CONF
