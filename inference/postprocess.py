@@ -104,6 +104,23 @@ def refine_angle(
         logger.debug("refine_angle: crop too small (%s), returning initial angle", crop.shape)
         return float(initial_angle % 180.0)
 
+    # Downsample large crops before Radon to keep runtime bounded.
+    # DINO bboxes scaled back from a low-resolution inference pass (e.g. 256 px
+    # on a 6k-pixel sensor) produce crops of 2000–3000 px; Radon on these with
+    # 360 angles takes many minutes on CPU.  512 px preserves sub-degree
+    # angular precision while keeping Radon runtime under ~1 s.
+    _MAX_RADON_SIDE = 512
+    h_crop, w_crop = crop.shape[:2]
+    if max(h_crop, w_crop) > _MAX_RADON_SIDE:
+        import cv2 as _cv2
+        scale_r = _MAX_RADON_SIDE / max(h_crop, w_crop)
+        crop = _cv2.resize(
+            crop,
+            (max(1, int(w_crop * scale_r)), max(1, int(h_crop * scale_r))),
+            interpolation=_cv2.INTER_AREA,
+        )
+        logger.debug("refine_angle: downsampled crop %s→%s for Radon", (h_crop, w_crop), crop.shape)
+
     # Subtract background so Radon variance reflects the streak, not the sky level.
     # Without this, a non-zero background dominates the Radon at all angles and
     # the variance peak gets pulled toward whichever axis is most compressed by
