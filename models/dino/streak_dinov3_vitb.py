@@ -188,7 +188,7 @@ train_dataloader = dict(
         type=dataset_type,
         data_root=data_root,
         metainfo=metainfo,
-        ann_file='annotations/dev_subset.json',
+        ann_file='annotations/train.json',
         data_prefix=dict(img=''),
         filter_cfg=dict(filter_empty_gt=False),
         pipeline=train_pipeline,
@@ -207,7 +207,7 @@ val_dataloader = dict(
         type=dataset_type,
         data_root=data_root,
         metainfo=metainfo,
-        ann_file='annotations/dev_subset.json',
+        ann_file='annotations/val.json',
         data_prefix=dict(img=''),
         test_mode=True,
         pipeline=val_pipeline,
@@ -221,7 +221,7 @@ test_dataloader = val_dataloader
 # ---------------------------------------------------------------------------
 val_evaluator = dict(
     type='CocoMetric',
-    ann_file=data_root + 'annotations/dev_subset.json',
+    ann_file=data_root + 'annotations/val.json',
     metric='bbox',
     format_only=False,
     backend_args=backend_args,
@@ -250,12 +250,12 @@ optim_wrapper = dict(
     ),
 )
 
-max_epochs = 50
+max_epochs = 4
 
 train_cfg = dict(
     type='EpochBasedTrainLoop',
     max_epochs=max_epochs,
-    val_interval=5,
+    val_interval=1,
 )
 val_cfg  = dict(type='ValLoop')
 test_cfg = dict(type='TestLoop')
@@ -266,7 +266,7 @@ param_scheduler = [
         begin=0,
         end=max_epochs,
         by_epoch=True,
-        milestones=[40, 47],
+        milestones=[3, 4],
         gamma=0.1,
     ),
 ]
@@ -282,10 +282,10 @@ default_hooks = dict(
     param_scheduler=dict(type='ParamSchedulerHook'),
     checkpoint=dict(
         type='CheckpointHook',
-        interval=5,
+        interval=1,
         save_best='coco/bbox_mAP',
         rule='greater',
-        max_keep_ckpts=3,
+        max_keep_ckpts=4,
     ),
     sampler_seed=dict(type='DistSamplerSeedHook'),
     visualization=dict(type='DetVisualizationHook'),
