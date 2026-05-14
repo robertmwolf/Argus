@@ -1,22 +1,26 @@
 """Phase E: Head-to-head comparison — DINOv3 ViT-B vs Swin-T baseline.
 
-Evaluates both models on the same held-out val split using MMDetection's
+Evaluates both models on the same annotation split using MMDetection's
 CocoMetric, then renders a side-by-side Markdown table.
+
+Split guidance:
+  --split dev_subset  Phase C local comparison (both models trained on dev_subset)
+  --split val         Phase D full comparison (both models trained on full dataset)
 
 Usage::
 
-    # Evaluate both models (runs whichever checkpoints are present):
-    python scripts/phase_e_compare.py
+    # Phase C local comparison (dev_subset models, evaluate on dev_subset):
+    python scripts/phase_e_compare.py --split dev_subset
+
+    # Phase D full comparison (full-dataset models, evaluate on val):
+    python scripts/phase_e_compare.py --split val
 
     # Evaluate one model only:
-    python scripts/phase_e_compare.py --model swin
-    python scripts/phase_e_compare.py --model dinov3_vitb
+    python scripts/phase_e_compare.py --model swin_t --split dev_subset
+    python scripts/phase_e_compare.py --model dinov3_vitb --split dev_subset
 
     # Use a specific DINOv3 checkpoint (default: auto-detect best):
-    python scripts/phase_e_compare.py --dinov3-checkpoint weights/dinov3_vitb_dev/best_coco_bbox_mAP_epoch_50.pth
-
-    # Override the val split (default: data/annotations/val.json):
-    python scripts/phase_e_compare.py --split dev_subset
+    python scripts/phase_e_compare.py --dinov3-checkpoint weights/dinov3_vitb_dev/best_coco_bbox_mAP_epoch_50.pth --split dev_subset
 
 Results are saved to results/phase_e/ as JSON and printed as Markdown.
 """
@@ -42,19 +46,29 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _MODELS = {
+    # Full-dataset Swin-T baseline (SatStreaks + GTImages merged)
+    # Known mAP@0.5 on test.json: 0.190 (MMDet CocoMetric)
     "swin_t": {
-        "label": "Co-DINO Swin-T (baseline)",
+        "label": "Co-DINO Swin-T (full-dataset baseline)",
         "config": "models/dino/streak_codino_swin_t.py",
-        "checkpoint": "weights/local_run/best_coco_bbox_mAP_epoch_50.pth",
+        "checkpoint": "weights/retrain_satstreaks_gtimages_20260507_1050/best_coco_bbox_mAP_epoch_4.pth",
     },
+    # Phase C: frozen ViT-B, 50-image dev subset — local sanity check only
     "dinov3_vitb": {
-        "label": "DINOv3 ViT-B frozen (Phase C)",
+        "label": "DINOv3 ViT-B frozen (Phase C, dev subset)",
         "config": "models/dino/streak_dinov3_vitb.py",
         "checkpoint": None,  # auto-detected from weights/dinov3_vitb_dev/
+    },
+    # Phase D: frozen ViT-L, full SatStreaks dataset — primary workstation run
+    "dinov3_vitl": {
+        "label": "DINOv3 ViT-L frozen (Phase D, full dataset)",
+        "config": "models/dino/streak_dinov3_vitl.py",
+        "checkpoint": None,  # auto-detected from weights/run_5070ti_dinov3_vitl/
     },
 }
 
 _DINOV3_CHECKPOINT_DIR = Path("weights/dinov3_vitb_dev")
+_DINOV3_VITL_CHECKPOINT_DIR = Path("weights/run_5070ti_dinov3_vitl")
 
 
 def _find_best_dinov3_checkpoint(work_dir: Path) -> Path | None:
@@ -98,6 +112,15 @@ def evaluate_model(
                 "DINOv3 ViT-B checkpoint not found in %s — Phase C may still be running. "
                 "Run again after training completes.",
                 _DINOV3_CHECKPOINT_DIR,
+            )
+            return None
+    elif model_key == "dinov3_vitl":
+        ckpt_path = dinov3_checkpoint_override or _find_best_dinov3_checkpoint(_DINOV3_VITL_CHECKPOINT_DIR)
+        if ckpt_path is None:
+            logger.warning(
+                "DINOv3 ViT-L checkpoint not found in %s — Phase D workstation run not yet complete. "
+                "Copy results from workstation and run again.",
+                _DINOV3_VITL_CHECKPOINT_DIR,
             )
             return None
     else:
@@ -158,33 +181,59 @@ def _delta(a: float | None, b: float | None) -> str:
 
 
 def render_markdown_table(results: dict[str, dict | None]) -> str:
-    swin = results.get("swin_t")
-    dino = results.get("dinov3_vitb")
+    swin  = results.get("swin_t")
+    vitb  = results.get("dinov3_vitb")
+    vitl  = results.get("dinov3_vitl")
+    split = results.get("split", "val")
 
     lines = [
-        "## Phase E — DINOv3 ViT-B vs Swin-T Baseline",
+        "## Phase E — DINOv3 vs Swin-T Baseline",
         "",
-        f"Evaluated on: `{results.get('split', 'val')}` split  ",
+        f"Evaluated on: `{split}` split  ",
         f"Date: {results.get('date', '—')}",
         "",
-        f"| Metric | {_MODELS['swin_t']['label']} | {_MODELS['dinov3_vitb']['label']} | Δ (DINOv3 − Swin) |",
+        f"| Metric | {_MODELS['swin_t']['label']} | {_MODELS['dinov3_vitb']['label']} | {_MODELS['dinov3_vitl']['label']} |",
         "|--------|------|------|------|",
     ]
 
     for key, label in _METRIC_LABELS:
         swin_val = swin.get(key) if swin else None
-        dino_val = dino.get(key) if dino else None
+        vitb_val = vitb.get(key) if vitb else None
+        vitl_val = vitl.get(key) if vitl else None
         lines.append(
-            f"| {label} | {_fmt(swin_val)} | {_fmt(dino_val)} | {_delta(dino_val, swin_val)} |"
+            f"| {label} | {_fmt(swin_val)} | {_fmt(vitb_val)} | {_fmt(vitl_val)} |"
+        )
+
+    lines += ["", "**Δ vs Swin-T baseline:**", ""]
+    lines += [
+        f"| Metric | ViT-B Δ | ViT-L Δ |",
+        "|--------|---------|---------|",
+    ]
+    for key, label in _METRIC_LABELS:
+        swin_val = swin.get(key) if swin else None
+        vitb_val = vitb.get(key) if vitb else None
+        vitl_val = vitl.get(key) if vitl else None
+        lines.append(f"| {label} | {_delta(vitb_val, swin_val)} | {_delta(vitl_val, swin_val)} |")
+
+    if split == "dev_subset":
+        context = (
+            "Phase C dev-subset check: Swin-T and ViT-B both trained on 50-image dev_subset. "
+            "Run `--split val` with full-dataset checkpoints for the Phase D meaningful comparison."
+        )
+    else:
+        context = (
+            "Phase D full comparison: Swin-T (retrain_satstreaks_gtimages) vs ViT-L (Phase D workstation run) "
+            "both trained on full SatStreaks + GTImages merged dataset."
         )
 
     lines += [
         "",
         "### Notes",
-        "- Both models evaluated on the same held-out val split with MMDetection CocoMetric.",
-        "- Swin-T: Co-DINO Swin-T fine-tuned 50 epochs on dev subset (50 images).",
-        "- DINOv3 ViT-B: frozen backbone + DETR head only, 50 epochs on dev subset.",
-        "- Phase D (ViT-L, full dataset) and Phase E full comparison pending workstation run.",
+        f"- {context}",
+        "- Swin-T baseline known mAP@0.5 on test.json: 0.190 (MMDet CocoMetric).",
+        "- Phase E gate: ViT-L mAP@0.5 > Swin-T mAP@0.5 → Phase D succeeded.",
+        "  If within ±5 pp: acceptable. If > 5 pp below: consider Phase F partial unfreeze.",
+        "- Phase 8 hard targets (test.json): ≥94% precision, ≥97% recall.",
     ]
     return "\n".join(lines)
 
@@ -199,7 +248,7 @@ def main() -> int:
         "--model",
         choices=list(_MODELS) + ["all"],
         default="all",
-        help="Which model to evaluate (default: all)",
+        help="Which model to evaluate: swin_t | dinov3_vitb | dinov3_vitl | all (default: all)",
     )
     parser.add_argument(
         "--split",
