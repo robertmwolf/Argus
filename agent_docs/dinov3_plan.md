@@ -169,12 +169,23 @@ cloud-scale GPU:
 
 | Phase | Task | Where | Status |
 |-------|------|--------|--------|
-| A | Feasibility probe: cosine dissimilarity + PCA heatmaps | Mac CPU | ✅ DONE |
-| B | `dinov3_adapter.py` + MMDet configs + pipeline smoke test | Mac | ← next |
-| C | Full 50-epoch frozen ViT-B training, dev subset | Mac MPS | |
-| D | Full 50-epoch frozen ViT-L training, full dataset | RTX 5070 Ti | |
-| E | Evaluation vs Co-DINO Swin-T/L baseline | Mac MPS | |
-| F (optional) | Partial ViT-L unfreeze if Phase D targets not met | A100 | deferred |
+| A | Feasibility probe: cosine dissimilarity + PCA heatmaps | Mac CPU | ✅ DONE (cosine dissim=0.095 > 0.05 gate) |
+| B | `dinov3_adapter.py` + MMDet configs + pipeline smoke test | Mac | ✅ DONE (smoke test loss 37→30) |
+| C | Full 50-epoch frozen ViT-B training, dev subset | Mac MPS | ✅ DONE (best mAP@0.5=0.274 on dev_subset, 0.002 on test — expected from 50-image train) |
+| D | Full 50-epoch frozen ViT-L training, full dataset | RTX 5070 Ti | ⏳ PENDING — handoff in Training_Handoff.md |
+| E | Evaluation vs Co-DINO Swin-T/L baseline on test.json | Mac | ✅ PARTIAL — Swin-T baseline 0.190; ViT-L column pending Phase D |
+| F (optional) | Partial ViT-L unfreeze if Phase D targets not met | A100 | deferred — evaluate after Phase D |
+
+### Phase E current results (test.json)
+
+| Model | mAP | mAP@0.5 | mAP@0.75 | Training data |
+|-------|-----|---------|---------|---------------|
+| Co-DINO Swin-T | 0.149 | **0.190** | 0.167 | full merged (SatStreaks + GTImages) |
+| DINOv3 ViT-B (Phase C) | 0.001 | 0.002 | 0.000 | 50-image dev_subset only — not a fair comparison |
+| DINOv3 ViT-L (Phase D) | TBD | TBD | TBD | full merged — apples-to-apples vs Swin-T |
+
+**Phase E gate**: ViT-L mAP@0.5 ≥ 0.190 (match Swin-T) → Phase D succeeded.
+Within ±5 pp = acceptable. > 5 pp below → consider Phase F.
 
 ## Open Questions (resolve during Phase A/B)
 
