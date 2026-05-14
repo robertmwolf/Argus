@@ -106,6 +106,16 @@ def check_config_large() -> bool:
     return _check_config("models/dino/streak_codino_swin_l.py", "Swin-L config parses")
 
 
+def check_config_dinov3_vitb() -> bool:
+    """DINOv3 ViT-B config must parse cleanly via mmengine."""
+    return _check_config("models/dino/streak_dinov3_vitb.py", "DINOv3 ViT-B config parses")
+
+
+def check_config_dinov3_vitl() -> bool:
+    """DINOv3 ViT-L config must parse cleanly via mmengine."""
+    return _check_config("models/dino/streak_dinov3_vitl.py", "DINOv3 ViT-L config parses")
+
+
 def _check_config(config_path: str, label: str) -> bool:
     try:
         from mmengine.config import Config
@@ -122,6 +132,14 @@ def check_weights_large() -> bool:
     ok = path.exists() and path.stat().st_size > 100_000_000
     return check(ok, f"Swin-L weights present ({path})",
                  f"Run: MODEL_SIZE=large python scripts/download_weights.py")
+
+
+def check_weights_dinov3_vitl() -> bool:
+    """DINOv3 ViT-L pretrain weights must exist in weights/."""
+    path = Path("weights/dinov3_vitl16_lvd1689m.pth")
+    ok = path.exists() and path.stat().st_size > 500_000_000
+    return check(ok, f"DINOv3 ViT-L weights present ({path})",
+                 "Copy from Mac: scp mac:~/Argus/weights/dinov3_vitl16_lvd1689m.pth weights/")
 
 
 def check_annotations() -> bool:
@@ -207,21 +225,25 @@ def check_smoke_test_train() -> bool:
     """Training smoke test (2 epochs, 10 images) must exit cleanly.
 
     Skipped when SKIP_SMOKE_TRAIN=1 is set (takes ~5 min on GPU).
+    Uses the active MODEL_SIZE backbone so the right config is exercised.
     """
     if os.environ.get("SKIP_SMOKE_TRAIN") == "1":
         print(f"  {WARN}  Training smoke test skipped (SKIP_SMOKE_TRAIN=1)")
         _results.append((True, "Training smoke test (skipped)"))
         return True
 
+    model_size = os.environ.get("MODEL_SIZE", "large").lower()
     cmd = [
         sys.executable, "-m", "training.train_dino",
+        "--backbone", model_size,
         "--smoke-test",
     ]
-    env = {**os.environ, "MODEL_SIZE": "large"}
+    env = {**os.environ, "MODEL_SIZE": model_size}
+    label = f"Training smoke test --backbone {model_size} (2 epochs)"
     result = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=600)
     ok = result.returncode == 0
     detail = (result.stderr or result.stdout)[-500:] if not ok else ""
-    return check(ok, "Training smoke test (--smoke-test, 2 epochs)", detail)
+    return check(ok, label, detail)
 
 
 def check_requirements_pinned() -> bool:
@@ -234,14 +256,17 @@ def check_requirements_pinned() -> bool:
 def check_env_vars() -> bool:
     """Required env vars for training must be set."""
     all_ok = True
-    required = {
-        "MODEL_SIZE": ("large", "export MODEL_SIZE=large"),
-        "USE_DEV_SUBSET": ("false", "export USE_DEV_SUBSET=false"),
-    }
-    for var, (expected, hint) in required.items():
-        val = os.environ.get(var, "")
-        ok = val.lower() == expected
-        all_ok = check(ok, f"${var}={expected!r}  (found {val!r})", hint) and all_ok
+    model_size = os.environ.get("MODEL_SIZE", "").lower()
+    valid_sizes = {"large", "dinov3_vitl", "dinov3_vitb", "tiny"}
+    ms_ok = model_size in valid_sizes
+    all_ok = check(ms_ok,
+                   f"$MODEL_SIZE={model_size!r}  (valid: {sorted(valid_sizes)})",
+                   "export MODEL_SIZE=dinov3_vitl") and all_ok
+
+    val = os.environ.get("USE_DEV_SUBSET", "")
+    ok = val.lower() == "false"
+    all_ok = check(ok, f"$USE_DEV_SUBSET='false'  (found {val!r})",
+                   "export USE_DEV_SUBSET=false") and all_ok
     return all_ok
 
 
@@ -268,10 +293,18 @@ def main() -> int:
     check_mmdet()
     check_requirements_pinned()
 
+    model_size = os.environ.get("MODEL_SIZE", "large").lower()
+    is_dinov3 = model_size.startswith("dinov3")
+
     print("\n── Model configs ────────────────────────────────────────")
     check_config_tiny()
-    check_config_large()
-    check_weights_large()
+    if is_dinov3:
+        check_config_dinov3_vitb()
+        check_config_dinov3_vitl()
+        check_weights_dinov3_vitl()
+    else:
+        check_config_large()
+        check_weights_large()
 
     print("\n── Data ─────────────────────────────────────────────────")
     check_dev_subset()
@@ -298,8 +331,13 @@ def main() -> int:
     else:
         print(f"\n  {PASS}  All checks passed — ready for GPU training.")
         print("\n  Next step:")
-        print("    MODEL_SIZE=large python -m training.train_dino \\")
-        print("        --work-dir weights/run_001\n")
+        if is_dinov3:
+            print("    python -m training.train_dino \\")
+            print(f"        --backbone {model_size} \\")
+            print(f"        --work-dir weights/run_5070ti_{model_size}\n")
+        else:
+            print("    MODEL_SIZE=large python -m training.train_dino \\")
+            print("        --work-dir weights/run_001\n")
         return 0
 
 

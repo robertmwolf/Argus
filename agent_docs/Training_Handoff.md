@@ -230,6 +230,210 @@ SKIP_SMOKE_TRAIN=1 python scripts/prepare_cloud_training.py
 
 Before the real run, execute the full pre-flight without `SKIP_SMOKE_TRAIN`.
 
+## Train DINOv3 ViT-L (Phase D — primary run)
+
+This is the Phase D training run for the `feature/dinov3-backbone` branch.
+The DINOv3 backbone is **fully frozen** — only the ChannelMapper neck and
+DINO-DETR head train. This is the primary evaluation before considering any
+backbone fine-tuning.
+
+### Branch
+
+Check out the DINOv3 branch before training:
+
+```bash
+git fetch origin
+git checkout feature/dinov3-backbone
+```
+
+### DINOv3 ViT-L weights
+
+The ViT-L backbone weights are not downloaded by `cloud_setup.sh` automatically
+because they require Meta portal access. Copy from the Mac:
+
+```bash
+scp mac:~/Argus/weights/dinov3_vitl16_lvd1689m.pth weights/
+```
+
+Verify the file is ~1.1 GB before proceeding.
+
+### Environment variables
+
+```bash
+export MODEL_SIZE=dinov3_vitl
+export USE_DEV_SUBSET=false
+export ARGUS_NORM=autostretch
+export DATABASE_URL=sqlite+aiosqlite:///./argus.db
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+```
+
+### Pre-flight
+
+```bash
+MODEL_SIZE=dinov3_vitl USE_DEV_SUBSET=false \
+python scripts/prepare_cloud_training.py
+```
+
+### Start training
+
+```bash
+python -m training.train_dino \
+    --backbone dinov3_vitl \
+    --work-dir weights/run_5070ti_dinov3_vitl
+```
+
+Restart / timebox options:
+
+```bash
+# Resume interrupted run
+python -m training.train_dino \
+    --backbone dinov3_vitl \
+    --work-dir weights/run_5070ti_dinov3_vitl \
+    --resume
+
+# New run from a checkpoint
+python -m training.train_dino \
+    --backbone dinov3_vitl \
+    --work-dir weights/run_5070ti_dinov3_vitl_retry \
+    --load-from weights/run_5070ti_dinov3_vitl/best_coco_bbox_mAP_epoch_50.pth \
+    --max-epochs 10 --val-interval 2 --checkpoint-interval 2
+```
+
+Expected VRAM: ~12 GB at 512px batch=1.
+If OOM, reduce image size by editing `_img_scale` in `streak_dinov3_vitl.py` to `(384, 384)`.
+
+### Evaluate
+
+```bash
+mkdir -p results/5070ti_dinov3_vitl
+BEST_CKPT="$(ls weights/run_5070ti_dinov3_vitl/*best*.pth | head -n 1)"
+
+MODEL_WEIGHTS="$BEST_CKPT" \
+MODEL_SIZE=dinov3_vitl USE_DEV_SUBSET=false \
+python -m eval.benchmark \
+    --run-pipeline \
+    --annotations data/annotations/test.json \
+    --output results/5070ti_dinov3_vitl/phase8_benchmark.json
+
+cp eval/results/dino_predictions.json \
+    results/5070ti_dinov3_vitl/dino_predictions.json
+```
+
+### Required result files
+
+```text
+results/5070ti_dinov3_vitl/phase8_benchmark.json
+results/5070ti_dinov3_vitl/confusion_matrix.png
+results/5070ti_dinov3_vitl/training_summary.md
+results/5070ti_dinov3_vitl/environment.txt
+results/5070ti_dinov3_vitl/dino_predictions.json
+```
+
+`training_summary.md` must include the same fields as the Swin-L summary
+(see below), plus:
+- Backbone: DINOv3 ViT-L/16 LVD-1689M (frozen)
+- Whether Phase 8 targets met: ≥94% precision, ≥97% recall
+- Comparison note vs Swin-T dev baseline (mAP@0.5=0.657)
+
+Generate environment metadata:
+
+```bash
+{
+    echo "Date UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "Git branch: $(git rev-parse --abbrev-ref HEAD)"
+    echo "Git commit: $(git rev-parse HEAD)"
+    echo "Backbone: DINOv3 ViT-L/16 LVD-1689M (frozen)"
+    echo "GPU:"
+    nvidia-smi
+    echo ""
+    echo "Python:"
+    python --version
+    echo ""
+    echo "PyTorch:"
+    python - <<'PY'
+import torch
+print(torch.__version__)
+print("cuda_available:", torch.cuda.is_available())
+if torch.cuda.is_available():
+    print("device:", torch.cuda.get_device_name(0))
+    print("cuda:", torch.version.cuda)
+PY
+    echo ""
+    echo "Installed packages:"
+    pip freeze
+} > results/5070ti_dinov3_vitl/environment.txt
+```
+
+### Check results back into GitHub
+
+```bash
+git checkout -b codex/5070ti-dinov3-vitl-training-results
+git add results/5070ti_dinov3_vitl/
+git commit -m "Add RTX 5070 Ti DINOv3 ViT-L training results"
+git push -u origin codex/5070ti-dinov3-vitl-training-results
+```
+
+Open a pull request against `feature/dinov3-backbone` (not `main`) titled:
+
+```text
+Add RTX 5070 Ti DINOv3 ViT-L training results
+```
+
+---
+
+## Phase E — DINOv3 ViT-L vs Swin-T/L Comparison
+
+Run this after the DINOv3 ViT-L training above is complete and the best
+checkpoint is saved in `weights/run_5070ti_dinov3_vitl/`.
+
+### What Phase E does
+
+Evaluates DINOv3 ViT-L (Phase D) head-to-head against the Swin-T baseline
+on the held-out `val` split using MMDetection CocoMetric.  Outputs a
+Markdown comparison table and a combined JSON.
+
+### Run Phase E comparison
+
+```bash
+mkdir -p results/phase_e
+
+# Evaluate DINOv3 ViT-L (Phase D) only — Swin-T baseline is already present
+# from the Mac Phase C run; to regenerate it here, drop --model:
+python scripts/phase_e_compare.py \
+    --model dinov3_vitb \
+    --split val \
+    --dinov3-checkpoint "$(ls weights/run_5070ti_dinov3_vitl/best_coco_bbox_mAP_epoch_*.pth | tail -1)" \
+    --output-dir results/phase_e
+```
+
+For a full comparison (re-evaluates both models):
+
+```bash
+python scripts/phase_e_compare.py \
+    --split val \
+    --output-dir results/phase_e
+```
+
+### Required result files
+
+```text
+results/phase_e/phase_e_comparison_val.json
+results/phase_e/swin_t_val_metrics.json
+results/phase_e/dinov3_vitb_val_metrics.json   (or dinov3_vitl if adapted)
+```
+
+### Interpretation gates
+
+| Metric | Gate |
+|--------|------|
+| DINOv3 mAP@0.5 > Swin-T mAP@0.5 | Phase D is better |
+| DINOv3 mAP@0.5 within 5 pp of Swin-T | Acceptable — frozen backbone competitive |
+| DINOv3 mAP@0.5 > 5 pp below Swin-T | Consider Phase F (partial unfreeze, A100) |
+
+Phase 8 hard targets: ≥94% precision, ≥97% recall (measured on `test.json`).
+
+---
+
 ## Train Swin-L
 
 Start full training:
