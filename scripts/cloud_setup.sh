@@ -90,15 +90,32 @@ echo "  Installing project dependencies from requirements.txt..."
 pip install -r requirements.txt --quiet
 pip install mmdet mmengine mmcv --quiet
 
+# DINOv3 package (for DINOv3Backbone adapter)
+pip install git+https://github.com/facebookresearch/dinov3.git --quiet
+
 echo "  ✓  All dependencies installed"
 
 # ---------------------------------------------------------------------------
-# 4. Download Swin-L pretrain weights
+# 4. Model weights
 # ---------------------------------------------------------------------------
 echo ""
-echo "── Step 4: Download Swin-L weights (~828 MB) ────────────"
+echo "── Step 4: Model weights ────────────────────────────────"
+
+# Swin-L COCO pretrain (for MODEL_SIZE=large Swin-L training)
 MODEL_SIZE=large python scripts/download_weights.py
-echo "  ✓  Weights ready"
+echo "  ✓  Swin-L weights ready"
+
+# DINOv3 ViT-L — must be copied from the Mac or downloaded from Meta portal
+VITL_WEIGHTS="${REPO_ROOT}/weights/dinov3_vitl16_lvd1689m.pth"
+if [ -f "${VITL_WEIGHTS}" ]; then
+    echo "  ✓  DINOv3 ViT-L weights present ($(du -sh "${VITL_WEIGHTS}" | cut -f1))"
+else
+    echo ""
+    echo "  ! DINOv3 ViT-L weights not found at weights/dinov3_vitl16_lvd1689m.pth"
+    echo "    Copy from Mac or download from the Meta DINOv3 portal:"
+    echo "      scp mac:~/Argus/weights/dinov3_vitl16_lvd1689m.pth weights/"
+    echo "    Training will fail without this file."
+fi
 
 # ---------------------------------------------------------------------------
 # 5. GTImages conversion (if data/GTImages/ is present)
@@ -172,7 +189,7 @@ _add_env() {
     fi
 }
 
-_add_env "MODEL_SIZE"                     "large"
+_add_env "MODEL_SIZE"                     "dinov3_vitl"   # change to 'large' for Swin-L run
 _add_env "USE_DEV_SUBSET"                 "false"
 _add_env "DATABASE_URL"                   "sqlite+aiosqlite:///./argus.db"
 _add_env "PYTORCH_CUDA_ALLOC_CONF"        "expandable_segments:True"
@@ -188,7 +205,7 @@ echo ""
 echo "── Step 9: Pre-flight checklist (SKIP_SMOKE_TRAIN=1) ────"
 cd "${REPO_ROOT}"
 SKIP_SMOKE_TRAIN=1 \
-MODEL_SIZE=large \
+MODEL_SIZE=dinov3_vitl \
 USE_DEV_SUBSET=false \
 python scripts/prepare_cloud_training.py || true
 
@@ -200,7 +217,8 @@ echo "║  1. source ~/.bashrc                                 ║"
 echo "║  2. (If prompted) complete data downloads above     ║"
 echo "║  3. python scripts/merge_annotations.py             ║"
 echo "║  4. python scripts/prepare_cloud_training.py        ║"
-echo "║  5. MODEL_SIZE=large python -m training.train_dino \\ ║"
-echo "║         --work-dir weights/run_001                   ║"
+echo "║  5. python -m training.train_dino \\                  ║"
+echo "║         --backbone dinov3_vitl \\                     ║"
+echo "║         --work-dir weights/run_5070ti_dinov3_vitl    ║"
 echo "╚══════════════════════════════════════════════════════╝"
 echo ""
