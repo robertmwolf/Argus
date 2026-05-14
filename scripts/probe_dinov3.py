@@ -80,9 +80,15 @@ def load_dinov3_vitb(weights_path: Path, device: torch.device) -> torch.nn.Modul
         ) from exc
 
     logger.info("Building DINOv3 ViT-B/16 ...")
-    model = vits.vit_base(patch_size=16, img_size=518)
+    # n_storage_tokens=4, layerscale_init, mask_k_bias derived from checkpoint inspection
+    model = vits.vit_base(
+        patch_size=16,
+        img_size=518,
+        n_storage_tokens=4,
+        layerscale_init=1e-4,
+        mask_k_bias=True,
+    )
     state = torch.load(weights_path, map_location="cpu", weights_only=True)
-    # Pretrain checkpoints may be wrapped under a 'model' key
     if "model" in state:
         state = state["model"]
     missing, unexpected = model.load_state_dict(state, strict=False)
@@ -99,22 +105,16 @@ def load_dinov3_vitb(weights_path: Path, device: torch.device) -> torch.nn.Modul
 # Image loading helpers
 # ---------------------------------------------------------------------------
 
-def load_fits_as_uint8(fits_path: Path) -> np.ndarray:
-    """Load a FITS file → uint8 (H, W, 3) via ARGUS FITSLoader.
+_REPO_ROOT = Path(__file__).resolve().parents[1]
 
-    Falls back to cv2 if the file is not valid FITS (e.g. PNG test images).
-    """
-    sys.path.insert(0, str(fits_path.parents[1]))  # ensure repo root on path
-    try:
-        from inference.fits_loader import FITSLoader
-        loader = FITSLoader()
-        return loader.load(fits_path)["array"]  # (H, W, 3) uint8
-    except Exception as exc:
-        logger.warning("FITSLoader failed for %s (%s); trying cv2", fits_path.name, exc)
-        img = cv2.imread(str(fits_path))
-        if img is None:
-            raise ValueError(f"Cannot load image: {fits_path}") from exc
-        return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+def load_fits_as_uint8(fits_path: Path) -> np.ndarray:
+    """Load a FITS file → uint8 (H, W, 3) via ARGUS FITSLoader."""
+    if str(_REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(_REPO_ROOT))
+    from inference.fits_loader import FITSLoader
+    loader = FITSLoader()
+    return loader.load(fits_path)["array"]  # (H, W, 3) uint8
 
 
 def extract_crop(
@@ -360,14 +360,17 @@ def run_probe(
         elapsed = time.perf_counter() - t0
         times.append(elapsed)
 
-        # Norm ratio
-        streak_norm = float(np.linalg.norm(streak_feats, axis=1).mean())
-        bg_norm     = float(np.linalg.norm(bg_feats,     axis=1).mean())
-        ratio = streak_norm / (bg_norm + 1e-8)
-        norm_ratios.append(ratio)
+        # Cosine dissimilarity: mean(1 - cos_sim) between streak and bg patch features.
+        # ViT patch norms are uniform by design; cosine distance captures directional
+        # difference in feature space, which is the meaningful signal.
+        streak_norm_feats = streak_feats / (np.linalg.norm(streak_feats, axis=1, keepdims=True) + 1e-8)
+        bg_norm_feats     = bg_feats     / (np.linalg.norm(bg_feats,     axis=1, keepdims=True) + 1e-8)
+        cos_sims  = (streak_norm_feats * bg_norm_feats).sum(axis=1)  # (N,)
+        cos_dissim = float(1.0 - cos_sims.mean())
+        norm_ratios.append(cos_dissim)
         logger.info(
-            "  %s | streak_norm=%.3f  bg_norm=%.3f  ratio=%.3f  time=%.1fs",
-            img_path.name, streak_norm, bg_norm, ratio, elapsed,
+            "  %s | cosine_dissim=%.4f  time=%.1fs",
+            img_path.name, cos_dissim, elapsed,
         )
 
         # Visualisations
@@ -380,31 +383,29 @@ def run_probe(
             img_path.name,
         )
 
-    mean_ratio = float(np.mean(norm_ratios)) if norm_ratios else 0.0
-    mean_time  = float(np.mean(times)) if times else 0.0
-    gate_pass  = mean_ratio > 1.15
+    mean_dissim = float(np.mean(norm_ratios)) if norm_ratios else 0.0
+    mean_time   = float(np.mean(times)) if times else 0.0
+    # Gate: mean cosine dissimilarity > 0.05 means streak and background crops
+    # occupy meaningfully different regions of feature space.
+    gate_pass   = mean_dissim > 0.05
 
     print("\n" + "=" * 60)
     print("PHASE A — PROBE RESULTS")
     print("=" * 60)
-    print(f"  Images probed    : {len(norm_ratios)}")
-    print(f"  Mean norm ratio  : {mean_ratio:.3f}  (streak / background)")
-    print(f"  Mean inference   : {mean_time:.1f} s/crop-pair")
-    print(f"  Gate (ratio>1.15): {'PASS ✓' if gate_pass else 'FAIL ✗'}")
+    print(f"  Images probed        : {len(norm_ratios)}")
+    print(f"  Mean cosine dissim   : {mean_dissim:.4f}  (streak vs background patches)")
+    print(f"  Mean inference       : {mean_time:.1f} s/crop-pair")
+    print(f"  Gate (dissim > 0.05) : {'PASS ✓' if gate_pass else 'FAIL ✗'}")
     print("=" * 60)
-    if not gate_pass:
-        print(
-            "\nNOTE: ratio below threshold does not necessarily mean the backbone\n"
-            "is unsuitable — streak features may be spatially specific within\n"
-            "the crop rather than globally elevated. Review the PCA heatmaps.\n"
-        )
+    print("\nAlso review PCA heatmaps in results/probe_dinov3/ —")
+    print("streak-region patches should form a distinct colour cluster vs background.")
 
     summary = {
         "n_images": len(norm_ratios),
-        "mean_norm_ratio": mean_ratio,
+        "mean_cosine_dissimilarity": mean_dissim,
         "mean_inference_s": mean_time,
         "gate_pass": gate_pass,
-        "per_image_ratios": norm_ratios,
+        "per_image_dissimilarities": norm_ratios,
     }
     return summary
 
