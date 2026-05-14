@@ -109,47 +109,72 @@ This replaces the current z-score-derived values in the Swin configs.
 
 ## Training Strategy
 
-### Stage 1 — backbone frozen (epochs 1–20)
-- DINOv3 backbone: `requires_grad=False`, `lr_mult=0.0`
-- Adapter + DETR head: full lr
-- Rationale: DINOv3 features are high quality; let the head learn first
+The DINOv3 backbone requires zero training — the downloaded weights are the
+finished product of Meta's pretraining run. Only the adapter and detection head
+need to learn from streak data.
 
-### Stage 2 — partial backbone unfreeze (epochs 21–50)
-- Unfreeze last 4 transformer blocks of ViT-L: `lr_mult=0.01`
-- Adapter + head: `lr_mult=1.0`
-- Lower backbone LR than Swin to preserve pretrained representations
+### What actually trains
 
-### Batch / memory (A100 40 GB, ViT-L, 800px)
-- `batch_size=1`, gradient accumulation steps=2 (effective batch=2)
-- Gradient checkpointing: `True` (ViT-L activations are large)
-- Mixed precision: `True` (CUDA only)
-- Estimated VRAM: ~34 GB with gradient checkpointing
+| Component | Params | Notes |
+|-----------|--------|-------|
+| PatchToPyramid adapter | ~4 M | 1×1 convs only |
+| DETR detection head | ~40 M | queries, cross-attn, cls+bbox |
+| DINOv3 backbone | 0 (frozen) | `requires_grad=False` throughout |
+
+### Primary training — backbone fully frozen
+- DINOv3 backbone: `requires_grad=False`, `lr_mult=0.0` for all epochs
+- Adapter + DETR head: full lr from epoch 1
+- Evaluate fully before considering any backbone fine-tuning
+
+Memory with frozen backbone (no backbone gradients or optimizer states):
+
+| Config | Memory | Runs on |
+|--------|--------|---------|
+| ViT-B/16, 400px, batch=1 | ~6 GB | Mac MPS (16 GB) |
+| ViT-L/16, 400px, batch=1 | ~9 GB | Mac MPS (16 GB) |
+| ViT-L/16, 800px, batch=1 | ~12 GB | RTX 5070 Ti (16 GB VRAM) |
+
+### Optional Stage 2 — partial backbone unfreeze (deferred)
+Only attempt if fully-frozen evaluation on the full dataset falls short of Phase 8
+targets (≥94% precision, ≥97% recall). This is the only step that requires
+cloud-scale GPU:
+- Unfreeze last 4 ViT-L transformer blocks: `lr_mult=0.01`
+- Estimated VRAM with unfrozen blocks at 800px: ~18–22 GB → A100 40 GB required
+- Do not start Stage 2 without frozen-backbone eval results in hand
 
 ### Mac dev (ViT-B, 400px)
 - `batch_size=1`, `num_workers=0`, `pin_memory=False`
 - No AMP (MPS)
 - Use `USE_DEV_SUBSET=true` (50-image subset)
+- Run full 50-epoch frozen training here as dev validation
+
+### Workstation (RTX 5070 Ti, ViT-L, 800px)
+- Full SatStreaks dataset, frozen backbone, 50 epochs
+- `batch_size=1`, mixed precision, gradient checkpointing on head
+- Follow `agent_docs/Training_Handoff.md` for handoff procedure
 
 ## Evaluation Gates
 
 | Gate | Metric | Target |
 |------|--------|--------|
-| Phase A | Streak patches produce visually distinct PCA heatmap | Subjective pass |
-| Phase A | ViT-B runs on Mac MPS at 400px in <30 s/image | Wall time |
+| Phase A ✅ | Cosine dissimilarity streak vs background | 0.0951 — PASS |
 | Phase B | MMDet config parses with DINOv3 backbone | `mmdet.utils.check_config` |
-| Phase B | `pipeline.py --fast` with ViT-B <60 s on Mac | Wall time |
-| Phase C | ViT-L dev subset 50 epochs: mAP@0.5 >0.50 | vs Swin-T 0.657 |
-| Phase C | Full dataset cloud: mAP@0.5 ≥0.70 | Phase 8 target ≥94% prec/rec |
+| Phase B | `pipeline.py --fast` with frozen ViT-B <60 s on Mac | Wall time |
+| Phase C | Frozen ViT-B, dev subset, 50 epochs: mAP@0.5 >0.50 | Mac MPS validation |
+| Phase D | Frozen ViT-L, full dataset, 50 epochs | Workstation RTX 5070 Ti |
+| Phase D | mAP@0.5 ≥0.70, precision ≥94%, recall ≥97% | Phase 8 targets |
+| Phase E (optional) | Partial ViT-L unfreeze if Phase D falls short | A100 only if needed |
 
 ## Phase Sequence
 
-| Phase | Task | Where |
-|-------|------|-------|
-| A | Feasibility probe: feature visualization + memory check | Mac CPU/MPS |
-| B | `dinov3_adapter.py` + MMDet configs | Mac |
-| C | Update `train_dino.py` + smoke test (1 epoch, dev subset) | Mac MPS |
-| D | Cloud training: ViT-L, full dataset, 50 epochs | A100 |
-| E | Evaluation vs Co-DINO Swin baseline | Mac MPS |
+| Phase | Task | Where | Status |
+|-------|------|--------|--------|
+| A | Feasibility probe: cosine dissimilarity + PCA heatmaps | Mac CPU | ✅ DONE |
+| B | `dinov3_adapter.py` + MMDet configs + pipeline smoke test | Mac | ← next |
+| C | Full 50-epoch frozen ViT-B training, dev subset | Mac MPS | |
+| D | Full 50-epoch frozen ViT-L training, full dataset | RTX 5070 Ti | |
+| E | Evaluation vs Co-DINO Swin-T/L baseline | Mac MPS | |
+| F (optional) | Partial ViT-L unfreeze if Phase D targets not met | A100 | deferred |
 
 ## Open Questions (resolve during Phase A/B)
 

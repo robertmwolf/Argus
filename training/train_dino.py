@@ -1,9 +1,10 @@
-"""Co-DINO / DINO Swin training script for satellite streak detection.
+"""DINO training script for satellite streak detection.
 
 Wraps MMDetection's Runner to add:
-  - Hardware-aware device / config selection via MODEL_SIZE env var
-  - Two-stage fine-tuning (backbone frozen epochs 1-20, unfrozen 21-50)
-  - Cost guardrails: after epoch 1 print estimated total cost, sleep 30 s
+  - Hardware-aware device / config selection via MODEL_SIZE env var or --backbone
+  - Swin backbones: two-stage fine-tuning (backbone frozen epochs 1-20, unfrozen 21-50)
+  - DINOv3 backbones: backbone permanently frozen; only neck + DETR head train
+  - Cost guardrails: after epoch 1 print estimated total cost, sleep 30 s (CUDA only)
   - --smoke-test mode: 2 epochs on 10 images, asserts loss decreasing, exits
 
 Usage::
@@ -11,11 +12,19 @@ Usage::
     # Local Mac dev (Swin-T, dev subset):
     MODEL_SIZE=tiny python -m training.train_dino
 
+    # Local Mac dev (DINOv3 ViT-B, dev subset):
+    MODEL_SIZE=dinov3_vitb python -m training.train_dino
+    # equivalently:
+    python -m training.train_dino --backbone dinov3_vitb
+
+    # Workstation RTX 5070 Ti (DINOv3 ViT-L, full dataset):
+    MODEL_SIZE=dinov3_vitl USE_DEV_SUBSET=false python -m training.train_dino
+
     # Cloud A100 (Swin-L, full dataset):
     MODEL_SIZE=large python -m training.train_dino --work-dir weights/run_001
 
-    # Verify cloud setup before full run:
-    MODEL_SIZE=large python -m training.train_dino --smoke-test
+    # Verify setup before full run:
+    python -m training.train_dino --backbone dinov3_vitb --smoke-test
 
     # Custom config:
     python -m training.train_dino --config models/dino/streak_codino_swin_t.py
@@ -78,38 +87,48 @@ _patch_torch_load_weights_only()
 # ---------------------------------------------------------------------------
 
 _CONFIG_MAP: dict[str, str] = {
-    "tiny":  "models/dino/streak_codino_swin_t.py",
-    "large": "models/dino/streak_codino_swin_l.py",
+    "tiny":         "models/dino/streak_codino_swin_t.py",
+    "large":        "models/dino/streak_codino_swin_l.py",
+    "dinov3_vitb":  "models/dino/streak_dinov3_vitb.py",
+    "dinov3_vitl":  "models/dino/streak_dinov3_vitl.py",
 }
 
-_STAGE2_EPOCH = 21   # epoch at which backbone is unfrozen
+# Backbones that are permanently frozen — Stage2UnfreezeHook is skipped.
+_FROZEN_BACKBONES: frozenset[str] = frozenset({"dinov3_vitb", "dinov3_vitl"})
+
+_STAGE2_EPOCH = 21   # epoch at which Swin backbone is unfrozen (not used for DINOv3)
 
 
 def _select_config(model_size: str) -> str:
-    """Return config path for the given MODEL_SIZE.
+    """Return config path for the given MODEL_SIZE / backbone key.
 
     Args:
-        model_size: ``'tiny'`` or ``'large'``.
+        model_size: One of 'tiny', 'large', 'dinov3_vitb', 'dinov3_vitl'.
 
     Returns:
         Path to the MMDetection config file.
 
     Raises:
         ValueError: If model_size is not recognised.
-        EnvironmentError: If model_size='large' and CUDA is not available.
+        EnvironmentError: If model_size requires CUDA and it is not available.
     """
     if model_size not in _CONFIG_MAP:
         raise ValueError(
-            f"Unknown MODEL_SIZE={model_size!r}. Choose 'tiny' or 'large'."
+            f"Unknown MODEL_SIZE={model_size!r}. "
+            f"Choose from: {sorted(_CONFIG_MAP)}"
         )
 
-    if model_size == "large":
-        import torch
-        if not torch.cuda.is_available():
-            raise EnvironmentError(
-                "MODEL_SIZE=large requires CUDA (Lambda Labs A100).\n"
-                "On Mac, use MODEL_SIZE=tiny for development."
-            )
+    import torch
+    if model_size == "large" and not torch.cuda.is_available():
+        raise EnvironmentError(
+            "MODEL_SIZE=large (Swin-L) requires CUDA.\n"
+            "On Mac use MODEL_SIZE=tiny or MODEL_SIZE=dinov3_vitb."
+        )
+    if model_size == "dinov3_vitl" and not torch.cuda.is_available():
+        raise EnvironmentError(
+            "MODEL_SIZE=dinov3_vitl (ViT-L, 512px) requires CUDA (RTX 5070 Ti or A100).\n"
+            "On Mac use MODEL_SIZE=dinov3_vitb (ViT-B, 256px)."
+        )
 
     return _CONFIG_MAP[model_size]
 
@@ -404,10 +423,16 @@ def train(
 
     runner = Runner.from_cfg(cfg)
 
-    # Register two-stage hook manually
-    stage2_hook = _make_stage2_hook(_STAGE2_EPOCH)
-    if stage2_hook is not None:
-        runner.register_hook(stage2_hook)
+    # Stage2UnfreezeHook: Swin backbones only.
+    # DINOv3 backbones are permanently frozen in the config; the hook is skipped
+    # to avoid misleading log messages about "unfreezing" a frozen backbone.
+    is_frozen_backbone = any(tag in config_path for tag in ("dinov3",))
+    if not is_frozen_backbone:
+        stage2_hook = _make_stage2_hook(_STAGE2_EPOCH)
+        if stage2_hook is not None:
+            runner.register_hook(stage2_hook)
+    else:
+        logger.info("DINOv3 backbone: Stage2UnfreezeHook skipped (backbone permanently frozen)")
 
     # Register cost guardrail hook manually (if not in custom_hooks)
     if device.type == "cuda":
@@ -428,11 +453,21 @@ def _parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
+        "--backbone",
+        default=None,
+        choices=sorted(_CONFIG_MAP),
+        help=(
+            "Backbone / config preset. Equivalent to setting MODEL_SIZE env var. "
+            "Options: tiny (Swin-T, Mac), large (Swin-L, A100), "
+            "dinov3_vitb (frozen ViT-B, Mac), dinov3_vitl (frozen ViT-L, workstation)."
+        ),
+    )
+    parser.add_argument(
         "--config",
         default=None,
         help=(
             "Path to MMDetection config file. "
-            "Defaults to the config for the current MODEL_SIZE env var."
+            "Defaults to the config for the current MODEL_SIZE env var or --backbone."
         ),
     )
     parser.add_argument(
@@ -488,7 +523,8 @@ if __name__ == "__main__":
 
     args = _parse_args()
 
-    model_size = os.environ.get("MODEL_SIZE", "tiny").lower()
+    # --backbone flag takes precedence over MODEL_SIZE env var
+    model_size = (args.backbone or os.environ.get("MODEL_SIZE", "tiny")).lower()
 
     if args.config:
         config_path = args.config
@@ -499,7 +535,7 @@ if __name__ == "__main__":
         except (ValueError, EnvironmentError) as exc:
             logger.error("%s", exc)
             raise SystemExit(1) from exc
-        logger.info("MODEL_SIZE=%s → %s", model_size, config_path)
+        logger.info("backbone=%s → %s", model_size, config_path)
 
     work_dir = Path(args.work_dir)
 
