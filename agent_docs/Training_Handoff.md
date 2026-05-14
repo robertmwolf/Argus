@@ -381,6 +381,59 @@ Add RTX 5070 Ti DINOv3 ViT-L training results
 
 ---
 
+## Phase E — DINOv3 ViT-L vs Swin-T/L Comparison
+
+Run this after the DINOv3 ViT-L training above is complete and the best
+checkpoint is saved in `weights/run_5070ti_dinov3_vitl/`.
+
+### What Phase E does
+
+Evaluates DINOv3 ViT-L (Phase D) head-to-head against the Swin-T baseline
+on the held-out `val` split using MMDetection CocoMetric.  Outputs a
+Markdown comparison table and a combined JSON.
+
+### Run Phase E comparison
+
+```bash
+mkdir -p results/phase_e
+
+# Evaluate DINOv3 ViT-L (Phase D) only — Swin-T baseline is already present
+# from the Mac Phase C run; to regenerate it here, drop --model:
+python scripts/phase_e_compare.py \
+    --model dinov3_vitb \
+    --split val \
+    --dinov3-checkpoint "$(ls weights/run_5070ti_dinov3_vitl/best_coco_bbox_mAP_epoch_*.pth | tail -1)" \
+    --output-dir results/phase_e
+```
+
+For a full comparison (re-evaluates both models):
+
+```bash
+python scripts/phase_e_compare.py \
+    --split val \
+    --output-dir results/phase_e
+```
+
+### Required result files
+
+```text
+results/phase_e/phase_e_comparison_val.json
+results/phase_e/swin_t_val_metrics.json
+results/phase_e/dinov3_vitb_val_metrics.json   (or dinov3_vitl if adapted)
+```
+
+### Interpretation gates
+
+| Metric | Gate |
+|--------|------|
+| DINOv3 mAP@0.5 > Swin-T mAP@0.5 | Phase D is better |
+| DINOv3 mAP@0.5 within 5 pp of Swin-T | Acceptable — frozen backbone competitive |
+| DINOv3 mAP@0.5 > 5 pp below Swin-T | Consider Phase F (partial unfreeze, A100) |
+
+Phase 8 hard targets: ≥94% precision, ≥97% recall (measured on `test.json`).
+
+---
+
 ## Train Swin-L
 
 Start full training:
