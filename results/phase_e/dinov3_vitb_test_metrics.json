@@ -1,12 +1,12 @@
 {
-  "checkpoint": "weights/dinov3_vitb_dev/best_coco_bbox_mAP_epoch_50.pth",
+  "checkpoint": "weights/dinov3_vitb_full/best_coco_bbox_mAP_epoch_4.pth",
   "config": "models/dino/streak_dinov3_vitb.py",
   "metrics": {
-    "coco/bbox_mAP": 0.001,
-    "coco/bbox_mAP_50": 0.002,
-    "coco/bbox_mAP_75": 0.0,
-    "coco/bbox_mAP_l": 0.001,
-    "coco/bbox_mAP_m": 0.051,
+    "coco/bbox_mAP": 0.58,
+    "coco/bbox_mAP_50": 0.74,
+    "coco/bbox_mAP_75": 0.606,
+    "coco/bbox_mAP_l": 0.585,
+    "coco/bbox_mAP_m": 0.305,
     "coco/bbox_mAP_s": -1.0
   },
   "split": "test"
