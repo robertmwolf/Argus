@@ -38,7 +38,7 @@ import math
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from src.matching.tle_store import query_tles_for_window
+from src.matching.tle_manager import TLECatalogManager
 
 logger = logging.getLogger(__name__)
 
@@ -53,18 +53,22 @@ _LENGTH_SIGMA_RELATIVE = 0.4
 # TLE loading from Space-Track
 # ---------------------------------------------------------------------------
 
+_tle_manager = TLECatalogManager()
+
+
 def _fetch_tle_catalog(
     obs_time: datetime,
     epoch_window_days: int,
 ) -> list[tuple[str, str, str]]:
-    """Return TLEs for the observation window, querying the local DB first.
+    """Return TLEs for the observation window via the two-track TLE manager.
 
-    Lookup is intentionally local-only.  The ``tle_catalog`` table is populated
-    at environment setup from Space-Track bulk files.  If the table has no
-    coverage for the requested window, ARGUS skips cross-identification and the
-    detected object remains unknown.  This avoids accidental broad GP_History
-    queries during inference and keeps Space-Track access as an explicit
-    operator/admin action.
+    Delegates to :class:`~src.matching.tle_manager.TLECatalogManager`, which
+    implements the live/historical branching policy:
+
+    - Recent observations (< 72 h): local DB first; CelesTrak refresh on miss.
+    - Historical observations (≥ 72 h): local DB only; miss → unknown.
+
+    Space-Track ``gp_history`` is never called here.
 
     Args:
         obs_time: UTC observation time.
@@ -76,27 +80,25 @@ def _fetch_tle_catalog(
     if obs_time.tzinfo is None:
         obs_time = obs_time.replace(tzinfo=timezone.utc)
 
-    age_hours = (datetime.now(tz=timezone.utc) - obs_time).total_seconds() / 3600
-
-    db_rows = query_tles_for_window(obs_time, epoch_window_days)
+    db_rows = _tle_manager.get_tles(obs_time, epoch_window_days)
     if not db_rows:
+        age_hours = (datetime.now(tz=timezone.utc) - obs_time).total_seconds() / 3600
         logger.warning(
-            "No local TLE coverage for obs_time=%s, window=%dd, age=%.1fh; "
-            "skipping cross-identification and leaving detections unknown",
+            "No TLE coverage for obs_time=%s, window=%dd, age=%.1fh; "
+            "leaving detections unknown",
             obs_time.isoformat(),
             epoch_window_days,
             age_hours,
         )
         return []
 
-    logger.debug("TLE catalog DB hit: %d records for window", len(db_rows))
     catalog = [
         (r["object_name"], r["tle_line1"], r["tle_line2"])
         for r in db_rows
         if r.get("tle_line1") and r.get("tle_line2")
     ]
     logger.debug(
-        "Local DB returned %d records; %d have TLE lines",
+        "TLE manager returned %d records; %d have TLE lines",
         len(db_rows),
         len(catalog),
     )

@@ -263,36 +263,37 @@ class TestParseTleZip:
 class TestFetchTleCatalogDbFirst:
     """Verify that _fetch_tle_catalog uses the local DB before the API."""
 
-    def test_db_hit_skips_api(self, engine, monkeypatch):
-        """When the DB has records for the window, no API call should be made."""
+    def test_db_hit_skips_celestrak(self, engine, monkeypatch):
+        """When the DB has records for the window, CelesTrak is not called."""
+        import inference.crossid as crossid
         from src.matching.tle_store import upsert_tles
         from inference.crossid import _fetch_tle_catalog
 
         upsert_tles([_ISS_RECORD, _STARLINK_RECORD], engine)
 
-        with patch("inference.crossid.query_tles_for_window",
-                   return_value=[
-                       {"object_name": "ISS (ZARYA)",
-                        "tle_line1": _ISS_RECORD["TLE_LINE1"],
-                        "tle_line2": _ISS_RECORD["TLE_LINE2"]},
-                   ]) as mock_db:
+        fake_rows = [
+            {"object_name": "ISS (ZARYA)",
+             "tle_line1": _ISS_RECORD["TLE_LINE1"],
+             "tle_line2": _ISS_RECORD["TLE_LINE2"]},
+        ]
+        with patch.object(crossid._tle_manager, "get_tles", return_value=fake_rows):
+            with patch("scripts.celestrak_client.fetch_and_upsert") as mock_ct:
+                catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=3)
 
-            catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=3)
-
-        mock_db.assert_called_once()
+        mock_ct.assert_not_called()
         assert len(catalog) == 1
 
-    def test_db_miss_returns_empty_catalog_without_api(self, monkeypatch):
-        """When the DB is empty, inference leaves objects unknown without API calls."""
+    def test_db_miss_returns_empty_catalog_without_spacetrack(self, monkeypatch):
+        """When the DB misses on a historical obs, Space-Track is never called."""
+        import inference.crossid as crossid
         from inference.crossid import _fetch_tle_catalog
 
-        with patch("inference.crossid.query_tles_for_window", return_value=[]) as mock_db, \
-             patch("src.matching.spacetrack_query.query_gp_current") as mock_gp_current, \
-             patch("src.matching.spacetrack_query.query_gp_history") as mock_gp_history:
+        with patch.object(crossid._tle_manager, "get_tles", return_value=[]):
+            with patch("src.matching.spacetrack_query.query_gp_current") as mock_gp_current, \
+                 patch("src.matching.spacetrack_query.query_gp_history") as mock_gp_history:
 
-            catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=3)
+                catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=3)
 
-        mock_db.assert_called_once()
         mock_gp_current.assert_not_called()
         mock_gp_history.assert_not_called()
         assert catalog == []
