@@ -1,6 +1,6 @@
 {
   "split": "test",
-  "date": "2026-05-14T20:41:29Z",
+  "date": "2026-05-15T01:06:46Z",
   "swin_t": {
     "coco/bbox_mAP": 0.149,
     "coco/bbox_mAP_50": 0.19,
@@ -10,11 +10,11 @@
     "coco/bbox_mAP_s": -1.0
   },
   "dinov3_vitb": {
-    "coco/bbox_mAP": 0.001,
-    "coco/bbox_mAP_50": 0.002,
-    "coco/bbox_mAP_75": 0.0,
-    "coco/bbox_mAP_l": 0.001,
-    "coco/bbox_mAP_m": 0.051,
+    "coco/bbox_mAP": 0.58,
+    "coco/bbox_mAP_50": 0.74,
+    "coco/bbox_mAP_75": 0.606,
+    "coco/bbox_mAP_l": 0.585,
+    "coco/bbox_mAP_m": 0.305,
     "coco/bbox_mAP_s": -1.0
   },
   "dinov3_vitl": null

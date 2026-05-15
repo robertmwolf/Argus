@@ -13,8 +13,8 @@ data_root = 'data/'
 dataset_type = 'CocoDataset'
 default_hooks = dict(
     checkpoint=dict(
-        interval=5,
-        max_keep_ckpts=3,
+        interval=1,
+        max_keep_ckpts=4,
         rule='greater',
         save_best='coco/bbox_mAP',
         type='CheckpointHook'),
@@ -28,10 +28,10 @@ env_cfg = dict(
     cudnn_benchmark=False,
     dist_cfg=dict(backend='gloo'),
     mp_cfg=dict(mp_start_method='spawn', opencv_num_threads=0))
-load_from = 'weights/dinov3_vitb_dev/best_coco_bbox_mAP_epoch_50.pth'
+load_from = 'weights/dinov3_vitb_full/best_coco_bbox_mAP_epoch_4.pth'
 log_level = 'INFO'
 log_processor = dict(by_epoch=True, type='LogProcessor', window_size=10)
-max_epochs = 50
+max_epochs = 4
 metainfo = dict(
     classes=('streak', ), palette=[
         (
@@ -136,11 +136,11 @@ param_scheduler = [
     dict(
         begin=0,
         by_epoch=True,
-        end=50,
+        end=4,
         gamma=0.1,
         milestones=[
-            40,
-            47,
+            3,
+            4,
         ],
         type='MultiStepLR'),
 ]
@@ -190,14 +190,14 @@ test_evaluator = dict(
     format_only=False,
     metric='bbox',
     outfile_prefix=
-    'results/phase_e/dinov3_vitb/best_coco_bbox_mAP_epoch_50_test',
+    'results/phase_e/dinov3_vitb/best_coco_bbox_mAP_epoch_4_test',
     type='CocoMetric')
-train_cfg = dict(max_epochs=50, type='EpochBasedTrainLoop', val_interval=5)
+train_cfg = dict(max_epochs=4, type='EpochBasedTrainLoop', val_interval=1)
 train_dataloader = dict(
     batch_sampler=dict(type='AspectRatioBatchSampler'),
     batch_size=1,
     dataset=dict(
-        ann_file='annotations/dev_subset.json',
+        ann_file='annotations/train.json',
         backend_args=None,
         data_prefix=dict(img=''),
         data_root='data/',
@@ -245,7 +245,7 @@ val_cfg = dict(type='ValLoop')
 val_dataloader = dict(
     batch_size=1,
     dataset=dict(
-        ann_file='annotations/dev_subset.json',
+        ann_file='annotations/val.json',
         backend_args=None,
         data_prefix=dict(img=''),
         data_root='data/',
@@ -281,7 +281,7 @@ val_dataloader = dict(
     pin_memory=False,
     sampler=dict(shuffle=False, type='DefaultSampler'))
 val_evaluator = dict(
-    ann_file='data/annotations/dev_subset.json',
+    ann_file='data/annotations/val.json',
     backend_args=None,
     format_only=False,
     metric='bbox',
