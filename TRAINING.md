@@ -4,6 +4,12 @@ This guide is written for someone coming in cold to train ARGUS on a GPU machine
 Follow each step in order; the pre-flight checklist at the end will catch anything
 you missed before GPU time starts.
 
+> **Active training track:** DINOv3 ViT-L (Phase D) is the current priority run.
+> See [`agent_docs/Training_Handoff.md`](agent_docs/Training_Handoff.md) for the
+> detailed workstation handoff. Phase C² (ViT-B, full dataset, 4 epochs) is
+> complete with mAP@0.5=0.74; Phase D targets 50 epochs with ViT-L.
+> This file covers the general Swin-L training path, which remains valid.
+
 ---
 
 ## Hardware requirements

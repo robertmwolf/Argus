@@ -46,6 +46,9 @@ This project builds on and cites the following prior works:
 - **Danarianto et al.** — Satellite identification prototype pipeline.
   Cite per published paper.
 
+- **DINOv3** — Meta AI self-supervised ViT foundation model (LVD-1689M pretraining).
+  Used as a frozen backbone in the `feature/dinov3-backbone` integration.
+
 Code derived from or substantially adapting these works is annotated with
 `# Source:` and `# Ref:` comments at the function/class level.
 
@@ -267,7 +270,10 @@ Argus/
 ├── models/
 │   └── dino/
 │       ├── streak_codino_swin_t.py   ← Swin-T dev config
-│       └── streak_codino_swin_l.py   ← Swin-L cloud config
+│       ├── streak_codino_swin_l.py   ← Swin-L cloud config
+│       ├── streak_dinov3_vitb.py     ← DINOv3 ViT-B/16 dev config (Mac MPS)
+│       ├── streak_dinov3_vitl.py     ← DINOv3 ViT-L/16 cloud config (GPU)
+│       └── dinov3_adapter.py         ← PatchToPyramid adapter + MMDet backbone
 ├── scripts/
 │   ├── make_test_fits.py           ← synthetic FITS generator
 │   ├── download_weights.py         ← pretrained weight downloader
@@ -301,7 +307,7 @@ conda activate satid
 pip install -r requirements.txt
 
 # Required env vars for local dev
-export MODEL_SIZE=tiny                          # tiny=Swin-T (Mac), large=Swin-L (A100)
+export MODEL_SIZE=tiny                          # tiny=Swin-T, large=Swin-L, dinov3_vitb, dinov3_vitl
 export MODEL_WEIGHTS=weights/dino_tiny.pth      # path to trained checkpoint
 export PYTORCH_ENABLE_MPS_FALLBACK=1            # required on Apple Silicon
 export DATABASE_URL=sqlite+aiosqlite:///./argus.db
@@ -444,7 +450,9 @@ Recorded local results (50-image dev subset, Swin-T, CPU, 50 epochs):
 - DINO Swin-T: mAP@0.5=65.7%, precision=66.7%, recall=73.3%, F1=69.8%
 - YOLO11-OBB: mAP@0.5=36.0%, precision=63.2%, recall=40.0%, angle error=0.66°
 
-Swin-L on the full dataset is needed for ≥94% precision / ≥97% recall (paper targets).
+**Phase E results (full merged test split):**
+- DINOv3 ViT-B (frozen, 4 epochs): mAP@0.5=**74.0%** — beats Swin-T (19.0%) by +55 pp
+- DINOv3 ViT-L (Phase D, pending workstation run): target ≥94% precision / ≥97% recall
 
 ## Cloud Training (Lambda A100)
 
@@ -494,8 +502,9 @@ expected results branch.
 
 | Machine | Use | Config |
 |---------|-----|--------|
-| MacBook Air M3 (16 GB) | Development, testing | `MODEL_SIZE=tiny`, MPS |
-| Lambda Labs A100 40 GB | Training | `MODEL_SIZE=large`, CUDA |
+| MacBook Air M3 (16 GB) | Development, testing | `MODEL_SIZE=tiny` or `dinov3_vitb`, MPS |
+| RTX 5070 Ti 16 GB (workstation) | DINOv3 ViT-L training (Phase D) | `MODEL_SIZE=dinov3_vitl`, CUDA |
+| Lambda Labs A100 40 GB | Swin-L training or ViT-L Stage 2 unfreeze | `MODEL_SIZE=large`, CUDA |
 
 Never hardcode `torch.device("cuda")` — always use `get_device()` from
 `inference/device.py`.

@@ -16,7 +16,7 @@ propagation and multi-factor confidence scoring. Results are served through a
 FastAPI backend and React frontend.
 
 ## Current Phase
-**ALL IMPLEMENTATION PHASES COMPLETE — local training done, cloud GPU training next.**
+**ALL IMPLEMENTATION PHASES COMPLETE. DINOv3 ViT-B backbone (Phase C²) complete — awaiting Phase D (ViT-L workstation).**
 
 Progress:
 - ✅ Phase 0 (Classical baseline): `src/` — fits_parser, classical_detector, plate_solver, SGP4 matching
@@ -29,13 +29,18 @@ Progress:
 - ✅ Phase 7 (Docker): `docker/`, `docker-compose.yml`, `docker-compose.cloud.yml` — full stack verified
 - ✅ Phase 8 (Evaluation): `eval/metrics.py`, `eval/benchmark.py` — mAP, angle error, per-band, DINO vs YOLO
 - ✅ Local training: Swin-T DINO (50 epochs, CPU) + YOLO11-OBB baseline — results in `results/phase8_benchmark.json`
+- ✅ DINOv3 Phase A (feasibility probe): cosine dissimilarity = 0.095 — PASS
+- ✅ DINOv3 Phase B (adapter + configs): `models/dino/dinov3_adapter.py`, `streak_dinov3_vitb.py`, `streak_dinov3_vitl.py` — smoke test PASS
+- ✅ DINOv3 Phase C (frozen ViT-B dev subset): mAP@0.5=0.274 on dev_subset
+- ✅ DINOv3 Phase C² (frozen ViT-B full dataset, 4 epochs): mAP@0.5=**0.74** on test.json — beats Swin-T (0.19) by +0.55
+- ✅ DINOv3 Phase E (partial): Swin-T vs ViT-B comparison in `results/phase_e/` — ViT-B dominant
+- ⏳ DINOv3 Phase D: Frozen ViT-L, full dataset — RTX 5070 Ti workstation, see `agent_docs/Training_Handoff.md`
 
-## Next Step: Cloud GPU / Workstation Training
-Local dev results: Swin-T DINO mAP@0.5=0.657, precision=0.667, recall=0.733 (50-image dev subset, CPU).
-Phase 8 targets (≥94% precision, ≥97% recall) require Swin-L training on the full SatStreaks dataset.
-Run `scripts/prepare_cloud_training.py` before renting the GPU.
-For the current RTX 5070 Ti workstation handoff, follow `agent_docs/Training_Handoff.md`.
-See **Phase Sequencing** table below for the cloud training handoff checklist.
+## Next Step: Phase D — DINOv3 ViT-L Workstation Training
+Phase C² result: DINOv3 ViT-B frozen, full merged dataset, 4 epochs → mAP@0.5=0.74 (test.json).
+This beats Swin-T (0.19) by a wide margin. Phase D trains ViT-L on the same data for the definitive result.
+Phase 8 targets (≥94% precision, ≥97% recall) are expected to be met with ViT-L on the full dataset.
+Follow `agent_docs/Training_Handoff.md` for the RTX 5070 Ti workstation handoff procedure.
 
 ## Hardware
 - **Dev / CI:** MacBook Air M3 — CPU or MPS. Use `MODEL_SIZE=tiny` (Swin-T).
@@ -49,12 +54,13 @@ Always read the relevant agent_docs file before writing code:
 - `agent_docs/architecture.md`       — full system design, component map, data flow
 - `agent_docs/phase1_goals.md`       — Phase 1 data pipeline (complete — reference only)
 - `agent_docs/streakmind_phases.md`  — ARGUS Phases 2–8: model through eval
+- `agent_docs/dinov3_plan.md`        — DINOv3 backbone integration plan and phase status
 - `agent_docs/datasets.md`           — where to get test data, download links
 - `agent_docs/dependencies.md`       — exact packages, versions, install commands
 - `agent_docs/service_roadmap.md`    — Docker, deployment, cloud scale path
 - `agent_docs/test_strategy.md`      — how to measure and record baseline accuracy
 - `agent_docs/spacetrack.md`         — Space-Track API policy, TLE catalog setup, rate limits
-- `agent_docs/Training_Handoff.md`   — current RTX 5070 Ti Swin-L training handoff
+- `agent_docs/Training_Handoff.md`   — current RTX 5070 Ti DINOv3 ViT-L training handoff
 
 ## Stack
 - Python 3.11, conda environment named `satid`
@@ -92,7 +98,9 @@ Argus/
 │   ├── train_dino.py        ← Co-DINO training script + checkpoint/timebox CLI overrides (Phase 2)
 │   └── train_baseline.py    ← YOLO11-OBB training script (Phase 2)
 ├── models/
-│   ├── dino/                ← MMDetection configs: streak_codino_swin_t.py, _swin_l.py
+│   ├── dino/                ← MMDetection configs: streak_codino_swin_t.py, _swin_l.py,
+│   │                           streak_dinov3_vitb.py, streak_dinov3_vitl.py,
+│   │                           dinov3_adapter.py (PatchToPyramid + DINOv3Backbone)
 │   └── baselines/           ← YOLO11-OBB config
 ├── api/                     ← FastAPI application (Phase 5)
 │   ├── main.py
@@ -163,7 +171,9 @@ academic research code.
 ## Environment Variables Required
 ```bash
 export DATABASE_URL=sqlite+aiosqlite:///./argus.db   # default
-export MODEL_SIZE=tiny     # tiny=Swin-T (dev/MPS), large=Swin-L (A100)
+export MODEL_SIZE=tiny     # tiny=Swin-T (dev/MPS), large=Swin-L (A100),
+                           # dinov3_vitb=ViT-B/16 (Mac MPS), dinov3_vitl=ViT-L/16 (GPU)
+export ARGUS_NORM=zscore   # zscore (Swin-T/L) or autostretch (DINOv3 ViT-B/L)
 # Optional for cloud deployment:
 export STORAGE_BACKEND=local   # or s3
 export QUEUE_BACKEND=memory    # or sqs
@@ -286,6 +296,29 @@ Two MMDetection configs must always exist:
 | 6 — Cloud handoff | Mac | `prepare_cloud_training.py` all checks pass |
 | 7 — Cloud training | Lambda A100 | val mAP >90%, fetch weights |
 | 8 — Evaluation | Mac MPS | ≥94% precision, ≥97% recall |
+| DINOv3 A — Probe | Mac CPU | Cosine dissimilarity > 0.05 ✅ (0.095) |
+| DINOv3 B — Adapter | Mac | MMDet configs parse, pipeline smoke test ✅ |
+| DINOv3 C² — ViT-B full | Mac MPS | mAP@0.5 > Swin-T baseline ✅ (0.74 vs 0.19) |
+| DINOv3 D — ViT-L full | RTX 5070 Ti | mAP@0.5 ≥ 0.70, see Training_Handoff.md ⏳ |
+| DINOv3 E — Comparison | Mac | ViT-L vs ViT-B vs Swin-T table |
+
+## DINOv3 Training (model size `dinov3_vitb` / `dinov3_vitl`)
+
+```bash
+# Mac MPS — ViT-B frozen, dev subset (smoke test):
+MODEL_SIZE=dinov3_vitb USE_DEV_SUBSET=true ARGUS_NORM=autostretch \
+  python -m training.train_dino --backbone dinov3_vitb --work-dir weights/dinov3_vitb_dev
+
+# Workstation — ViT-L frozen, full dataset (Phase D):
+MODEL_SIZE=dinov3_vitl USE_DEV_SUBSET=false ARGUS_NORM=autostretch \
+  python -m training.train_dino --backbone dinov3_vitl --work-dir weights/run_5070ti_dinov3_vitl
+```
+
+DINOv3 weights are not downloaded by `download_weights.py`.
+Copy from Mac (`weights/dinov3_vitb16_pretrain_lvd1689m*.pth` or `dinov3_vitl16_lvd1689m.pth`),
+or see `scripts/download_dinov3_weights.py`.
+
+`MODEL_SIZE=dinov3_vitl` raises `EnvironmentError` if `device.type != "cuda"`.
 
 ## Cloud Training Scripts
 

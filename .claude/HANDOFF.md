@@ -1,4 +1,4 @@
-# Claude Code Handoff — Session Start Prompt
+# Claude Code Session Start Prompt
 
 Copy and paste this prompt as your FIRST message when you open
 Claude Code in the Argus/ project directory.
@@ -8,80 +8,60 @@ Claude Code in the Argus/ project directory.
 ## PASTE THIS INTO CLAUDE CODE:
 
 ```
-Read CLAUDE.md, then read agent_docs/architecture.md and
-agent_docs/phase1_goals.md before doing anything else.
+Read CLAUDE.md, then read agent_docs/assistant_guide.md before doing anything else.
 
-Once you have read those three files, tell me:
+Once you have read those files, summarise:
 1. What the system does in one sentence
-2. What Week 1 requires you to build
-3. What the Week 1 success metric is
+2. What the current phase status is
+3. What the next pending work item is
 
-Then, before writing any code, give me a brief plan for
-src/ingest/fits_parser.py:
-- What dataclass(es) will you define and where
-- What the main parse function signature will look like
-- What the __main__ block will do
-- What tests you will write
-
-Wait for my approval of the plan before writing any code.
+Then wait for my instruction before writing any code.
 ```
 
 ---
 
-## Week-by-Week Prompts
+## Context (as of 2026-05-14)
 
-After each week is done and tests are passing, use the
-relevant prompt below to start the next week.
+- All implementation phases (0–8) are complete and 325 tests pass.
+- DINOv3 ViT-B backbone (Phase C²) is merged to `main`.
+  - Frozen ViT-B, full merged dataset, 4 epochs: **mAP@0.5=0.74** on test.json
+  - Beats Co-DINO Swin-T (0.19) by +0.55 mAP@0.5
+- Phase D (ViT-L, full dataset, 50 epochs, RTX 5070 Ti) is the only pending item.
+  - See `agent_docs/Training_Handoff.md` for the handoff procedure.
+- A structural refactor plan is documented in `agent_docs/refactor_plan.md`
+  (rename `src/` → `classical/`, `agent_docs/` → `docs/`, `models/` → `configs/`).
+  Not yet executed — wait until Phase D results are in hand.
 
-### Start Week 2
-```
-Week 1 is complete and pytest passes.
-Read agent_docs/phase1_goals.md Week 2 section.
-Plan src/detection/classical_detector.py before writing it.
-Include: class/function signatures, preprocessing steps,
-ASTRiDE integration approach, __main__ behavior, test plan.
-Wait for approval before coding.
-```
+## Useful session openers
 
-### Start Week 3
+### Continue Phase D prep / review handoff docs
 ```
-Week 2 is complete and pytest passes.
-Read agent_docs/phase1_goals.md Week 3 section
-and agent_docs/spacetrack.md.
-Plan src/astrometry/plate_solver.py and
-src/matching/spacetrack_query.py.
-Show me signatures and caching design before coding.
+Read agent_docs/Training_Handoff.md.
+Summarise the Phase D DINOv3 ViT-L training procedure in bullet points.
+Flag anything that looks stale or missing.
 ```
 
-### Start Week 4
+### Work on a specific bug or feature
 ```
-Week 3 is complete and pytest passes.
-Read agent_docs/phase1_goals.md Week 4 section.
-Plan the four remaining modules:
-  spatial_filter.py, propagator.py, matcher.py, scorer.py
-and the end-to-end test.
-Show me how data flows between them and the scoring formulas
-you'll implement before coding.
+Read agent_docs/assistant_guide.md.
+I want to work on: <describe the task>
+Plan the change before writing any code and wait for my approval.
 ```
 
-### Record Baseline Metrics
+### Run the structural refactor
 ```
-All Week 4 modules are built and pytest passes.
-Run test_end_to_end.py against the confirmed passes in
-results/confirmed_passes.json.
-Record all metrics to results/phase1_baseline.json using the
-format defined in agent_docs/phase1_goals.md.
-Print a summary of the results when done.
+Read agent_docs/refactor_plan.md.
+Implement Issues 1–3 (directory renames) as a single coordinated commit.
+Plan first, then wait for my approval before making any changes.
 ```
 
 ---
 
-## Tips for Working with Claude Code on This Project
+## Tips
 
-- **One week at a time.** Don't ask it to build multiple weeks at once.
-- **Plan first, always.** Prompt ends with "wait for approval before coding."
-- **Run pytest after each module.** If tests fail, fix before moving on.
-- **Check Space-Track credentials first** (Week 3 onward):
-  `echo $SPACETRACK_USER` — if blank, set them before starting.
-- **If context gets long,** start a new Claude Code session and
-  re-read CLAUDE.md + the relevant week's goals to reset context.
+- **Plan first, always.** Ask Claude to plan before coding and end the prompt
+  with "wait for my approval before writing any code."
+- **Run pytest after each module.** `conda activate satid && pytest tests/ -v`
+- **One phase at a time.** Don't ask it to build multiple phases at once.
+- **If context gets long,** start a new Claude Code session and re-read
+  CLAUDE.md + the relevant section of assistant_guide.md.
