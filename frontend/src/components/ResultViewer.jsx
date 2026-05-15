@@ -172,7 +172,8 @@ function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
   const { obb, confidence: conf = 1 } = det
   if (!obb || [obb.cx, obb.cy, obb.w, obb.h, obb.angle_deg].some((v) => v == null)) return
 
-  const isClassical = det.method === 'astride' || det.method === 'opencv' || det.method === 'classical'
+  const isClassical = (det.sources ?? [{ method: det.method }])
+    .every(s => s.method === 'astride' || s.method === 'opencv' || s.method === 'classical')
   const colour = highlighted ? HIGHLIGHT_COLOUR : (isClassical ? CLASSICAL_COLOUR : OBB_COLOUR)
   const alpha = highlighted ? 1.0 : 0.4 + conf * 0.6
   const endpointR = highlighted ? 5.5 : 4
@@ -203,6 +204,7 @@ function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
 export default function ResultViewer({
   jobId,
   detections,
+  visibleSet,
   imageWidth,
   imageHeight,
   highlightIndex,
@@ -240,24 +242,26 @@ export default function ResultViewer({
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
 
+    const isVisible = (i) => !visibleSet || visibleSet.has(i)
+
     // Non-highlighted detections first, then highlighted on top
     detections.forEach((det, i) => {
-      if (i !== highlightIndex) drawDetection(ctx, det, i, false, scaleX, scaleY)
+      if (i !== highlightIndex && isVisible(i)) drawDetection(ctx, det, i, false, scaleX, scaleY)
     })
     detections.forEach((det, i) => {
-      if (i === highlightIndex) drawDetection(ctx, det, i, true, scaleX, scaleY)
+      if (i === highlightIndex && isVisible(i)) drawDetection(ctx, det, i, true, scaleX, scaleY)
     })
 
     // Labels always on top of everything
     detections.forEach((det, i) => {
-      if (det.obb) {
-        const isClassical = det.method === 'astride' || det.method === 'opencv' || det.method === 'classical'
+      if (!det.obb || !isVisible(i)) return
+      const isClassical = (det.sources ?? [{ method: det.method }])
+        .every(s => s.method === 'astride' || s.method === 'opencv' || s.method === 'classical')
       const colour = i === highlightIndex ? HIGHLIGHT_COLOUR : (isClassical ? CLASSICAL_COLOUR : OBB_COLOUR)
-        const alpha = i === highlightIndex ? 1.0 : 0.4 + (det.confidence ?? 1) * 0.6
-        drawLabel(ctx, det.obb, i, colour, alpha, scaleX, scaleY)
-      }
+      const alpha = i === highlightIndex ? 1.0 : 0.4 + (det.confidence ?? 1) * 0.6
+      drawLabel(ctx, det.obb, i, colour, alpha, scaleX, scaleY)
     })
-  }, [imgLoaded, detections, highlightIndex, imageWidth, imageHeight])
+  }, [imgLoaded, detections, visibleSet, highlightIndex, imageWidth, imageHeight])
 
   const onMouseMove = (e) => {
     if (!canvasRef.current || !imgRef.current) return
@@ -273,6 +277,7 @@ export default function ResultViewer({
     detections.forEach((det, i) => {
       const obb = det.obb
       if (!obb) return
+      if (visibleSet && !visibleSet.has(i)) return
       const dx = mx - obb.cx * scaleX
       const dy = my - obb.cy * scaleY
       const rad = -(obb.angle_deg * Math.PI) / 180
@@ -319,19 +324,21 @@ export default function ResultViewer({
           className="fixed z-50 bg-slate-900 border border-slate-600 rounded-xl px-3 py-2.5 text-xs text-slate-200 pointer-events-none shadow-2xl"
           style={{ left: tooltip.x + 16, top: tooltip.y - 12 }}
         >
-          <p className="font-semibold text-cyan-300 mb-1.5">Detection {tooltip.index + 1}</p>
+          <p className="font-semibold text-cyan-300 mb-1.5">Streak {tooltip.index + 1}</p>
           <div className="flex flex-col gap-0.5 text-slate-300">
-            <p>Method: <span className="font-semibold">{tooltip.det.method ?? 'Unknown'}</span></p>
-            <p>
-              Confidence:{' '}
-              <span className={
-                tooltip.det.confidence >= 0.9 ? 'text-green-400 font-semibold' :
-                tooltip.det.confidence >= 0.7 ? 'text-yellow-400 font-semibold' :
-                'text-red-400 font-semibold'
-              }>
-                {(tooltip.det.confidence * 100).toFixed(1)}%
-              </span>
-            </p>
+            {(tooltip.det.sources ?? [{ method: tooltip.det.method, confidence: tooltip.det.confidence }]).map((src, i) => (
+              <p key={i}>
+                <span className="font-semibold">{src.method ?? 'Unknown'}</span>
+                {': '}
+                <span className={
+                  src.confidence >= 0.9 ? 'text-green-400 font-semibold' :
+                  src.confidence >= 0.7 ? 'text-yellow-400 font-semibold' :
+                  'text-red-400 font-semibold'
+                }>
+                  {(src.confidence * 100).toFixed(1)}%
+                </span>
+              </p>
+            ))}
             {tooltip.det.streak_length_px != null && (
               <p>Length: <span className="font-mono">{tooltip.det.streak_length_px.toFixed(0)} px</span></p>
             )}

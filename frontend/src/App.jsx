@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import DetectionTable from './components/DetectionTable'
+import FilterPanel from './components/FilterPanel'
 import FitsHeaderPanel from './components/FitsHeaderPanel'
 import IdentificationPanel from './components/IdentificationPanel'
 import ProcessingView from './components/ProcessingView'
@@ -16,6 +17,8 @@ export default function App() {
   const [error, setError] = useState(null)
   const [highlightIndex, setHighlightIndex] = useState(null)
   const [modelLabel, setModelLabel] = useState(null)
+  const [disabledStreaks, setDisabledStreaks] = useState(new Set())   // Set of displayDetections indices
+  const [methodThresholds, setMethodThresholds] = useState({})        // { method: 0-1 }
 
   useEffect(() => {
     fetch('/health').then(r => r.json()).then(d => setModelLabel(d.model_label)).catch(() => {})
@@ -53,10 +56,25 @@ export default function App() {
     }
   }, [jobId, jobStatus])
 
+  const handleThresholdChange = (method, value) => {
+    setMethodThresholds(prev => ({ ...prev, [method]: value }))
+  }
+
+  const handleToggleStreak = (idx) => {
+    setDisabledStreaks(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx)
+      else next.add(idx)
+      return next
+    })
+  }
+
   const handleQueued = (newJobId, newFilename) => {
     setError(null)
     setHighlightIndex(null)
     setResult(null)
+    setDisabledStreaks(new Set())
+    setMethodThresholds({})
     setJobId(newJobId)
     setFilename(newFilename)
     setJobStatus('queued')
@@ -69,28 +87,30 @@ export default function App() {
     setResult(null)
     setError(null)
     setHighlightIndex(null)
+    setDisabledStreaks(new Set())
+    setMethodThresholds({})
   }
 
   const isProcessing = jobId && jobStatus && jobStatus !== 'complete' && jobStatus !== 'failed'
   const isComplete = result !== null
 
-  // Top-3-per-method filtered list, sorted by length then confidence.
-  // Shared by ResultViewer and DetectionTable so their indices always agree.
-  const TOP_PER_METHOD = 3
+  // One entry per streak, sorted by primary confidence descending.
   const displayDetections = useMemo(() => {
     if (!result?.detections) return []
-    const methodGroups = new Map()
-    for (const det of [...result.detections].sort((a, b) => {
-      const la = a.streak_length_px ?? a.obb?.w ?? 0
-      const lb = b.streak_length_px ?? b.obb?.w ?? 0
-      return lb !== la ? lb - la : (b.confidence ?? 0) - (a.confidence ?? 0)
-    })) {
-      const key = det.method ?? 'unknown'
-      if (!methodGroups.has(key)) methodGroups.set(key, [])
-      methodGroups.get(key).push(det)
-    }
-    return [...methodGroups.values()].flatMap(dets => dets.slice(0, TOP_PER_METHOD))
+    return [...result.detections].sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))
   }, [result?.detections])
+
+  // Streaks that pass both the per-method threshold and are not manually disabled.
+  const visibleSet = useMemo(() => {
+    const set = new Set()
+    displayDetections.forEach((det, idx) => {
+      if (disabledStreaks.has(idx)) return
+      const sources = det.sources ?? [{ method: det.method, confidence: det.confidence }]
+      const passes = sources.some(s => (s.confidence ?? 1) >= (methodThresholds[s.method] ?? 0))
+      if (passes) set.add(idx)
+    })
+    return set
+  }, [displayDetections, disabledStreaks, methodThresholds])
 
   return (
     <div className="min-h-screen bg-[#0d0e14] text-slate-200">
@@ -163,16 +183,24 @@ export default function App() {
             <div className="flex items-center gap-3">
               <h2 className="text-base font-semibold text-white truncate">{result.filename}</h2>
               <span className="text-xs text-slate-500">
-                {result.detections.length} detection{result.detections.length !== 1 ? 's' : ''}
+                {displayDetections.length} streak{displayDetections.length !== 1 ? 's' : ''} detected
                 {result.obs_epoch ? ` · ${result.obs_epoch}` : ''}
               </span>
             </div>
+
+            <FilterPanel
+              detections={displayDetections}
+              methodThresholds={methodThresholds}
+              onThresholdChange={handleThresholdChange}
+              visibleCount={visibleSet.size}
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
               <div className="lg:col-span-2">
                 <ResultViewer
                   jobId={result.jobId}
                   detections={displayDetections}
+                  visibleSet={visibleSet}
                   imageWidth={result.image_width}
                   imageHeight={result.image_height}
                   highlightIndex={highlightIndex}
@@ -186,9 +214,10 @@ export default function App() {
 
             <DetectionTable
               detections={displayDetections}
-              totalDetections={result.detections.length}
+              visibleSet={visibleSet}
               highlightIndex={highlightIndex}
               onRowClick={setHighlightIndex}
+              onToggleStreak={handleToggleStreak}
             />
 
             <IdentificationPanel
