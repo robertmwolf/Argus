@@ -224,6 +224,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
                     obb_h=obb.get("h"),
                     obb_angle_deg=obb.get("angle_deg"),
                     streak_length_px=det_dict.get("streak_length_px"),
+                    streak_id=det_dict.get("streak_id"),
                     ra_tip1_deg=det_dict.get("ra_tip1_deg"),
                     dec_tip1_deg=det_dict.get("dec_tip1_deg"),
                     ra_tip2_deg=det_dict.get("ra_tip2_deg"),
@@ -528,30 +529,51 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
             )
         ).scalars().all()
 
-        detections = []
+        # Group per-method detection rows by streak_id so the UI can show
+        # multi-method agreement.  Rows without a streak_id (legacy) each form
+        # their own group keyed by the row's own id.
+        streak_groups: dict[str, list] = {}
         for det in det_rows:
+            key = str(det.streak_id) if det.streak_id is not None else det.id
+            streak_groups.setdefault(key, []).append(det)
+
+        detections = []
+        for group in streak_groups.values():
+            # Primary = highest-confidence detection in the group (carries geometry
+            # and identifications).
+            primary = max(group, key=lambda d: d.confidence)
+
             ident_rows = (
                 await session.execute(
-                    select(Identification).where(Identification.detection_id == det.id)
+                    select(Identification).where(Identification.detection_id == primary.id)
                 )
             ).scalars().all()
 
+            sources = sorted(
+                [{"method": d.method, "confidence": d.confidence} for d in group],
+                key=lambda s: s["confidence"],
+                reverse=True,
+            )
+
             detections.append({
-                "method": det.method,
-                "confidence": det.confidence,
-                "bbox": [det.bbox_x1, det.bbox_y1, det.bbox_x2, det.bbox_y2],
+                "streak_id": primary.streak_id,
+                "sources": sources,
+                # Top-level method/confidence kept for backwards-compat with canvas overlay
+                "method": sources[0]["method"],
+                "confidence": sources[0]["confidence"],
+                "bbox": [primary.bbox_x1, primary.bbox_y1, primary.bbox_x2, primary.bbox_y2],
                 "obb": {
-                    "cx": det.obb_cx,
-                    "cy": det.obb_cy,
-                    "w": det.obb_w,
-                    "h": det.obb_h,
-                    "angle_deg": det.obb_angle_deg,
+                    "cx": primary.obb_cx,
+                    "cy": primary.obb_cy,
+                    "w": primary.obb_w,
+                    "h": primary.obb_h,
+                    "angle_deg": primary.obb_angle_deg,
                 },
-                "streak_length_px": det.streak_length_px,
-                "ra_tip1_deg": det.ra_tip1_deg,
-                "dec_tip1_deg": det.dec_tip1_deg,
-                "ra_tip2_deg": det.ra_tip2_deg,
-                "dec_tip2_deg": det.dec_tip2_deg,
+                "streak_length_px": primary.streak_length_px,
+                "ra_tip1_deg": primary.ra_tip1_deg,
+                "dec_tip1_deg": primary.dec_tip1_deg,
+                "ra_tip2_deg": primary.ra_tip2_deg,
+                "dec_tip2_deg": primary.dec_tip2_deg,
                 "identifications": [
                     {
                         "satellite_name": i.satellite_name,
@@ -563,6 +585,9 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
                     for i in sorted(ident_rows, key=lambda x: x.rank or 99)
                 ],
             })
+
+        # Sort streaks by primary confidence descending
+        detections.sort(key=lambda d: d["confidence"], reverse=True)
 
         image_shape = None
         try:
