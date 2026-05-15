@@ -107,6 +107,7 @@ class Detection(Base):
     obb_h: Mapped[float | None] = mapped_column(Float)
     obb_angle_deg: Mapped[float | None] = mapped_column(Float)
     streak_length_px: Mapped[float | None] = mapped_column(Float)
+    streak_id: Mapped[int | None] = mapped_column(Integer)
     ra_tip1_deg: Mapped[float | None] = mapped_column(Float)
     dec_tip1_deg: Mapped[float | None] = mapped_column(Float)
     ra_tip2_deg: Mapped[float | None] = mapped_column(Float)
@@ -203,6 +204,8 @@ def _migrate_existing_tables(sync_conn) -> None:
     columns = {col["name"] for col in inspect(sync_conn).get_columns("detections")}
     if "method" not in columns:
         sync_conn.exec_driver_sql("ALTER TABLE detections ADD COLUMN method TEXT DEFAULT 'ml'")
+    if "streak_id" not in columns:
+        sync_conn.exec_driver_sql("ALTER TABLE detections ADD COLUMN streak_id INTEGER")
 
 
 if __name__ == "__main__":
