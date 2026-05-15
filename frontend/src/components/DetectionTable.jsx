@@ -6,7 +6,21 @@
  *   highlightIndex — index of the row to highlight (synced with canvas hover)
  *   onRowClick(i)  — called when a row is clicked
  */
-export default function DetectionTable({ detections, highlightIndex, onRowClick }) {
+const TOP_PER_METHOD = 3
+
+const METHOD_CONFIG = {
+  astride:      { label: 'ASTRiDE',       cls: 'border-amber-600/60 bg-amber-950/40 text-amber-300' },
+  opencv:       { label: 'OpenCV',        cls: 'border-orange-600/60 bg-orange-950/40 text-orange-300' },
+  dinov3_vitb:  { label: 'DINOv3 ViT-B', cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
+  dinov3_vitl:  { label: 'DINOv3 ViT-L', cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
+  tiny:         { label: 'DINO Swin-T',  cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
+  large:        { label: 'DINO Swin-L',  cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
+  // legacy fallbacks for detections stored before this change
+  classical:    { label: 'Classical',    cls: 'border-amber-600/60 bg-amber-950/40 text-amber-300' },
+  ml:           { label: 'ML',           cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
+}
+
+export default function DetectionTable({ detections, totalDetections, highlightIndex, onRowClick }) {
   if (!detections || detections.length === 0) {
     return (
       <div className="rounded-xl border border-slate-700 px-4 py-8 text-center">
@@ -14,6 +28,23 @@ export default function DetectionTable({ detections, highlightIndex, onRowClick 
       </div>
     )
   }
+
+  // detections arrives pre-filtered and pre-sorted from App.jsx (top N per
+  // method, length desc). We only need to group by method for visual separation.
+  const methodGroups = new Map()
+  for (const det of detections) {
+    const key = det.method ?? 'unknown'
+    if (!methodGroups.has(key)) methodGroups.set(key, [])
+    methodGroups.get(key).push(det)
+  }
+
+  // Flat list preserving the original order, annotated with rank-within-method
+  const flatRows = []
+  for (const [methodKey, dets] of methodGroups) {
+    dets.forEach((det, rank) => flatRows.push({ det, methodKey, rankInMethod: rank }))
+  }
+
+  const totalMethods = methodGroups.size
 
   return (
     <div className="rounded-xl border border-slate-700 overflow-hidden">
@@ -23,7 +54,9 @@ export default function DetectionTable({ detections, highlightIndex, onRowClick 
             d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
         </svg>
         <h3 className="text-sm font-semibold text-slate-300">Streak Detections</h3>
-        <span className="text-xs text-slate-500">{detections.length} found</span>
+        <span className="text-xs text-slate-500">
+          top {TOP_PER_METHOD} per method · {totalMethods} method{totalMethods !== 1 ? 's' : ''} · {detections.length} shown of {totalDetections ?? detections.length}
+        </span>
         <span className="ml-auto text-xs text-slate-600">Click a row to highlight on image</span>
       </div>
 
@@ -31,47 +64,68 @@ export default function DetectionTable({ detections, highlightIndex, onRowClick 
         <table className="w-full text-sm text-left">
           <thead className="bg-slate-800/40 text-slate-400 text-xs uppercase tracking-wider">
             <tr>
-              {['#', 'Method', 'Confidence', 'Length (px)', 'Angle (°)', 'Sky Position', 'Best Match', 'Match Conf'].map((h) => (
-                <th key={h} className="px-4 py-2.5 whitespace-nowrap font-medium">{h}</th>
+              {[
+                { label: '#' },
+                { label: 'Method' },
+                { label: 'Det. Confidence', sub: 'model / aspect score' },
+                { label: 'Length (px)' },
+                { label: 'Angle (°)' },
+                { label: 'Sky Position' },
+                { label: 'Best Match', divider: true },
+                { label: 'ID Confidence', sub: 'position × length', divider: true },
+              ].map(({ label, sub, divider }) => (
+                <th
+                  key={label}
+                  className={[
+                    'px-4 py-2.5 whitespace-nowrap font-medium',
+                    divider ? 'border-l border-slate-600/60' : '',
+                  ].join(' ')}
+                >
+                  <div className="leading-none">{label}</div>
+                  {sub && <div className="mt-0.5 text-[10px] normal-case tracking-normal text-slate-500 font-normal">{sub}</div>}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {detections.map((det, i) => {
+            {flatRows.map(({ det, methodKey, rankInMethod }, flatIdx) => {
               const best = det.identifications?.[0]
-              const isHighlighted = i === highlightIndex
+              const isHighlighted = flatIdx === highlightIndex
               const angleDeg = det.obb?.angle_deg
+              const isFirstInMethod = rankInMethod === 0
+              const isNewMethodGroup = isFirstInMethod && flatIdx > 0
 
               return (
                 <tr
-                  key={i}
-                  onClick={() => onRowClick?.(i === highlightIndex ? null : i)}
+                  key={flatIdx}
+                  onClick={() => onRowClick?.(flatIdx === highlightIndex ? null : flatIdx)}
                   className={[
-                    'border-t border-slate-800 cursor-pointer transition-colors',
+                    'cursor-pointer transition-colors',
+                    isNewMethodGroup ? 'border-t-2 border-slate-600' : 'border-t border-slate-800',
                     isHighlighted
                       ? 'bg-orange-950/40 text-orange-200'
                       : 'hover:bg-slate-800/50 text-slate-300',
                   ].join(' ')}
                 >
-                  {/* Index */}
+                  {/* Rank within method — shown as 1/2/3 */}
                   <td className="px-4 py-2.5">
                     <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
                       isHighlighted ? 'bg-orange-500/20 text-orange-300' : 'bg-slate-800 text-slate-400'
                     }`}>
-                      {i + 1}
+                      {flatIdx + 1}
                     </span>
                   </td>
 
                   {/* Detection method */}
                   <td className="px-4 py-2.5">
-                    <span className={[
-                      'inline-flex items-center rounded border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide',
-                      det.method === 'classical'
-                        ? 'border-amber-600/60 bg-amber-950/40 text-amber-300'
-                        : 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300',
-                    ].join(' ')}>
-                      {det.method === 'classical' ? 'Classical' : 'ML'}
-                    </span>
+                    {(() => {
+                      const m = METHOD_CONFIG[det.method] ?? { label: det.method ?? 'Unknown', cls: 'border-slate-600/60 bg-slate-800/40 text-slate-400' }
+                      return (
+                        <span className={`inline-flex items-center rounded border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${m.cls}`}>
+                          {m.label}
+                        </span>
+                      )
+                    })()}
                   </td>
 
                   {/* Confidence */}
@@ -98,8 +152,7 @@ export default function DetectionTable({ detections, highlightIndex, onRowClick 
                     </div>
                   </td>
 
-                  {/* Length — fall back to max OBB dimension for legacy rows where
-                      streak_length_px was recorded as the raw bbox x-extent */}
+                  {/* Length */}
                   <td className="px-4 py-2.5 font-mono text-slate-300">
                     {(() => {
                       const obbMax = det.obb ? Math.max(det.obb.w ?? 0, det.obb.h ?? 0) : 0
@@ -115,7 +168,7 @@ export default function DetectionTable({ detections, highlightIndex, onRowClick 
                     {angleDeg != null ? angleDeg.toFixed(1) : '—'}
                   </td>
 
-                  {/* Sky Position — Solution 1 and Solution 2 */}
+                  {/* Sky Position */}
                   <td className="px-4 py-2.5">
                     {det.ra_tip1_deg != null ? (
                       <div className="flex flex-col gap-0.5">
@@ -140,7 +193,7 @@ export default function DetectionTable({ detections, highlightIndex, onRowClick 
                   </td>
 
                   {/* Best match name */}
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-2.5 border-l border-slate-600/60">
                     {best ? (
                       <span className="text-yellow-300 font-medium">
                         {best.satellite_name ?? `NORAD ${best.norad_id}`}
@@ -150,8 +203,8 @@ export default function DetectionTable({ detections, highlightIndex, onRowClick 
                     )}
                   </td>
 
-                  {/* Match confidence */}
-                  <td className="px-4 py-2.5">
+                  {/* ID confidence — position × length Gaussian score from crossid.py */}
+                  <td className="px-4 py-2.5 border-l border-slate-600/60">
                     {best?.confidence != null ? (
                       <span className={
                         best.confidence >= 0.8 ? 'text-green-400' :

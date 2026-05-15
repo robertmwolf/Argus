@@ -63,7 +63,7 @@ _patch_torch_load_weights_only()
 # Constants / defaults
 # ---------------------------------------------------------------------------
 
-_DEFAULT_CONFIDENCE_THRESHOLD = 0.01  # keep low-confidence dev proposals visible
+_DEFAULT_CONFIDENCE_THRESHOLD = 0.05
 _FAST_IMAGE_SIZE = 256
 
 # Minimum inference resolution for large sensor images.
@@ -83,31 +83,35 @@ def _select_config(model_size: str) -> Path:
     """Return the MMDetection config path for the given model size.
 
     Args:
-        model_size: 'tiny' (Swin-T, Mac dev) or 'large' (Swin-L, A100 cloud).
+        model_size: 'tiny' | 'large' | 'dinov3_vitb' | 'dinov3_vitl'
 
     Returns:
         Absolute path to the MMDetection config file.
 
     Raises:
-        EnvironmentError: If 'large' is requested on a non-CUDA device.
+        EnvironmentError: If a CUDA-only size is requested on a non-CUDA device.
         ValueError: If an unknown model_size string is given.
     """
     root = Path(__file__).resolve().parent.parent
     configs = {
-        "tiny":  root / "models" / "dino" / "streak_codino_swin_t.py",
-        "large": root / "models" / "dino" / "streak_codino_swin_l.py",
+        "tiny":         root / "models" / "dino" / "streak_codino_swin_t.py",
+        "large":        root / "models" / "dino" / "streak_codino_swin_l.py",
+        "dinov3_vitb":  root / "models" / "dino" / "streak_dinov3_vitb.py",
+        "dinov3_vitl":  root / "models" / "dino" / "streak_dinov3_vitl.py",
     }
     if model_size not in configs:
         raise ValueError(
-            f"Unknown MODEL_SIZE '{model_size}'. Choose 'tiny' or 'large'."
+            f"Unknown MODEL_SIZE '{model_size}'. "
+            f"Choose from: {sorted(configs)}"
         )
-    if model_size == "large":
+    cuda_only = {"large", "dinov3_vitl"}
+    if model_size in cuda_only:
         from inference.device import get_device
         device = get_device()
         if device.type != "cuda":
             raise EnvironmentError(
-                "MODEL_SIZE=large requires a CUDA GPU. "
-                f"Current device: {device.type}. Use MODEL_SIZE=tiny on Mac."
+                f"MODEL_SIZE={model_size} requires a CUDA GPU. "
+                f"Current device: {device.type}. Use 'tiny' or 'dinov3_vitb' on Mac."
             )
     return configs[model_size]
 
@@ -165,6 +169,7 @@ def _run_inference(
     array: "np.ndarray",
     image_size: int,
     confidence_threshold: float = _DEFAULT_CONFIDENCE_THRESHOLD,
+    model_name: str = "ml",
 ) -> list[dict]:
     """Run DINO inference on an image array, return raw bbox detections.
 
@@ -173,6 +178,8 @@ def _run_inference(
         array: uint8 (H, W, 3) image array.
         image_size: Longest edge to which the image is rescaled for inference.
         confidence_threshold: Minimum score to keep a detection.
+        model_name: Value to set on the 'method' key of each detection dict
+            (e.g. 'dinov3_vitb', 'tiny').
 
     Returns:
         List of dicts with keys: bbox ([x1, y1, x2, y2] floats), confidence.
@@ -222,7 +229,7 @@ def _run_inference(
         detections.append({
             "bbox": [x1, y1, x2, y2],
             "confidence": float(score),
-            "method": "ml",
+            "method": model_name,
         })
 
     logger.debug("DINO: %d raw detections above threshold %.2f",
@@ -304,7 +311,7 @@ def _run_classical_detector(
         detections.append({
             "bbox": [float(x), float(y), float(x + w), float(y + h)],
             "confidence": confidence,
-            "method": "classical",
+            "method": "opencv",
             "obb": {
                 "cx": float((start[0] + end[0]) / 2.0),
                 "cy": float((start[1] + end[1]) / 2.0),
@@ -318,6 +325,71 @@ def _run_classical_detector(
     detections.sort(key=lambda d: d["confidence"], reverse=True)
     logger.debug("Classical detector: %d candidate streak(s)", len(detections))
     return detections[:max_detections]
+
+
+def _run_astride_detector(
+    fits_path: Path,
+    min_length_px: float = 20.0,
+    contour_threshold: float = 3.0,
+) -> list[dict]:
+    """Run the Phase-0 ASTRiDE detector on the raw FITS file.
+
+    Calls src.detection.classical_detector.detect_streaks, then converts each
+    StreakDetection to the standard pipeline dict format so it can enter the
+    shared NMS pool alongside DINO and OpenCV detections.
+
+    Args:
+        fits_path: Path to the FITS file (same path passed to run()).
+        min_length_px: Minimum streak length forwarded to ASTRiDE.
+        contour_threshold: ASTRiDE sigma threshold for contour search.
+
+    Returns:
+        Detection dicts compatible with the rest of the pipeline, each with
+        method='astride'.
+    """
+    try:
+        from src.ingest.fits_parser import parse_fits
+        from src.detection.classical_detector import detect_streaks
+    except ImportError:
+        logger.debug("ASTRiDE detector unavailable (src package not importable); skipping")
+        return []
+
+    try:
+        fits_image = parse_fits(fits_path)
+        streak_dets = detect_streaks(
+            fits_image,
+            contour_threshold=contour_threshold,
+            min_length_px=min_length_px,
+        )
+    except Exception:
+        logger.exception("ASTRiDE detector failed on %s", fits_path)
+        return []
+
+    detections: list[dict] = []
+    for d in streak_dets:
+        aspect = d.length_px / max(d.width_px, 1.0)
+        confidence = min(0.99, max(0.2, aspect / 20.0))
+        detections.append({
+            "bbox": [
+                float(min(d.x_start, d.x_end)),
+                float(min(d.y_start, d.y_end)),
+                float(max(d.x_start, d.x_end)),
+                float(max(d.y_start, d.y_end)),
+            ],
+            "confidence": confidence,
+            "method": "astride",
+            "obb": {
+                "cx": float(d.x_center),
+                "cy": float(d.y_center),
+                "w": float(d.length_px),
+                "h": float(d.width_px),
+                "angle_deg": float(d.angle_deg),
+            },
+            "streak_length_px": float(d.length_px),
+        })
+
+    logger.debug("ASTRiDE detector: %d candidate streak(s)", len(detections))
+    return detections
 
 
 # ---------------------------------------------------------------------------
@@ -424,7 +496,15 @@ def load_model(
             weights_path = Path(weights_env)
         else:
             root = Path(__file__).resolve().parent.parent
-            weights_path = root / "weights" / f"dino_{model_size}.pth"
+            # DINOv3 variants have dedicated checkpoint directories
+            _dinov3_defaults = {
+                "dinov3_vitb": root / "weights" / "dinov3_vitb_full" / "best_coco_bbox_mAP_epoch_4.pth",
+                "dinov3_vitl": root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
+            }
+            if model_size in _dinov3_defaults:
+                weights_path = _dinov3_defaults[model_size]
+            else:
+                weights_path = root / "weights" / f"dino_{model_size}.pth"
 
     model = _load_model(config_path, Path(weights_path), inference_device)
     return model, inference_device
@@ -532,17 +612,19 @@ def run(
     elif inference_device is None:
         inference_device = device
 
-    raw_dets   = _run_inference(model, array, image_size, confidence_threshold)
+    raw_dets   = _run_inference(model, array, image_size, confidence_threshold,
+                                model_name=model_size)
     inference_ms = (time.perf_counter() - t1) * 1000
     logger.debug("inference_ms=%.1f  raw_dets=%d  threshold=%.2f",
                  inference_ms, len(raw_dets), confidence_threshold)
 
     classical_dets = _run_classical_detector(array)
+    astride_dets   = _run_astride_detector(fits_path)
 
     # --- 3. Postprocess: angle refinement + OBB + NMS -----------------------
     t2 = time.perf_counter()
     from inference.postprocess import (
-        bbox_to_obb, refine_angle, nms_detections, extend_obb_to_streak_extent,
+        bbox_to_obb, refine_angle, group_detections, extend_obb_to_streak_extent,
         classify_detection_quality,
     )
 
@@ -550,7 +632,6 @@ def run(
     w_img = array.shape[1]
 
     for det in raw_dets:
-        det.setdefault("method", "ml")
         x1, y1, x2, y2 = det["bbox"]
 
         # Always run Radon refinement — it operates on a small crop and is fast.
@@ -573,7 +654,7 @@ def run(
         det["obb"] = obb
         det["streak_length_px"] = float(obb["w"])
 
-    detections = nms_detections(raw_dets + classical_dets, iou_threshold=0.5)
+    detections = group_detections(raw_dets + classical_dets + astride_dets, iou_threshold=0.5)
     postprocess_ms = (time.perf_counter() - t2) * 1000
     logger.debug("postprocess_ms=%.1f  after_nms=%d", postprocess_ms, len(detections))
 

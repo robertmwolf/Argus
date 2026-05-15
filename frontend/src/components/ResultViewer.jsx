@@ -172,7 +172,8 @@ function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
   const { obb, confidence: conf = 1 } = det
   if (!obb || [obb.cx, obb.cy, obb.w, obb.h, obb.angle_deg].some((v) => v == null)) return
 
-  const colour = highlighted ? HIGHLIGHT_COLOUR : (det.method === 'classical' ? CLASSICAL_COLOUR : OBB_COLOUR)
+  const isClassical = det.method === 'astride' || det.method === 'opencv' || det.method === 'classical'
+  const colour = highlighted ? HIGHLIGHT_COLOUR : (isClassical ? CLASSICAL_COLOUR : OBB_COLOUR)
   const alpha = highlighted ? 1.0 : 0.4 + conf * 0.6
   const endpointR = highlighted ? 5.5 : 4
   const lineWidth = highlighted ? 2.5 : 1.5
@@ -250,7 +251,8 @@ export default function ResultViewer({
     // Labels always on top of everything
     detections.forEach((det, i) => {
       if (det.obb) {
-        const colour = i === highlightIndex ? HIGHLIGHT_COLOUR : (det.method === 'classical' ? CLASSICAL_COLOUR : OBB_COLOUR)
+        const isClassical = det.method === 'astride' || det.method === 'opencv' || det.method === 'classical'
+      const colour = i === highlightIndex ? HIGHLIGHT_COLOUR : (isClassical ? CLASSICAL_COLOUR : OBB_COLOUR)
         const alpha = i === highlightIndex ? 1.0 : 0.4 + (det.confidence ?? 1) * 0.6
         drawLabel(ctx, det.obb, i, colour, alpha, scaleX, scaleY)
       }
@@ -319,7 +321,7 @@ export default function ResultViewer({
         >
           <p className="font-semibold text-cyan-300 mb-1.5">Detection {tooltip.index + 1}</p>
           <div className="flex flex-col gap-0.5 text-slate-300">
-            <p>Method: <span className="font-semibold">{tooltip.det.method === 'classical' ? 'Classical' : 'ML'}</span></p>
+            <p>Method: <span className="font-semibold">{tooltip.det.method ?? 'Unknown'}</span></p>
             <p>
               Confidence:{' '}
               <span className={

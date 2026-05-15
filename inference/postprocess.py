@@ -407,6 +407,71 @@ def nms_detections(
     return kept
 
 
+def group_detections(
+    detections: list[dict],
+    iou_threshold: float = 0.5,
+) -> list[dict]:
+    """Group overlapping detections by streak without suppressing any.
+
+    Detections whose OBBs overlap above *iou_threshold* are assigned the same
+    ``streak_id`` (1-based int).  All detections are returned — nothing is
+    suppressed — so callers can display one row per (streak, method) pair.
+
+    Within each group, detections are ordered by confidence descending.
+    Groups themselves are ordered by the confidence of their best detection.
+
+    Args:
+        detections: Detection dicts, each with 'obb' and 'confidence' keys.
+        iou_threshold: OBB IoU threshold above which two detections are
+            considered observations of the same streak.
+
+    Returns:
+        All input detections with a 'streak_id' int field added.
+    """
+    if not detections:
+        return []
+
+    # Work in confidence-descending order so the highest-confidence detection
+    # is the "seed" of each group.
+    sorted_dets = sorted(detections, key=lambda d: d.get("confidence", 0.0), reverse=True)
+    n = len(sorted_dets)
+    group_id = [-1] * n
+
+    next_id = 0
+    for i in range(n):
+        if group_id[i] == -1:
+            group_id[i] = next_id
+            next_id += 1
+        else:
+            # Already assigned by a higher-confidence seed — don't extend the
+            # group further from here, which would cause chain-linking across
+            # unrelated detections.
+            continue
+        obb_i = sorted_dets[i].get("obb")
+        if obb_i is None:
+            continue
+        for j in range(i + 1, n):
+            if group_id[j] != -1:
+                continue
+            obb_j = sorted_dets[j].get("obb")
+            if obb_j is None:
+                continue
+            if _rotated_iou(obb_i, obb_j) > iou_threshold:
+                group_id[j] = group_id[i]
+
+    for det, gid in zip(sorted_dets, group_id):
+        det["streak_id"] = gid + 1  # 1-based for display
+
+    # Sort by group (ascending) then by confidence within the group (descending)
+    sorted_dets.sort(key=lambda d: (d["streak_id"], -d.get("confidence", 0.0)))
+
+    logger.debug(
+        "group_detections: %d detection(s) → %d streak group(s)",
+        n, next_id,
+    )
+    return sorted_dets
+
+
 # ---------------------------------------------------------------------------
 # Detection quality classification
 # ---------------------------------------------------------------------------
