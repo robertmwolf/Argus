@@ -1,4 +1,10 @@
-# ML Detection Pipeline — Co-DINO with Swin Backbone
+# ML Detection Pipeline — Co-DINO with Swin / DINOv3 Backbone
+
+> **Note (2026-05-14):** This document was written for the original Swin backbone.
+> A DINOv3 ViT-B/L backbone has since been integrated on `feature/dinov3-backbone`
+> (now merged to `main`). See `agent_docs/dinov3_plan.md` for DINOv3-specific
+> architecture, training strategy, and phase results. The Swin rules below remain
+> valid for the Swin-T/L configs.
 
 ## Overview
 

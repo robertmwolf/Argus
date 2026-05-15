@@ -388,3 +388,15 @@ Recorded 2026-05-05. Swin-T, 50 epochs, 50-image synthetic dev subset, 256×256p
 
 *DINO angle is estimated from bbox aspect ratio in fast mode (Radon skipped).
 YOLO angle is real (OBB corner-point output).
+
+### Phase E results: `results/phase_e/phase_e_comparison_test.json`
+Recorded 2026-05-15. Evaluation on held-out `test.json` (full merged dataset).
+
+| Model | mAP | mAP@0.5 | mAP@0.75 | Notes |
+|-------|-----|---------|---------|-------|
+| Co-DINO Swin-T | 0.149 | 0.190 | 0.167 | full merged dataset |
+| DINOv3 ViT-B (Phase C²) | 0.580 | **0.740** | 0.606 | frozen backbone, full dataset, 4 epochs |
+| DINOv3 ViT-L (Phase D) | TBD | TBD | TBD | pending workstation run |
+
+DINOv3 ViT-B (frozen) outperforms Swin-T by +0.55 mAP@0.5 on a fair comparison (same data, test split).
+Phase D (ViT-L, 50 epochs) is the definitive production run targeting ≥94% precision / ≥97% recall.
