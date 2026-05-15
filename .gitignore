@@ -103,6 +103,7 @@ data/satstreaks/
 data/dev_subset/
 data/raw/
 data/processed/
+data/augmented/
 weights/yolo_baseline/
 weights/local_run/
 weights/run/

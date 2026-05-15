@@ -327,6 +327,108 @@ def _run_classical_detector(
     return detections[:max_detections]
 
 
+def _run_tta_inference(
+    model: Any,
+    array: "np.ndarray",
+    image_size: int,
+    confidence_threshold: float,
+    model_name: str,
+) -> list[dict]:
+    """Run inference on original, H-flip, and V-flip views; merge all detections.
+
+    Bounding boxes from flipped views are mapped back to original image
+    coordinates before merging.  The caller is responsible for NMS to remove
+    near-duplicate detections that arise across views.
+
+    Args:
+        model: Loaded MMDetection model.
+        array: uint8 (H, W, 3) image array in original orientation.
+        image_size: Longest-edge resize target for inference.
+        confidence_threshold: Minimum score to keep a detection.
+        model_name: Value for the 'method' key on each detection dict.
+
+    Returns:
+        Combined list of detection dicts from all three views.
+    """
+    import numpy as np
+
+    h, w = array.shape[:2]
+    all_dets: list[dict] = []
+
+    all_dets.extend(_run_inference(model, array, image_size, confidence_threshold, model_name))
+
+    hflip = array[:, ::-1, :].copy()
+    for det in _run_inference(model, hflip, image_size, confidence_threshold, model_name):
+        x1, y1, x2, y2 = det["bbox"]
+        det["bbox"] = [w - x2, y1, w - x1, y2]
+        all_dets.append(det)
+
+    vflip = array[::-1, :, :].copy()
+    for det in _run_inference(model, vflip, image_size, confidence_threshold, model_name):
+        x1, y1, x2, y2 = det["bbox"]
+        det["bbox"] = [x1, h - y2, x2, h - y1]
+        all_dets.append(det)
+
+    logger.debug("TTA: %d detections from 3 augmented views", len(all_dets))
+    return all_dets
+
+
+def _run_yolo_detector(
+    array: "np.ndarray",
+    confidence_threshold: float = 0.25,
+) -> list[dict]:
+    """Run YOLO11-OBB baseline on an image array; return standard detection dicts.
+
+    Reads weights from ``weights/yolo_baseline.pt``.  Silently returns an
+    empty list if the weights file is missing or ultralytics is not installed,
+    so this function is always safe to call even when YOLO is not set up.
+
+    Args:
+        array: uint8 (H, W, 3) image array (RGB, same as pipeline input).
+        confidence_threshold: Minimum YOLO confidence to keep a detection.
+
+    Returns:
+        List of detection dicts with keys: bbox, confidence, method, obb,
+        streak_length_px.  The obb already contains the true oriented angle
+        from YOLO's xywhr output.
+    """
+    from pathlib import Path as _Path
+
+    weights = _Path(os.environ.get("YOLO_WEIGHTS", "weights/yolo_tiled/run/weights/best.pt"))
+    if not weights.exists():
+        logger.debug("YOLO baseline weights not found at %s; skipping", weights)
+        return []
+
+    try:
+        from ultralytics import YOLO  # type: ignore[import]
+    except ImportError:
+        logger.debug("ultralytics not installed; skipping YOLO ensemble")
+        return []
+
+    yolo = YOLO(str(weights))
+    results = yolo(array, verbose=False, conf=confidence_threshold)
+
+    detections: list[dict] = []
+    for result in results:
+        if result.obb is None:
+            continue
+        for box, conf in zip(result.obb.xywhr, result.obb.conf):
+            cx, cy, bw, bh, angle_rad = box.tolist()
+            angle_deg = float(angle_rad) * 180.0 / math.pi
+            half_w, half_h = bw / 2.0, bh / 2.0
+            detections.append({
+                "bbox": [cx - half_w, cy - half_h, cx + half_w, cy + half_h],
+                "confidence": float(conf),
+                "method": "yolo",
+                "obb": {"cx": cx, "cy": cy, "w": bw, "h": bh, "angle_deg": angle_deg},
+                "streak_length_px": float(max(bw, bh)),
+            })
+
+    logger.debug("YOLO ensemble: %d detections above threshold %.2f",
+                 len(detections), confidence_threshold)
+    return detections
+
+
 def _run_astride_detector(
     fits_path: Path,
     min_length_px: float = 20.0,
@@ -498,7 +600,7 @@ def load_model(
             root = Path(__file__).resolve().parent.parent
             # DINOv3 variants have dedicated checkpoint directories
             _dinov3_defaults = {
-                "dinov3_vitb": root / "weights" / "dinov3_vitb_full" / "best_coco_bbox_mAP_epoch_4.pth",
+                "dinov3_vitb": root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
                 "dinov3_vitl": root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
             }
             if model_size in _dinov3_defaults:
@@ -568,6 +670,7 @@ def run(
     confidence_threshold = float(
         os.environ.get("CONFIDENCE_THRESHOLD", str(_DEFAULT_CONFIDENCE_THRESHOLD))
     )
+    tta_enabled = os.environ.get("TTA_ENABLED", "").lower() in {"1", "true", "yes"}
 
     # --- 1. Load FITS --------------------------------------------------------
     t0 = time.perf_counter()
@@ -612,11 +715,15 @@ def run(
     elif inference_device is None:
         inference_device = device
 
-    raw_dets   = _run_inference(model, array, image_size, confidence_threshold,
-                                model_name=model_size)
+    if tta_enabled:
+        raw_dets = _run_tta_inference(model, array, image_size, confidence_threshold,
+                                      model_name=model_size)
+    else:
+        raw_dets = _run_inference(model, array, image_size, confidence_threshold,
+                                  model_name=model_size)
     inference_ms = (time.perf_counter() - t1) * 1000
-    logger.debug("inference_ms=%.1f  raw_dets=%d  threshold=%.2f",
-                 inference_ms, len(raw_dets), confidence_threshold)
+    logger.debug("inference_ms=%.1f  raw_dets=%d  tta=%s  threshold=%.2f",
+                 inference_ms, len(raw_dets), tta_enabled, confidence_threshold)
 
     classical_dets = _run_classical_detector(array)
     astride_dets   = _run_astride_detector(fits_path)
@@ -624,8 +731,8 @@ def run(
     # --- 3. Postprocess: angle refinement + OBB + NMS -----------------------
     t2 = time.perf_counter()
     from inference.postprocess import (
-        bbox_to_obb, refine_angle, group_detections, extend_obb_to_streak_extent,
-        classify_detection_quality,
+        bbox_to_obb, refine_angle, group_detections, nms_detections,
+        extend_obb_to_streak_extent, classify_detection_quality,
     )
 
     h_img = array.shape[0]
@@ -654,7 +761,31 @@ def run(
         det["obb"] = obb
         det["streak_length_px"] = float(obb["w"])
 
-    detections = group_detections(raw_dets + classical_dets + astride_dets, iou_threshold=0.5)
+    # Apply the same streak-extent tracing to classical and ASTRiDE detections.
+    # Their angles are already set by their own algorithms; this gives them the
+    # same endpoint refinement that DINO receives above.
+    for det in classical_dets + astride_dets:
+        if det.get("obb"):
+            obb = extend_obb_to_streak_extent(array, det["obb"])
+            det["obb"] = obb
+            det["streak_length_px"] = float(obb["w"])
+
+    # Per-detector NMS: collapse duplicates within each detector before combining.
+    # TTA produces 3 DINOv3 passes on the same image — NMS reduces those to the
+    # single best box per streak.  Classical detectors can also fire multiple
+    # times on the same streak, so we NMS them individually too.
+    raw_dets       = nms_detections(raw_dets,       iou_threshold=0.5)
+    classical_dets = nms_detections(classical_dets, iou_threshold=0.5)
+    astride_dets   = nms_detections(astride_dets,   iou_threshold=0.5)
+    yolo_dets      = nms_detections(
+        _run_yolo_detector(array, confidence_threshold), iou_threshold=0.5
+    )
+
+    # Group across detectors: overlapping detections from different methods share
+    # the same streak_id.  Nothing is suppressed — all per-method detections are
+    # kept so the UI can surface multi-method agreement.
+    combined   = raw_dets + classical_dets + astride_dets + yolo_dets
+    detections = group_detections(combined, iou_threshold=0.5)
     postprocess_ms = (time.perf_counter() - t2) * 1000
     logger.debug("postprocess_ms=%.1f  after_nms=%d", postprocess_ms, len(detections))
 

@@ -108,8 +108,15 @@ class SyntheticStreakInject(DualTransform):
         p: Probability of applying the transform.
     """
 
-    def __init__(self, p: float = 0.5) -> None:
+    def __init__(
+        self,
+        p: float = 0.5,
+        min_length_px: float = 50.0,
+        max_length_fraction: float = 1.0,
+    ) -> None:
         super().__init__(p=p)
+        self.min_length_px = min_length_px
+        self.max_length_fraction = max_length_fraction
 
     # ------------------------------------------------------------------
     # Public interface: direct injection (handles image + bboxes together)
@@ -195,7 +202,7 @@ class SyntheticStreakInject(DualTransform):
 
     def get_transform_init_args_names(self) -> tuple[str, ...]:
         """Return names of init args for serialisation."""
-        return ("p",)
+        return ("p", "min_length_px", "max_length_fraction")
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -224,10 +231,13 @@ class SyntheticStreakInject(DualTransform):
             img_mean = float(finite_px.mean())
             img_std = float(finite_px.std()) if finite_px.std() > 0 else 20.0
 
+        max_length = min(self.max_length_fraction * diagonal, diagonal)
+        min_length = max(self.min_length_px, 1.0)
+
         streaks = []
         for _ in range(n_streaks):
             angle_rad = np.deg2rad(float(rng.uniform(0, 180)))
-            length = float(rng.uniform(50, diagonal))
+            length = float(rng.uniform(min_length, max(min_length + 1.0, max_length)))
             brightness = float(np.clip(img_mean + float(rng.uniform(1, 5)) * img_std, 0, 255))
             dx = np.cos(angle_rad) * length / 2.0
             dy = np.sin(angle_rad) * length / 2.0
