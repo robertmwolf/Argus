@@ -4,6 +4,21 @@ This document is the handoff checklist for training ARGUS on a more powerful
 Windows or Linux workstation with an NVIDIA RTX 5070 Ti 16 GB GPU and a
 24-core i9 CPU.
 
+The DINOv3 backbone is frozen throughout, what specifically needs to be trained is the neck and head:
+
+1. ChannelMapper neck (~4M params)
+Converts DINOv3's flat 1024-dim patch grid into 4 feature pyramid levels at 256-dim each. This is just 4 × 1×1 convolutions — it has no pretrained weights and must learn from scratch.
+
+2. Co-DINO detection head (~40M params)
+
+The transformer encoder/decoder (6 layers each) that refines features into object queries
+The classification head (streak vs background)
+The bounding box regression head (cx, cy, w, h)
+The denoising (DN) auxiliary head
+None of these components have ever seen a satellite streak. They come from COCO pretrain weights (object detection on everyday images), so they need fine-tuning to learn what a streak looks like, where it is, and how to draw a tight box around a thin diagonal line.
+
+The backbone is already done — the 1.7B-image pretraining that gave DINOv3 rich visual features is baked into the .pth file. The workstation training is purely teaching the neck and head to interpret those features in the context of streak detection on astronomical FITS images.
+
 ## Short Prompt for the Colleague's Codex
 
 Give the colleague's Codex this instruction:
