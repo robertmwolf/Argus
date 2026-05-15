@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import DetectionTable from './components/DetectionTable'
 import FitsHeaderPanel from './components/FitsHeaderPanel'
 import IdentificationPanel from './components/IdentificationPanel'
@@ -15,6 +15,11 @@ export default function App() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const [highlightIndex, setHighlightIndex] = useState(null)
+  const [modelLabel, setModelLabel] = useState(null)
+
+  useEffect(() => {
+    fetch('/health').then(r => r.json()).then(d => setModelLabel(d.model_label)).catch(() => {})
+  }, [])
 
   // Poll for job completion once we have a jobId
   useEffect(() => {
@@ -69,6 +74,24 @@ export default function App() {
   const isProcessing = jobId && jobStatus && jobStatus !== 'complete' && jobStatus !== 'failed'
   const isComplete = result !== null
 
+  // Top-3-per-method filtered list, sorted by length then confidence.
+  // Shared by ResultViewer and DetectionTable so their indices always agree.
+  const TOP_PER_METHOD = 3
+  const displayDetections = useMemo(() => {
+    if (!result?.detections) return []
+    const methodGroups = new Map()
+    for (const det of [...result.detections].sort((a, b) => {
+      const la = a.streak_length_px ?? a.obb?.w ?? 0
+      const lb = b.streak_length_px ?? b.obb?.w ?? 0
+      return lb !== la ? lb - la : (b.confidence ?? 0) - (a.confidence ?? 0)
+    })) {
+      const key = det.method ?? 'unknown'
+      if (!methodGroups.has(key)) methodGroups.set(key, [])
+      methodGroups.get(key).push(det)
+    }
+    return [...methodGroups.values()].flatMap(dets => dets.slice(0, TOP_PER_METHOD))
+  }, [result?.detections])
+
   return (
     <div className="min-h-screen bg-[#0d0e14] text-slate-200">
       {/* Header */}
@@ -80,6 +103,12 @@ export default function App() {
         </svg>
         <h1 className="text-lg font-semibold tracking-tight text-white">ARGUS</h1>
         <span className="text-slate-500 text-sm">Satellite Streak Detector</span>
+        {modelLabel && (
+          <span className="ml-1 inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border border-cyan-700/50 bg-cyan-950/30 text-cyan-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+            {modelLabel}
+          </span>
+        )}
         {(isProcessing || isComplete) && (
           <button
             onClick={handleReset}
@@ -143,7 +172,7 @@ export default function App() {
               <div className="lg:col-span-2">
                 <ResultViewer
                   jobId={result.jobId}
-                  detections={result.detections}
+                  detections={displayDetections}
                   imageWidth={result.image_width}
                   imageHeight={result.image_height}
                   highlightIndex={highlightIndex}
@@ -156,7 +185,8 @@ export default function App() {
             </div>
 
             <DetectionTable
-              detections={result.detections}
+              detections={displayDetections}
+              totalDetections={result.detections.length}
               highlightIndex={highlightIndex}
               onRowClick={setHighlightIndex}
             />
