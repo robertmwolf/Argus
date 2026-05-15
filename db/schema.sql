@@ -44,17 +44,18 @@ CREATE TABLE tracklets (
     created_at TEXT DEFAULT (datetime('now'))
 );
 
--- TLE catalog: local copy of Space-Track data so gp_history is never re-queried.
--- Populated once at environment setup via scripts/bootstrap_tle_catalog.py,
--- then kept current by scripts/update_tle_catalog.py (GP class, ≤ once/hour).
+-- TLE catalog: local copy of TLE data from bootstrap zips (historical) and
+-- CelesTrak (live edge, ≤ once per 2 hours).  Space-Track gp_history is a
+-- one-time download resource and is never called at runtime.
 CREATE TABLE IF NOT EXISTS tle_catalog (
     norad_id     INTEGER NOT NULL,
     epoch        TEXT NOT NULL,          -- ISO8601 UTC
     object_name  TEXT NOT NULL,
-    object_type  TEXT,                   -- PAYLOAD / DEBRIS / ROCKET BODY / UNKNOWN
+    object_type  TEXT,                   -- PAYLOAD / DEBRIS / ROCKET BODY / UNKNOWN / ANALYST
     mean_motion  REAL,                   -- rev/day
     tle_line1    TEXT NOT NULL,
     tle_line2    TEXT NOT NULL,
+    source       TEXT,                   -- 'bootstrap' | 'celestrak' | 'spacetrack_gp'
     ingested_at  TEXT DEFAULT (datetime('now')),
     PRIMARY KEY (norad_id, epoch)
 );

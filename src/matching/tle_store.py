@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS tle_catalog (
     mean_motion  REAL,
     tle_line1    TEXT NOT NULL,
     tle_line2    TEXT NOT NULL,
+    source       TEXT,
     ingested_at  TEXT DEFAULT (CURRENT_TIMESTAMP),
     PRIMARY KEY (norad_id, epoch)
 );
@@ -90,6 +91,9 @@ CREATE TABLE IF NOT EXISTS tle_catalog_coverage (
 def init_tle_tables(engine=None) -> None:
     """Create tle_catalog and tle_catalog_coverage tables if they do not exist.
 
+    Also applies lightweight migrations (adding columns) to existing tables so
+    the function is safe to call on an already-populated database.
+
     Called automatically by :func:`upsert_tles` and :func:`query_tles_for_window`
     so callers never need to call this explicitly.
 
@@ -102,6 +106,16 @@ def init_tle_tables(engine=None) -> None:
             stmt = stmt.strip()
             if stmt:
                 conn.execute(text(stmt))
+    # Migration: add source column to pre-existing tle_catalog tables.
+    # Done in a separate connection so a no-op ALTER TABLE never taints the
+    # CREATE TABLE transaction above.  PRAGMA table_info is used to guard
+    # the ALTER TABLE because SQLite does not support IF NOT EXISTS on ADD COLUMN.
+    with eng.connect() as chk:
+        pragma_rows = chk.execute(text("PRAGMA table_info(tle_catalog)")).fetchall()
+    existing_cols = {row[1] for row in pragma_rows}
+    if "source" not in existing_cols:
+        with eng.begin() as mig:
+            mig.execute(text("ALTER TABLE tle_catalog ADD COLUMN source TEXT"))
 
 
 # ---------------------------------------------------------------------------
@@ -158,6 +172,41 @@ def record_coverage(
             },
         )
     logger.info("Coverage recorded: %s (%d records)", source_tag, record_count)
+
+
+def get_last_coverage_time(source_tag: str, engine=None) -> datetime | None:
+    """Return the ``downloaded_at`` timestamp for *source_tag*, or None.
+
+    Used by TLECatalogManager to rate-gate CelesTrak refreshes.
+
+    Args:
+        source_tag: e.g. ``'celestrak_refresh'``.
+        engine: Optional sync engine.
+
+    Returns:
+        UTC datetime of the last recorded refresh, or None if never refreshed.
+    """
+    eng = engine or get_engine()
+    init_tle_tables(eng)
+    with eng.connect() as conn:
+        row = conn.execute(
+            text(
+                "SELECT downloaded_at FROM tle_catalog_coverage "
+                "WHERE source_tag = :tag"
+            ),
+            {"tag": source_tag},
+        ).fetchone()
+    if row is None:
+        return None
+    try:
+        ts = row[0]
+        # Stored as ISO8601 string; parse to UTC datetime
+        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except Exception:
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -244,13 +293,15 @@ def _to_float(value: Any) -> float | None:
 # Write
 # ---------------------------------------------------------------------------
 
-def upsert_tles(records: list[dict[str, Any]], engine=None) -> int:
+def upsert_tles(records: list[dict[str, Any]], engine=None, *, source: str | None = None) -> int:
     """Bulk insert TLE records, ignoring duplicates (same norad_id + epoch).
 
     Accepts both Space-Track API dicts (uppercase keys) and normalised dicts.
 
     Args:
         records: List of TLE dicts.
+        source: Optional provenance tag stored in the ``source`` column,
+            e.g. ``'bootstrap'``, ``'celestrak'``, ``'spacetrack_gp'``.
         engine: Optional sync engine.
 
     Returns:
@@ -263,6 +314,10 @@ def upsert_tles(records: list[dict[str, Any]], engine=None) -> int:
     if not rows:
         return 0
 
+    if source is not None:
+        for row in rows:
+            row["source"] = source
+
     inserted = 0
     with eng.begin() as conn:
         for row in rows:
@@ -270,11 +325,11 @@ def upsert_tles(records: list[dict[str, Any]], engine=None) -> int:
                 text(
                     "INSERT OR IGNORE INTO tle_catalog "
                     "(norad_id, epoch, object_name, object_type, mean_motion, "
-                    " tle_line1, tle_line2) "
+                    " tle_line1, tle_line2, source) "
                     "VALUES (:norad_id, :epoch, :object_name, :object_type, "
-                    "        :mean_motion, :tle_line1, :tle_line2)"
+                    "        :mean_motion, :tle_line1, :tle_line2, :source)"
                 ),
-                row,
+                {**row, "source": row.get("source")},
             )
             inserted += result.rowcount
 
@@ -345,14 +400,15 @@ def query_tles_for_window(
 
 _INSERT_SQL = (
     "INSERT OR IGNORE INTO tle_catalog "
-    "(norad_id, epoch, object_name, object_type, mean_motion, tle_line1, tle_line2) "
-    "VALUES (:norad_id, :epoch, :object_name, :object_type, :mean_motion, :tle_line1, :tle_line2)"
+    "(norad_id, epoch, object_name, object_type, mean_motion, tle_line1, tle_line2, source) "
+    "VALUES (:norad_id, :epoch, :object_name, :object_type, :mean_motion, :tle_line1, :tle_line2, :source)"
 )
 
 
 def bulk_load_tle_file(
     file_path: Path,
     source_tag: str,
+    source: str = "bootstrap",
     engine=None,
     batch_size: int = 10_000,
 ) -> int:
@@ -407,6 +463,7 @@ def bulk_load_tle_file(
 
             for rec in _stream_tle_pairs(lines):
                 total_parsed += 1
+                rec["source"] = source
                 batch.append(rec)
                 if len(batch) >= batch_size:
                     total_inserted += _flush(conn, batch)

@@ -129,16 +129,49 @@ https://ln5.sync.com/dl/afd354190/c5cd2q72-a5qjzp4q-nbjdiqkr-cenajuqu
 
 ## Routing in ARGUS
 
-`inference/crossid.py → _fetch_tle_catalog()` is local-catalog only:
+`inference/crossid.py → _fetch_tle_catalog()` delegates to
+`src/matching/tle_manager.py → TLECatalogManager.get_tles()`.
 
-| Local TLE coverage | Inference behavior | Space-Track call |
+### Live track (obs_time within last 72 hours)
+
+| Local TLE coverage | Behavior | Network call |
 |---|---|---|
-| Present for obs_time window | Cross-identify against local `tle_catalog` | None |
-| Missing for obs_time window | Leave detections unidentified/unknown | None |
+| Present | Cross-identify against local `tle_catalog` | None |
+| Missing + CelesTrak cooldown active | Leave detections unknown for this inference | None |
+| Missing + cooldown elapsed (≥ 2 h) | Refresh from CelesTrak, re-check, then cross-identify | CelesTrak GP API |
 
-This is intentional. Missing historical coverage is accepted as an unknown
-object rather than triggering broad `gp_history` requests. Current/live
-Space-Track integration is a future operator decision, not automatic behavior.
+CelesTrak is a public mirror; no auth required. ARGUS fetches two groups:
+- `GROUP=active` — full active satellite catalog
+- `SPECIAL=GPZ-PLUS` — analyst/unclassified 80000-series objects
+
+The refresh is rate-gated to at most once per 2 hours via the
+`tle_catalog_coverage` table (tag `'celestrak_refresh'`).
+
+### Historical track (obs_time older than 72 hours)
+
+| Local TLE coverage | Behavior | Network call |
+|---|---|---|
+| Present (bootstrapped from zip bundles) | Cross-identify | None |
+| Missing | Leave detections unknown; log operator instruction | None |
+
+Missing historical coverage is accepted as unknown. The operator should
+pre-load the relevant year's zip bundle before processing historical images:
+
+```bash
+python scripts/bootstrap_tle_catalog.py --zip-dir data/tle_zips/ --years 2024
+```
+
+**Space-Track `gp_history` is never called at runtime.**  It is a one-time
+download resource (policy: 1 query per lifetime per object) and may only be
+used via explicit operator/admin scripts, not from inference code.
+
+### Coverage source tags in `tle_catalog_coverage`
+
+| Tag | Source | Written by |
+|---|---|---|
+| `zip_YYYY` / `txt_YYYY` | Annual Space-Track zip bundle | `bootstrap_tle_catalog.py` |
+| `celestrak_refresh` | CelesTrak GP API (live edge) | `celestrak_client.py` / `TLECatalogManager` |
+| `gp_current` | Space-Track GP class (explicit maintenance) | `bootstrap_tle_catalog.py --update-current` |
 
 ---
 
