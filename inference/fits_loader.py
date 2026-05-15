@@ -145,6 +145,27 @@ class FITSLoader:
         if not path.exists():
             raise FileNotFoundError(f"FITS file not found: {path}")
 
+        if path.suffix.lower() in {".jpg", ".jpeg", ".png"}:
+            import cv2
+            bgr = cv2.imread(str(path))
+            if bgr is None:
+                raise ValueError(f"Cannot read image file: {path.name}")
+            arr_u8 = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+            return {
+                "array": arr_u8,
+                "header": {},
+                "exposure_time": None,
+                "filename": path.name,
+                "shape": arr_u8.shape,
+                "obs_time": None,
+                "observer_lat": None,
+                "observer_lon": None,
+                "observer_alt_m": None,
+                "norm_mode": "raw",
+                "wcs": None,
+                "wcs_source": None,
+            }
+
         try:
             with fits.open(path) as hdul:
                 header = hdul[0].header
