@@ -680,9 +680,18 @@ async def health(request: Request) -> dict[str, Any]:
     except Exception:
         logger.exception("DB health check failed")
 
+    model_size = os.environ.get("MODEL_SIZE", "tiny")
+    model_labels = {
+        "tiny":        "Co-DINO Swin-T",
+        "large":       "Co-DINO Swin-L",
+        "dinov3_vitb": "DINOv3 ViT-B",
+        "dinov3_vitl": "DINOv3 ViT-L",
+    }
     return {
         "status": "ok",
         "model_loaded": request.app.state.model_loaded,
+        "model_size": model_size,
+        "model_label": model_labels.get(model_size, model_size),
         "db_connected": db_ok,
     }
 
