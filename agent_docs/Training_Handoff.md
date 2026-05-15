@@ -26,8 +26,8 @@ Give the colleague's Codex this instruction:
 ```text
 Check out repo at https://github.com/robertmwolf/Argus.git
 Read instructions at agent_docs/Training_Handoff.md
-Follow that document exactly to download data, run Swin-L training, evaluate
-results, and check the outputs back into GitHub.
+Follow that document exactly to download data, run DINOv3 ViT-L training
+(Phase D), evaluate results, and check the outputs back into GitHub.
 ```
 
 ## Current Handoff Scope
@@ -36,10 +36,223 @@ This handoff is for workstation training on an NVIDIA RTX 5070 Ti 16 GB GPU.
 The historical Lambda A100 path remains valid, but the data download flow and
 expected output branch below are tailored to the 5070 Ti run.
 
+## Dataset Decision — Read This First
+
+**The trainer is expected to bring their own dataset.** The GTImages and
+SatStreaks sources listed below are the legacy reference datasets used in
+earlier phases. They may be retained, augmented, or entirely replaced depending
+on the quality and coverage of the incoming dataset.
+
+Before downloading or preparing any data, evaluate your dataset against these
+criteria:
+
+- **Coverage**: Does it include the streak morphologies (short, medium, long)
+  and FITS/image formats the model must generalize to?
+- **Label quality**: Are bounding boxes tight and consistent? Is the category
+  set compatible with ARGUS (streak vs. background)?
+- **Scale**: Is the dataset large enough to meet or exceed the current split
+  counts (≈3,000 images)?  Larger is generally better.
+- **Overlap**: Does it contain sufficient diversity to avoid distribution
+  mismatch with real observation data?
+
+**Decision protocol:**
+
+1. Inspect a representative sample before committing to a conversion pipeline.
+2. If the incoming dataset is high quality and large, **discard GTImages and
+   SatStreaks entirely** — do not merge poor-quality legacy data just to inflate
+   counts.
+3. If the incoming dataset has gaps, selectively retain the legacy sources to
+   fill them, noting the mixing rationale in `training_summary.md`.
+4. Document your dataset decision clearly in `training_summary.md` (which
+   dataset(s) were used, why, and what was discarded).
+
+After the decision, continue below with whichever data applies.
+
+## Evaluate Your Training Data
+
+Before converting or merging anything, run these checks on the incoming dataset.
+Stop and record any failing gate in `training_summary.md` before proceeding.
+
+### 1. Annotation statistics
+
+If the dataset ships in COCO format:
+
+```bash
+python - <<'PY'
+import json, pathlib, sys
+
+for split in ["train", "val", "test"]:
+    p = pathlib.Path(f"data/annotations/{split}.json")
+    if not p.exists():
+        print(f"{split}.json — NOT FOUND")
+        continue
+    d = json.loads(p.read_text())
+    imgs  = len(d.get("images", []))
+    anns  = len(d.get("annotations", []))
+    cats  = [c["name"] for c in d.get("categories", [])]
+    empty = sum(1 for img in d["images"]
+                if not any(a["image_id"] == img["id"] for a in d["annotations"]))
+    print(f"{split:5s}  images={imgs:5d}  annotations={anns:5d}  "
+          f"empty_images={empty:4d}  categories={cats}")
+PY
+```
+
+Expected minimums after merging: train ≥ 2,000 images, val ≥ 400, test ≥ 400.
+If `empty_images` exceeds 30% of any split, the negative-sample balance is off —
+check `merge_annotations.py --val-fraction` and the source dataset masks.
+
+### 2. Streak morphology distribution
+
+ARGUS targets three morphology bands: short (<269 px diagonal), medium
+(269–800 px), long (>800 px). A heavily skewed distribution will hurt recall
+on the underrepresented band.
+
+```bash
+python - <<'PY'
+import json, math, pathlib
+
+for split in ["train", "val", "test"]:
+    p = pathlib.Path(f"data/annotations/{split}.json")
+    if not p.exists():
+        continue
+    anns = json.loads(p.read_text())["annotations"]
+    short = medium = long_ = 0
+    for a in anns:
+        w, h = a["bbox"][2], a["bbox"][3]
+        diag = math.hypot(w, h)
+        if diag < 269:
+            short += 1
+        elif diag <= 800:
+            medium += 1
+        else:
+            long_ += 1
+    total = short + medium + long_ or 1
+    print(f"{split:5s}  short={short:4d} ({short/total:.0%})  "
+          f"medium={medium:4d} ({medium/total:.0%})  "
+          f"long={long_:4d} ({long_/total:.0%})")
+PY
+```
+
+Flag the result in `training_summary.md` if any band is below 10% of annotated
+images — consider augmenting or rebalancing before training.
+
+### 3. Annotation sanity — degenerate boxes
+
+```bash
+python - <<'PY'
+import json, pathlib
+
+for split in ["train", "val", "test"]:
+    p = pathlib.Path(f"data/annotations/{split}.json")
+    if not p.exists():
+        continue
+    anns = json.loads(p.read_text())["annotations"]
+    bad = [a for a in anns if a["bbox"][2] < 2 or a["bbox"][3] < 2 or a["area"] < 4]
+    print(f"{split:5s}  degenerate boxes={len(bad)}")
+    for a in bad[:5]:
+        print(f"        id={a['id']} bbox={a['bbox']} area={a['area']}")
+PY
+```
+
+Any degenerate box (width or height < 2 px, area < 4 px²) should be removed
+before training — they produce NaN losses in the regression head.
+
+### 4. Image file integrity
+
+```bash
+python - <<'PY'
+import json, pathlib
+from PIL import Image
+
+ann_file = pathlib.Path("data/annotations/train.json")
+if not ann_file.exists():
+    print("train.json not found — skipping")
+    raise SystemExit
+
+d = json.loads(ann_file.read_text())
+missing = corrupt = ok = 0
+for img in d["images"]:
+    p = pathlib.Path(img["file_name"])
+    if not p.exists():
+        missing += 1
+        if missing <= 5:
+            print(f"MISSING  {p}")
+        continue
+    try:
+        Image.open(p).verify()
+        ok += 1
+    except Exception as e:
+        corrupt += 1
+        print(f"CORRUPT  {p}: {e}")
+
+print(f"ok={ok}  missing={missing}  corrupt={corrupt}")
+PY
+```
+
+Zero missing and zero corrupt is the gate. Resolve path mismatches by checking
+whether the annotation `file_name` field is absolute or relative and aligning
+it with the actual image tree.
+
+### 5. FITSStreakDataset iteration smoke test
+
+Confirms the full PyTorch data pipeline loads without error on a sample of images:
+
+```bash
+USE_DEV_SUBSET=false ARGUS_NORM=autostretch python - <<'PY'
+import os, sys
+os.environ.setdefault("USE_DEV_SUBSET", "false")
+os.environ.setdefault("ARGUS_NORM", "autostretch")
+
+from training.dataset import FITSStreakDataset
+import json, pathlib
+
+ann = pathlib.Path("data/annotations/train.json")
+ds  = FITSStreakDataset(ann_file=ann, img_dir=pathlib.Path("data"), transforms=None)
+errors = 0
+for i in range(min(50, len(ds))):
+    try:
+        ds[i]
+    except Exception as e:
+        print(f"[{i}] ERROR: {e}")
+        errors += 1
+print(f"Sampled 50 items — {errors} errors")
+PY
+```
+
+Zero errors required before starting full training.
+
+### 6. Decision gate summary
+
+Record the following block in `training_summary.md` under "Dataset Decision":
+
+```text
+Dataset used: <name(s)>
+Legacy datasets retained: GTImages=yes/no  SatStreaks=yes/no  Reason: <...>
+Split counts: train=N  val=N  test=N
+Empty images (train): N  (<pct>%)
+Morphology distribution (train): short=N%  medium=N%  long=N%
+Degenerate boxes removed: N
+Image integrity: ok=N  missing=0  corrupt=0
+FITSStreakDataset smoke test: PASS / FAIL
+```
+
+Do not start training until every field in this block is filled in and all
+gates pass.
+
 ## Data Sources
 
 The big datasets should be downloaded directly on the training workstation.
 Do not copy the full local data tree through the shared handoff folder.
+
+### Your dataset
+
+Place your dataset images in `data/` following the structure expected by
+`training/dataset.py`.  If your dataset ships with COCO-format annotations,
+place them in `data/annotations/`.  If it uses a different format, write or
+adapt a conversion script (see `scripts/convert_gtimages.py` as a reference)
+and output `data/annotations/train.json`, `val.json`, and `test.json`.
+
+### Legacy reference datasets (use only if needed per the Dataset Decision above)
 
 GTImages direct download:
 
@@ -59,11 +272,16 @@ SatStreaks dataset folder link from the upstream README:
 https://smuhalifax-my.sharepoint.com/:f:/g/personal/susrita_chatterjee_smu_ca/EsbHlOO3pMRKiN6yIZT54CoBaIaZSsHhYgRZswt-erqxmg?e=pcQ8Xk
 ```
 
-ARGUS lightweight handoff folder:
+### ARGUS lightweight handoff folder (annotations, catalogs, and trained weights)
 
 ```text
 https://1drv.ms/f/c/f9b9ba14546c7993/IgBKfTqYuQuWTZcfBhvDWoARAUD1kC9YfTDE70F9rHKH-o8?e=w4EplD
 ```
+
+This shared folder is the canonical storage location for both small project
+files and all trained model weights.  Weights are **never committed to git**
+(they are gitignored at the repo root).  Upload final checkpoints here so they
+are accessible to the team without bloating the repository.
 
 The ARGUS lightweight handoff folder should contain only small project-specific
 files that are inconvenient to regenerate, not the full image datasets:
@@ -118,12 +336,23 @@ argus.db*
 
 ## Clone and Restore Data
 
-Clone the project:
+Fork and clone the project:
+
+1. On GitHub, fork `https://github.com/robertmwolf/Argus` to your own account.
+2. Clone your fork:
 
 ```bash
-git clone https://github.com/robertmwolf/Argus.git
+git clone https://github.com/<your-username>/Argus.git
 cd Argus
+git remote add upstream https://github.com/robertmwolf/Argus.git
 ```
+
+All training work lives in your fork. To pull in upstream code changes at any
+point: `git pull upstream main`.
+
+When training is complete, open a pull request from your fork targeting
+`robertmwolf/Argus:main`. The PR should include **only** result files,
+manifests, and checksums — not dataset prep commits or training-run artifacts.
 
 Download GTImages from the direct OneDrive file link and extract it so the
 files land here:
@@ -247,18 +476,15 @@ Before the real run, execute the full pre-flight without `SKIP_SMOKE_TRAIN`.
 
 ## Train DINOv3 ViT-L (Phase D — primary run)
 
-This is the Phase D training run for the `feature/dinov3-backbone` branch.
-The DINOv3 backbone is **fully frozen** — only the ChannelMapper neck and
-DINO-DETR head train. This is the primary evaluation before considering any
-backbone fine-tuning.
+This is the Phase D training run. The DINOv3 backbone is **fully frozen** —
+only the ChannelMapper neck and DINO-DETR head train. This is the primary
+evaluation before considering any backbone fine-tuning.
 
-### Branch
-
-Check out the DINOv3 branch before training:
+All work for this run takes place in your fork. Verify the upstream remote is
+set before proceeding:
 
 ```bash
-git fetch origin
-git checkout feature/dinov3-backbone
+git remote -v   # should show both origin (your fork) and upstream (robertmwolf/Argus)
 ```
 
 ### DINOv3 ViT-L weights
@@ -348,7 +574,7 @@ results/5070ti_dinov3_vitl/dino_predictions.json
 (see below), plus:
 - Backbone: DINOv3 ViT-L/16 LVD-1689M (frozen)
 - Whether Phase 8 targets met: ≥94% precision, ≥97% recall
-- Comparison note vs Swin-T dev baseline (mAP@0.5=0.657)
+- Comparison note vs Swin-T baseline (mAP@0.5=0.190 on test.json, from results/phase_e/phase_e_comparison_test.json)
 
 Generate environment metadata:
 
@@ -379,16 +605,42 @@ PY
 } > results/5070ti_dinov3_vitl/environment.txt
 ```
 
+### Stage weights to OneDrive
+
+Checkpoints are gitignored — upload them to the shared OneDrive handoff folder:
+
+```text
+https://1drv.ms/f/c/f9b9ba14546c7993/IgBKfTqYuQuWTZcfBhvDWoARAUD1kC9YfTDE70F9rHKH-o8?e=w4EplD
+```
+
+```bash
+sha256sum weights/run_5070ti_dinov3_vitl/*.pth \
+    > results/5070ti_dinov3_vitl/weights_sha256.txt
+```
+
+Upload `weights/run_5070ti_dinov3_vitl/*.pth` to OneDrive under
+`weights/run_5070ti_dinov3_vitl/`, then create
+`results/5070ti_dinov3_vitl/weights_manifest.json`:
+
+```json
+{
+  "best_checkpoint": "best_coco_bbox_mAP_epoch_N.pth",
+  "storage": "OneDrive shared training handoff folder",
+  "onedrive_subfolder": "weights/run_5070ti_dinov3_vitl/",
+  "sha256_file": "results/5070ti_dinov3_vitl/weights_sha256.txt"
+}
+```
+
 ### Check results back into GitHub
 
 ```bash
-git checkout -b codex/5070ti-dinov3-vitl-training-results
 git add results/5070ti_dinov3_vitl/
 git commit -m "Add RTX 5070 Ti DINOv3 ViT-L training results"
-git push -u origin codex/5070ti-dinov3-vitl-training-results
+git push origin main
 ```
 
-Open a pull request against `feature/dinov3-backbone` (not `main`) titled:
+Open a pull request from your fork's `main` targeting `robertmwolf/Argus:main`
+titled:
 
 ```text
 Add RTX 5070 Ti DINOv3 ViT-L training results
@@ -404,7 +656,7 @@ checkpoint is saved in `weights/run_5070ti_dinov3_vitl/`.
 ### What Phase E does
 
 Evaluates DINOv3 ViT-L (Phase D) head-to-head against the Swin-T baseline
-on the held-out `val` split using MMDetection CocoMetric.  Outputs a
+on the held-out `test` split using MMDetection CocoMetric.  Outputs a
 Markdown comparison table and a combined JSON.
 
 ### Run Phase E comparison
@@ -415,8 +667,8 @@ mkdir -p results/phase_e
 # Evaluate DINOv3 ViT-L (Phase D) only — Swin-T baseline is already present
 # from the Mac Phase C run; to regenerate it here, drop --model:
 python scripts/phase_e_compare.py \
-    --model dinov3_vitb \
-    --split val \
+    --model dinov3_vitl \
+    --split test \
     --dinov3-checkpoint "$(ls weights/run_5070ti_dinov3_vitl/best_coco_bbox_mAP_epoch_*.pth | tail -1)" \
     --output-dir results/phase_e
 ```
@@ -425,16 +677,16 @@ For a full comparison (re-evaluates both models):
 
 ```bash
 python scripts/phase_e_compare.py \
-    --split val \
+    --split test \
     --output-dir results/phase_e
 ```
 
 ### Required result files
 
 ```text
-results/phase_e/phase_e_comparison_val.json
-results/phase_e/swin_t_val_metrics.json
-results/phase_e/dinov3_vitb_val_metrics.json   (or dinov3_vitl if adapted)
+results/phase_e/phase_e_comparison_test.json
+results/phase_e/swin_t_test_metrics.json
+results/phase_e/dinov3_vitl_test_metrics.json
 ```
 
 ### Interpretation gates
@@ -597,22 +849,17 @@ Any errors, retries, or config changes
 
 ## Weights
 
-Model checkpoints are large and gitignored. Prefer Git LFS if it is enabled for
-the repository:
+Model checkpoints are gitignored and must **never** be committed to this
+repository.  All trained weights are staged to the shared OneDrive handoff
+folder:
 
-```bash
-git lfs install
-git lfs track "weights/final/*.pth"
-mkdir -p weights/final
-cp weights/run_5070ti_swin_l/best_coco_bbox_mAP*.pth \
-    weights/final/argus_swin_l_5070ti_best.pth
-cp weights/run_5070ti_swin_l/epoch_50.pth \
-    weights/final/argus_swin_l_5070ti_epoch_50.pth
-git add .gitattributes weights/final/*.pth
+```text
+https://1drv.ms/f/c/f9b9ba14546c7993/IgBKfTqYuQuWTZcfBhvDWoARAUD1kC9YfTDE70F9rHKH-o8?e=w4EplD
 ```
 
-If Git LFS is not available, upload the final weights to the shared OneDrive
-folder and commit only a manifest:
+After training completes:
+
+1. Generate checksums:
 
 ```bash
 mkdir -p results/5070ti_swin_l
@@ -620,49 +867,40 @@ sha256sum weights/run_5070ti_swin_l/*.pth \
     > results/5070ti_swin_l/weights_sha256.txt
 ```
 
-Create `results/5070ti_swin_l/weights_manifest.json` with:
+2. Upload the checkpoint files to the OneDrive folder under a subfolder named
+   for this run (e.g. `weights/run_5070ti_swin_l/`).
+
+3. Create `results/5070ti_swin_l/weights_manifest.json`:
 
 ```json
 {
   "best_checkpoint": "argus_swin_l_5070ti_best.pth",
   "final_checkpoint": "argus_swin_l_5070ti_epoch_50.pth",
   "storage": "OneDrive shared training handoff folder",
+  "onedrive_subfolder": "weights/run_5070ti_swin_l/",
   "sha256_file": "results/5070ti_swin_l/weights_sha256.txt"
 }
 ```
 
-Commit the manifest and checksum file.
-
-## Check Results Back Into GitHub
-
-Create a results branch:
-
-```bash
-git checkout -b codex/5070ti-swin-l-training-results
-```
-
-Stage results:
-
-```bash
-git add results/5070ti_swin_l/
-git add .gitattributes weights/final/*.pth
-```
-
-If Git LFS is not being used, skip the weights add and stage only the manifest:
+4. Commit only the manifest and checksum file — not the `.pth` files:
 
 ```bash
 git add results/5070ti_swin_l/weights_manifest.json
 git add results/5070ti_swin_l/weights_sha256.txt
 ```
 
-Commit and push:
+## Check Results Back Into GitHub
+
+Stage results (weights stay on OneDrive — never commit `.pth` files):
 
 ```bash
+git add results/5070ti_swin_l/
 git commit -m "Add RTX 5070 Ti Swin-L training results"
-git push -u origin codex/5070ti-swin-l-training-results
+git push origin main
 ```
 
-Open a pull request titled:
+Open a pull request from your fork's `main` targeting `robertmwolf/Argus:main`
+titled:
 
 ```text
 Add RTX 5070 Ti Swin-L training results

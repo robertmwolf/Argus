@@ -2,13 +2,15 @@
 ### Automated Recognition and Grading of Unidentified Streaks
 
 ARGUS is an academic research pipeline for automated satellite streak detection
-and identification in FITS telescope images.  It runs a hybrid detection stage —
-a bounded classical line detector (ASTRiDE-derived) and a Co-DINO transformer
-model (Swin backbone) — then refines streak orientation via the Radon transform,
-traces each streak to its true endpoints across the full image, and
-cross-identifies detected objects against a local TLE catalog using SGP4
-propagation and multi-factor confidence scoring.  Results are served through a
-FastAPI backend and React frontend.
+and identification in FITS telescope images.  It runs four independent detectors
+in parallel — two ML-based (DINO-DETR with DINOv3 ViT-B backbone, YOLO11n-OBB)
+and two classical (ASTRiDE-derived, OpenCV connected-components) — then merges
+their results by grouping overlapping detections across methods rather than
+suppressing them, so the UI can surface multi-method agreement.  Streak
+orientation is refined via the Radon transform, each streak is traced to its
+true endpoints across the full image, and detected objects are cross-identified
+against a local TLE catalog using SGP4 propagation and multi-factor confidence
+scoring.  Results are served through a FastAPI backend and React frontend.
 
 > **Space-Track integration status:** Cross-identification reads exclusively from
 > a local `tle_catalog` database table.  Live Space-Track API queries are
@@ -36,12 +38,20 @@ This project builds on and cites the following prior works:
   Kim et al., *Astronomical Journal* (2017).
   https://github.com/dwkim78/ASTRiDE
 
-- **StreakMind** — Co-DINO transformer-based satellite streak detection pipeline
+- **StreakMind** — DINO-DETR-based satellite streak detection pipeline
   (prior work that ARGUS builds upon; cite per their published paper/repo).
+
+- **DINO-DETR** — End-to-end object detection with transformers (Detection
+  Transformer with Improved deNoising anchOr boxes).
+  Zhang et al., *arXiv* 2203.03605 (2022).
+  https://arxiv.org/abs/2203.03605
 
 - **Co-DINO** — Co-Deformable DETR object detection transformer.
   Zong et al., *arXiv* 2211.12860 (2023).
   https://arxiv.org/abs/2211.12860
+  *Note: Co-DINO pretrained weights (`co_dino_swin_t_coco.pth`) were used to
+  initialise the now-archived Swin-T backbone path (`models/dino/streak_codino_swin_t.py`).
+  The active model (DINOv3 ViT-B) uses DINO-DETR directly without Co-DINO auxiliary heads.*
 
 - **Danarianto et al.** — Satellite identification prototype pipeline.
   Cite per published paper.
@@ -84,7 +94,7 @@ stage opens the FITS file with **astropy** and:
 - Performs Z-score normalisation: subtract mean, divide by standard deviation,
   then rescale to uint8 [0, 255] clipped at ±3σ.
 - Converts the single-channel science image to a 3-channel uint8 array
-  `(H, W, 3)` so the DINO detector receives an RGB-like tensor.
+  `(H, W, 3)` so the DINOv3 detector receives an RGB-like tensor.
 - Extracts the WCS solution from the FITS header, or from a same-stem `.wcs`
   sidecar when the FITS header has no celestial WCS. GTImages/SkyTrack uploads
   rely on these sidecars for pixel → RA/Dec conversion.
@@ -93,35 +103,61 @@ stage opens the FITS file with **astropy** and:
 
 Timing logged: `fits_load_ms`.
 
-### 3. Hybrid Detection (`inference/pipeline.py` + MMDetection)
+### 3. Multi-Method Detection (`inference/pipeline.py` + MMDetection)
 
-Two detectors run on every image and their results are merged before downstream
-processing:
+Four independent detectors run on every image.  Their raw outputs are collected
+into a single pool before downstream processing.
 
-**Classical detector (ASTRiDE-derived, always active)**
-- A bounded classical line detector runs first, ensuring obvious bright streaks
-  are captured even when the ML model is underconfident (e.g. with a locally
-  trained Swin-T checkpoint).
+**ML detectors**
 
-**Co-DINO transformer (primary ML detector)**
-- The normalised array is passed to a Co-DINO model (Swin-T backbone for local
-  dev, Swin-L for cloud training).
-- The image is rescaled so its longest edge is at least 1280 px for normal
-  inference (256 px in fast mode).
-- MMDetection's `inference_detector` runs a forward pass.
-- Every predicted bounding box with score ≥ `CONFIDENCE_THRESHOLD` (default
-  0.01 for local development; raise after cloud Swin-L calibration) is kept.
-- Bounding boxes are scaled back to original image pixel coordinates.
+| Detector | Architecture | When active |
+|----------|-------------|-------------|
+| DINO-DETR + DINOv3 ViT-B/16 | DINO-DETR head, frozen ViT-B backbone (`MODEL_SIZE=dinov3_vitb`) | Always (primary) |
+| YOLO11n-OBB | Tiled OBB detector, 256 px tiles (`weights/yolo_tiled/run/weights/best.pt`) | Always (when weights present) |
 
-DINO can return multiple overlapping detections for the same physical streak
-(common for long streaks that span multiple attention heads).  Classical and
-DINO detections are pooled and deduplicated together in stage 5.
+The DINO-DETR path:
+- The normalised array is rescaled so its longest edge is ≥ 1280 px (256 px in
+  fast mode), then passed to MMDetection's `inference_detector`.
+- Every bounding box with score ≥ `CONFIDENCE_THRESHOLD` (default 0.05; lower
+  for locally-trained checkpoints) is kept and scaled back to original pixel
+  coordinates.
+- When `TTA_ENABLED=true`, inference also runs on horizontal and vertical
+  flips; bounding boxes are mapped back to original coordinates before merging.
+
+**Classical detectors**
+
+| Detector | Implementation | When active |
+|----------|---------------|-------------|
+| ASTRiDE | `src/detection/classical_detector.py` | Always |
+| OpenCV connected-components | `_run_classical_detector()` in `pipeline.py` | Always |
+
+The OpenCV detector thresholds the top 0.5 % of pixel values, closes short
+gaps with a morphological kernel, then retains connected components whose
+long-axis length ≥ 80 px and aspect ratio ≥ 5.  PCA on each component gives
+the streak angle and endpoints.
+
+ASTRiDE (Phase 0 baseline) uses sigma-thresholded contour detection on the raw
+FITS data and is the most sensitive classical path for faint streaks.
+
+**Merging**
+
+After per-detector NMS (rotated-IoU threshold 0.5), all four detection lists
+are combined:
+
+```
+combined = dino_dets + yolo_dets + classical_dets + astride_dets
+```
+
+Overlapping detections from *different* methods are **grouped** by
+`streak_id` rather than suppressed — nothing is thrown away.  This lets the
+frontend surface multi-method agreement ("3 of 4 detectors agree on this
+streak") as a quality signal.
 
 Timing logged: `inference_ms`.
 
 ### 4. Radon Angle Refinement (`inference/postprocess.py`)
 
-DINO produces axis-aligned bounding boxes — the streak angle is not directly
+DINOv3 produces axis-aligned bounding boxes — the streak angle is not directly
 predicted.  For each raw detection:
 
 **a) Seed angle from bbox geometry**
@@ -131,7 +167,7 @@ angle estimate.  This is always more accurate than snapping to 0° or 90°.
 
 **b) Radon transform on the bbox crop**
 
-The image region inside the DINO bounding box is cropped.  Before computing
+The image region inside the DINOv3 bounding box is cropped.  Before computing
 the Radon transform:
 
 - The crop is converted to float32 greyscale.
@@ -158,13 +194,13 @@ Timing is included in `postprocess_ms`.
 
 **a) Initial OBB from refined angle**
 
-`bbox_to_obb` converts the DINO axis-aligned box and the Radon-refined angle
+`bbox_to_obb` converts the DINOv3 axis-aligned box and the Radon-refined angle
 into an oriented bounding box `{cx, cy, w, h, angle_deg}` where `w` is always
 the long axis.
 
 **b) Full-image streak tracing (`extend_obb_to_streak_extent`)**
 
-DINO bounding boxes frequently cover only a portion of a long streak.  This
+DINOv3 bounding boxes frequently cover only a portion of a long streak.  This
 function traces the streak axis across the entire image to find the true
 endpoints:
 
@@ -173,17 +209,24 @@ endpoints:
    centre, ranging from image edge to image edge).
 2. Strip means above `background + 1.5σ` are marked as "bright".
 3. Bright positions are grouped into contiguous runs (gap tolerance 5 px).
-4. The run containing `t = 0` (the OBB centre, which DINO is guaranteed to
+4. The run containing `t = 0` (the OBB centre, which DINOv3 is guaranteed to
    have detected) is selected as the true streak.  Selecting by containment
    rather than by raw min/max prevents isolated noise spikes beyond the streak
    tip from inflating the endpoint position.
 5. The OBB centre and long-axis length are updated to match the selected run.
 
-**c) Rotated-IoU NMS**
+**c) Per-detector NMS, then cross-detector grouping**
 
-All OBBs are converted to Shapely polygons.  A greedy NMS pass (sorted by
-confidence descending) suppresses any detection whose rotated-IoU with a
-higher-confidence kept detection exceeds 0.5.
+Within each detector's output, OBBs are converted to Shapely polygons and a
+greedy NMS pass (sorted by confidence descending) suppresses any detection
+whose rotated-IoU with a higher-confidence kept detection exceeds 0.5.  This
+collapses TTA's three passes and each classical detector's duplicate firings
+down to one box per streak per method.
+
+Detections from *different* methods are then **grouped** rather than
+cross-suppressed: overlapping boxes across DINOv3, YOLO, ASTRiDE, and OpenCV
+share a common `streak_id`.  All per-method detections are preserved so the
+frontend can show multi-method agreement as a quality signal.
 
 ### 6. WCS Coordinate Conversion (`inference/pipeline.py`)
 
@@ -446,13 +489,96 @@ python -m eval.benchmark \
   --output results/phase8_benchmark.json
 ```
 
-Recorded local results (50-image dev subset, Swin-T, CPU, 50 epochs):
-- DINO Swin-T: mAP@0.5=65.7%, precision=66.7%, recall=73.3%, F1=69.8%
-- YOLO11-OBB: mAP@0.5=36.0%, precision=63.2%, recall=40.0%, angle error=0.66°
+See [Detection Performance](#detection-performance) for current per-method accuracy
+on the full merged test split.  The archived Swin-T benchmark (`results/phase8_benchmark.json`)
+covers the synthetic dev subset only and is not representative of real-data performance.
 
-**Phase E results (full merged test split):**
-- DINOv3 ViT-B (frozen, 4 epochs): mAP@0.5=**74.0%** — beats Swin-T (19.0%) by +55 pp
-- DINOv3 ViT-L (Phase D, pending workstation run): target ≥94% precision / ≥97% recall
+---
+
+## Detection Performance
+
+Results on the full merged test split — **308 images, 308 ground-truth streaks**
+(SatStreaks dataset, JPEG exports of HST/archival FITS).  Eval metric: IoU ≥ 0.5
+against COCO axis-aligned ground-truth bounding boxes, confidence threshold 0.05,
+no TTA, per-detector NMS IoU 0.5.
+
+### Per-method results
+
+| Detector | Precision | Recall | F1 | TP | FP | FN |
+|----------|----------:|-------:|---:|---:|---:|---:|
+| **DINOv3 ViT-B** (DINO-DETR, augmented, epoch 10) | 1.0 % | **93.8 %** | 1.9 % | 289 | 29 552 | 19 |
+| **YOLO11n-OBB** (tiled 256 px, epoch 17) | 24.1 % | 4.2 % | 7.2 % | 13 | 41 | 295 |
+| **OpenCV** (connected-components) | 5.8 % | 4.2 % | 4.9 % | 13 | 210 | 295 |
+| **ASTRiDE** (sigma-threshold) | — | — | — | — | — | — |
+
+### Per-method confusion matrix (IoU ≥ 0.5)
+
+```
+DINOv3 ViT-B        Predicted +   Predicted −
+  Actual +   TP =    289          FN =     19
+  Actual −   FP = 29 552          TN =    n/a
+
+YOLO11n-OBB         Predicted +   Predicted −
+  Actual +   TP =     13          FN =    295
+  Actual −   FP =     41          TN =    n/a
+
+OpenCV              Predicted +   Predicted −
+  Actual +   TP =     13          FN =    295
+  Actual −   FP =    210          TN =    n/a
+```
+
+### Recall by streak length
+
+| Detector | Short < 400 px (n=6) | Medium 400–999 px (n=18) | Long ≥ 1000 px (n=284) |
+|----------|---------------------:|-------------------------:|-----------------------:|
+| DINOv3 ViT-B | 50.0 % | 94.4 % | 94.7 % |
+| YOLO11n-OBB | 16.7 % | 0.0 % | 4.2 % |
+| OpenCV | 0.0 % | 0.0 % | 4.6 % |
+| ASTRiDE | — | — | — |
+
+### Training metrics (validation split)
+
+| Detector | Checkpoint | Epochs | mAP | mAP@0.5 |
+|----------|-----------|--------|----:|--------:|
+| DINOv3 ViT-B | `weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth` | 10 (augmented, from ep 4) | 35.5 % | 53.2 % |
+| YOLO11n-OBB | `weights/yolo_tiled/run/weights/best.pt` | 18 (tiled 256 px) | 27.4 % | 59.6 % |
+
+### Interpretation
+
+**DINOv3 ViT-B** achieves very high recall (93.8 %) — it misses only 19 of 308
+ground-truth streaks — but produces a large number of false positives at the
+default 0.05 confidence floor (~96 FP per image on average).  Raising the
+confidence threshold via the filter UI significantly improves precision while
+preserving recall for high-confidence detections.  Long streaks (≥ 1000 px)
+are detected at 94.7 % recall, confirming the model generalises well to
+full-resolution archival images.
+
+**YOLO11n-OBB** is conservative — 24 % precision, 4 % recall on full images.
+It was trained on 256 px tiles and evaluates on full images, so long streaks
+(≥ 1000 px, 92 % of this test set) that span many tiles are under-detected.
+YOLO's role in the ensemble is corroboration: when it agrees with ViT-B on a
+streak, that agreement is a strong quality signal.
+
+**OpenCV** (connected-components) provides marginal recall on this JPEG test set
+but adds value on raw FITS images where the pixel distribution is well-suited to
+the top-0.5 % brightness threshold.  It requires no learned weights and runs in
+< 1 s per image.
+
+**ASTRiDE** requires raw FITS pixel data (it thresholds against the background
+sigma of the original science image).  The full SatStreaks test set is distributed
+as JPEG exports, so ASTRiDE cannot be evaluated here.  On raw GTImages FITS
+observations it detects faint streaks that escape the ML detectors, at the cost
+of higher false-positive rates on noisy images.
+
+> **Multi-method ensemble note:** The four detectors run independently and their
+> outputs are grouped by overlap rather than suppressed.  A streak seen by
+> multiple detectors gives a user higher confidence than one seen by a single method.
+> The filter UI exposes per-method confidence sliders so the precision/recall
+> tradeoff can be tuned interactively after results are returned.
+> In the future, we may explore more sophisticated ensembling strategies (e.g., a learned
+> meta-classifier that takes all four detectors' outputs as input and produces a final confidence score), but the current approach has the advantage of transparency and user control.
+
+---
 
 ## Cloud Training (Lambda A100)
 
