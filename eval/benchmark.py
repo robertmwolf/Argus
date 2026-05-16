@@ -132,52 +132,126 @@ def run_pipeline_predictions(
                 })
 
     elif model == "yolo":
-        # Source: Ultralytics YOLO11-OBB baseline inference
         try:
             from ultralytics import YOLO
             import cv2
+            import numpy as np
         except ImportError as exc:
             raise ImportError("ultralytics and opencv are required for YOLO baseline") from exc
 
-        weights = Path("weights/yolo_baseline.pt")
-        if not weights.exists():
-            raise FileNotFoundError(f"YOLO weights not found: {weights}")
-
+        # Resolve weights: prefer full-dataset run, fall back to dev-subset baseline.
+        _weight_candidates = [
+            Path("weights/run_full_yolo_obb/run/weights/best.pt"),
+            Path("weights/yolo_baseline/run/weights/best.pt"),
+            Path("weights/yolo_baseline.pt"),
+        ]
+        weights: Path | None = next((p for p in _weight_candidates if p.exists()), None)
+        if weights is None:
+            raise FileNotFoundError(
+                "YOLO weights not found. Expected one of:\n"
+                + "\n".join(f"  {p}" for p in _weight_candidates)
+            )
+        logger.info("YOLO weights: %s", weights)
         yolo = YOLO(str(weights))
 
-        # YOLO cannot read FITS — find the matching PNG in the pre-converted dataset
-        png_train = Path("weights/yolo_baseline/dataset/images/train")
-        png_val   = Path("weights/yolo_baseline/dataset/images/val")
+        # Determine tile size from the training config stored alongside weights.
+        # Fall back to 640 (full-dataset default) if unavailable.
+        _tile_size = 640
+        _yaml_candidates = [
+            weights.parent.parent.parent / "dataset" / "dataset.yaml",
+            Path("weights/yolo_baseline/dataset/dataset.yaml"),
+        ]
+        for _yp in _yaml_candidates:
+            if _yp.exists():
+                try:
+                    import yaml as _yaml
+                    _cfg = _yaml.safe_load(_yp.read_text())
+                    # Not stored in yaml, but imgsz is implicit from tile dirs
+                except Exception:
+                    pass
+                break
+
+        from inference.fits_loader import FITSLoader
+        fits_loader = FITSLoader()
 
         for img_info in coco["images"]:
-            stem = Path(img_info["file_name"]).stem
-            # Search train then val for the converted PNG
-            png_path = None
-            for png_dir in (png_train, png_val):
-                candidate = png_dir / (stem + ".png")
-                if candidate.exists():
-                    png_path = candidate
-                    break
-            if png_path is None:
-                logger.warning("PNG not found for %s, skipping", stem)
+            fname = img_info["file_name"]
+            src = Path(fname)
+            if not src.exists():
+                src = ann_path.parent.parent / fname
+            if not src.exists():
+                logger.warning("Image not found, skipping: %s", fname)
                 continue
-            logger.info("Running YOLO on %s", png_path.name)
-            results = yolo(str(png_path))
-            for result in results:
-                if result.obb is None:
-                    continue
-                for box, conf in zip(result.obb.xywhr, result.obb.conf):
-                    cx, cy, w, h, angle_rad = box.tolist()
-                    predictions.append({
-                        "image_id": img_info["file_name"],
-                        "confidence": float(conf),
-                        "obb": {
-                            "cx": cx, "cy": cy,
-                            "w": w, "h": h,
-                            "angle_deg": float(angle_rad) * 180 / 3.14159265,
-                        },
-                        "streak_length_px": max(w, h),
-                    })
+
+            # Load image to numpy array (works for FITS and PNG/JPEG).
+            try:
+                if src.suffix.lower() in {".jpg", ".jpeg", ".png"}:
+                    bgr = cv2.imread(str(src))
+                    if bgr is None:
+                        raise OSError(f"cv2.imread returned None for {src}")
+                    arr = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+                else:
+                    loaded = fits_loader.load(str(src))
+                    arr = loaded["array"]
+            except Exception as exc:
+                logger.warning("Failed to load %s: %s — skipping", src, exc)
+                continue
+
+            h_arr, w_arr = arr.shape[:2]
+            img_preds: list[dict] = []
+
+            if max(h_arr, w_arr) <= _tile_size:
+                # Small image — run YOLO directly.
+                tiles = [(0, 0, arr)]
+            else:
+                # Large image — slice into tiles and offset predictions.
+                tiles = []
+                for ty in range(0, h_arr - _tile_size + 1, _tile_size):
+                    for tx in range(0, w_arr - _tile_size + 1, _tile_size):
+                        tiles.append((tx, ty, arr[ty:ty + _tile_size, tx:tx + _tile_size]))
+
+            for tx, ty, patch in tiles:
+                results = yolo(patch, verbose=False)
+                for result in results:
+                    if result.obb is None:
+                        continue
+                    for box, conf in zip(result.obb.xywhr, result.obb.conf):
+                        # xywhr: cx, cy, w, h, angle_rad (all in tile-local pixels)
+                        cx_t, cy_t, bw, bh, angle_rad = box.tolist()
+                        # Map back to full-image coordinates.
+                        img_preds.append({
+                            "image_id": fname,
+                            "confidence": float(conf),
+                            "obb": {
+                                "cx": cx_t + tx,
+                                "cy": cy_t + ty,
+                                "w": bw,
+                                "h": bh,
+                                "angle_deg": float(angle_rad) * 180.0 / 3.14159265,
+                            },
+                            "streak_length_px": max(bw, bh),
+                        })
+
+            # Simple NMS across tiles: suppress predictions whose centres are
+            # within half a tile width of a higher-confidence prediction.
+            img_preds.sort(key=lambda p: p["confidence"], reverse=True)
+            kept: list[dict] = []
+            for pred in img_preds:
+                cx_p = pred["obb"]["cx"]
+                cy_p = pred["obb"]["cy"]
+                suppress = False
+                for k in kept:
+                    dx = cx_p - k["obb"]["cx"]
+                    dy = cy_p - k["obb"]["cy"]
+                    if (dx * dx + dy * dy) ** 0.5 < _tile_size / 2:
+                        suppress = True
+                        break
+                if not suppress:
+                    kept.append(pred)
+
+            logger.info("YOLO: %s → %d raw, %d after NMS", Path(fname).name,
+                        len(img_preds), len(kept))
+            predictions.extend(kept)
     else:
         raise NotImplementedError(f"Unknown model: {model!r}")
 
@@ -358,7 +432,7 @@ def run_benchmark(
 # Display order (unified always first, then ML methods, then classical).
 _METHOD_ORDER = [
     "unified", "dinov3_vitb", "dinov3_vitl", "tiny", "large",
-    "yolo", "astride", "opencv", "classical", "ml",
+    "yolo_full", "yolo", "astride", "opencv", "classical", "ml",
 ]
 
 _METHOD_LABELS = {
@@ -367,7 +441,8 @@ _METHOD_LABELS = {
     "dinov3_vitl": "DINOv3 ViT-L",
     "tiny":        "DINO Swin-T",
     "large":       "DINO Swin-L",
-    "yolo":        "YOLO11-OBB",
+    "yolo_full":   "YOLO11m-OBB (full)",
+    "yolo":        "YOLO11n-OBB (dev)",
     "astride":     "ASTRiDE",
     "opencv":      "OpenCV",
     "classical":   "Classical",
