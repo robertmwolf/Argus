@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 
-const OBB_COLOUR = '#00DCFF'
-const CLASSICAL_COLOUR = '#F59E0B'
-const HIGHLIGHT_COLOUR = '#FF6B35'
+const OBB_COLOUR = '#00DCFF'        // cyan  — DINOv3 / ML
+const YOLO_COLOUR = '#C084FC'       // purple — YOLO (dev + full)
+const CLASSICAL_COLOUR = '#F59E0B'  // amber  — ASTRiDE / OpenCV
+const HIGHLIGHT_COLOUR = '#FF6B35'  // orange — highlighted row
 
 // ---------------------------------------------------------------------------
 // Geometry helpers
@@ -178,7 +179,12 @@ function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
     .filter(s => s.method !== 'unified')
   const isClassical = individualSources.length > 0 &&
     individualSources.every(s => s.method === 'astride' || s.method === 'opencv' || s.method === 'classical')
-  const colour = highlighted ? HIGHLIGHT_COLOUR : (isClassical ? CLASSICAL_COLOUR : OBB_COLOUR)
+  const isYolo = individualSources.length > 0 &&
+    individualSources.every(s => s.method === 'yolo' || s.method === 'yolo_full')
+  const colour = highlighted ? HIGHLIGHT_COLOUR
+    : isClassical ? CLASSICAL_COLOUR
+    : isYolo ? YOLO_COLOUR
+    : OBB_COLOUR
   const alpha = highlighted ? 1.0 : 0.4 + conf * 0.6
   const endpointR = highlighted ? 5.5 : 4
   const lineWidth = highlighted ? 2.5 : 1.5
@@ -262,7 +268,12 @@ export default function ResultViewer({
       const indSources = (det.sources ?? [{ method: det.method }]).filter(s => s.method !== 'unified')
       const isClassical = indSources.length > 0 &&
         indSources.every(s => s.method === 'astride' || s.method === 'opencv' || s.method === 'classical')
-      const colour = i === highlightIndex ? HIGHLIGHT_COLOUR : (isClassical ? CLASSICAL_COLOUR : OBB_COLOUR)
+      const isYolo = indSources.length > 0 &&
+        indSources.every(s => s.method === 'yolo' || s.method === 'yolo_full')
+      const colour = i === highlightIndex ? HIGHLIGHT_COLOUR
+        : isClassical ? CLASSICAL_COLOUR
+        : isYolo ? YOLO_COLOUR
+        : OBB_COLOUR
       const alpha = i === highlightIndex ? 1.0 : 0.4 + (det.confidence ?? 1) * 0.6
       drawLabel(ctx, det.obb, i, colour, alpha, scaleX, scaleY)
     })
@@ -385,14 +396,22 @@ export default function ResultViewer({
         <div className="absolute bottom-3 right-3 bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-400 flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
             <span className="inline-block w-6 border-t-2 border-dashed border-cyan-400" />
-            <span>Streak axis</span>
+            <span className="text-cyan-300">DINOv3 / ML</span>
           </div>
           <div className="flex items-center gap-2">
+            <span className="inline-block w-6 border-t-2 border-dashed border-purple-400" />
+            <span className="text-purple-300">YOLO OBB</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-6 border-t-2 border-dashed border-amber-400" />
+            <span className="text-amber-300">Classical</span>
+          </div>
+          <div className="flex items-center gap-2 mt-0.5 pt-1.5 border-t border-slate-700">
             <span className="inline-flex items-center justify-center w-3 h-3 rounded-full bg-cyan-400 text-[7px] font-bold text-black">1</span>
-            <span>Soln 1 / 2 positions</span>
+            <span>Streak endpoints</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-cyan-400">θ°</span>
+            <span className="font-mono text-slate-400">θ°</span>
             <span>Angle from horizontal</span>
           </div>
         </div>
