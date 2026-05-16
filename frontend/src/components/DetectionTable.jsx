@@ -8,16 +8,17 @@
  */
 
 const METHOD_CONFIG = {
-  unified:      { label: 'Unified',       cls: 'border-emerald-500/80 bg-emerald-900/50 text-emerald-300' },
-  astride:      { label: 'ASTRiDE',       cls: 'border-amber-600/60 bg-amber-950/40 text-amber-300' },
-  opencv:       { label: 'OpenCV',        cls: 'border-orange-600/60 bg-orange-950/40 text-orange-300' },
-  dinov3_vitb:  { label: 'DINOv3 ViT-B', cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
-  dinov3_vitl:  { label: 'DINOv3 ViT-L', cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
-  yolo:         { label: 'YOLO',          cls: 'border-violet-600/60 bg-violet-950/40 text-violet-300' },
-  tiny:         { label: 'DINO Swin-T',  cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
-  large:        { label: 'DINO Swin-L',  cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
-  classical:    { label: 'Classical',    cls: 'border-amber-600/60 bg-amber-950/40 text-amber-300' },
-  ml:           { label: 'ML',           cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
+  unified:      { label: 'Unified',        cls: 'border-emerald-500/80 bg-emerald-900/50 text-emerald-300' },
+  astride:      { label: 'ASTRiDE',        cls: 'border-amber-600/60 bg-amber-950/40 text-amber-300' },
+  opencv:       { label: 'OpenCV',         cls: 'border-orange-600/60 bg-orange-950/40 text-orange-300' },
+  dinov3_vitb:  { label: 'DINOv3 ViT-B',  cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
+  dinov3_vitl:  { label: 'DINOv3 ViT-L',  cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
+  yolo:         { label: 'YOLO (dev)',     cls: 'border-violet-600/60 bg-violet-950/40 text-violet-300' },
+  yolo_full:    { label: 'YOLO (full)',    cls: 'border-purple-600/60 bg-purple-950/40 text-purple-300' },
+  tiny:         { label: 'DINO Swin-T',   cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
+  large:        { label: 'DINO Swin-L',   cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
+  classical:    { label: 'Classical',     cls: 'border-amber-600/60 bg-amber-950/40 text-amber-300' },
+  ml:           { label: 'ML',            cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
 }
 
 function MethodBadge({ method, confidence }) {

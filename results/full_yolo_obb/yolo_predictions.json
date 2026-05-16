@@ -1,0 +1,434 @@
+[
+  {
+    "image_id": "satstreaks/Data/Images/j9cv38umq_flc.fits.jpg",
+    "confidence": 0.2680705487728119,
+    "obb": {
+      "cx": 1479.2925109863281,
+      "cy": 319.6604919433594,
+      "w": 618.2530517578125,
+      "h": 293.8218688964844,
+      "angle_deg": 90.12679823921516
+    },
+    "streak_length_px": 618.2530517578125
+  },
+  {
+    "image_id": "satstreaks/Data/Images/j9cv38umq_flc.fits.jpg",
+    "confidence": 0.2601376473903656,
+    "obb": {
+      "cx": 1542.2690124511719,
+      "cy": 958.8682861328125,
+      "w": 617.3548583984375,
+      "h": 323.787109375,
+      "angle_deg": 90.06499868753427
+    },
+    "streak_length_px": 617.3548583984375
+  },
+  {
+    "image_id": "satstreaks/Data/Images/j8xiaqhdq_flc.fits.jpg",
+    "confidence": 0.2668820321559906,
+    "obb": {
+      "cx": 317.4945983886719,
+      "cy": 1006.4367370605469,
+      "w": 617.8896484375,
+      "h": 293.21685791015625,
+      "angle_deg": 0.030271411776299866
+    },
+    "streak_length_px": 617.8896484375
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jcwr01wlq_flc.fits.jpg",
+    "confidence": 0.2920663356781006,
+    "obb": {
+      "cx": 1515.0694732666016,
+      "cy": 1599.0119018554688,
+      "w": 618.818359375,
+      "h": 339.9925842285156,
+      "angle_deg": 89.86110388019807
+    },
+    "streak_length_px": 618.818359375
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jcwr01wlq_flc.fits.jpg",
+    "confidence": 0.2755450904369354,
+    "obb": {
+      "cx": 1543.4584350585938,
+      "cy": 2239.2740783691406,
+      "w": 618.7498779296875,
+      "h": 371.20001220703125,
+      "angle_deg": 90.01145000438018
+    },
+    "streak_length_px": 618.7498779296875
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jcwr01wlq_flc.fits.jpg",
+    "confidence": 0.27401578426361084,
+    "obb": {
+      "cx": 1631.6352844238281,
+      "cy": 2877.6963500976562,
+      "w": 625.2233276367188,
+      "h": 384.04608154296875,
+      "angle_deg": 89.58785533195031
+    },
+    "streak_length_px": 625.2233276367188
+  },
+  {
+    "image_id": "satstreaks/Data/Images/icphaybnq_flc.fits.jpg",
+    "confidence": 0.2761414051055908,
+    "obb": {
+      "cx": 1526.3185119628906,
+      "cy": 2240.968963623047,
+      "w": 616.0323486328125,
+      "h": 392.4591064453125,
+      "angle_deg": 89.68176360295611
+    },
+    "streak_length_px": 616.0323486328125
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jbohcctkq_flc.fits.jpg",
+    "confidence": 0.2892642021179199,
+    "obb": {
+      "cx": 403.6560974121094,
+      "cy": 2876.659698486328,
+      "w": 614.0506591796875,
+      "h": 287.29644775390625,
+      "angle_deg": 89.7043988498914
+    },
+    "streak_length_px": 614.0506591796875
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jbok05p2q_flc.fits.jpg",
+    "confidence": 0.29554083943367004,
+    "obb": {
+      "cx": 2796.9789428710938,
+      "cy": 1597.7340087890625,
+      "w": 619.569091796875,
+      "h": 250.45852661132812,
+      "angle_deg": 89.9197205637221
+    },
+    "streak_length_px": 619.569091796875
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jbok05p2q_flc.fits.jpg",
+    "confidence": 0.27825039625167847,
+    "obb": {
+      "cx": 2854.5023193359375,
+      "cy": 2878.3853454589844,
+      "w": 614.0438842773438,
+      "h": 225.81570434570312,
+      "angle_deg": 89.63698488270634
+    },
+    "streak_length_px": 614.0438842773438
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jbok05p2q_flc.fits.jpg",
+    "confidence": 0.2743991017341614,
+    "obb": {
+      "cx": 2806.205535888672,
+      "cy": 2235.669464111328,
+      "w": 622.1068725585938,
+      "h": 268.53094482421875,
+      "angle_deg": 89.95470479269088
+    },
+    "streak_length_px": 622.1068725585938
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jbok05p2q_flc.fits.jpg",
+    "confidence": 0.2621413767337799,
+    "obb": {
+      "cx": 2897.7701416015625,
+      "cy": 3515.088836669922,
+      "w": 623.0665283203125,
+      "h": 223.2794189453125,
+      "angle_deg": 89.94137909360495
+    },
+    "streak_length_px": 623.0665283203125
+  },
+  {
+    "image_id": "satstreaks/Data/Images/j8xib4j3q_flc.fits.jpg",
+    "confidence": 0.4188319742679596,
+    "obb": {
+      "cx": 1608.1111145019531,
+      "cy": 2132.604949951172,
+      "w": 479.3515625,
+      "h": 44.89972686767578,
+      "angle_deg": 0.2212661528701518
+    },
+    "streak_length_px": 479.3515625
+  },
+  {
+    "image_id": "satstreaks/Data/Images/j8xib4j3q_flc.fits.jpg",
+    "confidence": 0.4094865918159485,
+    "obb": {
+      "cx": 984.1240844726562,
+      "cy": 2134.675262451172,
+      "w": 479.32330322265625,
+      "h": 44.69122314453125,
+      "angle_deg": 0.2981650783684399
+    },
+    "streak_length_px": 479.32330322265625
+  },
+  {
+    "image_id": "satstreaks/Data/Images/j8xib4j3q_flc.fits.jpg",
+    "confidence": 0.3997134268283844,
+    "obb": {
+      "cx": 376.1576232910156,
+      "cy": 2149.946578979492,
+      "w": 479.5399169921875,
+      "h": 45.88493347167969,
+      "angle_deg": 0.2102422808980075
+    },
+    "streak_length_px": 479.5399169921875
+  },
+  {
+    "image_id": "satstreaks/Data/Images/j8xib4j3q_flc.fits.jpg",
+    "confidence": 0.35485318303108215,
+    "obb": {
+      "cx": 3496.217742919922,
+      "cy": 2100.6766204833984,
+      "w": 478.9598388671875,
+      "h": 42.91590118408203,
+      "angle_deg": 0.22891045524124
+    },
+    "streak_length_px": 478.9598388671875
+  },
+  {
+    "image_id": "satstreaks/Data/Images/j8xib4j3q_flc.fits.jpg",
+    "confidence": 0.31578293442726135,
+    "obb": {
+      "cx": 2819.6168823242188,
+      "cy": 2103.0209045410156,
+      "w": 470.02935791015625,
+      "h": 42.90204620361328,
+      "angle_deg": 0.05091905698557526
+    },
+    "streak_length_px": 470.02935791015625
+  },
+  {
+    "image_id": "satstreaks/Data/Images/j8xib4j3q_flc.fits.jpg",
+    "confidence": 0.2800278961658478,
+    "obb": {
+      "cx": 2321.4671020507812,
+      "cy": 2120.514892578125,
+      "w": 458.21893310546875,
+      "h": 35.77863311767578,
+      "angle_deg": 0.10957360336982655
+    },
+    "streak_length_px": 458.21893310546875
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jbfuw6bnq_flc.fits.jpg",
+    "confidence": 0.5599039196968079,
+    "obb": {
+      "cx": 2232.1355895996094,
+      "cy": 278.4645080566406,
+      "w": 479.48529052734375,
+      "h": 45.64435577392578,
+      "angle_deg": 0.3063565562659081
+    },
+    "streak_length_px": 479.48529052734375
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jbfuw6bnq_flc.fits.jpg",
+    "confidence": 0.5079740881919861,
+    "obb": {
+      "cx": 2856.2134704589844,
+      "cy": 278.4797058105469,
+      "w": 479.3115234375,
+      "h": 45.81049346923828,
+      "angle_deg": 0.2799260720252847
+    },
+    "streak_length_px": 479.3115234375
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jbfuw6bnq_flc.fits.jpg",
+    "confidence": 0.5050871968269348,
+    "obb": {
+      "cx": 904.125,
+      "cy": 262.6654357910156,
+      "w": 479.5311279296875,
+      "h": 44.761451721191406,
+      "angle_deg": 0.2670568216755118
+    },
+    "streak_length_px": 479.5311279296875
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jbfuw6bnq_flc.fits.jpg",
+    "confidence": 0.4925329387187958,
+    "obb": {
+      "cx": 3528.1435546875,
+      "cy": 276.7065734863281,
+      "w": 479.38177490234375,
+      "h": 45.41871643066406,
+      "angle_deg": 0.2662843432877565
+    },
+    "streak_length_px": 479.38177490234375
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jbfuw6bnq_flc.fits.jpg",
+    "confidence": 0.4282626211643219,
+    "obb": {
+      "cx": 1624.0274353027344,
+      "cy": 277.10150146484375,
+      "w": 479.37371826171875,
+      "h": 45.34922790527344,
+      "angle_deg": 0.22985459549294088
+    },
+    "streak_length_px": 479.37371826171875
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jbfuw6bnq_flc.fits.jpg",
+    "confidence": 0.3396729528903961,
+    "obb": {
+      "cx": 344.2185363769531,
+      "cy": 247.7322540283203,
+      "w": 479.20489501953125,
+      "h": 41.63561248779297,
+      "angle_deg": 0.29415250230903106
+    },
+    "streak_length_px": 479.20489501953125
+  },
+  {
+    "image_id": "satstreaks/Data/Images/j9ew03i6q_flc.fits.jpg",
+    "confidence": 0.2931040823459625,
+    "obb": {
+      "cx": 3429.704147338867,
+      "cy": 1597.8408203125,
+      "w": 615.70361328125,
+      "h": 266.97564697265625,
+      "angle_deg": 90.17991662045105
+    },
+    "streak_length_px": 615.70361328125
+  },
+  {
+    "image_id": "satstreaks/Data/Images/j9ew03i6q_flc.fits.jpg",
+    "confidence": 0.2795258164405823,
+    "obb": {
+      "cx": 3368.943817138672,
+      "cy": 3521.4288024902344,
+      "w": 619.192626953125,
+      "h": 238.0450897216797,
+      "angle_deg": 90.07036038603886
+    },
+    "streak_length_px": 619.192626953125
+  },
+  {
+    "image_id": "satstreaks/Data/Images/j9ew03i6q_flc.fits.jpg",
+    "confidence": 0.26835572719573975,
+    "obb": {
+      "cx": 3473.777557373047,
+      "cy": 956.0736389160156,
+      "w": 623.4334716796875,
+      "h": 201.64547729492188,
+      "angle_deg": 90.1941302441301
+    },
+    "streak_length_px": 623.4334716796875
+  },
+  {
+    "image_id": "satstreaks/Data/Images/j9ew03i6q_flc.fits.jpg",
+    "confidence": 0.2643701732158661,
+    "obb": {
+      "cx": 3497.3860473632812,
+      "cy": 318.5328674316406,
+      "w": 614.09326171875,
+      "h": 218.05316162109375,
+      "angle_deg": 89.69519858506888
+    },
+    "streak_length_px": 614.09326171875
+  },
+  {
+    "image_id": "satstreaks/Data/Images/j9ew03i6q_flc.fits.jpg",
+    "confidence": 0.2580244839191437,
+    "obb": {
+      "cx": 3434.712371826172,
+      "cy": 2237.1306762695312,
+      "w": 617.484619140625,
+      "h": 334.7249450683594,
+      "angle_deg": 89.9794232473254
+    },
+    "streak_length_px": 617.484619140625
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jcn654mbq_flc.fits.jpg",
+    "confidence": 0.31455710530281067,
+    "obb": {
+      "cx": 3426.7582397460938,
+      "cy": 958.0291442871094,
+      "w": 616.4407958984375,
+      "h": 314.2879333496094,
+      "angle_deg": 90.03646215714934
+    },
+    "streak_length_px": 616.4407958984375
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jcn654mbq_flc.fits.jpg",
+    "confidence": 0.3038620948791504,
+    "obb": {
+      "cx": 3499.5711059570312,
+      "cy": 319.5586242675781,
+      "w": 616.7493896484375,
+      "h": 354.98675537109375,
+      "angle_deg": 90.09432068967465
+    },
+    "streak_length_px": 616.7493896484375
+  },
+  {
+    "image_id": "satstreaks/Data/Images/j8m80dcbq_flc.fits.jpg",
+    "confidence": 0.304850697517395,
+    "obb": {
+      "cx": 1617.9806213378906,
+      "cy": 3519.3872985839844,
+      "w": 619.01416015625,
+      "h": 355.53472900390625,
+      "angle_deg": 90.05213061112326
+    },
+    "streak_length_px": 619.01416015625
+  },
+  {
+    "image_id": "satstreaks/Data/Images/j8m80dcbq_flc.fits.jpg",
+    "confidence": 0.27365997433662415,
+    "obb": {
+      "cx": 1541.459716796875,
+      "cy": 2878.0709838867188,
+      "w": 617.794677734375,
+      "h": 334.10675048828125,
+      "angle_deg": 90.03474094947654
+    },
+    "streak_length_px": 617.794677734375
+  },
+  {
+    "image_id": "satstreaks/Data/Images/j8m80dcbq_flc.fits.jpg",
+    "confidence": 0.2544296383857727,
+    "obb": {
+      "cx": 1527.0347442626953,
+      "cy": 2236.833770751953,
+      "w": 618.160888671875,
+      "h": 347.63604736328125,
+      "angle_deg": 89.82707587771418
+    },
+    "streak_length_px": 618.160888671875
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jdxfr8amq_flc.fits.jpg",
+    "confidence": 0.274666965007782,
+    "obb": {
+      "cx": 343.8961181640625,
+      "cy": 133.79791259765625,
+      "w": 479.1536865234375,
+      "h": 43.745948791503906,
+      "angle_deg": 0.0808900638350236
+    },
+    "streak_length_px": 479.1536865234375
+  },
+  {
+    "image_id": "satstreaks/Data/Images/jdxfr8amq_flc.fits.jpg",
+    "confidence": 0.27352404594421387,
+    "obb": {
+      "cx": 1560.1763305664062,
+      "cy": 135.6300506591797,
+      "w": 479.24658203125,
+      "h": 43.65568923950195,
+      "angle_deg": 0.028678180104134605
+    },
+    "streak_length_px": 479.24658203125
+  }
+]

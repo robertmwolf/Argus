@@ -434,6 +434,84 @@ def _run_yolo_detector(
     return detections
 
 
+def _run_yolo_full_detector(
+    array: "np.ndarray",
+    confidence_threshold: float = 0.25,
+) -> list[dict]:
+    """Run the full-dataset YOLO11n-OBB model with tiled inference.
+
+    Loads weights from ``weights/run_full_yolo_obb/run/weights/best.pt``.
+    Tiles large images at 640 px (matching training resolution) with 50%
+    overlap; bounding boxes are remapped to full-image coordinates before
+    returning.  Silently returns an empty list if weights are missing.
+
+    Args:
+        array: uint8 (H, W, 3) image array (RGB).
+        confidence_threshold: Minimum YOLO confidence to keep a detection.
+
+    Returns:
+        List of detection dicts with method='yolo_full'.
+    """
+    import numpy as np
+
+    root = Path(__file__).resolve().parent.parent
+    weights = root / "weights" / "run_full_yolo_obb" / "run" / "weights" / "best.pt"
+    if not weights.exists():
+        logger.debug("YOLO-full weights not found at %s; skipping", weights)
+        return []
+
+    try:
+        from ultralytics import YOLO  # type: ignore[import]
+    except ImportError:
+        logger.debug("ultralytics not installed; skipping YOLO-full")
+        return []
+
+    cache_key = str(weights)
+    if cache_key not in _yolo_model_cache:
+        _yolo_model_cache[cache_key] = YOLO(str(weights))
+    yolo = _yolo_model_cache[cache_key]
+
+    h_img, w_img = array.shape[:2]
+    _tile_size = 640
+    _stride = _tile_size // 2  # 50% overlap
+
+    if max(h_img, w_img) <= _tile_size:
+        tile_list = [(array, 0, 0)]
+    else:
+        tile_list = []
+        for y0 in range(0, h_img, _stride):
+            for x0 in range(0, w_img, _stride):
+                x1 = min(x0 + _tile_size, w_img)
+                y1 = min(y0 + _tile_size, h_img)
+                tile = array[y0:y1, x0:x1]
+                if tile.shape[0] < 32 or tile.shape[1] < 32:
+                    continue
+                tile_list.append((tile, x0, y0))
+
+    detections: list[dict] = []
+    for tile, x_off, y_off in tile_list:
+        for result in yolo(tile, verbose=False, conf=confidence_threshold):
+            if result.obb is None:
+                continue
+            for box, conf in zip(result.obb.xywhr, result.obb.conf):
+                cx, cy, bw, bh, angle_rad = box.tolist()
+                cx += x_off
+                cy += y_off
+                angle_deg = float(angle_rad) * 180.0 / math.pi
+                half_w, half_h = bw / 2.0, bh / 2.0
+                detections.append({
+                    "bbox": [cx - half_w, cy - half_h, cx + half_w, cy + half_h],
+                    "confidence": float(conf),
+                    "method": "yolo_full",
+                    "obb": {"cx": cx, "cy": cy, "w": bw, "h": bh, "angle_deg": angle_deg},
+                    "streak_length_px": float(max(bw, bh)),
+                })
+
+    logger.debug("YOLO-full: %d raw detections above threshold %.2f",
+                 len(detections), confidence_threshold)
+    return detections
+
+
 def _run_astride_detector(
     fits_path: Path,
     min_length_px: float = 20.0,
@@ -798,11 +876,14 @@ def run_with_array(
     yolo_dets      = nms_detections(
         _run_yolo_detector(array, confidence_threshold), iou_threshold=0.5
     )
+    yolo_full_dets = nms_detections(
+        _run_yolo_full_detector(array, confidence_threshold), iou_threshold=0.5
+    )
 
     # Group across detectors: overlapping detections from different methods share
     # the same streak_id.  Nothing is suppressed — all per-method detections are
     # kept so the UI can surface multi-method agreement.
-    combined   = raw_dets + classical_dets + astride_dets + yolo_dets
+    combined   = raw_dets + classical_dets + astride_dets + yolo_dets + yolo_full_dets
     detections = group_detections(combined, iou_threshold=0.5)
     postprocess_ms = (time.perf_counter() - t2) * 1000
     logger.debug("postprocess_ms=%.1f  after_nms=%d", postprocess_ms, len(detections))

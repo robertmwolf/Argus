@@ -1,0 +1,25 @@
+{
+  "date_recorded": "2026-05-16T19:36:27Z",
+  "model": "yolo11n-obb-full",
+  "weights": "weights/run_full_yolo_obb/run/weights/best.pt",
+  "training_epochs": 15,
+  "best_epoch": 13,
+  "training_dataset": "full dataset (train.json, 3023 images, 14385 tiles at 640px)",
+  "eval_dataset": "tiled val split (604 source images, ~2881 tiles, same tiling as training)",
+  "eval_note": "Evaluated on YOLO tiled val split. Full-image COCO test not directly comparable due to GT OBBs spanning full image height (h=4096) vs tiled predictions.",
+  "imgsz": 640,
+  "map_50": 0.6730310784634366,
+  "map_75": 0.5739015334453946,
+  "precision": 0.5718380508778216,
+  "recall": 0.8457869634340223,
+  "f1": 0.6823428815733219,
+  "mean_angle_error_deg": null,
+  "per_band": {
+    "note": "Per-band breakdown not available from YOLO val split (no COCO morphology bins)"
+  },
+  "phase8_targets": {
+    "precision": ">=0.94",
+    "recall": ">=0.97",
+    "status": "not_met \u2014 targets require Co-DINO Swin-L on full resolution"
+  }
+}
