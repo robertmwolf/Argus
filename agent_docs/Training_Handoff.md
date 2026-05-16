@@ -684,6 +684,35 @@ cp eval/results/dino_predictions.json \
     results/5070ti_dinov3_vitl/dino_predictions.json
 ```
 
+### Update Unified Confidence Score weights
+
+After evaluation, open `inference/confidence.py` and update the `"dinov3_vitl"`
+entry in `DETECTOR_PROFILES` with the measured precision and recall from
+`results/5070ti_dinov3_vitl/phase8_benchmark.json`:
+
+```python
+"dinov3_vitl": DetectorProfile(
+    name="DINOv3 ViT-L",
+    precision=<measured>,          # from phase8_benchmark.json "precision"
+    recall=<measured>,             # from phase8_benchmark.json "recall"
+    confidence_ceiling=None,       # ML detector — confidence is well-calibrated
+    notes="Phase D results/5070ti_dinov3_vitl/phase8_benchmark.json",
+),
+```
+
+Only set `confidence_ceiling` if the detector is observed to emit misleadingly high
+scores on false positives (i.e. its confidence magnitude does not correlate with
+true-positive probability).  ML detectors trained with cross-entropy loss are
+generally well-calibrated and should leave this as `None`.
+
+Verify:
+```bash
+python -m inference.confidence          # scores should reflect new weights
+python -m pytest tests/test_confidence.py -v   # all tests must pass
+```
+
+Commit this change alongside the result files.
+
 ### Required result files
 
 ```text
@@ -699,6 +728,7 @@ results/5070ti_dinov3_vitl/dino_predictions.json
 - Backbone: DINOv3 ViT-L/16 LVD-1689M (frozen)
 - Whether Phase 8 targets met: ≥94% precision, ≥97% recall
 - Comparison note vs Swin-T baseline (mAP@0.5=0.190 on test.json, from results/phase_e/phase_e_comparison_test.json)
+- Confirmation that `DETECTOR_PROFILES["dinov3_vitl"]` in `inference/confidence.py` was updated
 
 Generate environment metadata:
 
@@ -904,6 +934,33 @@ Copy predictions into the results folder for check-in:
 cp eval/results/dino_predictions.json results/5070ti_swin_l/dino_predictions.json
 ```
 
+## Update Unified Confidence Score Weights
+
+After evaluation, open `inference/confidence.py` and update the `"large"` entry in
+`DETECTOR_PROFILES` with the measured precision and recall from
+`results/5070ti_swin_l/phase8_benchmark.json`:
+
+```python
+"large": DetectorProfile(
+    name="DINO Swin-L",
+    precision=<measured>,          # from phase8_benchmark.json "precision"
+    recall=<measured>,             # from phase8_benchmark.json "recall"
+    confidence_ceiling=None,       # ML detector — confidence is well-calibrated
+    notes="Swin-L results/5070ti_swin_l/phase8_benchmark.json",
+),
+```
+
+Only set `confidence_ceiling` if the detector emits unreliably high scores on false
+positives.  ML detectors are generally well-calibrated and should leave this as `None`.
+
+Verify:
+```bash
+python -m inference.confidence          # scores should reflect new weights
+python -m pytest tests/test_confidence.py -v   # all tests must pass
+```
+
+Commit this change alongside the result files.
+
 ## Required Result Files
 
 Create and commit these files:
@@ -968,6 +1025,7 @@ Per-band short/medium/long precision, recall, and F1
 Confusion matrix TP, FP, FN, TN
 Whether precision >= 0.94
 Whether recall >= 0.97
+DETECTOR_PROFILES updated in inference/confidence.py: yes/no
 Any errors, retries, or config changes
 ```
 

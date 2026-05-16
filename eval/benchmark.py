@@ -362,7 +362,7 @@ _METHOD_ORDER = [
 ]
 
 _METHOD_LABELS = {
-    "unified":     "Unified (noisy-OR)",
+    "unified":     "Unified Confidence Score",
     "dinov3_vitb": "DINOv3 ViT-B",
     "dinov3_vitl": "DINOv3 ViT-L",
     "tiny":        "DINO Swin-T",

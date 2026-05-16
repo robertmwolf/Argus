@@ -188,8 +188,9 @@ async def test_full_upload_poll_result_cycle(client, tmp_path):
     det = body["detections"][0]
     # Top-level method is always "unified"; individual method is in sources
     assert det["method"] == "unified"
-    # Single-source noisy-OR equals the source's own confidence
-    assert det["confidence"] == pytest.approx(0.92)
+    # Unified score is weighted by the detector's F-0.5 reliability weight.
+    # "ml" maps to the default profile (P=R=0.5, weight=0.5), so 0.5 × 0.92 = 0.46.
+    assert det["confidence"] == pytest.approx(0.46)
     sources = det["sources"]
     assert sources[0]["method"] == "unified"
     assert sources[1]["method"] == "ml"

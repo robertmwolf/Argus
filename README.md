@@ -5,7 +5,8 @@ ARGUS is a pipeline for automated satellite streak detection
 and identification in FITS telescope images.  It runs four independent detectors
 in parallel — two ML-based (DINO-DETR with DINOv3 ViT-B backbone, YOLO11n-OBB)
 and two classical (ASTRiDE-derived, OpenCV connected-components) — then merges
-their results by grouping overlapping detections so the UI can surface multi-method agreement.  
+their results by grouping overlapping detections and fusing them into a
+**Unified Confidence Score** weighted by each detector's empirical precision and recall.  
 Streak orientation is refined via the Radon transform, each streak is traced to its
 true endpoints across the full image, and detected objects are cross-identified
 against a local TLE catalog using SGP4 propagation and multi-factor confidence
@@ -308,7 +309,8 @@ Argus/
 │   ├── fits_loader.py         ← FITS → tensor, normalisation + FITS/sidecar WCS
 │   ├── pipeline.py            ← inference orchestrator
 │   ├── postprocess.py         ← Radon angle refinement + streak extent + NMS
-│   └── crossid.py             ← satellite cross-matching
+│   ├── crossid.py             ← satellite cross-matching
+│   └── confidence.py          ← Unified Confidence Score (F-beta weighted fusion)
 ├── training/
 │   ├── convert_labels.py      ← YOLO OBB → COCO JSON
 │   ├── dataset.py             ← FITSStreakDataset
@@ -512,23 +514,28 @@ Benchmark recorded 2026-05-16; full results in `results/multi_method_benchmark.j
 
 | Detector | Precision | Recall | F1 | mAP@0.5 | mAP@0.75 | n predictions |
 |----------|----------:|-------:|---:|---------:|---------:|--------------:|
-| **Unified** (noisy-OR ensemble) | **29.9 %** | 72.1 % | **42.3 %** | 40.6 % | 31.8 % | 742 |
+| **Unified Confidence Score** (F-beta weighted ensemble) | **29.9 %** | 72.1 % | **42.3 %** | 40.6 % | 31.8 % | 742 |
 | **DINOv3 ViT-B** (DINO-DETR, augmented, epoch 10) | 9.3 % | **89.3 %** | 16.8 % | **75.5 %** | **59.4 %** | 2 969 |
 | **OpenCV** (connected-components) | 1.4 % | 1.0 % | 1.1 % | 0.01 % | 0.01 % | 223 |
 | **ASTRiDE** (sigma-threshold) | — | — | — | — | — | — |
 
-The **Unified** detector groups DINOv3 and OpenCV detections that overlap (IoU ≥ 0.5
-or IoMin ≥ 0.3) and fuses their confidence scores via noisy-OR
-(`1 − ∏(1 − confᵢ)`).  Grouping collapses 3 192 individual predictions into
-742 streak-level predictions, sharply raising precision (9.3 % → 29.9 %) at the
-cost of some recall (89.3 % → 72.1 %).
+The **Unified Confidence Score** groups DINOv3 and OpenCV detections that overlap
+(IoU ≥ 0.5 or IoMin ≥ 0.3) and fuses their outputs via a precision-recall calibrated
+formula (`inference/confidence.py`): each detector's contribution is scaled by its
+empirical F-0.5 score before Noisy-OR combination, with additional adjustments for
+false-negative signals and inter-detector divergence.  Detectors whose raw confidence
+magnitude is unreliable (e.g. ASTRiDE, which routinely emits 0.95+ on false positives)
+have a `confidence_ceiling` that caps their effective contribution regardless of the
+score they emit — trusting the *presence* of the detection, not its stated certainty.
+Grouping collapses 3 192 individual predictions into 742 streak-level predictions,
+sharply raising precision (9.3 % → 29.9 %) at the cost of some recall (89.3 % → 72.1 %).
 
 ### Per-method confusion matrices (IoU ≥ 0.5)
 
 Confusion matrix PNGs are saved in `results/confusion_matrices/`.
 
 ```
-Unified (noisy-OR)  Predicted +   Predicted −
+Unified Conf. Score  Predicted +  Predicted −
   Actual +   TP ≈    222          FN ≈     86
   Actual −   FP ≈    520          TN =    n/a
 
@@ -545,7 +552,7 @@ OpenCV              Predicted +   Predicted −
 
 | Detector | Short < 400 px | Medium 400–999 px | Long ≥ 1 000 px |
 |----------|---------------:|------------------:|----------------:|
-| Unified  | 0.0 %  | 3.6 %  | **49.0 %** |
+| Unified Conf. Score | 0.0 % | 3.6 % | **49.0 %** |
 | DINOv3 ViT-B | 0.0 % | 3.1 % | 16.9 % |
 | OpenCV   | 0.0 %  | 0.0 %  | 1.8 % |
 | ASTRiDE  | —      | —      | — |
@@ -559,13 +566,17 @@ OpenCV              Predicted +   Predicted −
 
 ### Interpretation
 
-**Unified (noisy-OR ensemble)** achieves the best balance of precision and recall
-(F1 = 42.3 %).  By grouping detections from multiple methods and fusing confidence
-via noisy-OR, it eliminates the redundant false-positive cloud that DINOv3 produces
-in isolation — reducing prediction count from 2 969 to 742 while retaining 72 %
-recall.  On long streaks (≥ 1 000 px, 92 % of this test set) F1 reaches 49 %,
-compared to 16.9 % for DINOv3 alone.  The mean angle error of 0.018° confirms that
-Radon-refined orientation is essentially exact.
+**Unified Confidence Score** achieves the best balance of precision and recall
+(F1 = 42.3 %).  The score is computed by `inference/confidence.py`: each detector's
+raw confidence is first capped at an optional `confidence_ceiling` (used for ASTRiDE,
+which emits misleadingly high scores on false positives), then weighted by its empirical
+F-0.5 score (precision-heavy) before Noisy-OR combination, with a false-negative
+adjustment for silent high-recall detectors and a mild divergence penalty when detectors
+strongly disagree.  This eliminates the
+redundant false-positive cloud that DINOv3 produces in isolation — reducing prediction
+count from 2 969 to 742 while retaining 72 % recall.  On long streaks (≥ 1 000 px,
+92 % of this test set) F1 reaches 49 %, compared to 16.9 % for DINOv3 alone.  The mean
+angle error of 0.018° confirms that Radon-refined orientation is essentially exact.
 
 **DINOv3 ViT-B** achieves the highest recall (89.3 %) and mAP@0.5 (75.5 %) in
 isolation — it misses only ~33 of 308 ground-truth streaks — but produces ~2 694
@@ -585,10 +596,77 @@ cost of higher false-positive rates on noisy images.
 
 > **Multi-method ensemble note:** The four detectors run independently and their
 > outputs are grouped by overlap (IoU or IoMin) rather than suppressed.  The
-> **Unified** badge in the UI shows the noisy-OR confidence across all agreeing
-> detectors; individual per-method badges are shown below it.  The filter UI
-> exposes per-method confidence sliders so the precision/recall tradeoff can be
-> tuned interactively after results are returned.
+> **Unified Confidence Score** badge in the UI shows the calibrated fusion across
+> all agreeing detectors; each detector's contribution is weighted by its empirical
+> F-0.5 score (see `inference/confidence.py` and `DETECTOR_PROFILES`).  Individual
+> per-method badges are shown below the unified score.  The filter UI exposes
+> per-method confidence sliders so the precision/recall tradeoff can be tuned
+> interactively after results are returned.
+>
+> **Updating weights after training:** after any training run produces new precision
+> and recall numbers, update the relevant `DetectorProfile` entries in
+> `inference/confidence.py` — see [Updating Detector Profiles](#updating-detector-profiles-after-training).
+> To tune ASTRiDE's false-positive suppression, adjust its `confidence_ceiling` value
+> (currently 0.6); values above the ceiling are treated identically regardless of
+> what ASTRiDE reports.
+
+---
+
+## Updating Detector Profiles After Training
+
+Every time a detector is retrained or a new model is evaluated, update its entry
+in `DETECTOR_PROFILES` inside [`inference/confidence.py`](inference/confidence.py).
+The Unified Confidence Score weights each detector's contribution by its F-0.5 score
+(`w = 1.25 × P × R / (0.25 × P + R)`), so stale values silently under- or
+over-weight a detector's evidence.
+
+### Step 1 — Run the benchmark to get per-method P/R
+
+```bash
+MODEL_WEIGHTS=weights/<run>/<best>.pth MODEL_SIZE=<size> USE_DEV_SUBSET=false \
+python -m eval.benchmark \
+    --run-pipeline \
+    --annotations data/annotations/test.json \
+    --output results/<run>/phase8_benchmark.json
+```
+
+The output JSON contains `"precision"` and `"recall"` fields for the evaluated method.
+
+### Step 2 — Edit `DETECTOR_PROFILES` in `inference/confidence.py`
+
+Find the entry for the detector key (e.g. `"dinov3_vitb"`, `"tiny"`, `"yolo"`) and
+update `precision`, `recall`, and `notes`:
+
+```python
+"dinov3_vitb": DetectorProfile(
+    name="DINOv3 ViT-B",
+    precision=0.94,      # ← replace with measured value
+    recall=0.97,         # ← replace with measured value
+    notes="Phase D results/<run>/phase8_benchmark.json",
+),
+```
+
+Detector keys must match the `method` string written by the inference pipeline.
+Check `api/main.py` or the benchmark output for exact key names.
+
+**Confidence ceiling** — if a detector is known to emit unreliably high scores on
+false positives (its confidence magnitude is miscalibrated), set `confidence_ceiling`
+to cap its effective contribution.  ASTRiDE ships with `confidence_ceiling=0.6`
+for this reason.  To tune it, adjust the value and observe the score changes via
+`python -m inference.confidence`; the ceiling should sit just above the typical
+true-positive confidence for that detector.  Leave `confidence_ceiling=None` for
+ML detectors with well-calibrated outputs.
+
+### Step 3 — Verify
+
+```bash
+python -m inference.confidence      # prints example scores with updated weights
+python -m pytest tests/test_confidence.py -v   # all 21 tests must pass
+```
+
+The test `test_registered_profiles_have_valid_weights` will catch any weight
+outside [0, 1].  Scores for single-detector runs will shift proportionally to
+the precision change — review that the new values look sensible.
 
 ---
 

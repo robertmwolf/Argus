@@ -74,10 +74,10 @@ back with your team.
 
 ---
 
-## 3. Space-Track GP_History (Required — Register Now)
+## 3. Space-Track TLE Catalog (Required — Register Now)
 
 **What it is:** Authoritative US Space Force satellite catalog.
-Over 138 million historical TLE sets. Free public access.
+Over 220 million historical TLE sets. Free public access.
 This is the source of all TLE data for matching.
 
 **Register:** https://www.space-track.org/auth/createAccount
@@ -90,11 +90,38 @@ more than once per 3 seconds (enforced rate limit).
 ```bash
 export SPACETRACK_USER=your@email.com
 export SPACETRACK_PASS=yourpassword
-
-# Add to ~/.bashrc or ~/.zshrc to persist:
-echo 'export SPACETRACK_USER=your@email.com' >> ~/.bashrc
-echo 'export SPACETRACK_PASS=yourpassword' >> ~/.bashrc
+export ARGUS_ENV=production   # use real site; omit = test site
 ```
+
+**Bootstrap historical coverage (recommended path):**
+```bash
+# Download the annual bundle covering the last 3 months:
+python scripts/download_tle_bundle.py
+
+# See what's available first:
+python scripts/download_tle_bundle.py --list
+
+# Specific year (e.g. current partial year):
+python scripts/download_tle_bundle.py --year 2026
+```
+
+`download_tle_bundle.py` uses the Space-Track **fileshare** API to discover and
+stream-download annual zip bundles, then ingests them via `bootstrap_tle_catalog`.
+Each annual bundle is ~2.7 GB for a complete past year; the current partial year
+is smaller and grows over time. The script is idempotent.
+
+**Manual fallback** if the fileshare API is unavailable:
+```
+https://ln5.sync.com/dl/afd354190/c5cd2q72-a5qjzp4q-nbjdiqkr-cenajuqu
+```
+Download to `data/tle_zips/` then:
+```bash
+python scripts/bootstrap_tle_catalog.py --zip-dir data/tle_zips/ --years 2026
+```
+
+**GP_History API — NOT used for bootstrap:**
+Space-Track prohibits broad `gp_history` queries (no NORAD filter + large date range).
+Use the annual zip bundles instead. See `agent_docs/spacetrack.md` for the full policy.
 
 **Test your access:**
 ```python
@@ -105,7 +132,6 @@ st = SpaceTrackClient(
     identity=os.environ['SPACETRACK_USER'],
     password=os.environ['SPACETRACK_PASS']
 )
-# Should return data without error:
 result = st.gp(norad_cat_id=25544, format='json')  # ISS
 print(result[0]['OBJECT_NAME'])  # Should print: ISS (ZARYA)
 ```
