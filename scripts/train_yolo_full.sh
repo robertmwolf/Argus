@@ -18,7 +18,8 @@ PYTHON="${PYTHON:-/Users/robert/miniconda3/envs/satid/bin/python}"
 # yolo11n on Mac M3 CPU: ~5-8 hours for 50 epochs (12h budget OK)
 # yolo11m on GPU (RTX 5070 Ti): ~2-3 hours for 50 epochs — override with YOLO_MODEL=m
 YOLO_MODEL="${YOLO_MODEL:-n}"
-YOLO_EPOCHS="${YOLO_EPOCHS:-50}"
+# 15 epochs × ~36 min on Mac M3 CPU ≈ 9h; override with YOLO_EPOCHS=50 on GPU
+YOLO_EPOCHS="${YOLO_EPOCHS:-15}"
 YOLO_IMGSZ="${YOLO_IMGSZ:-640}"
 WORK_DIR="${WORK_DIR:-weights/run_full_yolo_obb}"
 RESULTS_DIR="${RESULTS_DIR:-results/full_yolo_obb}"

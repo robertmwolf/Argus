@@ -45,7 +45,9 @@ _YOLO_MODEL_DEV  = "yolo11n-obb.pt"   # nano — fastest for dev subset
 _YOLO_MODEL_FULL = "yolo11n-obb.pt"
 _IMGSZ_DEV   = 256   # matches synthetic FITS size
 _IMGSZ_FULL  = 640   # standard YOLO size; matches real FITS tile scale
-_EPOCHS_FULL  = 50
+# 15 epochs × ~36 min/epoch on Mac M3 CPU ≈ 9h (within 12h budget).
+# Use --epochs 50 on GPU (RTX 5070 Ti: ~36 min → ~30 min → fits in 8h).
+_EPOCHS_FULL  = 15
 _EPOCHS_SMOKE = 2
 _BATCH_SIZE_DEV  = 4
 _BATCH_SIZE_FULL = 8   # better throughput on real dataset
