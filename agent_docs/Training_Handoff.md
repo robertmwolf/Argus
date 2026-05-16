@@ -457,6 +457,130 @@ data/annotations/val.json
 data/annotations/test.json
 ```
 
+## Optional: Dual-Track Weight Production
+
+If you have proprietary data, consider producing two independent sets of weights
+in the same training run so the project has both a sharable artefact and a
+highest-performance artefact.
+
+**Open-source track (`oss`)** — trained exclusively on GTImages and SatStreaks.
+These weights can be uploaded to the shared OneDrive folder and attached to a
+publication.
+
+**Proprietary track (`prop`)** — trained on your incoming dataset, optionally
+merged with the OSS sources to fill morphology gaps. These weights stay private
+unless your data licence explicitly permits redistribution.
+
+If you have no proprietary dataset, skip this section entirely and proceed with
+the single training run described later.
+
+### Step 1 — Prepare separate annotation splits
+
+Run `merge_annotations.py` once per track, then save the outputs under a
+track-specific prefix so the two splits never overwrite each other.
+
+```bash
+# ---- Open-source track (GTImages + SatStreaks only) ----
+python scripts/merge_annotations.py --seed 42 --val-fraction 0.2 \
+    --sources gtimages satstreaks
+for split in train val test; do
+    cp data/annotations/${split}.json data/annotations/oss_${split}.json
+done
+
+# ---- Proprietary track ----
+# Option A: proprietary data only (recommended if large and high-quality)
+python scripts/merge_annotations.py --seed 42 --val-fraction 0.2 \
+    --sources proprietary
+
+# Option B: merge proprietary with OSS sources to fill morphology gaps
+python scripts/merge_annotations.py --seed 42 --val-fraction 0.2 \
+    --sources proprietary gtimages satstreaks
+
+for split in train val test; do
+    cp data/annotations/${split}.json data/annotations/prop_${split}.json
+done
+```
+
+Run the data evaluation checks from the previous section on both
+`oss_train.json` and `prop_train.json` (substitute the filename in each
+script) before continuing.
+
+### Step 2 — Train one run per track
+
+Swap the active split files before each run so the training script picks up the
+correct data.  Use a track-specific `--work-dir` so the two runs are fully
+isolated.
+
+```bash
+# ---- Open-source track ----
+for split in train val test; do
+    cp data/annotations/oss_${split}.json data/annotations/${split}.json
+done
+
+MODEL_SIZE=dinov3_vitl USE_DEV_SUBSET=false ARGUS_NORM=autostretch \
+python -m training.train_dino \
+    --backbone dinov3_vitl \
+    --work-dir weights/run_oss_dinov3_vitl
+
+# ---- Proprietary track ----
+for split in train val test; do
+    cp data/annotations/prop_${split}.json data/annotations/${split}.json
+done
+
+MODEL_SIZE=dinov3_vitl USE_DEV_SUBSET=false ARGUS_NORM=autostretch \
+python -m training.train_dino \
+    --backbone dinov3_vitl \
+    --work-dir weights/run_prop_dinov3_vitl
+```
+
+### Step 3 — Evaluate each track independently
+
+```bash
+# ---- Open-source track ----
+mkdir -p results/oss_dinov3_vitl
+BEST_OSS="$(ls weights/run_oss_dinov3_vitl/*best*.pth | head -n 1)"
+MODEL_WEIGHTS="$BEST_OSS" MODEL_SIZE=dinov3_vitl USE_DEV_SUBSET=false \
+python -m eval.benchmark \
+    --run-pipeline \
+    --annotations data/annotations/oss_test.json \
+    --output results/oss_dinov3_vitl/phase8_benchmark.json
+cp eval/results/dino_predictions.json results/oss_dinov3_vitl/dino_predictions.json
+
+# ---- Proprietary track ----
+mkdir -p results/prop_dinov3_vitl
+BEST_PROP="$(ls weights/run_prop_dinov3_vitl/*best*.pth | head -n 1)"
+MODEL_WEIGHTS="$BEST_PROP" MODEL_SIZE=dinov3_vitl USE_DEV_SUBSET=false \
+python -m eval.benchmark \
+    --run-pipeline \
+    --annotations data/annotations/prop_test.json \
+    --output results/prop_dinov3_vitl/phase8_benchmark.json
+cp eval/results/dino_predictions.json results/prop_dinov3_vitl/dino_predictions.json
+```
+
+Each result directory needs the same `training_summary.md` and `environment.txt`
+fields as the primary Phase D run (see Required result files below), plus a
+**Data track** field recording which sources were used and why.
+
+### Weights and sharing
+
+| Track | Work dir | Results dir | Share to OneDrive? | Commit results? |
+|-------|----------|-------------|-------------------|-----------------|
+| OSS | `weights/run_oss_dinov3_vitl/` | `results/oss_dinov3_vitl/` | Yes | Yes |
+| Proprietary | `weights/run_prop_dinov3_vitl/` | `results/prop_dinov3_vitl/` | Only if licence permits | Only if licence permits |
+
+All `.pth` files are gitignored regardless of track.  Upload OSS weights to the
+shared OneDrive handoff folder under `weights/run_oss_dinov3_vitl/`.  Store
+proprietary weights privately — do not upload to the shared folder unless your
+data licence explicitly allows redistribution.
+
+```bash
+# Commit OSS results only (proprietary results conditional on licence)
+git add results/oss_dinov3_vitl/
+git commit -m "Add OSS-track DINOv3 ViT-L training results"
+```
+
+---
+
 ## Pre-Flight Checks
 
 Run the full training pre-flight:
