@@ -27,7 +27,7 @@ Give the colleague's Codex this instruction:
 Check out repo at https://github.com/robertmwolf/Argus.git
 Read instructions at agent_docs/Training_Handoff.md
 Follow that document to download training data, run DINOv3 ViT-L training
-(Phase D), evaluate results, and check the outputs back into GitHub.
+(Phase D), evaluate results, and optionally check the outputs back into GitHub.
 ```
 
 ## Current Handoff Scope
