@@ -34,6 +34,7 @@ Progress:
 - ✅ DINOv3 Phase C (frozen ViT-B dev subset): mAP@0.5=0.274 on dev_subset
 - ✅ DINOv3 Phase C² (frozen ViT-B full dataset, 4 epochs): mAP@0.5=**0.74** on test.json — beats Swin-T (0.19) by +0.55
 - ✅ DINOv3 Phase E (partial): Swin-T vs ViT-B comparison in `results/phase_e/` — ViT-B dominant
+- ✅ YOLO11n-OBB full dataset: 15 epochs, 3 023 images → 14 385 tiles, mAP@0.5=67.3% P=57% R=85% F1=68% (tiled val); integrated as `yolo_full` 5th detector in `inference/pipeline.py`
 - ⏳ DINOv3 Phase D: Frozen ViT-L, full dataset — RTX 5070 Ti workstation, see `agent_docs/Training_Handoff.md`
 
 ## Next Step: Phase D — DINOv3 ViT-L Workstation Training

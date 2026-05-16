@@ -396,7 +396,13 @@ Recorded 2026-05-15. Evaluation on held-out `test.json` (full merged dataset).
 |-------|-----|---------|---------|-------|
 | Co-DINO Swin-T | 0.149 | 0.190 | 0.167 | full merged dataset |
 | DINOv3 ViT-B (Phase C²) | 0.580 | **0.740** | 0.606 | frozen backbone, full dataset, 4 epochs |
+| YOLO11n-OBB (full dataset) | 0.561† | 0.673† | 0.574† | 15 epochs, 3 023 images → 14 385 tiles, Mac M3 CPU; P=57% R=85% F1=68% |
 | DINOv3 ViT-L (Phase D) | TBD | TBD | TBD | pending workstation run |
+
+†YOLO metrics are from YOLO's native tiled val split (2 881 tiles, 604 source images),
+not the full-image COCO test.json evaluated above.  The two evaluation protocols
+are not directly comparable — tiled IoU matching inflates mAP relative to full-image GT.
+`weights/run_full_yolo_obb/run/weights/best.pt` (5.4 MB), best at epoch 13/15.
 
 DINOv3 ViT-B (frozen) outperforms Swin-T by +0.55 mAP@0.5 on a fair comparison (same data, test split).
 Phase D (ViT-L, 50 epochs) is the definitive production run targeting ≥94% precision / ≥97% recall.
@@ -408,11 +414,25 @@ Confusion matrix PNGs in `results/confusion_matrices/`.
 
 | Method | Precision | Recall | F1 | mAP@0.5 | mAP@0.75 | n preds |
 |--------|----------:|-------:|---:|---------:|---------:|--------:|
-| **Unified** (noisy-OR) | **29.9 %** | 72.1 % | **42.3 %** | 40.6 % | 31.8 % | 742 |
+| **Unified Confidence Score** (F-beta weighted) | **29.9 %** | 72.1 % | **42.3 %** | 40.6 % | 31.8 % | 742 |
 | DINOv3 ViT-B | 9.3 % | **89.3 %** | 16.8 % | **75.5 %** | **59.4 %** | 2 969 |
 | OpenCV | 1.4 % | 1.0 % | 1.1 % | 0.01 % | 0.01 % | 223 |
 
-Key finding: noisy-OR grouping collapses 3 192 individual predictions to 742,
+Key finding: weighted fusion grouping collapses 3 192 individual predictions to 742,
 raising precision from 9.3 % to 29.9 % while retaining 72 % recall (F1 42.3 %).
 On long streaks (≥ 1 000 px, 92 % of test set) Unified F1 = 49 % vs 16.9 % for
 DINOv3 alone.
+
+The Unified Confidence Score is computed by `inference/confidence.py`.  The formula:
+
+1. Cap each detector's raw confidence at its optional `confidence_ceiling` before
+   any weighting.  ASTRiDE has `confidence_ceiling=0.6` because it routinely emits
+   0.95+ on false positives — the cap trusts the *presence* of its detection, not
+   the stated magnitude.
+2. Weight each capped confidence by its F-0.5 score (`w = 1.25×P×R / (0.25×P + R)`).
+3. Combine via weighted Noisy-OR with false-negative and divergence adjustments.
+
+This is *not* equal Noisy-OR.  **After each new training run, update `DETECTOR_PROFILES`
+in `inference/confidence.py` with the measured precision and recall** — see the README
+section "Updating Detector Profiles After Training".  If a newly added detector emits
+unreliable confidence magnitudes, also set its `confidence_ceiling`.
