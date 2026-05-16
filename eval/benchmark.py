@@ -351,6 +351,254 @@ def run_benchmark(
     return results
 
 
+# ---------------------------------------------------------------------------
+# Multi-method comparison
+# ---------------------------------------------------------------------------
+
+# Display order (unified always first, then ML methods, then classical).
+_METHOD_ORDER = [
+    "unified", "dinov3_vitb", "dinov3_vitl", "tiny", "large",
+    "yolo", "astride", "opencv", "classical", "ml",
+]
+
+_METHOD_LABELS = {
+    "unified":     "Unified (noisy-OR)",
+    "dinov3_vitb": "DINOv3 ViT-B",
+    "dinov3_vitl": "DINOv3 ViT-L",
+    "tiny":        "DINO Swin-T",
+    "large":       "DINO Swin-L",
+    "yolo":        "YOLO11-OBB",
+    "astride":     "ASTRiDE",
+    "opencv":      "OpenCV",
+    "classical":   "Classical",
+    "ml":          "ML",
+}
+
+
+def format_comparison_table(method_metrics: dict[str, dict]) -> str:
+    """Render a multi-method comparison as a Markdown table.
+
+    Methods are ordered with ``"unified"`` first, then ML methods, then
+    classical detectors.  Unknown method names appear last in alphabetical
+    order.
+
+    Args:
+        method_metrics: Dict mapping method name → metrics dict from
+            ``evaluate()``.
+
+    Returns:
+        Markdown-formatted comparison table string.
+    """
+    def _sort_key(m: str) -> tuple[int, str]:
+        try:
+            return (_METHOD_ORDER.index(m), m)
+        except ValueError:
+            return (len(_METHOD_ORDER), m)
+
+    methods = sorted(method_metrics.keys(), key=_sort_key)
+    labels  = [_METHOD_LABELS.get(m, m) for m in methods]
+
+    metric_rows = [
+        ("Precision",       "precision",            True),
+        ("Recall",          "recall",               True),
+        ("F1",              "f1",                   True),
+        ("mAP@0.5",         "map_50",               True),
+        ("mAP@0.75",        "map_75",               True),
+        ("Angle error (°)", "mean_angle_error_deg", False),
+    ]
+
+    header = "| Metric | " + " | ".join(labels) + " |"
+    sep    = "|--------|" + "|".join("-" * (len(l) + 2) for l in labels) + "|"
+    lines  = [header, sep]
+
+    for row_label, key, pct in metric_rows:
+        vals = [_fmt(method_metrics[m].get(key, 0.0), pct) for m in methods]
+        lines.append(f"| {row_label} | " + " | ".join(vals) + " |")
+
+    for method in methods:
+        m_label = _METHOD_LABELS.get(method, method)
+        per_band = method_metrics[method].get("per_band", {})
+        if not per_band:
+            continue
+        lines += [
+            "",
+            f"### Per-band — {m_label}",
+            "| Band | Precision | Recall | F1 |",
+            "|------|-----------|--------|----|",
+        ]
+        for band in ("short", "medium", "long"):
+            b = per_band.get(band, {})
+            lines.append(
+                f"| {band.capitalize()} (<150 / 150–400 / >400 px)"
+                f" | {_fmt(b.get('precision', 0))}"
+                f" | {_fmt(b.get('recall', 0))}"
+                f" | {_fmt(b.get('f1', 0))} |"
+            )
+
+    return "\n".join(lines)
+
+
+def save_per_method_confusion_matrices(
+    method_preds: dict[str, list[dict]],
+    ground_truth: list[dict],
+    output_dir: Path,
+    iou_threshold: float = 0.5,
+) -> dict[str, Path]:
+    """Save a labelled confusion-matrix PNG for each method.
+
+    Args:
+        method_preds: Dict mapping method name → prediction list.
+        ground_truth: Ground-truth annotation list.
+        output_dir: Directory where PNGs are written.
+        iou_threshold: IoU threshold forwarded to ``confusion_matrix()``.
+
+    Returns:
+        Dict mapping method name → saved PNG path.
+    """
+    from eval.metrics import confusion_matrix as _cm
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    paths: dict[str, Path] = {}
+    for method, preds in method_preds.items():
+        png_path = output_dir / f"confusion_matrix_{method}.png"
+        label = _METHOD_LABELS.get(method, method)
+        _cm(preds, ground_truth, iou_threshold=iou_threshold,
+            save_path=png_path, title=label)
+        paths[method] = png_path
+        logger.info("Saved confusion matrix for %s → %s", method, png_path)
+
+    return paths
+
+
+def run_pipeline_predictions_all_methods(
+    annotations_path: str | Path,
+) -> dict[str, list[dict]]:
+    """Run the multi-method pipeline on every image in a COCO annotation file.
+
+    Loads the DINO model once, runs the full pipeline (DINO + classical +
+    ASTRiDE + YOLO) on each annotated image, then extracts per-method and
+    unified prediction lists via ``extract_method_predictions()``.
+
+    Args:
+        annotations_path: Path to a COCO-format JSON annotation file.
+
+    Returns:
+        Dict mapping method name → list of prediction dicts for
+        ``evaluate()``.  Always includes a ``"unified"`` key.
+
+    Raises:
+        FileNotFoundError: If model weights are not found.
+        ImportError: If required ML packages are not installed.
+    """
+    from eval.metrics import extract_method_predictions
+
+    with open(annotations_path) as f:
+        coco = json.load(f)
+
+    ann_path  = Path(annotations_path)
+    image_dir = ann_path.parent.parent / "raw"
+
+    from inference.pipeline import load_model, run as pipeline_run
+
+    logger.info("Loading DINO model (once for all images)…")
+    dino_model, dino_device = load_model()
+
+    all_method_preds: dict[str, list[dict]] = {}
+
+    for img_info in coco["images"]:
+        fits_path = image_dir / img_info["file_name"]
+        if not fits_path.exists():
+            logger.warning("Image not found, skipping: %s", fits_path)
+            continue
+        logger.info("Running pipeline on %s", fits_path.name)
+        grouped = pipeline_run(
+            fits_path=fits_path,
+            fast=True,
+            model=dino_model,
+            inference_device=dino_device,
+        )
+        per_method = extract_method_predictions(grouped, img_info["file_name"])
+        for method, preds in per_method.items():
+            all_method_preds.setdefault(method, []).extend(preds)
+
+    return all_method_preds
+
+
+def run_multi_method_benchmark(
+    annotations_path: str | Path,
+    method_predictions: dict[str, list[dict]] | None = None,
+    output_path: str | Path = "results/multi_method_benchmark.json",
+    run_pipeline: bool = False,
+) -> dict:
+    """Run a full multi-method benchmark and save results.
+
+    Evaluates every method present in *method_predictions* (including
+    ``"unified"``) and produces:
+    - A Markdown comparison table printed to stdout.
+    - One confusion-matrix PNG per method in ``<output_dir>/confusion_matrices/``.
+    - A JSON results file at *output_path*.
+
+    Args:
+        annotations_path: Path to the COCO JSON annotation file (test split).
+        method_predictions: Pre-computed per-method predictions.  When ``None``
+            and *run_pipeline* is ``True``, the pipeline runs live.
+        output_path: Destination for the JSON results file.
+        run_pipeline: If ``True`` and *method_predictions* is ``None``, runs
+            the multi-method inference pipeline on the test set (requires
+            model weights).
+
+    Returns:
+        Results dict with a ``"methods"`` key mapping method name → metrics.
+
+    Raises:
+        ValueError: If neither *method_predictions* nor *run_pipeline* is
+            provided.
+        FileNotFoundError: If *run_pipeline* is True and weights are missing.
+    """
+    ground_truth = load_ground_truth(annotations_path)
+    logger.info("Loaded %d ground-truth annotations", len(ground_truth))
+
+    if method_predictions is None:
+        if not run_pipeline:
+            raise ValueError(
+                "Provide method_predictions or set run_pipeline=True."
+            )
+        method_predictions = run_pipeline_predictions_all_methods(annotations_path)
+
+    method_metrics: dict[str, dict] = {}
+    for method, preds in method_predictions.items():
+        logger.info("Evaluating %s  (%d predictions)…", method, len(preds))
+        method_metrics[method] = evaluate(preds, ground_truth)
+
+    output_path = Path(output_path)
+    cm_dir = output_path.parent / "confusion_matrices"
+    cm_paths = save_per_method_confusion_matrices(
+        method_predictions, ground_truth, cm_dir
+    )
+
+    results = {
+        "date_recorded": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "methods": {
+            method: {
+                **metrics,
+                "n_predictions": len(method_predictions[method]),
+                "confusion_matrix_png": str(cm_paths.get(method, "")),
+            }
+            for method, metrics in method_metrics.items()
+        },
+    }
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w") as f:
+        json.dump(results, f, indent=2)
+    logger.info("Results saved to %s", output_path)
+
+    print("\n" + format_comparison_table(method_metrics) + "\n")
+    return results
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s — %(message)s")
 
@@ -358,24 +606,41 @@ if __name__ == "__main__":
     parser.add_argument("--annotations", required=True, help="COCO JSON annotation file")
     parser.add_argument("--dino-predictions", help="Pre-computed DINO predictions JSON")
     parser.add_argument("--yolo-predictions", help="Pre-computed YOLO predictions JSON")
+    parser.add_argument("--method-predictions", help="Pre-computed multi-method predictions JSON "
+                        "(dict mapping method → prediction list)")
+    parser.add_argument("--multi-method", action="store_true",
+                        help="Run multi-method benchmark (unified vs individual methods)")
     parser.add_argument("--run-pipeline", action="store_true", help="Run pipeline live (needs weights)")
     parser.add_argument("--output", default="results/phase8_benchmark.json", help="Output JSON path")
     args = parser.parse_args()
 
-    dino_preds = None
-    if args.dino_predictions:
-        with open(args.dino_predictions) as f:
-            dino_preds = json.load(f)
+    if args.multi_method or args.method_predictions:
+        method_preds = None
+        if args.method_predictions:
+            with open(args.method_predictions) as f:
+                method_preds = json.load(f)
+        multi_output = Path(args.output).parent / "multi_method_benchmark.json"
+        run_multi_method_benchmark(
+            annotations_path=args.annotations,
+            method_predictions=method_preds,
+            output_path=multi_output,
+            run_pipeline=args.run_pipeline,
+        )
+    else:
+        dino_preds = None
+        if args.dino_predictions:
+            with open(args.dino_predictions) as f:
+                dino_preds = json.load(f)
 
-    yolo_preds = None
-    if args.yolo_predictions:
-        with open(args.yolo_predictions) as f:
-            yolo_preds = json.load(f)
+        yolo_preds = None
+        if args.yolo_predictions:
+            with open(args.yolo_predictions) as f:
+                yolo_preds = json.load(f)
 
-    run_benchmark(
-        annotations_path=args.annotations,
-        dino_predictions=dino_preds,
-        yolo_predictions=yolo_preds,
-        output_path=args.output,
-        run_pipeline=args.run_pipeline,
-    )
+        run_benchmark(
+            annotations_path=args.annotations,
+            dino_predictions=dino_preds,
+            yolo_predictions=yolo_preds,
+            output_path=args.output,
+            run_pipeline=args.run_pipeline,
+        )

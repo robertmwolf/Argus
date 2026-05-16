@@ -407,3 +407,247 @@ class TestEvaluateCrossid:
         dets = [{"confidence": 0.9, "obb": {}}, _make_crossid_det()]
         result = evaluate_crossid(dets)
         assert result["n_detections"] == 2
+
+
+# ---------------------------------------------------------------------------
+# extract_method_predictions
+# ---------------------------------------------------------------------------
+
+def _make_group(method, confidence, cx=100, cy=100, w=200, h=10, angle=5.0, length=200.0):
+    """Build a minimal pipeline-style grouped detection dict."""
+    return {
+        "obb": {"cx": cx, "cy": cy, "w": w, "h": h, "angle_deg": angle},
+        "streak_length_px": length,
+        "sources": [{"method": method, "confidence": confidence}],
+    }
+
+
+class TestExtractMethodPredictions:
+    def test_single_method_group_produces_that_method_and_unified(self):
+        from eval.metrics import extract_method_predictions
+        groups = [_make_group("dinov3_vitb", 0.90)]
+        result = extract_method_predictions(groups, "img1.fits")
+        assert "dinov3_vitb" in result
+        assert "unified" in result
+        assert len(result["dinov3_vitb"]) == 1
+        assert len(result["unified"]) == 1
+
+    def test_unified_confidence_equals_single_source_confidence(self):
+        from eval.metrics import extract_method_predictions
+        groups = [_make_group("dinov3_vitb", 0.85)]
+        result = extract_method_predictions(groups, "img1.fits")
+        assert result["unified"][0]["confidence"] == pytest.approx(0.85)
+
+    def test_noisy_or_raises_confidence_for_two_methods(self):
+        from eval.metrics import extract_method_predictions
+        # Two sources on the same streak
+        group = {
+            "obb": {"cx": 100, "cy": 100, "w": 200, "h": 10, "angle_deg": 5.0},
+            "streak_length_px": 200.0,
+            "sources": [
+                {"method": "dinov3_vitb", "confidence": 0.80},
+                {"method": "astride",     "confidence": 0.60},
+            ],
+        }
+        result = extract_method_predictions([group], "img1.fits")
+        # noisy-OR: 1 - (1-0.80)*(1-0.60) = 1 - 0.08 = 0.92
+        assert result["unified"][0]["confidence"] == pytest.approx(0.92, abs=1e-6)
+
+    def test_multiple_groups_accumulate_correctly(self):
+        from eval.metrics import extract_method_predictions
+        groups = [
+            _make_group("dinov3_vitb", 0.90, cx=100),
+            _make_group("yolo",        0.70, cx=500),
+        ]
+        result = extract_method_predictions(groups, "img1.fits")
+        assert len(result["dinov3_vitb"]) == 1
+        assert len(result["yolo"]) == 1
+        assert len(result["unified"]) == 2
+
+    def test_synthetic_unified_source_in_input_is_ignored(self):
+        """If pipeline already added a 'unified' source, it should not double-count."""
+        from eval.metrics import extract_method_predictions
+        group = {
+            "obb": {"cx": 100, "cy": 100, "w": 200, "h": 10, "angle_deg": 5.0},
+            "streak_length_px": 200.0,
+            "sources": [
+                {"method": "unified",     "confidence": 0.92},  # pre-existing
+                {"method": "dinov3_vitb", "confidence": 0.80},
+                {"method": "astride",     "confidence": 0.60},
+            ],
+        }
+        result = extract_method_predictions([group], "img1.fits")
+        # Individual methods should be extracted
+        assert len(result["dinov3_vitb"]) == 1
+        assert len(result["astride"]) == 1
+        # Unified should be recomputed from the two individual methods only
+        assert result["unified"][0]["confidence"] == pytest.approx(0.92, abs=1e-6)
+
+    def test_group_without_obb_is_skipped(self):
+        from eval.metrics import extract_method_predictions
+        group = {"streak_length_px": 100.0, "sources": [{"method": "yolo", "confidence": 0.8}]}
+        result = extract_method_predictions([group], "img1.fits")
+        assert result["unified"] == []
+        assert "yolo" not in result
+
+    def test_image_id_is_stamped_on_all_predictions(self):
+        from eval.metrics import extract_method_predictions
+        groups = [_make_group("yolo", 0.75)]
+        result = extract_method_predictions(groups, "frame42.fits")
+        assert result["yolo"][0]["image_id"] == "frame42.fits"
+        assert result["unified"][0]["image_id"] == "frame42.fits"
+
+    def test_unified_confidence_capped_at_0_99(self):
+        from eval.metrics import extract_method_predictions
+        # Four very high-confidence detections — noisy-OR would exceed 0.99
+        group = {
+            "obb": {"cx": 100, "cy": 100, "w": 200, "h": 10, "angle_deg": 0.0},
+            "streak_length_px": 200.0,
+            "sources": [
+                {"method": "dinov3_vitb", "confidence": 0.99},
+                {"method": "yolo",        "confidence": 0.98},
+                {"method": "astride",     "confidence": 0.97},
+            ],
+        }
+        result = extract_method_predictions([group], "img1.fits")
+        assert result["unified"][0]["confidence"] <= 0.99
+
+
+# ---------------------------------------------------------------------------
+# format_comparison_table
+# ---------------------------------------------------------------------------
+
+class TestFormatComparisonTable:
+    def _make_metrics(self, precision=0.9, recall=0.8, f1=0.85, map50=0.75, map75=0.60):
+        return {
+            "precision": precision, "recall": recall, "f1": f1,
+            "map_50": map50, "map_75": map75,
+            "mean_angle_error_deg": 2.5,
+            "per_band": {
+                "short":  {"precision": 0.8, "recall": 0.7, "f1": 0.75},
+                "medium": {"precision": 0.9, "recall": 0.85, "f1": 0.87},
+                "long":   {"precision": 0.95, "recall": 0.90, "f1": 0.92},
+            },
+        }
+
+    def test_unified_appears_first(self):
+        from eval.benchmark import format_comparison_table
+        method_metrics = {
+            "yolo":    self._make_metrics(),
+            "unified": self._make_metrics(precision=0.95),
+        }
+        table = format_comparison_table(method_metrics)
+        unified_pos = table.index("Unified")
+        yolo_pos    = table.index("YOLO")
+        assert unified_pos < yolo_pos
+
+    def test_table_contains_all_methods(self):
+        from eval.benchmark import format_comparison_table
+        method_metrics = {
+            "unified":     self._make_metrics(),
+            "dinov3_vitb": self._make_metrics(),
+            "astride":     self._make_metrics(),
+        }
+        table = format_comparison_table(method_metrics)
+        assert "Unified" in table
+        assert "DINOv3 ViT-B" in table
+        assert "ASTRiDE" in table
+
+    def test_table_contains_metric_rows(self):
+        from eval.benchmark import format_comparison_table
+        table = format_comparison_table({"unified": self._make_metrics()})
+        for label in ("Precision", "Recall", "F1", "mAP@0.5", "mAP@0.75", "Angle error"):
+            assert label in table
+
+    def test_per_band_section_present(self):
+        from eval.benchmark import format_comparison_table
+        table = format_comparison_table({"unified": self._make_metrics()})
+        assert "Per-band" in table
+        assert "Short" in table
+        assert "Medium" in table
+        assert "Long" in table
+
+
+# ---------------------------------------------------------------------------
+# run_multi_method_benchmark
+# ---------------------------------------------------------------------------
+
+class TestRunMultiMethodBenchmark:
+    def _make_coco(self, tmp_path):
+        coco = {
+            "images": [{"id": 1, "file_name": "img001.fits", "width": 512, "height": 512}],
+            "annotations": [{
+                "id": 1, "image_id": 1, "category_id": 0, "iscrowd": 0,
+                "bbox": [50, 90, 200, 15],
+                "obb": [150.0, 97.5, 200.0, 15.0, 0.0],
+                "area": 3000,
+            }],
+            "categories": [{"id": 0, "name": "streak"}],
+        }
+        ann_file = tmp_path / "test.json"
+        ann_file.write_text(json.dumps(coco))
+        return ann_file
+
+    def _make_method_preds(self, image_id="img001.fits"):
+        obb = {"cx": 150.0, "cy": 97.5, "w": 200.0, "h": 15.0, "angle_deg": 0.0}
+        def _p(conf):
+            return {"image_id": image_id, "confidence": conf, "obb": obb, "streak_length_px": 200.0}
+        return {
+            "unified":     [_p(0.95)],
+            "dinov3_vitb": [_p(0.90)],
+            "astride":     [_p(0.75)],
+        }
+
+    def test_saves_json_with_methods_key(self, tmp_path):
+        from eval.benchmark import run_multi_method_benchmark
+        ann = self._make_coco(tmp_path)
+        out = tmp_path / "multi.json"
+        result = run_multi_method_benchmark(
+            annotations_path=ann,
+            method_predictions=self._make_method_preds(),
+            output_path=out,
+        )
+        assert out.exists()
+        saved = json.loads(out.read_text())
+        assert "methods" in saved
+        assert "unified" in saved["methods"]
+        assert "dinov3_vitb" in saved["methods"]
+
+    def test_unified_metrics_present(self, tmp_path):
+        from eval.benchmark import run_multi_method_benchmark
+        ann = self._make_coco(tmp_path)
+        out = tmp_path / "multi.json"
+        result = run_multi_method_benchmark(
+            annotations_path=ann,
+            method_predictions=self._make_method_preds(),
+            output_path=out,
+        )
+        assert "unified" in result["methods"]
+        u = result["methods"]["unified"]
+        assert "precision" in u
+        assert "recall" in u
+        assert "confusion_matrix_png" in u
+
+    def test_confusion_matrix_pngs_created(self, tmp_path):
+        from eval.benchmark import run_multi_method_benchmark
+        ann = self._make_coco(tmp_path)
+        out = tmp_path / "multi.json"
+        run_multi_method_benchmark(
+            annotations_path=ann,
+            method_predictions=self._make_method_preds(),
+            output_path=out,
+        )
+        cm_dir = tmp_path / "confusion_matrices"
+        assert cm_dir.exists()
+        pngs = list(cm_dir.glob("confusion_matrix_*.png"))
+        assert len(pngs) == 3  # unified, dinov3_vitb, astride
+
+    def test_raises_without_predictions_or_pipeline_flag(self, tmp_path):
+        from eval.benchmark import run_multi_method_benchmark
+        ann = self._make_coco(tmp_path)
+        with pytest.raises(ValueError, match="method_predictions"):
+            run_multi_method_benchmark(
+                annotations_path=ann,
+                method_predictions=None,
+                run_pipeline=False,
+            )

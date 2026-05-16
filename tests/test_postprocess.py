@@ -324,3 +324,76 @@ class TestClassifyDetectionQuality:
         from inference.postprocess import classify_detection_quality, QUALITY_LOW_CONF
         det = _make_quality_det(confidence=0.05, streak_length_px=5.0)
         assert classify_detection_quality(det, self.IMAGE_SHAPE) == QUALITY_LOW_CONF
+
+
+# ---------------------------------------------------------------------------
+# group_detections
+# ---------------------------------------------------------------------------
+
+class TestGroupDetections:
+    def test_empty_input_returns_empty(self):
+        from inference.postprocess import group_detections
+        assert group_detections([]) == []
+
+    def test_all_dets_have_streak_id(self):
+        from inference.postprocess import group_detections
+        dets = [_make_det(0.9), _make_det(0.8, cx=400.0, cy=400.0)]
+        result = group_detections(dets)
+        assert all("streak_id" in d for d in result)
+
+    def test_non_overlapping_get_different_streak_ids(self):
+        from inference.postprocess import group_detections
+        det1 = _make_det(0.9, cx=50.0, cy=50.0)
+        det2 = _make_det(0.8, cx=400.0, cy=400.0)
+        result = group_detections([det1, det2])
+        ids = {d["streak_id"] for d in result}
+        assert len(ids) == 2
+
+    def test_heavily_overlapping_same_streak_id(self):
+        """Nearly identical detections from two methods → same streak_id."""
+        from inference.postprocess import group_detections
+        det1 = _make_det(0.9, cx=64.0, cy=64.0, angle_deg=45.0)
+        det2 = _make_det(0.7, cx=64.5, cy=64.5, angle_deg=45.0)
+        result = group_detections([det1, det2])
+        ids = [d["streak_id"] for d in result]
+        assert ids[0] == ids[1], "Heavily overlapping detections must share a streak_id"
+
+    def test_thin_streak_lateral_offset_groups_correctly(self):
+        """Two thin 5×500 OBBs shifted 3 px perpendicular have IoU~0.25 but IoM~0.7.
+
+        This is the core regression: before IoM was added, these would get
+        different streak_ids even though they clearly see the same streak.
+        """
+        from inference.postprocess import group_detections
+        # Both OBBs represent the same 45° streak, one shifted 3 px perpendicular
+        det1 = {"confidence": 0.9, "method": "ml",
+                 "obb": {"cx": 250.0, "cy": 250.0, "w": 500.0, "h": 5.0, "angle_deg": 45.0}}
+        # shift 3 px along the perpendicular direction (−sin45, cos45)
+        perp = math.cos(math.radians(45.0))
+        det2 = {"confidence": 0.7, "method": "opencv",
+                 "obb": {"cx": 250.0 - 3 * perp, "cy": 250.0 + 3 * perp,
+                         "w": 500.0, "h": 5.0, "angle_deg": 45.0}}
+        result = group_detections([det1, det2])
+        ids = [d["streak_id"] for d in result]
+        assert ids[0] == ids[1], (
+            "Thin streaks with small perpendicular offset must share a streak_id "
+            "(IoU is low but IoM is high)"
+        )
+
+    def test_partial_detection_groups_with_full(self):
+        """A 200 px partial detection should group with a 500 px full detection.
+
+        IoU ≈ 0.4 → would fail with IoU-only grouping.
+        IoM ≈ 1.0 → correctly groups via IoM.
+        """
+        from inference.postprocess import group_detections
+        full  = {"confidence": 0.9, "method": "ml",
+                  "obb": {"cx": 250.0, "cy": 128.0, "w": 500.0, "h": 5.0, "angle_deg": 0.0}}
+        # Partial: same centre x, aligned, but only 200 px long
+        partial = {"confidence": 0.6, "method": "yolo",
+                    "obb": {"cx": 250.0, "cy": 128.0, "w": 200.0, "h": 5.0, "angle_deg": 0.0}}
+        result = group_detections([full, partial])
+        ids = [d["streak_id"] for d in result]
+        assert ids[0] == ids[1], (
+            "Partial detection must group with the full detection of the same streak"
+        )

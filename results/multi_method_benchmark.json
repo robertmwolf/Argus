@@ -1,0 +1,86 @@
+{
+  "date_recorded": "2026-05-16T00:08:12Z",
+  "methods": {
+    "unified": {
+      "precision": 0.2992,
+      "recall": 0.7208,
+      "f1": 0.4229,
+      "map_50": 0.4063,
+      "map_75": 0.3175,
+      "mean_angle_error_deg": 0.018,
+      "per_band": {
+        "short": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "medium": {
+          "precision": 0.0204,
+          "recall": 0.1667,
+          "f1": 0.0364
+        },
+        "long": {
+          "precision": 0.3699,
+          "recall": 0.7252,
+          "f1": 0.4899
+        }
+      },
+      "n_predictions": 742,
+      "confusion_matrix_png": "results/confusion_matrices/confusion_matrix_unified.png"
+    },
+    "dinov3_vitb": {
+      "precision": 0.0926,
+      "recall": 0.8929,
+      "f1": 0.1678,
+      "map_50": 0.7548,
+      "map_75": 0.5938,
+      "mean_angle_error_deg": 0.0,
+      "per_band": {
+        "short": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "medium": {
+          "precision": 0.0172,
+          "recall": 0.1667,
+          "f1": 0.0312
+        },
+        "long": {
+          "precision": 0.0931,
+          "recall": 0.8974,
+          "f1": 0.1687
+        }
+      },
+      "n_predictions": 2969,
+      "confusion_matrix_png": "results/confusion_matrices/confusion_matrix_dinov3_vitb.png"
+    },
+    "opencv": {
+      "precision": 0.0135,
+      "recall": 0.0097,
+      "f1": 0.0113,
+      "map_50": 0.0001,
+      "map_75": 0.0001,
+      "mean_angle_error_deg": 7.884,
+      "per_band": {
+        "short": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "medium": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "long": {
+          "precision": 0.0833,
+          "recall": 0.0099,
+          "f1": 0.0178
+        }
+      },
+      "n_predictions": 223,
+      "confusion_matrix_png": "results/confusion_matrices/confusion_matrix_opencv.png"
+    }
+  }
+}

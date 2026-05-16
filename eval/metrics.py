@@ -426,6 +426,80 @@ def evaluate(
 
 
 # ---------------------------------------------------------------------------
+# Multi-method prediction extraction
+# ---------------------------------------------------------------------------
+
+def extract_method_predictions(
+    grouped_pipeline_output: list[dict],
+    image_id: str | int,
+) -> dict[str, list[dict]]:
+    """Extract per-method and unified prediction lists from grouped pipeline output.
+
+    ``inference.pipeline.run()`` returns one dict per streak group, each with
+    a ``sources`` list recording which detectors fired and at what confidence.
+    This function fans those entries back out into flat per-method prediction
+    lists that are compatible with ``evaluate()``.
+
+    The primary OBB (from the highest-confidence single-method detection in
+    the group) is reused for every source in that group.  This is a necessary
+    approximation: the pipeline retains only one OBB per streak group.
+
+    A synthetic ``"unified"`` method is included whose confidence is the
+    noisy-OR combination of all individual-method confidences::
+
+        unified_conf = 1 – Π(1 – conf_i)
+
+    For a single-source group this equals that source's confidence exactly.
+
+    Args:
+        grouped_pipeline_output: Streak-group dicts returned by
+            ``inference.pipeline.run()``.  Each must have ``obb``,
+            ``streak_length_px``, and ``sources`` keys.
+        image_id: Image identifier (filename) stamped on every prediction.
+
+    Returns:
+        Dict mapping method name → list of prediction dicts for ``evaluate()``.
+        Always includes the ``"unified"`` key.
+    """
+    method_preds: dict[str, list[dict]] = {}
+    unified_preds: list[dict] = []
+
+    for group in grouped_pipeline_output:
+        obb = group.get("obb")
+        if not obb:
+            continue
+        length = group.get("streak_length_px") or 0.0
+        # Filter out the synthetic "unified" entry if the pipeline already added it.
+        sources = [s for s in (group.get("sources") or []) if s.get("method") != "unified"]
+
+        for src in sources:
+            method = src.get("method")
+            if not method:
+                continue
+            method_preds.setdefault(method, []).append({
+                "image_id": image_id,
+                "confidence": float(src["confidence"]),
+                "obb": obb,
+                "streak_length_px": float(length),
+            })
+
+        if sources:
+            unified_conf = min(
+                0.99,
+                1.0 - math.prod(1.0 - float(s["confidence"]) for s in sources),
+            )
+            unified_preds.append({
+                "image_id": image_id,
+                "confidence": unified_conf,
+                "obb": obb,
+                "streak_length_px": float(length),
+            })
+
+    method_preds["unified"] = unified_preds
+    return method_preds
+
+
+# ---------------------------------------------------------------------------
 # Confusion matrix
 # ---------------------------------------------------------------------------
 
@@ -434,6 +508,7 @@ def confusion_matrix(
     ground_truth: list[dict],
     iou_threshold: float = 0.5,
     save_path: str | Path | None = None,
+    title: str = "",
 ) -> np.ndarray:
     """Compute and optionally plot a 2×2 confusion matrix for streak detection.
 
@@ -449,6 +524,7 @@ def confusion_matrix(
         iou_threshold: IoU threshold for TP matching.
         save_path: If given, save a PNG confusion-matrix plot to this path.
             Parent directory is created if needed.
+        title: Optional label shown in the PNG title (e.g. method name).
 
     Returns:
         2×2 numpy array [[TP, FP], [FN, TN]] as int32.
@@ -479,17 +555,18 @@ def confusion_matrix(
     cm = np.array([[tp, fp], [fn, tn]], dtype=np.int32)
 
     if save_path is not None:
-        _plot_confusion_matrix(cm, Path(save_path))
+        _plot_confusion_matrix(cm, Path(save_path), title=title)
 
     return cm
 
 
-def _plot_confusion_matrix(cm: np.ndarray, save_path: Path) -> None:
+def _plot_confusion_matrix(cm: np.ndarray, save_path: Path, title: str = "") -> None:
     """Render and save a confusion matrix PNG.
 
     Args:
         cm: 2×2 array [[TP, FP], [FN, TN]].
         save_path: Output path for the PNG file.
+        title: Optional title prefix shown above the matrix.
     """
     try:
         import matplotlib
@@ -520,7 +597,8 @@ def _plot_confusion_matrix(cm: np.ndarray, save_path: Path) -> None:
                 fontsize=14,
             )
 
-    ax.set_title(f"Confusion Matrix (IoU ≥ 0.5)\n"
+    prefix = f"{title} — " if title else ""
+    ax.set_title(f"{prefix}Confusion Matrix (IoU ≥ 0.5)\n"
                  f"Precision={cm[0,0]/(cm[0,0]+cm[0,1]+1e-9):.1%}  "
                  f"Recall={cm[0,0]/(cm[0,0]+cm[1,0]+1e-9):.1%}")
     fig.tight_layout()
