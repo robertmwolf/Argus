@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
+import numpy as np
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -172,8 +173,9 @@ async def test_full_upload_poll_result_cycle(client, tmp_path):
     # Drain the queue and run the worker synchronously inside the mock context
     from api.main import _process_job, app as _app
 
+    _fake_array = np.zeros((10, 10, 3), dtype=np.uint8)
     with patch("inference.pipeline.load_model", return_value=(object(), object())), \
-         patch("inference.pipeline.run", return_value=[fake_detection]):
+         patch("inference.pipeline.run_with_array", return_value=([fake_detection], _fake_array)):
         queued_id = await _app.state.queue.dequeue()
         await _process_job(queued_id, _app)
 
@@ -183,5 +185,11 @@ async def test_full_upload_poll_result_cycle(client, tmp_path):
     assert body["image_width"] is not None
     assert body["image_height"] is not None
     assert len(body["detections"]) == 1
-    assert body["detections"][0]["method"] == "ml"
-    assert body["detections"][0]["confidence"] == pytest.approx(0.92)
+    det = body["detections"][0]
+    # Top-level method is always "unified"; individual method is in sources
+    assert det["method"] == "unified"
+    # Single-source noisy-OR equals the source's own confidence
+    assert det["confidence"] == pytest.approx(0.92)
+    sources = det["sources"]
+    assert sources[0]["method"] == "unified"
+    assert sources[1]["method"] == "ml"
