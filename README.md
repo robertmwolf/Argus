@@ -1,13 +1,12 @@
 # ARGUS
 ### Automated Recognition and Grading of Unidentified Streaks
 
-ARGUS is an academic research pipeline for automated satellite streak detection
+ARGUS is a pipeline for automated satellite streak detection
 and identification in FITS telescope images.  It runs four independent detectors
 in parallel — two ML-based (DINO-DETR with DINOv3 ViT-B backbone, YOLO11n-OBB)
 and two classical (ASTRiDE-derived, OpenCV connected-components) — then merges
-their results by grouping overlapping detections across methods rather than
-suppressing them, so the UI can surface multi-method agreement.  Streak
-orientation is refined via the Radon transform, each streak is traced to its
+their results by grouping overlapping detections so the UI can surface multi-method agreement.  
+Streak orientation is refined via the Radon transform, each streak is traced to its
 true endpoints across the full image, and detected objects are cross-identified
 against a local TLE catalog using SGP4 propagation and multi-factor confidence
 scoring.  Results are served through a FastAPI backend and React frontend.
