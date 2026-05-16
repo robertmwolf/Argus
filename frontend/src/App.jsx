@@ -106,7 +106,7 @@ export default function App() {
     displayDetections.forEach((det, idx) => {
       if (disabledStreaks.has(idx)) return
       const sources = det.sources ?? [{ method: det.method, confidence: det.confidence }]
-      const passes = sources.some(s => (s.confidence ?? 1) >= (methodThresholds[s.method] ?? 0))
+      const passes = sources.every(s => (s.confidence ?? 1) >= (methodThresholds[s.method] ?? 0))
       if (passes) set.add(idx)
     })
     return set

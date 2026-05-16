@@ -39,8 +39,70 @@ Space-Track has flagged the following as violations:
 **Rules**:
 1. Once you download historical TLE data from `gp_history`, store it locally and never re-download it.  Historical TLEs are immutable — cache them permanently.
 2. For current/recent TLEs (live pipeline), use the `GP` class, at most **once per hour**.
-3. For large historical date ranges or full-catalog dumps, download the **annual TLE zip bundles** — do not use `gp_history` for bulk retrieval:
-   https://ln5.sync.com/dl/afd354190/c5cd2q72-a5qjzp4q-nbjdiqkr-cenajuqu
+3. For large historical date ranges or full-catalog dumps, download the **annual TLE zip bundles** — do not use `gp_history` for bulk retrieval.
+
+**GP_History policy (important):** Space-Track explicitly prohibits using `gp_history` without
+both a specific NORAD_CAT_ID list AND a short epoch range.  It cannot be used to bootstrap the
+full catalog across a broad date window.  Use the annual zip bundles instead.
+
+---
+
+## Bootstrapping Historical TLE Coverage
+
+ARGUS cross-identification requires TLEs with epochs within ≤3 days of the observation time
+(LEO staleness limit).  A fresh install has no historical coverage; images older than 72 hours
+will produce unknown cross-ID results unless the catalog is bootstrapped first.
+
+### Automated download (recommended)
+
+`scripts/download_tle_bundle.py` uses the Space-Track **fileshare** API to discover and
+download annual TLE bundles, then ingests them via the existing `bootstrap_tle_catalog` loader.
+
+```bash
+export SPACETRACK_USER=your@email.com
+export SPACETRACK_PASS=yourpassword
+export ARGUS_ENV=production
+
+# See what bundles Space-Track has available:
+python scripts/download_tle_bundle.py --list
+
+# Download bundle(s) for the last 3 months (default):
+python scripts/download_tle_bundle.py
+
+# Explicit year (e.g. current partial year):
+python scripts/download_tle_bundle.py --year 2026
+
+# 6-month window (may span two years → downloads two bundles):
+python scripts/download_tle_bundle.py --months 6
+
+# Also refresh the live GP snapshot after loading:
+python scripts/download_tle_bundle.py --update-current
+```
+
+The script is idempotent: years already in `tle_catalog_coverage` are skipped automatically.
+Use `--force` to re-ingest.
+
+### Manual download (fallback)
+
+If the fileshare API is unavailable, download from Space-Track's cloud storage directly:
+```
+https://ln5.sync.com/dl/afd354190/c5cd2q72-a5qjzp4q-nbjdiqkr-cenajuqu
+```
+Save the file(s) to `data/tle_zips/` then run:
+```bash
+python scripts/bootstrap_tle_catalog.py --zip-dir data/tle_zips/ --years 2026
+```
+
+### Coverage strategy
+
+| Observation age | Source | Script |
+|----------------|--------|--------|
+| < 72 h | CelesTrak live refresh (auto) | none — handled by `TLECatalogManager` |
+| 72 h – current year | Annual zip bundle (current year) | `download_tle_bundle.py` |
+| Prior years | Annual zip bundle (per year) | `download_tle_bundle.py --year YYYY` |
+
+Each annual bundle covers one calendar year.  A partial bundle for the current year
+is typically available on Space-Track and grows as the year progresses.
 
 ---
 

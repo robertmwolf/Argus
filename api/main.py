@@ -16,7 +16,6 @@ import asyncio
 import io
 import json
 import logging
-import math
 import os
 import shutil
 import tempfile
@@ -31,6 +30,7 @@ from fastapi.responses import Response
 from sqlalchemy import select, text
 
 from db.models import Detection, Identification, Observation, get_engine, get_session_factory, init_db
+from inference.confidence import compute_unified_confidence
 
 logger = logging.getLogger(__name__)
 
@@ -566,13 +566,11 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
                 reverse=True,
             )
 
-            # Noisy-OR: treat each detector as independent evidence.
-            # unified = 1 - Π(1 - conf_i).  For a single source this equals
-            # that source's confidence exactly.
-            unified_conf = min(
-                0.99,
-                1.0 - math.prod(1.0 - s["confidence"] for s in sources),
-            )
+            # Precision-recall calibrated Unified Confidence Score.
+            # Each detector is weighted by its empirical F-0.5 score so that
+            # detectors with more false positives contribute proportionally less.
+            unified_result = compute_unified_confidence(sources)
+            unified_conf = unified_result["score"]
             sources_with_unified = [
                 {"method": "unified", "confidence": unified_conf}
             ] + sources

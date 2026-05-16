@@ -9,7 +9,7 @@
  */
 
 const METHOD_LABELS = {
-  unified:     'Unified',
+  unified:     'Unified Confidence',
   astride:     'ASTRiDE',
   opencv:      'OpenCV',
   dinov3_vitb: 'DINOv3 ViT-B',

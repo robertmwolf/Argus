@@ -432,15 +432,17 @@ class TestExtractMethodPredictions:
         assert len(result["dinov3_vitb"]) == 1
         assert len(result["unified"]) == 1
 
-    def test_unified_confidence_equals_single_source_confidence(self):
+    def test_unified_confidence_matches_weighted_formula_single_source(self):
         from eval.metrics import extract_method_predictions
+        from inference.confidence import compute_unified_confidence
         groups = [_make_group("dinov3_vitb", 0.85)]
         result = extract_method_predictions(groups, "img1.fits")
-        assert result["unified"][0]["confidence"] == pytest.approx(0.85)
+        expected = compute_unified_confidence([{"method": "dinov3_vitb", "confidence": 0.85}])["score"]
+        assert result["unified"][0]["confidence"] == pytest.approx(expected)
 
-    def test_noisy_or_raises_confidence_for_two_methods(self):
+    def test_two_methods_produce_higher_unified_than_one(self):
         from eval.metrics import extract_method_predictions
-        # Two sources on the same streak
+        from inference.confidence import compute_unified_confidence
         group = {
             "obb": {"cx": 100, "cy": 100, "w": 200, "h": 10, "angle_deg": 5.0},
             "streak_length_px": 200.0,
@@ -450,8 +452,14 @@ class TestExtractMethodPredictions:
             ],
         }
         result = extract_method_predictions([group], "img1.fits")
-        # noisy-OR: 1 - (1-0.80)*(1-0.60) = 1 - 0.08 = 0.92
-        assert result["unified"][0]["confidence"] == pytest.approx(0.92, abs=1e-6)
+        expected = compute_unified_confidence([
+            {"method": "dinov3_vitb", "confidence": 0.80},
+            {"method": "astride",     "confidence": 0.60},
+        ])["score"]
+        assert result["unified"][0]["confidence"] == pytest.approx(expected, abs=1e-6)
+        # Two detectors should produce a higher score than either alone
+        single = compute_unified_confidence([{"method": "dinov3_vitb", "confidence": 0.80}])["score"]
+        assert result["unified"][0]["confidence"] > single
 
     def test_multiple_groups_accumulate_correctly(self):
         from eval.metrics import extract_method_predictions
@@ -481,7 +489,12 @@ class TestExtractMethodPredictions:
         assert len(result["dinov3_vitb"]) == 1
         assert len(result["astride"]) == 1
         # Unified should be recomputed from the two individual methods only
-        assert result["unified"][0]["confidence"] == pytest.approx(0.92, abs=1e-6)
+        from inference.confidence import compute_unified_confidence
+        expected = compute_unified_confidence([
+            {"method": "dinov3_vitb", "confidence": 0.80},
+            {"method": "astride",     "confidence": 0.60},
+        ])["score"]
+        assert result["unified"][0]["confidence"] == pytest.approx(expected, abs=1e-6)
 
     def test_group_without_obb_is_skipped(self):
         from eval.metrics import extract_method_predictions

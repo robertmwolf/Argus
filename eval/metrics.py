@@ -34,6 +34,8 @@ from typing import Sequence
 
 import numpy as np
 
+from inference.confidence import compute_unified_confidence
+
 # Band thresholds (pixels)
 _SHORT_MAX = 150.0
 _LONG_MIN = 400.0
@@ -484,10 +486,7 @@ def extract_method_predictions(
             })
 
         if sources:
-            unified_conf = min(
-                0.99,
-                1.0 - math.prod(1.0 - float(s["confidence"]) for s in sources),
-            )
+            unified_conf = compute_unified_confidence(sources)["score"]
             unified_preds.append({
                 "image_id": image_id,
                 "confidence": unified_conf,
