@@ -16,6 +16,7 @@ import asyncio
 import io
 import json
 import logging
+import math
 import os
 import shutil
 import tempfile
@@ -180,7 +181,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
         # Set FAST_MODE=true in the environment to skip Radon + cross-ID.
         try:
             from inference.pipeline import load_model as pipeline_load_model
-            from inference.pipeline import run as pipeline_run
+            from inference.pipeline import run_with_array as pipeline_run
         except ImportError as exc:
             raise RuntimeError(
                 "ML packages (torch/mmdet) are not installed in this environment. "
@@ -194,7 +195,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
             app.state.pipeline_device = inference_device
             app.state.model_loaded = True
 
-        detections = await asyncio.to_thread(
+        detections, fits_array = await asyncio.to_thread(
             pipeline_run,
             fits_path=tmp_path,
             model=app.state.pipeline_model,
@@ -202,7 +203,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
         )
         app.state.model_loaded = True
 
-        png_bytes = await asyncio.to_thread(_render_png, tmp_path, detections)
+        png_bytes = await asyncio.to_thread(_render_png, tmp_path, detections, fits_array)
         await storage.save_image(job_id, png_bytes)
 
         async with session_factory() as session:
@@ -390,12 +391,19 @@ def _render_fits_preview(data: bytes) -> bytes | None:
         return None
 
 
-def _render_png(fits_path: Path, detections: list[dict]) -> bytes:
+def _render_png(
+    fits_path: Path,
+    detections: list[dict],
+    array: "np.ndarray | None" = None,
+) -> bytes:
     """Render FITS data to a PNG with bounding box overlays.
 
     Args:
-        fits_path: Path to the FITS file.
+        fits_path: Path to the FITS file (used only when *array* is None).
         detections: List of detection dicts from the pipeline.
+        array: Pre-loaded uint8 (H, W, 3) image array from the pipeline run.
+            When provided the FITS file is not re-parsed, saving a full I/O
+            and normalisation pass.
 
     Returns:
         PNG file bytes.
@@ -404,10 +412,13 @@ def _render_png(fits_path: Path, detections: list[dict]) -> bytes:
         import numpy as np
         from PIL import Image, ImageDraw
 
-        from inference.fits_loader import FITSLoader
+        if array is not None:
+            arr = array
+        else:
+            from inference.fits_loader import FITSLoader
 
-        result = FITSLoader().load(fits_path)
-        arr = result["array"]  # (H, W, 3) uint8
+            result = FITSLoader().load(fits_path)
+            arr = result["array"]  # (H, W, 3) uint8
 
         img = Image.fromarray(arr, mode="RGB")
         draw = ImageDraw.Draw(img, "RGBA")
@@ -555,12 +566,23 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
                 reverse=True,
             )
 
+            # Noisy-OR: treat each detector as independent evidence.
+            # unified = 1 - Π(1 - conf_i).  For a single source this equals
+            # that source's confidence exactly.
+            unified_conf = min(
+                0.99,
+                1.0 - math.prod(1.0 - s["confidence"] for s in sources),
+            )
+            sources_with_unified = [
+                {"method": "unified", "confidence": unified_conf}
+            ] + sources
+
             detections.append({
                 "streak_id": primary.streak_id,
-                "sources": sources,
-                # Top-level method/confidence kept for backwards-compat with canvas overlay
-                "method": sources[0]["method"],
-                "confidence": sources[0]["confidence"],
+                "sources": sources_with_unified,
+                # Top-level fields reflect the unified score for canvas overlay
+                "method": "unified",
+                "confidence": unified_conf,
                 "bbox": [primary.bbox_x1, primary.bbox_y1, primary.bbox_x2, primary.bbox_y2],
                 "obb": {
                     "cx": primary.obb_cx,

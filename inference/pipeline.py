@@ -60,6 +60,14 @@ def _patch_torch_load_weights_only() -> None:
 _patch_torch_load_weights_only()
 
 # ---------------------------------------------------------------------------
+# Module-level caches
+# ---------------------------------------------------------------------------
+
+# YOLO weights are ~50 MB — reload once, reuse across all run() calls.
+_yolo_model_cache: dict[str, Any] = {}
+
+
+# ---------------------------------------------------------------------------
 # Constants / defaults
 # ---------------------------------------------------------------------------
 
@@ -363,13 +371,7 @@ def _run_tta_inference(
         det["bbox"] = [w - x2, y1, w - x1, y2]
         all_dets.append(det)
 
-    vflip = array[::-1, :, :].copy()
-    for det in _run_inference(model, vflip, image_size, confidence_threshold, model_name):
-        x1, y1, x2, y2 = det["bbox"]
-        det["bbox"] = [x1, h - y2, x2, h - y1]
-        all_dets.append(det)
-
-    logger.debug("TTA: %d detections from 3 augmented views", len(all_dets))
+    logger.debug("TTA: %d detections from 2 augmented views", len(all_dets))
     return all_dets
 
 
@@ -405,7 +407,10 @@ def _run_yolo_detector(
         logger.debug("ultralytics not installed; skipping YOLO ensemble")
         return []
 
-    yolo = YOLO(str(weights))
+    cache_key = str(weights)
+    if cache_key not in _yolo_model_cache:
+        _yolo_model_cache[cache_key] = YOLO(str(weights))
+    yolo = _yolo_model_cache[cache_key]
     results = yolo(array, verbose=False, conf=confidence_threshold)
 
     detections: list[dict] = []
@@ -616,12 +621,12 @@ def load_model(
 # Main pipeline entry point
 # ---------------------------------------------------------------------------
 
-def run(
+def run_with_array(
     fits_path: str | Path,
     fast: bool = False,
     model: Any | None = None,
     inference_device: Any | None = None,
-) -> list[dict]:
+) -> tuple[list[dict], "np.ndarray"]:
     """Run the full ARGUS inference pipeline on a single FITS image.
 
     Args:
@@ -636,7 +641,10 @@ def run(
             Required when ``model`` is passed; ignored otherwise.
 
     Returns:
-        List of detection dicts.  Each dict has keys:
+        Tuple of (detections, array).  ``array`` is the uint8 (H, W, 3) image
+        produced by FITSLoader — callers can pass it to downstream rendering
+        steps to avoid a second FITS parse.  Use ``run()`` for the list-only
+        interface.  Each detection dict has keys:
           confidence        — float, DINO score 0–1
           bbox              — [x1, y1, x2, y2] pixel coords
           obb               — {cx, cy, w, h, angle_deg}
@@ -730,10 +738,20 @@ def run(
 
     # --- 3. Postprocess: angle refinement + OBB + NMS -----------------------
     t2 = time.perf_counter()
+    import numpy as np
     from inference.postprocess import (
         bbox_to_obb, refine_angle, group_detections, nms_detections,
         extend_obb_to_streak_extent, classify_detection_quality,
     )
+
+    # Precompute greyscale array and background threshold once so that every
+    # extend_obb_to_streak_extent call shares the same stats instead of each
+    # recomputing median/std over the full image independently.
+    _gray_f32 = np.asarray(array, dtype=np.float32)
+    if _gray_f32.ndim == 3:
+        _gray_f32 = _gray_f32.mean(axis=2)
+    _bg = float(np.median(_gray_f32))
+    _extent_threshold = _bg + 3.0 * float(_gray_f32.std())
 
     h_img = array.shape[0]
     w_img = array.shape[1]
@@ -757,7 +775,7 @@ def run(
         obb = bbox_to_obb(det["bbox"], angle)
         # Extend OBB endpoints along the streak axis to the true streak tips —
         # DINO bboxes often cover only a fraction of a long streak.
-        obb = extend_obb_to_streak_extent(array, obb)
+        obb = extend_obb_to_streak_extent(array, obb, _gray=_gray_f32, _threshold=_extent_threshold)
         det["obb"] = obb
         det["streak_length_px"] = float(obb["w"])
 
@@ -766,7 +784,7 @@ def run(
     # same endpoint refinement that DINO receives above.
     for det in classical_dets + astride_dets:
         if det.get("obb"):
-            obb = extend_obb_to_streak_extent(array, det["obb"])
+            obb = extend_obb_to_streak_extent(array, det["obb"], _gray=_gray_f32, _threshold=_extent_threshold)
             det["obb"] = obb
             det["streak_length_px"] = float(obb["w"])
 
@@ -839,6 +857,23 @@ def run(
         "Pipeline complete: %d detections  "
         "[load=%.0fms  infer=%.0fms  post=%.0fms  crossid=%.0fms]",
         len(detections), fits_load_ms, inference_ms, postprocess_ms, crossid_ms,
+    )
+    return detections, array
+
+
+def run(
+    fits_path: str | Path,
+    fast: bool = False,
+    model: Any | None = None,
+    inference_device: Any | None = None,
+) -> list[dict]:
+    """Run the full ARGUS inference pipeline on a single FITS image.
+
+    Thin wrapper around ``run_with_array()`` for callers that only need the
+    detection list.  See ``run_with_array()`` for full parameter documentation.
+    """
+    detections, _ = run_with_array(
+        fits_path, fast=fast, model=model, inference_device=inference_device
     )
     return detections
 

@@ -138,7 +138,7 @@ def refine_angle(
     # Do NOT wrap the search window to [0, 180°) before calling radon — that
     # breaks the contiguous range when the window straddles the boundary.
     # skimage accepts any real θ, treating θ and θ+180° as equivalent.
-    step = 0.5
+    step = 1.0
     radon_center = 90.0 - initial_angle
     radon_angles = np.arange(
         radon_center - angle_search_range,
@@ -176,6 +176,8 @@ def extend_obb_to_streak_extent(
     obb: dict,
     sample_halfwidth: int = 8,
     threshold_sigma: float = 3.0,
+    _gray: "np.ndarray | None" = None,
+    _threshold: float | None = None,
 ) -> dict:
     """Extend OBB w/cx/cy so endpoints cover the full streak, not just the bbox.
 
@@ -204,34 +206,23 @@ def extend_obb_to_streak_extent(
     cos_a = math.cos(angle_rad)
     sin_a = math.sin(angle_rad)
 
-    gray = np.asarray(array, dtype=np.float32)
-    if gray.ndim == 3:
-        gray = gray.mean(axis=2)
+    if _gray is not None:
+        gray = _gray
+    else:
+        gray = np.asarray(array, dtype=np.float32)
+        if gray.ndim == 3:
+            gray = gray.mean(axis=2)
     h_img, w_img = gray.shape
 
-    bg = float(np.median(gray))
-    threshold = bg + threshold_sigma * float(gray.std())
+    if _threshold is not None:
+        threshold = _threshold
+    else:
+        bg = float(np.median(gray))
+        threshold = bg + threshold_sigma * float(gray.std())
 
     # Perpendicular unit vector (for the cross-section sample)
     perp_cos = -sin_a
     perp_sin = cos_a
-
-    def _strip_signal(t: float) -> float:
-        """Max pixel value across a perpendicular strip at parameter t.
-
-        Using max rather than mean lets a 1–2 px wide streak clear the
-        threshold even when the bbox centre is offset from the streak axis
-        and most of the strip samples background.
-        """
-        vals: list[float] = []
-        xc = cx + t * cos_a
-        yc = cy + t * sin_a
-        for s in range(-sample_halfwidth, sample_halfwidth + 1):
-            xi = int(round(xc + s * perp_cos))
-            yi = int(round(yc + s * perp_sin))
-            if 0 <= xi < w_img and 0 <= yi < h_img:
-                vals.append(float(gray[yi, xi]))
-        return max(vals) if vals else bg
 
     # Compute the t-range that keeps (x,y) inside the image
     eps = 1e-9
@@ -244,31 +235,53 @@ def extend_obb_to_streak_extent(
     t_lo = max(min(t_candidates) if t_candidates else -diag, -diag)
     t_hi = min(max(t_candidates) if t_candidates else diag,  diag)
 
-    # Collect all t values where the strip is above threshold
-    streak_ts = [
-        t for t in np.arange(t_lo, t_hi, 1.0)
-        if _strip_signal(t) > threshold
-    ]
+    # Vectorised strip sampling: build a (n_t × n_s) index grid covering all
+    # positions along the streak axis at once, then take the per-row max.
+    # Using max-per-strip (rather than mean) lets a 1–2 px wide streak clear
+    # the threshold even when the bbox centre is offset from the streak axis.
+    _t = np.arange(t_lo, t_hi, 1.0)
+    if _t.size == 0:
+        logger.debug("extend_obb: t-range empty — OBB unchanged")
+        return dict(obb)
 
-    if not streak_ts:
+    _s = np.arange(-sample_halfwidth, sample_halfwidth + 1)  # (n_s,)
+    _xc = cx + _t * cos_a  # (n_t,)
+    _yc = cy + _t * sin_a  # (n_t,)
+
+    _xi = np.clip(
+        np.round(_xc[:, None] + _s[None, :] * perp_cos).astype(np.intp),
+        0, w_img - 1,
+    )  # (n_t, n_s)
+    _yi = np.clip(
+        np.round(_yc[:, None] + _s[None, :] * perp_sin).astype(np.intp),
+        0, h_img - 1,
+    )  # (n_t, n_s)
+
+    _strip_max = gray[_yi, _xi].max(axis=1)  # (n_t,)
+    bright_idx = np.where(_strip_max > threshold)[0]
+
+    if bright_idx.size == 0:
         logger.debug("extend_obb: no bright pixels found along axis — OBB unchanged")
         return dict(obb)
 
     # Group bright t values into contiguous runs (gap tolerance = 5 px).
+    # bright_idx indexes into _t which steps by 1 px, so an index gap equals
+    # a t gap.  Vectorised: find where consecutive index gaps exceed tolerance,
+    # then build run (start, end) pairs without a Python loop.
     # Then select the run that contains t=0 (the OBB centre is guaranteed to
     # lie on the streak), falling back to the longest run if t=0 is not bright.
     # This prevents isolated noise spikes beyond the streak from inflating w.
     gap_tolerance = 5.0
-    runs: list[tuple[float, float]] = []
-    run_start = streak_ts[0]
-    run_end   = streak_ts[0]
-    for t in streak_ts[1:]:
-        if t - run_end <= gap_tolerance:
-            run_end = t
-        else:
-            runs.append((run_start, run_end))
-            run_start = run_end = t
-    runs.append((run_start, run_end))
+    if bright_idx.size == 1:
+        runs: list[tuple[float, float]] = [(float(_t[bright_idx[0]]), float(_t[bright_idx[0]]))]
+    else:
+        _gap_mask = np.diff(bright_idx) > gap_tolerance          # (n-1,)
+        _rs = np.concatenate([[0], np.where(_gap_mask)[0] + 1])  # run-start positions
+        _re = np.concatenate([np.where(_gap_mask)[0], [len(bright_idx) - 1]])  # run-end
+        runs = [
+            (float(_t[bright_idx[int(s)]]), float(_t[bright_idx[int(e)]]))
+            for s, e in zip(_rs, _re)
+        ]
 
     # Prefer the run that straddles t=0 (OBB centre on the streak)
     centre_runs = [(s, e) for s, e in runs if s <= 0.0 <= e]
@@ -357,6 +370,37 @@ def _rotated_iou(obb_a: dict, obb_b: dict) -> float:
         return 0.0
 
 
+def _rotated_iom(obb_a: dict, obb_b: dict) -> float:
+    """Compute intersection-over-minimum for two OBBs using Shapely.
+
+    Unlike IoU, IoM is robust to partial detections and perpendicular offsets
+    on thin elongated streaks.  A short detection that is fully contained within
+    a longer detection of the same streak scores IoM ≈ 1.0 but IoU ≈ 0.2 — IoU
+    would wrongly split them into different streak groups.
+
+    Args:
+        obb_a: First OBB dict {cx, cy, w, h, angle_deg}.
+        obb_b: Second OBB dict {cx, cy, w, h, angle_deg}.
+
+    Returns:
+        intersection / min(area_a, area_b) in [0, 1].  Returns 0.0 if either
+        polygon is degenerate or has zero area.
+    """
+    try:
+        poly_a = _obb_to_polygon(obb_a)
+        poly_b = _obb_to_polygon(obb_b)
+        if not poly_a.is_valid or not poly_b.is_valid:
+            return 0.0
+        min_area = min(poly_a.area, poly_b.area)
+        if min_area <= 0.0:
+            return 0.0
+        intersection = poly_a.intersection(poly_b).area
+        return float(intersection / min_area)
+    except Exception as exc:  # pragma: no cover
+        logger.debug("rotated IoM failed: %s", exc)
+        return 0.0
+
+
 def nms_detections(
     detections: list[dict],
     iou_threshold: float = 0.5,
@@ -410,12 +454,20 @@ def nms_detections(
 def group_detections(
     detections: list[dict],
     iou_threshold: float = 0.5,
+    iom_threshold: float = 0.3,
 ) -> list[dict]:
     """Group overlapping detections by streak without suppressing any.
 
-    Detections whose OBBs overlap above *iou_threshold* are assigned the same
+    Detections whose OBBs overlap above *iou_threshold* (IoU) **or**
+    *iom_threshold* (IoMin = intersection / min-area) are assigned the same
     ``streak_id`` (1-based int).  All detections are returned — nothing is
     suppressed — so callers can display one row per (streak, method) pair.
+
+    IoMin is the primary signal here.  For thin elongated streaks, IoU is a
+    poor match metric: a 3 px perpendicular offset on a 5×500 px streak drops
+    IoU to ~0.25, far below any useful threshold.  IoMin instead asks "does
+    30 % of the smaller detection lie inside the larger?" — robust to partial
+    detections and small lateral offsets between methods.
 
     Within each group, detections are ordered by confidence descending.
     Groups themselves are ordered by the confidence of their best detection.
@@ -423,7 +475,9 @@ def group_detections(
     Args:
         detections: Detection dicts, each with 'obb' and 'confidence' keys.
         iou_threshold: OBB IoU threshold above which two detections are
-            considered observations of the same streak.
+            considered the same streak (kept for same-size detection pairs).
+        iom_threshold: OBB IoMin threshold above which two detections are
+            considered the same streak (handles partial/offset detections).
 
     Returns:
         All input detections with a 'streak_id' int field added.
@@ -456,7 +510,10 @@ def group_detections(
             obb_j = sorted_dets[j].get("obb")
             if obb_j is None:
                 continue
-            if _rotated_iou(obb_i, obb_j) > iou_threshold:
+            if (
+                _rotated_iou(obb_i, obb_j) > iou_threshold
+                or _rotated_iom(obb_i, obb_j) > iom_threshold
+            ):
                 group_id[j] = group_id[i]
 
     for det, gid in zip(sorted_dets, group_id):
