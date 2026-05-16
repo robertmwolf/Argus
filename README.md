@@ -2,11 +2,11 @@
 ### Automated Recognition and Grading of Unidentified Streaks
 
 ARGUS is a pipeline for automated satellite streak detection
-and identification in FITS telescope images.  It runs four independent detectors
-in parallel — two ML-based (DINO-DETR with DINOv3 ViT-B backbone, YOLO11n-OBB)
-and two classical (ASTRiDE-derived, OpenCV connected-components) — then merges
-their results by grouping overlapping detections and fusing them into a
-**Unified Confidence Score** weighted by each detector's empirical precision and recall.  
+and identification in FITS telescope images.  It runs five independent detectors
+in parallel — three ML-based (DINO-DETR with DINOv3 ViT-B backbone, YOLO11n-OBB dev-subset,
+YOLO11n-OBB full-dataset) and two classical (ASTRiDE-derived, OpenCV connected-components) —
+then merges their results by grouping overlapping detections and fusing them into a
+**Unified Confidence Score** weighted by each detector's empirical precision and recall.
 Streak orientation is refined via the Radon transform, each streak is traced to its
 true endpoints across the full image, and detected objects are cross-identified
 against a local TLE catalog using SGP4 propagation and multi-factor confidence
@@ -105,7 +105,7 @@ Timing logged: `fits_load_ms`.
 
 ### 3. Multi-Method Detection (`inference/pipeline.py` + MMDetection)
 
-Four independent detectors run on every image.  Their raw outputs are collected
+Five independent detectors run on every image.  Their raw outputs are collected
 into a single pool before downstream processing.
 
 **ML detectors**
@@ -113,7 +113,8 @@ into a single pool before downstream processing.
 | Detector | Architecture | When active |
 |----------|-------------|-------------|
 | DINO-DETR + DINOv3 ViT-B/16 | DINO-DETR head, frozen ViT-B backbone (`MODEL_SIZE=dinov3_vitb`) | Always (primary) |
-| YOLO11n-OBB | Tiled OBB detector, 256 px tiles (`weights/yolo_tiled/run/weights/best.pt`) | Always (when weights present) |
+| YOLO11n-OBB (dev) | Tiled OBB detector, 640 px tiles, dev-subset weights (`weights/yolo_tiled/run/weights/best.pt`) | When weights present |
+| YOLO11n-OBB (full) | Tiled OBB detector, 640 px tiles, trained on 3 023-image full dataset (`weights/run_full_yolo_obb/run/weights/best.pt`); mAP@0.5=67.3% P=57% R=85% on tiled val split | When weights present |
 
 The DINO-DETR path:
 - The normalised array is rescaled so its longest edge is ≥ 1280 px (256 px in
@@ -141,11 +142,11 @@ FITS data and is the most sensitive classical path for faint streaks.
 
 **Merging**
 
-After per-detector NMS (rotated-IoU threshold 0.5), all four detection lists
+After per-detector NMS (rotated-IoU threshold 0.5), all five detection lists
 are combined:
 
 ```
-combined = dino_dets + yolo_dets + classical_dets + astride_dets
+combined = dino_dets + yolo_dets + yolo_full_dets + classical_dets + astride_dets
 ```
 
 Overlapping detections from *different* methods are **grouped** by

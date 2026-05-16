@@ -1,20 +1,25 @@
 """YOLO11-OBB baseline training script for satellite streak detection.
 
-Trains Ultralytics YOLO11-OBB on the synthetic dev subset.  Used as the
-comparison baseline against the Co-DINO model in eval/benchmark.py.
+Trains Ultralytics YOLO11-OBB on the dev subset (default) or full dataset.
+Used as the comparison baseline against the Co-DINO model in eval/benchmark.py.
 
-Results are written to weights/yolo_baseline/.
+For the full-dataset run use the convenience launcher::
 
-Usage::
+    bash scripts/train_yolo_full.sh
 
-    # Train on dev subset (default, ~30 min on M3 MPS):
-    python -m training.train_baseline
+Or drive it manually::
 
-    # Smoke-test: 2 epochs only:
+    # Full dataset, medium model, 640px tiles, 50 epochs:
+    USE_DEV_SUBSET=false python -m training.train_baseline \\
+        --model m --imgsz 640 --epochs 50 \\
+        --work-dir weights/run_full_yolo_obb
+
+    # Smoke-test (2 epochs, full dataset):
+    USE_DEV_SUBSET=false python -m training.train_baseline --smoke-test \\
+        --model m --imgsz 640 --work-dir weights/run_full_yolo_obb
+
+    # Dev subset (original behaviour):
     python -m training.train_baseline --smoke-test
-
-    # Full dataset (cloud only):
-    USE_DEV_SUBSET=false python -m training.train_baseline
 """
 
 from __future__ import annotations
@@ -34,15 +39,22 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-_YOLO_MODEL = "yolo11n-obb.pt"  # nano OBB — fastest for dev
-_IMGSZ      = 256                # matches our synthetic FITS size
-_EPOCHS_FULL  = 50
+_YOLO_MODEL_DEV  = "yolo11n-obb.pt"   # nano — fastest for dev subset
+# Full dataset default is also nano for Mac M3 CPU (12h budget).
+# Override with --model m or YOLO_MODEL=m for GPU (RTX 5070 Ti) runs.
+_YOLO_MODEL_FULL = "yolo11n-obb.pt"
+_IMGSZ_DEV   = 256   # matches synthetic FITS size
+_IMGSZ_FULL  = 640   # standard YOLO size; matches real FITS tile scale
+# 15 epochs × ~36 min/epoch on Mac M3 CPU ≈ 9h (within 12h budget).
+# Use --epochs 50 on GPU (RTX 5070 Ti: ~36 min → ~30 min → fits in 8h).
+_EPOCHS_FULL  = 15
 _EPOCHS_SMOKE = 2
-_BATCH_SIZE   = 4
+_BATCH_SIZE_DEV  = 4
+_BATCH_SIZE_FULL = 8   # better throughput on real dataset
 
 _DEV_ANN  = Path("data/annotations/dev_subset.json")
-_FULL_ANN = Path("data/annotations/full_dataset.json")
-_WORK_DIR = Path("weights/yolo_baseline")
+_WORK_DIR     = Path("weights/yolo_baseline")       # dev-subset default
+_WORK_DIR_FULL = Path("weights/run_full_yolo_obb")  # full-dataset default
 
 
 # ---------------------------------------------------------------------------
@@ -128,7 +140,13 @@ def _obb_label_line(cx: float, cy: float, w: float, h: float,
         (cx + ( hw) * cos_a - ( hh) * sin_a, cy + ( hw) * sin_a + ( hh) * cos_a),
         (cx + (-hw) * cos_a - ( hh) * sin_a, cy + (-hw) * sin_a + ( hh) * cos_a),
     ]
-    coords = " ".join(f"{x / norm:.6f} {y / norm:.6f}" for x, y in corners)
+    # Clamp to [0, 1]: the short axis (h) can push corners outside the tile
+    # boundary even when the long axis is fully clipped. YOLO marks out-of-
+    # range coordinates as corrupt, so we clamp rather than discard the label.
+    coords = " ".join(
+        f"{max(0.0, min(1.0, x / norm)):.6f} {max(0.0, min(1.0, y / norm)):.6f}"
+        for x, y in corners
+    )
     return f"0 {coords}"
 
 
@@ -320,17 +338,24 @@ def _coco_to_yolo_dataset(
 
 def train(
     smoke_test: bool = False,
-    work_dir: Path = _WORK_DIR,
-    imgsz: int = _IMGSZ,
+    work_dir: Path | None = None,
+    imgsz: int | None = None,
     epochs: int | None = None,
+    model_size: str = "",
+    batch: int | None = None,
 ) -> None:
     """Train YOLO11-OBB on the dev subset (or full dataset if USE_DEV_SUBSET=false).
 
     Args:
         smoke_test: If True, run 2 epochs and exit.
-        work_dir: Directory for weights and logs.
-        imgsz: Image size for training.
+        work_dir: Directory for weights and logs.  Defaults to
+            ``weights/run_full_yolo_obb`` for full dataset, ``weights/yolo_baseline``
+            for the dev subset.
+        imgsz: Tile size for training.  Defaults to 640 (full) or 256 (dev).
         epochs: Number of training epochs. Defaults to _EPOCHS_FULL (50).
+        model_size: One of "n", "s", "m", "l", "x".  Defaults to "m" (full) or
+            "n" (dev).
+        batch: Batch size. Defaults to 8 (full) or 4 (dev).
     """
     try:
         from ultralytics import YOLO
@@ -340,12 +365,22 @@ def train(
         ) from exc
 
     use_dev = os.environ.get("USE_DEV_SUBSET", "true").lower() != "false"
+
+    # Choose sensible defaults based on dataset mode
     if use_dev:
-        ann_path = _DEV_ANN
+        ann_path   = _DEV_ANN
+        _imgsz     = imgsz     or _IMGSZ_DEV
+        _work_dir  = work_dir  or _WORK_DIR
+        _model_pt  = f"yolo11{model_size or 'n'}-obb.pt"
+        _batch     = batch     or _BATCH_SIZE_DEV
     else:
         train_ann_env = os.environ.get("TRAIN_ANN_FILE", "")
-        ann_path = (Path("data/annotations") / train_ann_env
-                    if train_ann_env else Path("data/annotations/train.json"))
+        ann_path   = (Path("data/annotations") / train_ann_env
+                      if train_ann_env else Path("data/annotations/train.json"))
+        _imgsz     = imgsz     or _IMGSZ_FULL
+        _work_dir  = work_dir  or _WORK_DIR_FULL
+        _model_pt  = f"yolo11{model_size or 'm'}-obb.pt"
+        _batch     = batch     or _BATCH_SIZE_FULL
 
     if not ann_path.exists():
         if use_dev:
@@ -361,47 +396,49 @@ def train(
                 "Set TRAIN_ANN_FILE to a valid annotations filename, or set USE_DEV_SUBSET=true."
             )
 
-    work_dir.mkdir(parents=True, exist_ok=True)
-    dataset_dir = work_dir / "dataset"
+    _work_dir.mkdir(parents=True, exist_ok=True)
+    dataset_dir = _work_dir / "dataset"
     yaml_path = dataset_dir / "dataset.yaml"
     if yaml_path.exists():
         logger.info("Reusing existing tiled dataset at %s", dataset_dir)
     else:
-        logger.info("Converting COCO → tiled YOLO dataset (tile_size=%d) …", imgsz)
-        yaml_path = _coco_to_yolo_dataset(ann_path, dataset_dir, tile_size=imgsz)
+        logger.info("Converting COCO → tiled YOLO dataset (tile_size=%d) …", _imgsz)
+        yaml_path = _coco_to_yolo_dataset(ann_path, dataset_dir, tile_size=_imgsz)
 
-    epochs = _EPOCHS_SMOKE if smoke_test else (epochs if epochs is not None else _EPOCHS_FULL)
+    n_epochs = _EPOCHS_SMOKE if smoke_test else (epochs if epochs is not None else _EPOCHS_FULL)
+
+    device = "cuda" if _device_is_cuda() else "cpu"
+    # Workers: MPS crashes with 0-instance batches; CPU is safe with multiple workers.
+    workers = 0 if device == "mps" else min(4, os.cpu_count() or 1)
 
     logger.info(
-        "Training YOLO11n-OBB: %d epochs, imgsz=%d, data=%s",
-        epochs, imgsz, yaml_path,
+        "Training %s: %d epochs, imgsz=%d, batch=%d, device=%s, data=%s",
+        _model_pt, n_epochs, _imgsz, _batch, device, yaml_path,
     )
 
-    model = YOLO(_YOLO_MODEL)
-    results = model.train(
+    model = YOLO(_model_pt)
+    model.train(
         data=str(yaml_path),
-        epochs=epochs,
-        imgsz=imgsz,
-        batch=_BATCH_SIZE,
+        epochs=n_epochs,
+        imgsz=_imgsz,
+        batch=_batch,
         # Use absolute path so YOLO saves directly to work_dir/run/ rather
         # than under Ultralytics' default runs/obb/{project}/ directory.
-        project=str(work_dir.resolve()),
+        project=str(_work_dir.resolve()),
         name="run",
         exist_ok=True,
-        # MPS crashes with 0-instance batches (blank images) due to a PyTorch
-        # MPS limitation with zero-size tensors in OBB loss computation.
-        device="cuda" if _device_is_cuda() else "cpu",
-        workers=0,
+        device=device,
+        workers=workers,
         verbose=True,
         save=True,
         val=True,
     )
 
-    best_path = work_dir.resolve() / "run" / "weights" / "best.pt"
+    best_path = _work_dir.resolve() / "run" / "weights" / "best.pt"
     if best_path.exists():
         print(f"\nBest weights: {best_path}")
     else:
-        print(f"\nTraining complete. Weights in {work_dir.resolve()}/run/weights/")
+        print(f"\nTraining complete. Weights in {_work_dir.resolve()}/run/weights/")
 
     if smoke_test:
         print("Smoke test passed.")
@@ -436,22 +473,35 @@ if __name__ == "__main__":
         help="Run 2 epochs and exit (verify environment only)",
     )
     parser.add_argument(
-        "--work-dir", default=str(_WORK_DIR),
-        help=f"Output directory for weights and logs (default: {_WORK_DIR})",
+        "--work-dir", default=None,
+        help="Output directory for weights and logs "
+             "(default: weights/run_full_yolo_obb for full dataset, weights/yolo_baseline for dev)",
     )
     parser.add_argument(
-        "--imgsz", type=int, default=_IMGSZ,
-        help=f"Training image size (default: {_IMGSZ})",
+        "--imgsz", type=int, default=None,
+        help="Training tile size (default: 640 for full dataset, 256 for dev)",
     )
     parser.add_argument(
         "--epochs", type=int, default=None,
         help=f"Number of training epochs (default: {_EPOCHS_FULL})",
     )
+    parser.add_argument(
+        "--model", default="",
+        choices=["n", "s", "m", "l", "x", ""],
+        help="YOLO model size: n=nano, s=small, m=medium, l=large, x=extra-large "
+             "(default: m for full dataset, n for dev)",
+    )
+    parser.add_argument(
+        "--batch", type=int, default=None,
+        help="Batch size (default: 8 for full dataset, 4 for dev)",
+    )
     args = parser.parse_args()
 
     train(
         smoke_test=args.smoke_test,
-        work_dir=Path(args.work_dir),
+        work_dir=Path(args.work_dir) if args.work_dir else None,
         imgsz=args.imgsz,
         epochs=args.epochs,
+        model_size=args.model,
+        batch=args.batch,
     )
