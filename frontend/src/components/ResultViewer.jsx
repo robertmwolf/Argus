@@ -124,9 +124,13 @@ function drawAngleIndicator(ctx, obb, colour, alpha, scaleX, scaleY) {
 }
 
 function drawLabel(ctx, obb, index, colour, alpha, scaleX, scaleY) {
-  const { cx, cy, h } = obb
+  const { cx, cy, w, h, angle_deg } = obb
+  const rad = (angle_deg * Math.PI) / 180
+  // Use the rotation-aware top edge of the OBB so the badge sits above the
+  // actual visible streak regardless of angle.  Without this, a near-vertical
+  // or near-top-of-image streak places the badge off-screen (negative y).
+  const rotatedTopY = cy - (Math.abs(w * Math.sin(rad)) + Math.abs(h * Math.cos(rad))) / 2
   const x = cx * scaleX
-  const y = (cy - h / 2) * scaleY - 6
 
   const label = String(index + 1)
   const fontSize = 11
@@ -135,6 +139,10 @@ function drawLabel(ctx, obb, index, colour, alpha, scaleX, scaleY) {
   const pad = 4
   const bw = textW + pad * 2
   const bh = fontSize + pad * 2
+
+  // Clamp so the badge never goes above the canvas top edge.
+  const yIdeal = rotatedTopY * scaleY - 6
+  const y = Math.max(bh + 2, yIdeal)
 
   ctx.save()
   ctx.globalAlpha = alpha
@@ -246,6 +254,13 @@ export default function ResultViewer({
     const ctx = canvas.getContext('2d')
     const coordWidth = imageWidth || img.naturalWidth
     const coordHeight = imageHeight || img.naturalHeight
+    if (!imageWidth || !imageHeight) {
+      console.warn(
+        '[ResultViewer] imageWidth/imageHeight missing — falling back to preview dimensions.',
+        'If the FITS preview is downsampled, detection OBB coordinates will be off.',
+        { imageWidth, imageHeight, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight },
+      )
+    }
     const scaleX = canvas.width / coordWidth
     const scaleY = canvas.height / coordHeight
 
@@ -264,7 +279,7 @@ export default function ResultViewer({
 
     // Labels always on top of everything
     detections.forEach((det, i) => {
-      if (!det.obb || !isVisible(i)) return
+      if (!det.obb || [det.obb.cx, det.obb.cy, det.obb.w, det.obb.h, det.obb.angle_deg].some(v => v == null) || !isVisible(i)) return
       const indSources = (det.sources ?? [{ method: det.method }]).filter(s => s.method !== 'unified')
       const isClassical = indSources.length > 0 &&
         indSources.every(s => s.method === 'astride' || s.method === 'opencv' || s.method === 'classical')

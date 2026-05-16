@@ -316,10 +316,17 @@ Argus-training-handoff/
 |   |-- catalogs/
 |   |   `-- active_sats.tle
 |   `-- tle_zips/
-|-- optional_weights/
-|   `-- co_dino_swin_l_coco.pth
+|-- weights/
+|   |-- dinov3_vitl16_lvd1689m.pth.zip   ← ViT-L backbone (~1.0 GB zip, ~1.1 GB extracted)
+|   |-- dinov3_vitb16_lvd1689m.pth.zip   ← ViT-B backbone (~327 MB, needed for Mac dev)
+|   `-- co_dino_swin_l_coco.pth          ← Swin-L COCO pretrain (optional, ~828 MB)
 `-- MANIFEST.txt
 ```
+
+> **Note on backbone weights:** `dinov3_vitl16_lvd1689m.pth` is the critical
+> file for Phase D training.  It is staged here because it requires Meta portal
+> access to download directly and is too large to re-download reliably on a
+> training workstation.  Always verify the file size (~1.1 GB) after extraction.
 
 Required training inputs:
 
@@ -630,14 +637,59 @@ git remote -v   # should show both origin (your fork) and upstream (robertmwolf/
 
 ### DINOv3 ViT-L weights
 
-The ViT-L backbone weights are not downloaded by `cloud_setup.sh` automatically
-because they require Meta portal access. Copy from the Mac:
+The ViT-L backbone weights (`dinov3_vitl16_lvd1689m.pth`, ~1.1 GB) are **not**
+downloaded automatically by `cloud_setup.sh` because they require Meta portal
+access.  Obtain them via one of the following methods, in order of preference:
+
+**Option A — OneDrive handoff folder (fastest for teammates)**
+
+The zip is staged in the shared ARGUS handoff folder:
+
+```text
+https://1drv.ms/f/c/f9b9ba14546c7993/IgBKfTqYuQuWTZcfBhvDWoARAUD1kC9YfTDE70F9rHKH-o8?e=w4EplD
+```
+
+Download `weights/dinov3_vitl16_lvd1689m.pth.zip` from the `weights/` subfolder,
+then extract it into the repo:
+
+```bash
+# Linux / WSL2
+mkdir -p weights
+cd weights
+unzip dinov3_vitl16_lvd1689m.pth.zip
+cd ..
+```
+
+**Option B — SCP from the Mac**
 
 ```bash
 scp mac:~/Argus/weights/dinov3_vitl16_lvd1689m.pth weights/
 ```
 
-Verify the file is ~1.1 GB before proceeding.
+Replace `mac` with the actual hostname or IP of the development Mac.
+
+**Option C — Meta DINOv2/DINOv3 portal**
+
+Download `dinov2_vitl14_pretrain.pth` (ViT-L/14, no registers) or the LVD-1689M
+variant directly from Meta's DINOv2 repository:
+`https://github.com/facebookresearch/dinov2#pretrained-models`
+
+Rename the file to `dinov3_vitl16_lvd1689m.pth` after downloading.
+
+**Verify before proceeding:**
+
+```bash
+ls -lh weights/dinov3_vitl16_lvd1689m.pth
+# Expected: ~1.1 GB
+python - <<'PY'
+import torch, pathlib
+w = pathlib.Path("weights/dinov3_vitl16_lvd1689m.pth")
+assert w.stat().st_size > 1_000_000_000, f"File too small: {w.stat().st_size}"
+sd = torch.load(w, map_location="cpu")
+keys = list(sd.keys()) if isinstance(sd, dict) else list(sd.get("model", sd).keys())
+print(f"OK — {len(keys)} weight tensors loaded")
+PY
+```
 
 ### Environment variables
 
@@ -1143,6 +1195,60 @@ results/
 ---
 
 ## Troubleshooting
+
+### Windows — mmcv CUDA ops (`No module named 'mmcv._ext'`)
+
+**Symptom:** `mmcv` imports version `2.1.0` but `from mmcv.ops import ...`
+raises `No module named 'mmcv._ext'`.  Training fails at the first deformable
+convolution op.  OpenMIM (`mim install mmcv==2.1.0`) falls back to source
+compilation and fails inside CUDA/PyTorch C++ headers.
+
+**Root cause:** As of early 2026 there is no pre-built Windows wheel for:
+```
+Windows + Python 3.11 + PyTorch 2.6+/cu128 + CUDA 12.8
+```
+OpenMMLab publishes Linux and macOS wheels only.  Building mmcv from source on
+Windows requires MSVC 2022 + a perfectly matching CUDA SDK version against the
+PyTorch headers — a notoriously fragile combination that currently does not work
+for the Blackwell/cu128 stack.
+
+**Resolution — use WSL2 (strongly recommended):**
+
+```powershell
+# PowerShell (admin)
+wsl --install -d Ubuntu-22.04
+# Reboot when prompted, then open the Ubuntu terminal
+```
+
+Inside WSL2 Ubuntu:
+
+```bash
+# Verify GPU is visible
+nvidia-smi   # must show your GPU; if not, install WSL CUDA driver first:
+             # https://developer.nvidia.com/cuda/wsl
+
+# Clone repo and run the Linux setup script
+git clone https://github.com/<your-username>/Argus.git
+cd Argus
+git remote add upstream https://github.com/robertmwolf/Argus.git
+chmod +x scripts/cloud_setup.sh
+./scripts/cloud_setup.sh
+```
+
+All Linux mmcv/cu128 wheels install without compilation inside WSL2.
+
+**Alternative — Docker:**
+
+```bash
+docker compose -f docker-compose.cloud.yml up --build worker
+```
+
+The CUDA base image handles Linux dependency installation, including mmcv CUDA
+ops, inside the container.
+
+**Do not attempt native Windows:** `mmcv-lite` (without `_ext`) will not train
+Co-DINO.  Spending time on VS 2022 + CUDA source builds for this stack is not
+productive — the WSL2 path is the correct one.
 
 ### CUDA not found after installing PyTorch
 

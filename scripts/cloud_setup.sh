@@ -71,10 +71,26 @@ echo ""
 echo "── Step 3: PyTorch 2.6+ (Blackwell-compatible) ─────────"
 cd "${REPO_ROOT}"
 
-# Install PyTorch first (pinned for Blackwell / CUDA 12.8 compatibility)
-pip install torch torchvision torchaudio \
-    --index-url https://download.pytorch.org/whl/cu128 \
-    --quiet
+# RTX 5070 Ti (Blackwell) requires PyTorch >= 2.6.0.
+# Install from the cu128 index; if PyTorch is already present and >= 2.6, skip.
+TORCH_OK=$(python -c "
+import sys
+try:
+    import torch
+    parts = [int(x) for x in torch.__version__.split('.')[:2]]
+    sys.exit(0 if (parts[0] > 2 or (parts[0] == 2 and parts[1] >= 6)) else 1)
+except Exception:
+    sys.exit(1)
+" 2>/dev/null && echo "yes" || echo "no")
+
+if [ "${TORCH_OK}" = "yes" ]; then
+    echo "  ✓  PyTorch already installed and >= 2.6 — skipping"
+else
+    echo "  Installing PyTorch 2.6+ (cu128)..."
+    pip install "torch>=2.6.0" torchvision torchaudio \
+        --index-url https://download.pytorch.org/whl/cu128 \
+        --quiet
+fi
 
 # Verify CUDA is visible
 python - <<'EOF'
@@ -82,16 +98,64 @@ import torch
 assert torch.cuda.is_available(), "CUDA not available after PyTorch install!"
 name = torch.cuda.get_device_name(0)
 vram = torch.cuda.get_device_properties(0).total_memory / 1e9
-print(f"  ✓  PyTorch {torch.__version__}  —  {name} ({vram:.1f} GB VRAM)")
+ver  = torch.__version__
+print(f"  ✓  PyTorch {ver}  —  {name} ({vram:.1f} GB VRAM)")
 EOF
 
-# Install remaining dependencies
+# Capture the installed PyTorch major.minor for the mmcv wheel index
+TORCH_VER=$(python -c "import torch; print('.'.join(torch.__version__.split('.')[:2]))")
+echo "  PyTorch version detected: ${TORCH_VER}"
+
+# ---------------------------------------------------------------------------
+# MMDetection stack — install order matters: mmengine → mmcv → mmdet
+#
+# mim (OpenMIM) auto-selects the correct pre-built CUDA wheel for the
+# installed PyTorch + CUDA combination. If no wheel exists (e.g. a brand-new
+# PyTorch release where OpenMMLab hasn't yet published), it falls back to the
+# explicit wheel index URL.
+#
+# Windows users: mim will fail on native Windows (no pre-built wheel).
+# Use WSL2 or Docker instead — see agent_docs/dependencies.md.
+# ---------------------------------------------------------------------------
+echo ""
+echo "── Step 3b: MMDetection stack (mmengine → mmcv → mmdet) ─"
+
+pip install mmengine==0.10.4 --quiet
+
+pip install -U openmim --quiet
+echo "  Installing mmcv==2.1.0 via mim (auto-selects wheel)..."
+if mim install "mmcv==2.1.0" --quiet 2>/dev/null; then
+    echo "  ✓  mmcv installed via mim"
+else
+    echo "  mim could not find a pre-built wheel — falling back to explicit index"
+    pip install mmcv==2.1.0 \
+        -f "https://download.openmmlab.com/mmcv/dist/cu128/torch${TORCH_VER}/index.html" \
+        --quiet
+fi
+
+pip install mmdet==3.3.0 --quiet
+
+# Verify mmcv CUDA ops loaded correctly
+python - <<'EOF'
+import mmcv, mmdet, mmengine
+print(f"  ✓  mmengine {mmengine.__version__}  mmcv {mmcv.__version__}  mmdet {mmdet.__version__}")
+try:
+    import mmcv.ops
+    print("  ✓  mmcv CUDA ops available")
+except Exception as e:
+    print(f"  ✗  mmcv CUDA ops MISSING: {e}")
+    print("     Training will fail — check the wheel index for your PyTorch version.")
+    raise SystemExit(1)
+EOF
+
+# Install remaining project dependencies (torch/torchvision already installed above)
 echo "  Installing project dependencies from requirements.txt..."
-pip install -r requirements.txt --quiet
-pip install mmdet mmengine mmcv --quiet
+pip install -r requirements.txt \
+    --extra-index-url https://download.pytorch.org/whl/cu128 \
+    --quiet
 
 # DINOv3 package (for DINOv3Backbone adapter)
-pip install git+https://github.com/facebookresearch/dinov3.git --quiet
+pip install git+https://github.com/facebookresearch/dinov2.git --quiet
 
 echo "  ✓  All dependencies installed"
 
