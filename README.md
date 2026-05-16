@@ -358,8 +358,9 @@ conda activate satid
 pip install -r requirements.txt
 
 # Required env vars for local dev
-export MODEL_SIZE=tiny                          # tiny=Swin-T, large=Swin-L, dinov3_vitb, dinov3_vitl
-export MODEL_WEIGHTS=weights/dino_tiny.pth      # path to trained checkpoint
+export MODEL_SIZE=dinov3_vitb                   # dinov3_vitb (default), dinov3_vitl, tiny=Swin-T, large=Swin-L
+# MODEL_WEIGHTS auto-resolved from MODEL_SIZE; override only if using a non-default checkpoint:
+# export MODEL_WEIGHTS=weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth
 export PYTORCH_ENABLE_MPS_FALLBACK=1            # required on Apple Silicon
 export DATABASE_URL=sqlite+aiosqlite:///./argus.db
 
@@ -391,22 +392,75 @@ coverage for an observation time window, ARGUS leaves the object unidentified
 ## Running Locally (Dev)
 
 Run the API directly with the satid conda environment — Docker is reserved for
-deployment.  The satid env has torch, mmdet, and all ML packages installed.
+deployment.  The satid env has torch, mmdet, ultralytics, and all ML packages installed.
+
+### Prerequisites — model weights
+
+Two weight files are needed to run DINOv3 and YOLO side-by-side in the UI:
+
+| Detector | Expected path | Size |
+|----------|--------------|------|
+| DINOv3 ViT-B (primary ML) | `weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth` | ~330 MB |
+| YOLO11n-OBB full dataset | `weights/run_full_yolo_obb/run/weights/best.pt` | ~5.4 MB |
+
+The YOLO weight is auto-detected by the pipeline — if the file exists, YOLO runs
+automatically alongside DINOv3 with no extra configuration required.
+
+To produce the YOLO weights locally (~9 hours on Mac M3 CPU, ~30 min on GPU):
+
+```bash
+# 1. Get annotated training data if not already present
+git clone https://github.com/jijup/SatStreaks data/satstreaks
+
+# 2. Build the split annotations (one-time)
+python scripts/merge_annotations.py --seed 42 --val-fraction 0.2
+
+# 3. Train YOLO11n-OBB on the full dataset and evaluate
+bash scripts/train_yolo_full.sh
+# Weights land at: weights/run_full_yolo_obb/run/weights/best.pt
+# Results land at: results/full_yolo_obb/yolo_benchmark.json
+```
+
+### Starting the dev servers
 
 ```bash
 conda activate satid
-export MODEL_SIZE=tiny
-export MODEL_WEIGHTS=weights/dino_tiny.pth
+
+# DINOv3 ViT-B — runs on CPU (MPS fallback) on Apple Silicon
+export MODEL_SIZE=dinov3_vitb
 export PYTORCH_ENABLE_MPS_FALLBACK=1
+export DATABASE_URL=sqlite+aiosqlite:///./argus.db
+export CONFIDENCE_THRESHOLD=0.05
 
 # Start the API (port 8000)
 uvicorn api.main:app --reload --port 8000
 
-# Start the frontend dev server (port 5173)
+# In a second terminal — start the frontend dev server (port 5173)
 cd frontend && npm run dev
 ```
 
-Open `http://localhost:5173` in your browser and upload a FITS file.
+Open `http://localhost:5173`, upload a FITS file, and both detectors will run in
+parallel.  In the results canvas:
+- **Cyan** lines = DINOv3 ViT-B detections
+- **Purple** lines = YOLO11n-OBB detections
+- **Amber** lines = ASTRiDE / OpenCV classical detections
+
+Use the **Filters** panel to slide confidence thresholds per-method and isolate
+each detector's output independently.
+
+### Verifying both detectors are active
+
+```bash
+# Quick smoke-test — prints per-method detection counts
+python -c "
+from inference import pipeline
+dets = pipeline.run('data/sample/synth_streak_000.fits', fast=True)
+from collections import Counter
+print(Counter(s['method'] for d in dets for s in (d.get('sources') or [{'method': d['method']}])))
+"
+# Expected output includes 'dinov3_vitb' and 'yolo_full' keys
+# 'yolo_full' absent → check weights/run_full_yolo_obb/run/weights/best.pt exists
+```
 
 ## Running with Docker (Deploy)
 
