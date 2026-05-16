@@ -1,78 +1,200 @@
 # Dependencies
 
-## Environment Setup
+## Why Python 3.11?
+
+Python 3.11 is the pinned version for this project. Do not upgrade to 3.12 or
+later without thorough re-testing.
+
+**Reasons:**
+
+- **mmcv pre-built CUDA wheels** — OpenMMLab publishes wheels for Python 3.8–3.11.
+  The cu121/cu128 index (used for mmcv 2.1.0) has no 3.12 wheels, meaning any
+  upgrade to 3.12 forces a source build that requires a matching MSVC + CUDA
+  dev environment (fatal on Windows; painful on Linux).
+- **numpy < 2.0 constraint** — `sep` and `astride` ship compiled C extensions
+  built against numpy 1.x ABI.  Python 3.12 wheels for those packages either
+  don't exist or are untested against our pinned numpy 1.26.4.
+- **Tested stack** — every package version in this file was verified together on
+  Python 3.11.  Upgrading Python requires re-verifying the entire matrix.
+
+Python 3.11 reaches end-of-life in October 2027, so this is not an urgent
+upgrade.  When the project does upgrade, the blocker to resolve first is mmcv
+pre-built wheel availability for the new Python + CUDA combination.
+
+---
+
+## What is OpenMIM?
+
+`openmim` (installed via `pip install openmim`) is the official package manager
+for the OpenMMLab ecosystem (mmcv, mmdet, mmseg, etc.).  After installing it you
+get the `mim` CLI:
 
 ```bash
-# Create conda environment
-conda create -n satid python=3.11 -y
-conda activate satid
-
-# Core astronomy (Phase 0 + Phase 3)
-pip install astropy==6.1.0
-pip install photutils==1.13.0
-pip install sep==1.2.1            # fast background estimation
-pip install astride==0.3.2        # ASTRiDE streak detection (Phase 0 baseline)
-pip install sgp4==2.23            # SGP4 propagation
-pip install skyfield==1.49        # high-level orbital + coordinate transforms
-pip install spacetrack==0.14.0    # Space-Track API client
-
-# ML stack (Phase 2 — Co-DINO)
-# Install PyTorch first, then MMDet dependencies in order
-pip install torch==2.2.0 torchvision==0.17.0 --index-url https://download.pytorch.org/whl/cu121
-pip install mmengine==0.10.4
-pip install mmcv==2.1.0 -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.2/index.html
-pip install mmdet==3.3.0
-pip install ultralytics==8.2.0    # YOLO11-OBB baseline
-
-# Image processing
-pip install opencv-python-headless==4.10.0.84
-pip install scikit-image==0.24.0  # Radon transform for angle refinement
-pip install albumentations==1.4.3 # augmentation pipeline
-pip install Pillow==10.4.0
-pip install shapely==2.0.4        # rotated IoU via polygon intersection
-
-# Data / compute
-pip install numpy==1.26.4
-pip install scipy==1.13.1
-pip install pandas==2.2.2
-
-# API + database (Phase 5)
-pip install fastapi==0.111.0
-pip install uvicorn[standard]==0.29.0
-pip install sqlalchemy[asyncio]==2.0.30
-pip install asyncpg==0.29.0       # PostgreSQL async driver
-pip install aiosqlite==0.20.0     # SQLite async driver (default for local)
-pip install pydantic==2.7.0
-pip install python-multipart==0.0.9
-pip install boto3==1.34.0         # S3 storage backend
-pip install python-dotenv==1.0.1
-
-# Utilities
-pip install python-dateutil==2.9.0
-pip install tqdm==4.66.4
-pip install diskcache==5.6.3      # on-disk caching for Space-Track results
-pip install click==8.1.7
-pip install requests==2.32.0      # TLE catalog refresh
-
-# Testing
-pip install pytest==8.2.2
-pip install pytest-cov==5.0.0
-pip install httpx==0.27.0         # async test client for FastAPI
-
-# Optional but useful
-pip install matplotlib==3.9.0
-pip install zenodo_get==1.6.1     # Zenodo dataset downloads
-
-# Save environment
-pip freeze > requirements.txt
+pip install -U openmim
+mim install mmcv==2.1.0
 ```
 
-## Quick Install (after cloning repo)
+`mim install` is smarter than plain `pip install mmcv` because it automatically
+picks the correct pre-built wheel from OpenMMLab's CUDA-indexed wheel server
+(`download.openmmlab.com/mmcv/dist/cuXXX/torchY.Z/`) for your exact
+CUDA+PyTorch combination.  Plain `pip install mmcv` may pull the wrong variant.
+
+**When does it fail?** When no pre-built wheel exists for your combination —
+most commonly on native Windows (see the Windows section below).  In that case
+`mim install` falls back to compiling from source, which requires a working
+MSVC + CUDA C++ toolchain and often fails with CUDA/PyTorch header errors.
+
+---
+
+## Windows — mmcv CUDA ops
+
+> **TL;DR: Do not try to build mmcv from source on native Windows.  Use WSL2.**
+
+As of May 2026 there is **no pre-built Windows wheel** for:
+
+```
+Windows + Python 3.11 + PyTorch 2.6+/cu128 + CUDA 12.8
+```
+
+Both `pip install mmcv` and `mim install mmcv==2.1.0` will fall back to source
+compilation, which fails inside the CUDA/PyTorch C++ headers even from a VS 2022
+Developer shell.  `mmcv-lite` installs cleanly but lacks the compiled CUDA ops
+(`mmcv._ext`), so Co-DINO training will fail at the first deformable conv op.
+
+**Recommended path for Windows workstations:**
+
+1. Install WSL2 with Ubuntu 22.04:
+   ```powershell
+   wsl --install -d Ubuntu-22.04
+   ```
+2. Inside WSL2, run `scripts/cloud_setup.sh` exactly as documented.  Linux
+   wheels for mmcv are available for cu128 and install without compilation.
+3. Expose the GPU to WSL2: ensure `nvidia-smi` works inside WSL2 before
+   proceeding (`nvidia-smi` should show your GPU; if not, update the WSL CUDA
+   driver from https://developer.nvidia.com/cuda/wsl).
+
+**Docker alternative:** The ARGUS `docker-compose.yml` uses a CUDA base image
+and installs all Linux dependencies at build time — another clean path that
+avoids the Windows wheel problem entirely.
+
+---
+
+## Install Order — Critical Rule
+
+**PyTorch and the MMDetection stack must be installed before `requirements.txt`.**
+The wheel index URL differs by target platform.  Installing in the wrong order
+or from the wrong index silently installs the wrong mmcv variant, which breaks
+Co-DINO training.
+
+---
+
+## Platform A — Mac (dev / MPS / CPU only)
+
 ```bash
 conda create -n satid python=3.11 -y
 conda activate satid
+
+# PyTorch (MPS backend; CPU fallback auto-selected by get_device())
+pip install torch==2.2.0 torchvision==0.17.0 torchaudio==2.2.0
+
+# MMDetection stack — CPU-only build (no CUDA ops needed on Mac)
+pip install mmengine==0.10.4
+pip install mmcv==2.1.0           # CPU wheel from PyPI — no custom index needed
+pip install mmdet==3.3.0
+
+# All remaining dependencies
 pip install -r requirements.txt
 ```
+
+Set before running any training or inference on Mac:
+```bash
+export PYTORCH_ENABLE_MPS_FALLBACK=1
+```
+
+---
+
+## Platform B — Linux / Docker (Lambda A100, CUDA 12.1)
+
+This is the path used by `docker/Dockerfile.worker` and the Lambda Labs A100
+cloud instance.
+
+```bash
+conda create -n satid python=3.11 -y
+conda activate satid
+
+# PyTorch cu121
+pip install torch==2.2.0 torchvision==0.17.0 torchaudio==2.2.0 \
+    --index-url https://download.pytorch.org/whl/cu121
+
+# MMDetection stack — cu121 wheels
+pip install mmengine==0.10.4
+pip install mmcv==2.1.0 \
+    -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.2/index.html
+pip install mmdet==3.3.0
+
+# All remaining dependencies
+pip install -r requirements.txt \
+    --extra-index-url https://download.pytorch.org/whl/cu121
+```
+
+---
+
+## Platform C — Workstation / WSL2 (RTX 5070 Ti, CUDA 12.8 / Blackwell)
+
+RTX 5070 Ti is a Blackwell GPU — requires PyTorch ≥ 2.6.0 (first release with
+Blackwell support).  Use `scripts/cloud_setup.sh` which handles version
+detection and the mim fallback automatically.
+
+Manual steps if running without `cloud_setup.sh`:
+
+```bash
+conda create -n satid python=3.11 -y
+conda activate satid
+
+# PyTorch (latest stable ≥ 2.6 from cu128 index)
+pip install "torch>=2.6.0" torchvision torchaudio \
+    --index-url https://download.pytorch.org/whl/cu128
+
+# Detect installed version for wheel selection
+TORCH_VER=$(python -c "import torch; print('.'.join(torch.__version__.split('.')[:2]))")
+
+# MMDetection stack — mim auto-selects wheel for detected torch+cuda
+pip install -U openmim
+pip install mmengine==0.10.4
+mim install "mmcv==2.1.0" || \
+    pip install mmcv==2.1.0 \
+        -f "https://download.openmmlab.com/mmcv/dist/cu128/torch${TORCH_VER}/index.html"
+pip install mmdet==3.3.0
+
+# Verify CUDA ops loaded
+python -c "import mmcv.ops; print('mmcv CUDA ops OK')"
+
+# All remaining dependencies
+pip install -r requirements.txt \
+    --extra-index-url https://download.pytorch.org/whl/cu128
+```
+
+> **Native Windows:** Do not attempt this platform natively — see the
+> "Windows — mmcv CUDA ops" section above.  Use WSL2 and treat it as
+> Platform C.
+
+---
+
+## Quick Install (after cloning — non-GPU environments only)
+
+For Mac dev or API-only containers that do not need the ML training stack:
+
+```bash
+conda create -n satid python=3.11 -y
+conda activate satid
+pip install -r requirements.txt   # does NOT install torch/mmdet
+```
+
+For GPU environments use the platform-specific steps above.
+
+---
+
+## Full Package List
 
 ## Separate requirements files
 
