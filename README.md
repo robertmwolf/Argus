@@ -517,8 +517,13 @@ Benchmark recorded 2026-05-16; full results in `results/multi_method_benchmark.j
 |----------|----------:|-------:|---:|---------:|---------:|--------------:|
 | **Unified Confidence Score** (F-beta weighted ensemble) | **29.9 %** | 72.1 % | **42.3 %** | 40.6 % | 31.8 % | 742 |
 | **DINOv3 ViT-B** (DINO-DETR, augmented, epoch 10) | 9.3 % | **89.3 %** | 16.8 % | **75.5 %** | **59.4 %** | 2 969 |
+| **YOLO11n-OBB full** (full-dataset, 640 px tiles) † | 57.2 % | 84.6 % | 68.2 % | 67.3 % | 57.4 % | — |
 | **OpenCV** (connected-components) | 1.4 % | 1.0 % | 1.1 % | 0.01 % | 0.01 % | 223 |
 | **ASTRiDE** (sigma-threshold) | — | — | — | — | — | — |
+
+† YOLO metrics evaluated on YOLO's native tiled val split (604 source images, ~2 881 tiles at 640 px)
+using the same tiling as training — **not** the 308-image COCO test set above.  The tiled eval protocol
+inflates mAP relative to full-image GT matching, so these figures are not directly comparable to DINOv3.
 
 The **Unified Confidence Score** groups DINOv3 and OpenCV detections that overlap
 (IoU ≥ 0.5 or IoMin ≥ 0.3) and fuses their outputs via a precision-recall calibrated
@@ -560,10 +565,11 @@ OpenCV              Predicted +   Predicted −
 
 ### Training metrics (validation split)
 
-| Detector | Checkpoint | Epochs | mAP | mAP@0.5 |
-|----------|-----------|--------|----:|--------:|
+| Detector | Checkpoint | Epochs | mAP@0.5:0.95 | mAP@0.5 |
+|----------|-----------|--------|-------------:|--------:|
 | DINOv3 ViT-B | `weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth` | 10 (augmented, from ep 4) | 35.5 % | 53.2 % |
-| YOLO11n-OBB | `weights/yolo_tiled/run/weights/best.pt` | 18 (tiled 256 px) | 27.4 % | 59.6 % |
+| YOLO11n-OBB (dev subset) | `weights/yolo_tiled/run/weights/best.pt` | 18 (tiled 256 px, dev subset) | 27.4 % | 59.6 % |
+| YOLO11n-OBB (full dataset) | `weights/run_full_yolo_obb/run/weights/best.pt` | 15 (tiled 640 px, 3 023 images) | 56.1 % | **67.3 %** |
 
 ### Interpretation
 
