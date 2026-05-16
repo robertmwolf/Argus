@@ -26,7 +26,7 @@ Give the colleague's Codex this instruction:
 ```text
 Check out repo at https://github.com/robertmwolf/Argus.git
 Read instructions at agent_docs/Training_Handoff.md
-Follow that document exactly to download data, run DINOv3 ViT-L training
+Follow that document to download training data, run DINOv3 ViT-L training
 (Phase D), evaluate results, and check the outputs back into GitHub.
 ```
 
