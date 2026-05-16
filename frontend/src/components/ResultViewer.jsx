@@ -172,8 +172,12 @@ function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
   const { obb, confidence: conf = 1 } = det
   if (!obb || [obb.cx, obb.cy, obb.w, obb.h, obb.angle_deg].some((v) => v == null)) return
 
-  const isClassical = (det.sources ?? [{ method: det.method }])
-    .every(s => s.method === 'astride' || s.method === 'opencv' || s.method === 'classical')
+  // Exclude the synthetic "unified" entry when deciding colour — only look at
+  // actual detector sources.
+  const individualSources = (det.sources ?? [{ method: det.method }])
+    .filter(s => s.method !== 'unified')
+  const isClassical = individualSources.length > 0 &&
+    individualSources.every(s => s.method === 'astride' || s.method === 'opencv' || s.method === 'classical')
   const colour = highlighted ? HIGHLIGHT_COLOUR : (isClassical ? CLASSICAL_COLOUR : OBB_COLOUR)
   const alpha = highlighted ? 1.0 : 0.4 + conf * 0.6
   const endpointR = highlighted ? 5.5 : 4
@@ -255,8 +259,9 @@ export default function ResultViewer({
     // Labels always on top of everything
     detections.forEach((det, i) => {
       if (!det.obb || !isVisible(i)) return
-      const isClassical = (det.sources ?? [{ method: det.method }])
-        .every(s => s.method === 'astride' || s.method === 'opencv' || s.method === 'classical')
+      const indSources = (det.sources ?? [{ method: det.method }]).filter(s => s.method !== 'unified')
+      const isClassical = indSources.length > 0 &&
+        indSources.every(s => s.method === 'astride' || s.method === 'opencv' || s.method === 'classical')
       const colour = i === highlightIndex ? HIGHLIGHT_COLOUR : (isClassical ? CLASSICAL_COLOUR : OBB_COLOUR)
       const alpha = i === highlightIndex ? 1.0 : 0.4 + (det.confidence ?? 1) * 0.6
       drawLabel(ctx, det.obb, i, colour, alpha, scaleX, scaleY)

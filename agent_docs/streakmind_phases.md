@@ -400,3 +400,19 @@ Recorded 2026-05-15. Evaluation on held-out `test.json` (full merged dataset).
 
 DINOv3 ViT-B (frozen) outperforms Swin-T by +0.55 mAP@0.5 on a fair comparison (same data, test split).
 Phase D (ViT-L, 50 epochs) is the definitive production run targeting ≥94% precision / ≥97% recall.
+
+### Multi-method benchmark: `results/multi_method_benchmark.json`
+Recorded 2026-05-16. 308-image SatStreaks test set, confidence threshold 0.05,
+per-detector NMS IoU 0.5, cross-detector grouping IoU ≥ 0.5 **or** IoMin ≥ 0.3.
+Confusion matrix PNGs in `results/confusion_matrices/`.
+
+| Method | Precision | Recall | F1 | mAP@0.5 | mAP@0.75 | n preds |
+|--------|----------:|-------:|---:|---------:|---------:|--------:|
+| **Unified** (noisy-OR) | **29.9 %** | 72.1 % | **42.3 %** | 40.6 % | 31.8 % | 742 |
+| DINOv3 ViT-B | 9.3 % | **89.3 %** | 16.8 % | **75.5 %** | **59.4 %** | 2 969 |
+| OpenCV | 1.4 % | 1.0 % | 1.1 % | 0.01 % | 0.01 % | 223 |
+
+Key finding: noisy-OR grouping collapses 3 192 individual predictions to 742,
+raising precision from 9.3 % to 29.9 % while retaining 72 % recall (F1 42.3 %).
+On long streaks (≥ 1 000 px, 92 % of test set) Unified F1 = 49 % vs 16.9 % for
+DINOv3 alone.

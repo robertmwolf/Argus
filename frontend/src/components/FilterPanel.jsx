@@ -9,6 +9,7 @@
  */
 
 const METHOD_LABELS = {
+  unified:     'Unified',
   astride:     'ASTRiDE',
   opencv:      'OpenCV',
   dinov3_vitb: 'DINOv3 ViT-B',
@@ -21,6 +22,7 @@ const METHOD_LABELS = {
 }
 
 const METHOD_ACCENT = {
+  unified:     'accent-emerald-400',
   astride:     'accent-amber-400',
   opencv:      'accent-orange-400',
   dinov3_vitb: 'accent-cyan-400',

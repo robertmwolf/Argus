@@ -225,8 +225,14 @@ down to one box per streak per method.
 
 Detections from *different* methods are then **grouped** rather than
 cross-suppressed: overlapping boxes across DINOv3, YOLO, ASTRiDE, and OpenCV
-share a common `streak_id`.  All per-method detections are preserved so the
-frontend can show multi-method agreement as a quality signal.
+share a common `streak_id`.  Grouping uses two overlap criteria in OR:
+rotated-IoU ≥ 0.5 **or** IoMin ≥ 0.3 (Intersection-over-Minimum,
+`intersection / min(area_A, area_B)`).  IoMin is essential for thin streaks:
+a 3 px lateral offset on a 5 × 500 px streak drops IoU to ~0.25 (below
+threshold) while IoMin stays near 1.0, so IoU alone would assign different
+`streak_id` values to the same physical streak seen by two detectors.
+All per-method detections are preserved so the frontend can show multi-method
+agreement as a quality signal.
 
 ### 6. WCS Coordinate Conversion (`inference/pipeline.py`)
 
@@ -500,41 +506,50 @@ covers the synthetic dev subset only and is not representative of real-data perf
 Results on the full merged test split — **308 images, 308 ground-truth streaks**
 (SatStreaks dataset, JPEG exports of HST/archival FITS).  Eval metric: IoU ≥ 0.5
 against COCO axis-aligned ground-truth bounding boxes, confidence threshold 0.05,
-no TTA, per-detector NMS IoU 0.5.
+per-detector NMS IoU 0.5, cross-detector grouping via IoU ≥ 0.5 or IoMin ≥ 0.3.
+Benchmark recorded 2026-05-16; full results in `results/multi_method_benchmark.json`.
 
 ### Per-method results
 
-| Detector | Precision | Recall | F1 | TP | FP | FN |
-|----------|----------:|-------:|---:|---:|---:|---:|
-| **DINOv3 ViT-B** (DINO-DETR, augmented, epoch 10) | 1.0 % | **93.8 %** | 1.9 % | 289 | 29 552 | 19 |
-| **YOLO11n-OBB** (tiled 256 px, epoch 17) | 24.1 % | 4.2 % | 7.2 % | 13 | 41 | 295 |
-| **OpenCV** (connected-components) | 5.8 % | 4.2 % | 4.9 % | 13 | 210 | 295 |
+| Detector | Precision | Recall | F1 | mAP@0.5 | mAP@0.75 | n predictions |
+|----------|----------:|-------:|---:|---------:|---------:|--------------:|
+| **Unified** (noisy-OR ensemble) | **29.9 %** | 72.1 % | **42.3 %** | 40.6 % | 31.8 % | 742 |
+| **DINOv3 ViT-B** (DINO-DETR, augmented, epoch 10) | 9.3 % | **89.3 %** | 16.8 % | **75.5 %** | **59.4 %** | 2 969 |
+| **OpenCV** (connected-components) | 1.4 % | 1.0 % | 1.1 % | 0.01 % | 0.01 % | 223 |
 | **ASTRiDE** (sigma-threshold) | — | — | — | — | — | — |
 
-### Per-method confusion matrix (IoU ≥ 0.5)
+The **Unified** detector groups DINOv3 and OpenCV detections that overlap (IoU ≥ 0.5
+or IoMin ≥ 0.3) and fuses their confidence scores via noisy-OR
+(`1 − ∏(1 − confᵢ)`).  Grouping collapses 3 192 individual predictions into
+742 streak-level predictions, sharply raising precision (9.3 % → 29.9 %) at the
+cost of some recall (89.3 % → 72.1 %).
+
+### Per-method confusion matrices (IoU ≥ 0.5)
+
+Confusion matrix PNGs are saved in `results/confusion_matrices/`.
 
 ```
-DINOv3 ViT-B        Predicted +   Predicted −
-  Actual +   TP =    289          FN =     19
-  Actual −   FP = 29 552          TN =    n/a
+Unified (noisy-OR)  Predicted +   Predicted −
+  Actual +   TP ≈    222          FN ≈     86
+  Actual −   FP ≈    520          TN =    n/a
 
-YOLO11n-OBB         Predicted +   Predicted −
-  Actual +   TP =     13          FN =    295
-  Actual −   FP =     41          TN =    n/a
+DINOv3 ViT-B        Predicted +   Predicted −
+  Actual +   TP ≈    275          FN ≈     33
+  Actual −   FP ≈  2 694          TN =    n/a
 
 OpenCV              Predicted +   Predicted −
-  Actual +   TP =     13          FN =    295
-  Actual −   FP =    210          TN =    n/a
+  Actual +   TP ≈      3          FN ≈    305
+  Actual −   FP ≈    220          TN =    n/a
 ```
 
-### Recall by streak length
+### Per-band F1 (long streaks ≥ 1 000 px, n = 284 — dominant class)
 
-| Detector | Short < 400 px (n=6) | Medium 400–999 px (n=18) | Long ≥ 1000 px (n=284) |
-|----------|---------------------:|-------------------------:|-----------------------:|
-| DINOv3 ViT-B | 50.0 % | 94.4 % | 94.7 % |
-| YOLO11n-OBB | 16.7 % | 0.0 % | 4.2 % |
-| OpenCV | 0.0 % | 0.0 % | 4.6 % |
-| ASTRiDE | — | — | — |
+| Detector | Short < 400 px | Medium 400–999 px | Long ≥ 1 000 px |
+|----------|---------------:|------------------:|----------------:|
+| Unified  | 0.0 %  | 3.6 %  | **49.0 %** |
+| DINOv3 ViT-B | 0.0 % | 3.1 % | 16.9 % |
+| OpenCV   | 0.0 %  | 0.0 %  | 1.8 % |
+| ASTRiDE  | —      | —      | — |
 
 ### Training metrics (validation split)
 
@@ -545,38 +560,36 @@ OpenCV              Predicted +   Predicted −
 
 ### Interpretation
 
-**DINOv3 ViT-B** achieves very high recall (93.8 %) — it misses only 19 of 308
-ground-truth streaks — but produces a large number of false positives at the
-default 0.05 confidence floor (~96 FP per image on average).  Raising the
-confidence threshold via the filter UI significantly improves precision while
-preserving recall for high-confidence detections.  Long streaks (≥ 1000 px)
-are detected at 94.7 % recall, confirming the model generalises well to
-full-resolution archival images.
+**Unified (noisy-OR ensemble)** achieves the best balance of precision and recall
+(F1 = 42.3 %).  By grouping detections from multiple methods and fusing confidence
+via noisy-OR, it eliminates the redundant false-positive cloud that DINOv3 produces
+in isolation — reducing prediction count from 2 969 to 742 while retaining 72 %
+recall.  On long streaks (≥ 1 000 px, 92 % of this test set) F1 reaches 49 %,
+compared to 16.9 % for DINOv3 alone.  The mean angle error of 0.018° confirms that
+Radon-refined orientation is essentially exact.
 
-**YOLO11n-OBB** is conservative — 24 % precision, 4 % recall on full images.
-It was trained on 256 px tiles and evaluates on full images, so long streaks
-(≥ 1000 px, 92 % of this test set) that span many tiles are under-detected.
-YOLO's role in the ensemble is corroboration: when it agrees with ViT-B on a
-streak, that agreement is a strong quality signal.
+**DINOv3 ViT-B** achieves the highest recall (89.3 %) and mAP@0.5 (75.5 %) in
+isolation — it misses only ~33 of 308 ground-truth streaks — but produces ~2 694
+false positives at the 0.05 confidence floor (~8.7 FP per image).  Raising the
+confidence threshold via the filter UI improves precision while preserving recall
+for high-confidence detections.
 
-**OpenCV** (connected-components) provides marginal recall on this JPEG test set
-but adds value on raw FITS images where the pixel distribution is well-suited to
+**OpenCV** (connected-components) contributes marginally on this JPEG test set
+(1 % recall) but adds value on raw FITS images where the pixel distribution suits
 the top-0.5 % brightness threshold.  It requires no learned weights and runs in
 < 1 s per image.
 
-**ASTRiDE** requires raw FITS pixel data (it thresholds against the background
-sigma of the original science image).  The full SatStreaks test set is distributed
-as JPEG exports, so ASTRiDE cannot be evaluated here.  On raw GTImages FITS
-observations it detects faint streaks that escape the ML detectors, at the cost
-of higher false-positive rates on noisy images.
+**ASTRiDE** requires raw FITS pixel data.  The full SatStreaks test set is
+distributed as JPEG exports so ASTRiDE cannot be evaluated here.  On raw GTImages
+FITS observations it detects faint streaks that escape the ML detectors, at the
+cost of higher false-positive rates on noisy images.
 
 > **Multi-method ensemble note:** The four detectors run independently and their
-> outputs are grouped by overlap rather than suppressed.  A streak seen by
-> multiple detectors gives a user higher confidence than one seen by a single method.
-> The filter UI exposes per-method confidence sliders so the precision/recall
-> tradeoff can be tuned interactively after results are returned.
-> In the future, we may explore more sophisticated ensembling strategies (e.g., a learned
-> meta-classifier that takes all four detectors' outputs as input and produces a final confidence score), but the current approach has the advantage of transparency and user control.
+> outputs are grouped by overlap (IoU or IoMin) rather than suppressed.  The
+> **Unified** badge in the UI shows the noisy-OR confidence across all agreeing
+> detectors; individual per-method badges are shown below it.  The filter UI
+> exposes per-method confidence sliders so the precision/recall tradeoff can be
+> tuned interactively after results are returned.
 
 ---
 

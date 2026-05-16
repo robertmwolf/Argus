@@ -8,6 +8,7 @@
  */
 
 const METHOD_CONFIG = {
+  unified:      { label: 'Unified',       cls: 'border-emerald-500/80 bg-emerald-900/50 text-emerald-300' },
   astride:      { label: 'ASTRiDE',       cls: 'border-amber-600/60 bg-amber-950/40 text-amber-300' },
   opencv:       { label: 'OpenCV',        cls: 'border-orange-600/60 bg-orange-950/40 text-orange-300' },
   dinov3_vitb:  { label: 'DINOv3 ViT-B', cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
@@ -156,11 +157,16 @@ export default function DetectionTable({ detections, visibleSet, highlightIndex,
                     </span>
                   </td>
 
-                  {/* Multi-method sources */}
+                  {/* Multi-method sources — Unified always first, then individual methods */}
                   <td className="px-4 py-2.5">
                     <div className="flex flex-col gap-1">
                       {sources.map((src, si) => (
-                        <MethodBadge key={si} method={src.method} confidence={src.confidence} />
+                        <div key={si}>
+                          <MethodBadge method={src.method} confidence={src.confidence} />
+                          {si === 0 && sources.length > 1 && (
+                            <div className="mt-1 mb-0.5 border-t border-slate-700/60" />
+                          )}
+                        </div>
                       ))}
                     </div>
                   </td>
