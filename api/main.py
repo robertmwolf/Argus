@@ -18,6 +18,13 @@ import json
 import logging
 import os
 import shutil
+
+# Load .env before any os.environ reads — safe no-op if python-dotenv not installed
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 import tempfile
 import uuid
 from contextlib import asynccontextmanager
