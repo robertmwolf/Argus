@@ -501,12 +501,12 @@ async def upload(request: Request, file: UploadFile) -> dict[str, str]:
     # Extract FITS header and generate preview PNG at upload time so the
     # frontend can display them immediately while the job is queued/processing.
     if ext in {".fits", ".fit", ".fts"}:
-        header_cards = _extract_fits_header(data)
+        header_cards = await asyncio.to_thread(_extract_fits_header, data)
         if header_cards is not None:
             await request.app.state.storage.save_fits_header(
                 job_id, json.dumps(header_cards).encode()
             )
-        preview_png = _render_fits_preview(data)
+        preview_png = await asyncio.to_thread(_render_fits_preview, data)
         if preview_png is not None:
             await request.app.state.storage.save_preview(job_id, preview_png)
     elif ext == ".png":
