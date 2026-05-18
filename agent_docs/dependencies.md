@@ -73,6 +73,11 @@ Developer shell.  `mmcv-lite` installs cleanly but lacks the compiled CUDA ops
    proceeding (`nvidia-smi` should show your GPU; if not, update the WSL CUDA
    driver from https://developer.nvidia.com/cuda/wsl).
 
+The training environment should live on the WSL filesystem (for example
+`~/Argus`), not under `/mnt/c/...`. Keeping the repo, conda environment, data,
+and checkpoints inside Ubuntu avoids Windows filesystem latency and path edge
+cases during long training runs.
+
 **Docker alternative:** The ARGUS `docker-compose.yml` uses a CUDA base image
 and installs all Linux dependencies at build time — another clean path that
 avoids the Windows wheel problem entirely.
@@ -172,6 +177,22 @@ python -c "import mmcv.ops; print('mmcv CUDA ops OK')"
 # All remaining dependencies
 pip install -r requirements.txt \
     --extra-index-url https://download.pytorch.org/whl/cu128
+
+# DINOv3 package used by models/dino/dinov3_adapter.py
+pip install git+https://github.com/facebookresearch/dinov3.git
+
+# Verify the pieces that commonly fail on a new workstation
+python - <<'PY'
+import torch
+import mmcv.ops
+import dinov3.models.vision_transformer
+
+print("torch:", torch.__version__)
+print("cuda_available:", torch.cuda.is_available())
+print("device:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "none")
+print("mmcv CUDA ops OK")
+print("dinov3 import OK")
+PY
 ```
 
 > **Native Windows:** Do not attempt this platform natively — see the
@@ -199,7 +220,8 @@ For GPU environments use the platform-specific steps above.
 ## Separate requirements files
 
 Keep two files:
-- `requirements.txt` — full stack including torch + mmdet (for worker container)
+- `requirements.txt` — project dependencies excluding torch/mmengine/mmcv/mmdet,
+  which must be installed first from the platform-specific wheel index
 - `requirements-api.txt` — API-only, no torch or mmdet (for api container, faster build)
 
 `requirements-api.txt`:

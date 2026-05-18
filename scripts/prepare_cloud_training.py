@@ -96,6 +96,26 @@ def check_mmdet() -> bool:
                      "pip install mmdet mmengine mmcv")
 
 
+def check_mmcv_ops() -> bool:
+    """mmcv compiled ops must be present for Co-DINO CUDA training."""
+    try:
+        import mmcv.ops  # noqa: F401
+        return check(True, "mmcv CUDA/C++ ops importable")
+    except Exception as exc:
+        return check(False, "mmcv CUDA/C++ ops importable",
+                     f"{exc}. Reinstall mmcv from the platform-specific OpenMMLab wheel index.")
+
+
+def check_dinov3_package() -> bool:
+    """DINOv3 Python package must be importable for the ViT backbone adapter."""
+    try:
+        import dinov3.models.vision_transformer  # noqa: F401
+        return check(True, "dinov3 package importable")
+    except Exception as exc:
+        return check(False, "dinov3 package importable",
+                     f"{exc}. Run: pip install git+https://github.com/facebookresearch/dinov3.git")
+
+
 def check_config_tiny() -> bool:
     """Swin-T config must parse cleanly via mmengine."""
     return _check_config("models/dino/streak_codino_swin_t.py", "Swin-T config parses")
@@ -289,12 +309,15 @@ def main() -> int:
     check_pytorch_version()
     check_env_vars()
 
-    print("\n── Dependencies ─────────────────────────────────────────")
-    check_mmdet()
-    check_requirements_pinned()
-
     model_size = os.environ.get("MODEL_SIZE", "large").lower()
     is_dinov3 = model_size.startswith("dinov3")
+
+    print("\n── Dependencies ─────────────────────────────────────────")
+    check_mmdet()
+    check_mmcv_ops()
+    if is_dinov3:
+        check_dinov3_package()
+    check_requirements_pinned()
 
     print("\n── Model configs ────────────────────────────────────────")
     check_config_tiny()

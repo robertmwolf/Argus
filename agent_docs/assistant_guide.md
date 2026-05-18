@@ -35,17 +35,22 @@ Progress:
 - ✅ DINOv3 Phase C² (frozen ViT-B full dataset, 4 epochs): mAP@0.5=**0.74** on test.json — beats Swin-T (0.19) by +0.55
 - ✅ DINOv3 Phase E (partial): Swin-T vs ViT-B comparison in `results/phase_e/` — ViT-B dominant
 - ✅ YOLO11n-OBB full dataset: 15 epochs, 3 023 images → 14 385 tiles, mAP@0.5=67.3% P=57% R=85% F1=68% (tiled val); integrated as `yolo_full` 5th detector in `inference/pipeline.py`
-- ⏳ DINOv3 Phase D: Frozen ViT-L, full dataset — RTX 5070 Ti workstation, see `agent_docs/Training_Handoff.md`
+- ⏳ DINOv3 Phase D: Frozen ViT-L, full dataset — two routes available, see `agent_docs/Training_Handoff.md`
 
-## Next Step: Phase D — DINOv3 ViT-L Workstation Training
+## Next Step: Phase D — DINOv3 ViT-L Training (Two Routes)
 Phase C² result: DINOv3 ViT-B frozen, full merged dataset, 4 epochs → mAP@0.5=0.74 (test.json).
 This beats Swin-T (0.19) by a wide margin. Phase D trains ViT-L on the same data for the definitive result.
 Phase 8 targets (≥94% precision, ≥97% recall) are expected to be met with ViT-L on the full dataset.
-Follow `agent_docs/Training_Handoff.md` for the RTX 5070 Ti workstation handoff procedure.
+
+Phase D has two independent execution routes — both are documented in `agent_docs/Training_Handoff.md`:
+- **Route 1** — Colleague's RTX 5070 Ti workstation (Windows WSL2): $0 compute cost, 512 px, ~30–40 hr
+- **Route 2** — Cloud GPU rental, RTX 4090 on Vast.ai/RunPod: ~$7–18, 800 px, early stopping
 
 ## Hardware
 - **Dev / CI:** MacBook Air M3 — CPU or MPS. Use `MODEL_SIZE=tiny` (Swin-T).
-- **Training:** Lambda Labs A100 40 GB — CUDA. Use `MODEL_SIZE=large` (Swin-L).
+- **Phase D Route 1:** Colleague's RTX 5070 Ti 16 GB (Windows WSL2) — CUDA. Use `MODEL_SIZE=dinov3_vitl`.
+- **Phase D Route 2:** Cloud GPU rental, RTX 4090 24 GB (Vast.ai / RunPod) — CUDA. Use `MODEL_SIZE=dinov3_vitl`.
+- **Phase F (if needed):** A100 80 GB cloud rental — for partial ViT-L backbone unfreeze only.
 - **Rule:** Never hardcode `torch.device("cuda")`. Always call `get_device()` from
   `inference/device.py`. Code must run on CPU, MPS, and CUDA without changes.
 
@@ -61,7 +66,7 @@ Always read the relevant agent_docs file before writing code:
 - `agent_docs/service_roadmap.md`    — Docker, deployment, cloud scale path
 - `agent_docs/test_strategy.md`      — how to measure and record baseline accuracy
 - `agent_docs/spacetrack.md`         — Space-Track API policy, TLE catalog setup, rate limits
-- `agent_docs/Training_Handoff.md`   — current RTX 5070 Ti DINOv3 ViT-L training handoff
+- `agent_docs/Training_Handoff.md`   — Phase D training: Route 1 (RTX 5070 Ti workstation) and Route 2 (RTX 4090 cloud rental)
 
 ## Stack
 - Python 3.11, conda environment named `satid`
@@ -300,7 +305,7 @@ Two MMDetection configs must always exist:
 | DINOv3 A — Probe | Mac CPU | Cosine dissimilarity > 0.05 ✅ (0.095) |
 | DINOv3 B — Adapter | Mac | MMDet configs parse, pipeline smoke test ✅ |
 | DINOv3 C² — ViT-B full | Mac MPS | mAP@0.5 > Swin-T baseline ✅ (0.74 vs 0.19) |
-| DINOv3 D — ViT-L full | RTX 5070 Ti | mAP@0.5 ≥ 0.70, see Training_Handoff.md ⏳ |
+| DINOv3 D — ViT-L full | Route 1: RTX 5070 Ti (WSL2) **or** Route 2: RTX 4090 cloud | mAP@0.5 ≥ 0.74, see Training_Handoff.md ⏳ |
 | DINOv3 E — Comparison | Mac | ViT-L vs ViT-B vs Swin-T table |
 
 ## DINOv3 Training (model size `dinov3_vitb` / `dinov3_vitl`)
