@@ -512,6 +512,81 @@ def _run_yolo_full_detector(
     return detections
 
 
+def _run_streakmind_yolo_detector(
+    array: "np.ndarray",
+    confidence_threshold: float = 0.25,
+) -> list[dict]:
+    """Run the GTImages StreakMindYOLO detector.
+
+    Loads weights from ``STREAKMIND_YOLO_WEIGHTS`` or the best local comparison
+    training output. Returns detections with method ``"streakmind_yolo"`` so
+    the web UI can surface them as StreakMindYOLO.
+    """
+    import numpy as np
+
+    root = Path(__file__).resolve().parent.parent
+    weights = Path(
+        os.environ.get(
+            "STREAKMIND_YOLO_WEIGHTS",
+            str(root / "weights" / "streakmind_yolo_real" / "run" / "weights" / "best.pt"),
+        )
+    )
+    if not weights.exists():
+        logger.debug("StreakMindYOLO weights not found at %s; skipping", weights)
+        return []
+
+    try:
+        from ultralytics import YOLO  # type: ignore[import]
+    except ImportError:
+        logger.debug("ultralytics not installed; skipping StreakMindYOLO")
+        return []
+
+    cache_key = str(weights)
+    if cache_key not in _yolo_model_cache:
+        _yolo_model_cache[cache_key] = YOLO(str(weights))
+    yolo = _yolo_model_cache[cache_key]
+
+    h_img, w_img = array.shape[:2]
+    tile_size = int(os.environ.get("STREAKMIND_YOLO_TILE_SIZE", "640"))
+    stride = int(os.environ.get("STREAKMIND_YOLO_STRIDE", str(tile_size // 2)))
+
+    if max(h_img, w_img) <= tile_size:
+        tile_list = [(array, 0, 0)]
+    else:
+        tile_list = []
+        for y0 in range(0, h_img, stride):
+            for x0 in range(0, w_img, stride):
+                x1 = min(x0 + tile_size, w_img)
+                y1 = min(y0 + tile_size, h_img)
+                tile = array[y0:y1, x0:x1]
+                if tile.shape[0] < 32 or tile.shape[1] < 32:
+                    continue
+                tile_list.append((tile, x0, y0))
+
+    detections: list[dict] = []
+    for tile, x_off, y_off in tile_list:
+        for result in yolo(tile, verbose=False, conf=confidence_threshold):
+            if result.obb is None:
+                continue
+            for box, conf in zip(result.obb.xywhr, result.obb.conf):
+                cx, cy, bw, bh, angle_rad = box.tolist()
+                cx += x_off
+                cy += y_off
+                angle_deg = float(angle_rad) * 180.0 / math.pi
+                half_w, half_h = bw / 2.0, bh / 2.0
+                detections.append({
+                    "bbox": [cx - half_w, cy - half_h, cx + half_w, cy + half_h],
+                    "confidence": float(conf),
+                    "method": "streakmind_yolo",
+                    "obb": {"cx": cx, "cy": cy, "w": bw, "h": bh, "angle_deg": angle_deg},
+                    "streak_length_px": float(max(bw, bh)),
+                })
+
+    logger.debug("StreakMindYOLO: %d raw detections above threshold %.2f",
+                 len(detections), confidence_threshold)
+    return detections
+
+
 def _run_astride_detector(
     fits_path: Path,
     min_length_px: float = 20.0,
@@ -879,11 +954,17 @@ def run_with_array(
     yolo_full_dets = nms_detections(
         _run_yolo_full_detector(array, confidence_threshold), iou_threshold=0.5
     )
+    streakmind_yolo_dets = nms_detections(
+        _run_streakmind_yolo_detector(array, confidence_threshold), iou_threshold=0.5
+    )
 
     # Group across detectors: overlapping detections from different methods share
     # the same streak_id.  Nothing is suppressed — all per-method detections are
     # kept so the UI can surface multi-method agreement.
-    combined   = raw_dets + classical_dets + astride_dets + yolo_dets + yolo_full_dets
+    combined = (
+        raw_dets + classical_dets + astride_dets
+        + yolo_dets + yolo_full_dets + streakmind_yolo_dets
+    )
     detections = group_detections(combined, iou_threshold=0.5)
     postprocess_ms = (time.perf_counter() - t2) * 1000
     logger.debug("postprocess_ms=%.1f  after_nms=%d", postprocess_ms, len(detections))

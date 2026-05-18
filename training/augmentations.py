@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -26,6 +27,67 @@ except ImportError as e:
     ) from e
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class SyntheticStreakGeometry:
+    """Visible geometry and rendering parameters for one synthetic streak."""
+
+    x0: float
+    y0: float
+    x1: float
+    y1: float
+    brightness: float
+    brightness_level: int
+    width_px: float
+
+    @property
+    def length_px(self) -> float:
+        return float(np.hypot(self.x1 - self.x0, self.y1 - self.y0))
+
+    @property
+    def angle_deg(self) -> float:
+        return float(np.degrees(np.arctan2(self.y1 - self.y0, self.x1 - self.x0)) % 180.0)
+
+    @property
+    def obb(self) -> dict[str, float]:
+        return {
+            "cx": (self.x0 + self.x1) / 2.0,
+            "cy": (self.y0 + self.y1) / 2.0,
+            "w": self.length_px,
+            "h": self.width_px,
+            "angle_deg": self.angle_deg,
+        }
+
+    @property
+    def render_tuple(self) -> tuple[float, float, float, float, float]:
+        return self.x0, self.y0, self.x1, self.y1, self.brightness
+
+    def segmentation(self) -> list[float]:
+        """Return the OBB polygon as COCO's flat 8-value segmentation."""
+        angle_rad = np.deg2rad(self.angle_deg)
+        cos_a = float(np.cos(angle_rad))
+        sin_a = float(np.sin(angle_rad))
+        cx = (self.x0 + self.x1) / 2.0
+        cy = (self.y0 + self.y1) / 2.0
+        half_w = self.length_px / 2.0
+        half_h = self.width_px / 2.0
+        corners = [
+            (cx + half_w * cos_a - half_h * sin_a, cy + half_w * sin_a + half_h * cos_a),
+            (cx - half_w * cos_a - half_h * sin_a, cy - half_w * sin_a + half_h * cos_a),
+            (cx - half_w * cos_a + half_h * sin_a, cy - half_w * sin_a - half_h * cos_a),
+            (cx + half_w * cos_a + half_h * sin_a, cy + half_w * sin_a - half_h * cos_a),
+        ]
+        return [float(coord) for point in corners for coord in point]
+
+    def bbox(self) -> list[float]:
+        """Return the COCO axis-aligned bbox enclosing the OBB polygon."""
+        poly = self.segmentation()
+        xs = poly[0::2]
+        ys = poly[1::2]
+        x_min = min(xs)
+        y_min = min(ys)
+        return [float(x_min), float(y_min), float(max(xs) - x_min), float(max(ys) - y_min)]
 
 
 def get_train_transforms() -> A.Compose:
@@ -163,6 +225,103 @@ class SyntheticStreakInject(DualTransform):
 
         return modified, new_bboxes, new_labels
 
+    def inject_with_geometry(
+        self,
+        image: np.ndarray,
+        rng: np.random.Generator | None = None,
+        n_streaks: int | None = None,
+        min_length_px: float | None = None,
+        max_length_px: float | None = None,
+        angle_choices_deg: Sequence[float] | None = None,
+        brightness_level: int | None = None,
+        width_px: float = 16.0,
+        full_crossing_probability: float = 0.25,
+    ) -> tuple[np.ndarray, list[SyntheticStreakGeometry]]:
+        """Draw synthetic streaks and return exact visible OBB geometry.
+
+        This is the dataset-building path used by the GTImages reproduction
+        pipeline. It keeps the older ``inject()`` API intact while exposing
+        true line endpoints, angle, length, and brightness provenance for COCO
+        annotations.
+
+        Args:
+            image: uint8 image array, shape ``(H, W, C)`` or ``(H, W)``.
+            rng: NumPy generator for deterministic dataset creation.
+            n_streaks: Number of streaks to draw. Defaults to 1–3.
+            min_length_px: Minimum requested streak length.
+            max_length_px: Maximum requested streak length.
+            angle_choices_deg: Optional observed-angle population to sample from.
+            brightness_level: Optional level 1–5. If omitted, sampled uniformly.
+            width_px: OBB short-axis width in pixels.
+            full_crossing_probability: Chance that a streak is deliberately
+                made longer than the frame diagonal.
+
+        Returns:
+            Tuple of modified image and visible streak geometries.
+        """
+        rng = rng or np.random.default_rng()
+        h_img, w_img = image.shape[:2]
+        diagonal = float(np.hypot(h_img, w_img))
+        min_len = float(min_length_px if min_length_px is not None else self.min_length_px)
+        max_len = float(max_length_px if max_length_px is not None else self.max_length_fraction * diagonal)
+        max_len = max(min_len + 1.0, min(max_len, diagonal * 1.5))
+        count = n_streaks if n_streaks is not None else int(rng.integers(1, 4))
+
+        finite_px = image[np.isfinite(image)]
+        if finite_px.size == 0:
+            img_mean, img_std = 128.0, 20.0
+        else:
+            img_mean = float(finite_px.mean())
+            img_std = float(finite_px.std()) if finite_px.std() > 0 else 20.0
+
+        geometries: list[SyntheticStreakGeometry] = []
+        for _ in range(count):
+            for _attempt in range(100):
+                if angle_choices_deg is not None and len(angle_choices_deg) > 0:
+                    angle_deg = float(rng.choice(np.asarray(angle_choices_deg, dtype=np.float64)))
+                else:
+                    angle_deg = float(rng.uniform(0.0, 180.0))
+                angle_rad = float(np.deg2rad(angle_deg))
+
+                requested_len = float(rng.uniform(min_len, max_len))
+                if rng.random() < full_crossing_probability:
+                    requested_len = max(requested_len, diagonal * float(rng.uniform(1.05, 1.35)))
+
+                dx = float(np.cos(angle_rad) * requested_len / 2.0)
+                dy = float(np.sin(angle_rad) * requested_len / 2.0)
+                margin = requested_len * 0.2
+                cx = float(rng.uniform(-margin, w_img + margin))
+                cy = float(rng.uniform(-margin, h_img + margin))
+
+                clipped = self._clip_segment_to_image(
+                    cx - dx, cy - dy, cx + dx, cy + dy, w_img, h_img
+                )
+                if clipped is None:
+                    continue
+                x0, y0, x1, y1 = clipped
+                visible_len = float(np.hypot(x1 - x0, y1 - y0))
+                if visible_len < max(8.0, min_len * 0.25):
+                    continue
+
+                level = int(brightness_level if brightness_level is not None else rng.integers(1, 6))
+                level = max(1, min(5, level))
+                brightness = float(np.clip((0.65 + 0.55 * level) * img_std, 8.0, 255.0))
+                geometries.append(
+                    SyntheticStreakGeometry(
+                        x0=float(x0),
+                        y0=float(y0),
+                        x1=float(x1),
+                        y1=float(y1),
+                        brightness=brightness,
+                        brightness_level=level,
+                        width_px=float(width_px),
+                    )
+                )
+                break
+
+        modified = self._draw_streaks(image, [g.render_tuple for g in geometries])
+        return modified, geometries
+
     # ------------------------------------------------------------------
     # albumentations DualTransform interface (image-only inside Compose)
     # ------------------------------------------------------------------
@@ -249,6 +408,39 @@ class SyntheticStreakInject(DualTransform):
                 cy = float(rng.uniform(margin_y, h - margin_y))
             streaks.append((cx - dx, cy - dy, cx + dx, cy + dy, brightness))
         return streaks
+
+    @staticmethod
+    def _clip_segment_to_image(
+        x0: float,
+        y0: float,
+        x1: float,
+        y1: float,
+        width: int,
+        height: int,
+    ) -> tuple[float, float, float, float] | None:
+        """Clip a line segment to image bounds using Liang-Barsky clipping."""
+        x_min, y_min = 0.0, 0.0
+        x_max, y_max = float(width - 1), float(height - 1)
+        dx = x1 - x0
+        dy = y1 - y0
+        p = [-dx, dx, -dy, dy]
+        q = [x0 - x_min, x_max - x0, y0 - y_min, y_max - y0]
+        u1, u2 = 0.0, 1.0
+
+        for pi, qi in zip(p, q):
+            if abs(pi) < 1e-12:
+                if qi < 0:
+                    return None
+                continue
+            t = qi / pi
+            if pi < 0:
+                u1 = max(u1, t)
+            else:
+                u2 = min(u2, t)
+            if u1 > u2:
+                return None
+
+        return x0 + u1 * dx, y0 + u1 * dy, x0 + u2 * dx, y0 + u2 * dy
 
     def _draw_streaks(
         self, image: np.ndarray, streaks: list[tuple]
