@@ -21,7 +21,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONDA_ENV="satid"
-PYTHON="/root/miniconda3/envs/${CONDA_ENV}/bin/python"
+MINICONDA_DIR="${MINICONDA_DIR:-${HOME}/miniconda3}"
 
 echo ""
 echo "╔══════════════════════════════════════════════════════╗"
@@ -36,12 +36,20 @@ echo "── Step 1: Miniconda ────────────────�
 if command -v conda &>/dev/null; then
     echo "  ✓  conda already installed: $(conda --version)"
 else
-    echo "  Installing Miniconda..."
-    wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
-        -O /tmp/miniconda.sh
-    bash /tmp/miniconda.sh -b -p /root/miniconda3
+    echo "  Installing Miniconda into ${MINICONDA_DIR}..."
+    if command -v curl &>/dev/null; then
+        curl -fsSL https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
+            -o /tmp/miniconda.sh
+    elif command -v wget &>/dev/null; then
+        wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
+            -O /tmp/miniconda.sh
+    else
+        echo "  ✗  Need curl or wget to download Miniconda."
+        exit 1
+    fi
+    bash /tmp/miniconda.sh -b -p "${MINICONDA_DIR}"
     rm /tmp/miniconda.sh
-    export PATH="/root/miniconda3/bin:$PATH"
+    export PATH="${MINICONDA_DIR}/bin:$PATH"
     conda init bash
     echo "  ✓  Miniconda installed"
 fi
@@ -155,7 +163,12 @@ pip install -r requirements.txt \
     --quiet
 
 # DINOv3 package (for DINOv3Backbone adapter)
-pip install git+https://github.com/facebookresearch/dinov2.git --quiet
+pip install git+https://github.com/facebookresearch/dinov3.git --quiet
+
+python - <<'EOF'
+import dinov3.models.vision_transformer  # noqa: F401
+print("  ✓  DINOv3 package importable")
+EOF
 
 echo "  ✓  All dependencies installed"
 
