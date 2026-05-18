@@ -86,6 +86,12 @@ DETECTOR_PROFILES: dict[str, DetectorProfile] = {
         recall=0.4000,
         notes="Phase 8 measured",
     ),
+    "streakmind_yolo": DetectorProfile(
+        name="StreakMindYOLO",
+        precision=0.0748,
+        recall=0.1404,
+        notes="GTImages local smoke benchmark, real-only checkpoint",
+    ),
     # DINOv3 ViT-B: mAP@0.5=0.74 (Phase C²); P/R to be refined after Phase D eval
     "dinov3_vitb": DetectorProfile(
         name="DINOv3 ViT-B",

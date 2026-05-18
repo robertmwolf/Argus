@@ -104,6 +104,7 @@ data/dev_subset/
 data/raw/
 data/processed/
 data/augmented/
+data/gtimages_synthetic/
 weights/yolo_baseline/
 weights/local_run/
 weights/run/

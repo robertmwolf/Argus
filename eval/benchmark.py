@@ -62,10 +62,22 @@ def load_ground_truth(annotations_path: str | Path) -> list[dict]:
     for ann in coco["annotations"]:
         if ann.get("iscrowd", 0):
             continue
-        obb_list = ann.get("obb")
-        if not obb_list or len(obb_list) < 5:
+        obb_raw = ann.get("obb")
+        if not obb_raw:
             continue
-        cx, cy, w, h, angle_deg = obb_list[:5]
+        if isinstance(obb_raw, dict):
+            try:
+                cx = float(obb_raw["cx"])
+                cy = float(obb_raw["cy"])
+                w = float(obb_raw["w"])
+                h = float(obb_raw["h"])
+                angle_deg = float(obb_raw["angle_deg"])
+            except (KeyError, TypeError, ValueError):
+                continue
+        else:
+            if len(obb_raw) < 5:
+                continue
+            cx, cy, w, h, angle_deg = [float(v) for v in obb_raw[:5]]
         ground_truth.append({
             "image_id": id_to_filename.get(ann["image_id"], str(ann["image_id"])),
             "obb": {"cx": cx, "cy": cy, "w": w, "h": h, "angle_deg": angle_deg},
@@ -432,7 +444,7 @@ def run_benchmark(
 # Display order (unified always first, then ML methods, then classical).
 _METHOD_ORDER = [
     "unified", "dinov3_vitb", "dinov3_vitl", "tiny", "large",
-    "yolo_full", "yolo", "astride", "opencv", "classical", "ml",
+    "streakmind_yolo", "yolo_full", "yolo", "astride", "opencv", "classical", "ml",
 ]
 
 _METHOD_LABELS = {
@@ -441,6 +453,7 @@ _METHOD_LABELS = {
     "dinov3_vitl": "DINOv3 ViT-L",
     "tiny":        "DINO Swin-T",
     "large":       "DINO Swin-L",
+    "streakmind_yolo": "StreakMindYOLO",
     "yolo_full":   "YOLO11m-OBB (full)",
     "yolo":        "YOLO11n-OBB (dev)",
     "astride":     "ASTRiDE",
