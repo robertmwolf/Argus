@@ -418,15 +418,27 @@ export default function ResultViewer({
         <div className="absolute bottom-3 right-3 bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-400 flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
             <span className="inline-block w-6 border-t-2 border-dashed border-cyan-400" />
-            <span className="text-cyan-300">DINOv3 / ML</span>
+            <span className="text-cyan-300">DINOv3 ViT-Base - SatStreaks+GTImages</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-6 border-t-2 border-dashed border-cyan-400" />
+            <span className="text-cyan-300">DINOv3 ViT-Large - SatStreaks+GTImages</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-6 border-t-2 border-dashed border-cyan-400" />
+            <span className="text-cyan-300">DINO Swin-Tiny - SatStreaks</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-6 border-t-2 border-dashed border-cyan-400" />
+            <span className="text-cyan-300">DINO Swin-Large - SatStreaks</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="inline-block w-6 border-t-2 border-dashed border-purple-400" />
-            <span className="text-purple-300">YOLO OBB</span>
+            <span className="text-purple-300">YOLO-OBB - SatStreaks</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="inline-block w-6 border-t-2 border-dashed border-fuchsia-400" />
-            <span className="text-fuchsia-300">StreakMindYOLO</span>
+            <span className="text-fuchsia-300">YOLO-OBB - GTImages</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="inline-block w-6 border-t-2 border-dashed border-amber-400" />
