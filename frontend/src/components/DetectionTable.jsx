@@ -13,6 +13,7 @@ const METHOD_CONFIG = {
   opencv:       { label: 'OpenCV',           cls: 'border-orange-600/60 bg-orange-950/40 text-orange-300' },
   dinov3_vitb:  { label: 'DINOv3 ViT-B',    cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
   dinov3_vitl:  { label: 'DINOv3 ViT-L',    cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
+  streakmind_yolo: { label: 'StreakMindYOLO', cls: 'border-fuchsia-500/70 bg-fuchsia-950/40 text-fuchsia-300' },
   yolo:         { label: 'YOLO (dev)',       cls: 'border-violet-600/60 bg-violet-950/40 text-violet-300' },
   yolo_full:    { label: 'YOLO (full)',      cls: 'border-purple-600/60 bg-purple-950/40 text-purple-300' },
   tiny:         { label: 'DINO Swin-T',     cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },

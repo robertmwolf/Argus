@@ -70,6 +70,16 @@ class TestFITSLoaderLoad:
         assert h == 64
         assert w == 64
 
+    def test_zscale_mode(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        fits_path = _make_fits(tmp_path)
+        monkeypatch.setenv("ARGUS_NORM", "zscale")
+
+        result = FITSLoader().load(fits_path)
+
+        assert result["norm_mode"] == "zscale"
+        assert result["array"].dtype == np.uint8
+        assert result["array"].shape == (64, 64, 3)
+
     def test_shape_tuple(self, tmp_path: Path) -> None:
         fits_path = _make_fits(tmp_path)
         result = FITSLoader().load(fits_path)
