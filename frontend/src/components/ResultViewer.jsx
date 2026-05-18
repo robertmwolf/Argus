@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 const OBB_COLOUR = '#00DCFF'        // cyan  — DINOv3 / ML
 const YOLO_COLOUR = '#C084FC'       // purple — YOLO (dev + full)
+const STREAKMIND_COLOUR = '#E879F9' // fuchsia — StreakMindYOLO
 const CLASSICAL_COLOUR = '#F59E0B'  // amber  — ASTRiDE / OpenCV
 const HIGHLIGHT_COLOUR = '#FF6B35'  // orange — highlighted row
 
@@ -189,8 +190,11 @@ function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
     individualSources.every(s => s.method === 'astride' || s.method === 'opencv' || s.method === 'classical')
   const isYolo = individualSources.length > 0 &&
     individualSources.every(s => s.method === 'yolo' || s.method === 'yolo_full')
+  const isStreakMind = individualSources.length > 0 &&
+    individualSources.every(s => s.method === 'streakmind_yolo')
   const colour = highlighted ? HIGHLIGHT_COLOUR
     : isClassical ? CLASSICAL_COLOUR
+    : isStreakMind ? STREAKMIND_COLOUR
     : isYolo ? YOLO_COLOUR
     : OBB_COLOUR
   const alpha = highlighted ? 1.0 : 0.4 + conf * 0.6
@@ -285,8 +289,11 @@ export default function ResultViewer({
         indSources.every(s => s.method === 'astride' || s.method === 'opencv' || s.method === 'classical')
       const isYolo = indSources.length > 0 &&
         indSources.every(s => s.method === 'yolo' || s.method === 'yolo_full')
+      const isStreakMind = indSources.length > 0 &&
+        indSources.every(s => s.method === 'streakmind_yolo')
       const colour = i === highlightIndex ? HIGHLIGHT_COLOUR
         : isClassical ? CLASSICAL_COLOUR
+        : isStreakMind ? STREAKMIND_COLOUR
         : isYolo ? YOLO_COLOUR
         : OBB_COLOUR
       const alpha = i === highlightIndex ? 1.0 : 0.4 + (det.confidence ?? 1) * 0.6
@@ -416,6 +423,10 @@ export default function ResultViewer({
           <div className="flex items-center gap-2">
             <span className="inline-block w-6 border-t-2 border-dashed border-purple-400" />
             <span className="text-purple-300">YOLO OBB</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-6 border-t-2 border-dashed border-fuchsia-400" />
+            <span className="text-fuchsia-300">StreakMindYOLO</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="inline-block w-6 border-t-2 border-dashed border-amber-400" />

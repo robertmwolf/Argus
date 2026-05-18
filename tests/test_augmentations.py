@@ -8,6 +8,7 @@ import pytest
 A = pytest.importorskip("albumentations")
 
 from training.augmentations import (
+    SyntheticStreakGeometry,
     SyntheticStreakInject,
     get_train_transforms,
     get_val_transforms,
@@ -138,3 +139,62 @@ class TestSyntheticStreakInject:
         out = tf(image=image, bboxes=[], labels=[])
         # Image should be modified (streaks drawn)
         assert not np.array_equal(out["image"], image)
+
+    def test_inject_with_geometry_returns_obb_metadata(self) -> None:
+        image = np.ones((128, 128, 3), dtype=np.uint8) * 80
+        rng = np.random.default_rng(42)
+        injector = SyntheticStreakInject(p=1.0)
+
+        out_img, geometries = injector.inject_with_geometry(
+            image,
+            rng=rng,
+            n_streaks=1,
+            min_length_px=40.0,
+            max_length_px=80.0,
+            angle_choices_deg=[30.0],
+            brightness_level=3,
+            width_px=12.0,
+            full_crossing_probability=0.0,
+        )
+
+        assert out_img.shape == image.shape
+        assert len(geometries) == 1
+        geom = geometries[0]
+        assert isinstance(geom, SyntheticStreakGeometry)
+        assert geom.length_px > 0
+        assert 0.0 <= geom.x0 <= 127.0
+        assert 0.0 <= geom.y0 <= 127.0
+        assert 0.0 <= geom.x1 <= 127.0
+        assert 0.0 <= geom.y1 <= 127.0
+        assert geom.obb["h"] == pytest.approx(12.0)
+        assert len(geom.segmentation()) == 8
+        bbox = geom.bbox()
+        assert bbox[2] > 0
+        assert bbox[3] > 0
+
+    def test_inject_with_geometry_is_deterministic_for_seed(self) -> None:
+        image = np.ones((96, 96, 3), dtype=np.uint8) * 90
+        injector = SyntheticStreakInject(p=1.0)
+
+        _, first = injector.inject_with_geometry(
+            image,
+            rng=np.random.default_rng(7),
+            n_streaks=1,
+            min_length_px=30.0,
+            max_length_px=70.0,
+            angle_choices_deg=[45.0],
+            brightness_level=2,
+            full_crossing_probability=0.0,
+        )
+        _, second = injector.inject_with_geometry(
+            image,
+            rng=np.random.default_rng(7),
+            n_streaks=1,
+            min_length_px=30.0,
+            max_length_px=70.0,
+            angle_choices_deg=[45.0],
+            brightness_level=2,
+            full_crossing_probability=0.0,
+        )
+
+        assert first == second

@@ -242,6 +242,28 @@ class TestBenchmarkHelpers:
         assert gts[0]["obb"]["angle_deg"] == pytest.approx(8.0)
         assert gts[0]["streak_length_px"] == pytest.approx(200.0)
 
+    def test_load_ground_truth_accepts_dict_obb(self, tmp_path):
+        from eval.benchmark import load_ground_truth
+
+        coco = {
+            "images": [{"id": 1, "file_name": "img001.fits", "width": 512, "height": 512}],
+            "annotations": [
+                {"id": 1, "image_id": 1, "category_id": 1, "iscrowd": 0,
+                 "bbox": [50, 90, 200, 15],
+                 "obb": {"cx": 150.0, "cy": 97.5, "w": 200.0, "h": 15.0, "angle_deg": 8.0},
+                 "area": 3000},
+            ],
+            "categories": [{"id": 1, "name": "streak"}],
+        }
+        ann_file = tmp_path / "test.json"
+        ann_file.write_text(json.dumps(coco))
+
+        gts = load_ground_truth(ann_file)
+
+        assert len(gts) == 1
+        assert gts[0]["obb"]["cx"] == pytest.approx(150.0)
+        assert gts[0]["streak_length_px"] == pytest.approx(200.0)
+
     def test_format_markdown_table_contains_headers(self):
         from eval.benchmark import format_markdown_table
 

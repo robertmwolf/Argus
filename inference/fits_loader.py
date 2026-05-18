@@ -16,6 +16,10 @@ Two normalisation modes are supported, selected by the ARGUS_NORM env var:
       and including the local Swin-T baseline used.  Must match training to
       avoid a domain shift that suppresses detection confidence.
 
+  ARGUS_NORM=zscale
+      IRAF/Astropy ZScale stretch, useful for StreakMind-style FITS→PNG
+      detector training runs.
+
 Set this to match whichever preprocessing was used during the training run
 whose weights are loaded.  Mismatch → very low detection scores.
 """
@@ -105,6 +109,33 @@ def _normalise_autostretch(arr: np.ndarray) -> np.ndarray:
     return (stretched * 255.0).astype(np.uint8)
 
 
+def _normalise_zscale(arr: np.ndarray) -> np.ndarray:
+    """ZScale normalisation → uint8 [0, 255].
+
+    Uses Astropy's ZScaleInterval, matching the common astronomical display
+    stretch used when converting FITS frames to detector-ready PNGs.
+    """
+    from astropy.visualization import ZScaleInterval
+
+    finite = arr[np.isfinite(arr)]
+    if finite.size == 0:
+        return np.zeros_like(arr, dtype=np.uint8)
+
+    interval = ZScaleInterval()
+    try:
+        lo, hi = interval.get_limits(finite)
+    except Exception:
+        lo, hi = float(np.nanmin(finite)), float(np.nanmax(finite))
+
+    if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
+        lo, hi = float(np.nanmin(finite)), float(np.nanmax(finite))
+    if hi <= lo:
+        return np.zeros_like(arr, dtype=np.uint8)
+
+    scaled = np.clip((arr - lo) / (hi - lo), 0.0, 1.0)
+    return (scaled * 255.0).astype(np.uint8)
+
+
 class FITSLoader:
     """Load and normalise FITS images for ML inference.
 
@@ -183,9 +214,11 @@ class FITSLoader:
                     )
 
                 # --- Normalisation -------------------------------------------
-                norm = _NORM_MODE
+                norm = os.environ.get("ARGUS_NORM", _NORM_MODE).lower()
                 if norm == "autostretch":
                     arr_u8 = _normalise_autostretch(arr)
+                elif norm == "zscale":
+                    arr_u8 = _normalise_zscale(arr)
                 else:
                     if norm != "zscore":
                         logger.warning(
