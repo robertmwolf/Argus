@@ -393,16 +393,20 @@ def train(
         cfg.load_from = load_from
         logger.info("Initialising from checkpoint: %s", load_from)
     if os.environ.get("USE_DEV_SUBSET", "true").lower() in {"0", "false", "no"}:
-        # TRAIN_ANN_FILE lets callers substitute an augmented annotation file
-        # (e.g. train_augmented.json) without changing any other config.
-        # Path must be relative to cfg.train_dataloader.dataset.data_root ("data/").
+        # TRAIN_ANN_FILE / VAL_ANN_FILE let callers substitute annotation files
+        # (e.g. dm_merged_train.json) without changing any other config.
+        # Paths must be relative to cfg.train_dataloader.dataset.data_root ("data/").
         train_ann = os.environ.get("TRAIN_ANN_FILE", "annotations/train.json")
+        val_ann = os.environ.get("VAL_ANN_FILE", "annotations/val.json")
         cfg.train_dataloader.dataset.ann_file = train_ann
-        cfg.val_dataloader.dataset.ann_file = "annotations/val.json"
+        cfg.val_dataloader.dataset.ann_file = val_ann
         cfg.test_dataloader = cfg.val_dataloader
-        cfg.val_evaluator.ann_file = "data/annotations/val.json"
+        cfg.val_evaluator.ann_file = f"data/{val_ann}"
         cfg.test_evaluator = cfg.val_evaluator
-        logger.info("USE_DEV_SUBSET=false → training on data/%s", train_ann)
+        logger.info(
+            "USE_DEV_SUBSET=false → train=data/%s  val=data/%s",
+            train_ann, val_ann,
+        )
     if not _torch.cuda.is_available():
         cfg.train_dataloader.num_workers = 0
         cfg.val_dataloader.num_workers = 0
