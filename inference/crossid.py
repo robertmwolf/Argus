@@ -17,11 +17,11 @@ Enhancements adapted from SkyTrack (colleague's pipeline):
     derived from the detection geometry, used as an additional confidence
     factor.
 
-TLE source routing (Space-Track API policy compliance):
-  - inference reads only from the local tle_catalog table
-  - if local coverage is missing, objects are left unidentified/unknown
-  - Space-Track current/history calls are explicit maintenance tasks, never
-    automatic inference fallbacks
+TLE source routing:
+  - inference reads the local tle_catalog first
+  - on a local miss, development can refresh current GP data through
+    Space-Track's test API via TLECatalogManager
+  - gp_history is never called from inference
 
 # Source: Danarianto et al. — Gaussian confidence scoring for satellite crossID
 # Ref: cite per published paper
@@ -38,6 +38,7 @@ import math
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from src.matching.scorer import tle_age_penalty
 from src.matching.tle_manager import TLECatalogManager
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,10 @@ _POSITION_SIGMA_ARCSEC = 900.0
 # Gaussian sigma for length score: 40% relative error → score ≈ 0.61
 _LENGTH_SIGMA_RELATIVE = 0.4
 
+# A broad epoch hit still counts as "no match" if no propagated candidate lands
+# within roughly a degree of the detection midpoint.
+_MIN_VIABLE_POSITION_SCORE = 0.01
+
 
 # ---------------------------------------------------------------------------
 # TLE loading from Space-Track
@@ -56,10 +61,27 @@ _LENGTH_SIGMA_RELATIVE = 0.4
 _tle_manager = TLECatalogManager()
 
 
+def _format_utc(dt: datetime | None) -> str | None:
+    """Format a datetime as compact ISO8601 UTC for API/UI metadata."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _catalog_entry(raw: Any) -> dict[str, Any]:
+    """Normalize legacy tuple catalogs and metadata-rich catalog dicts."""
+    if isinstance(raw, tuple):
+        name, line1, line2 = raw
+        return {"name": name, "line1": line1, "line2": line2}
+    return raw
+
+
 def _fetch_tle_catalog(
     obs_time: datetime,
     epoch_window_days: int,
-) -> list[tuple[str, str, str]]:
+) -> list[dict[str, Any]]:
     """Return TLEs for the observation window via the two-track TLE manager.
 
     Delegates to :class:`~src.matching.tle_manager.TLECatalogManager`, which
@@ -75,7 +97,7 @@ def _fetch_tle_catalog(
         epoch_window_days: Days before obs_time to search.
 
     Returns:
-        List of (name, line1, line2) tuples ready for SGP4 propagation.
+        List of catalog dicts ready for SGP4 propagation and scoring.
     """
     if obs_time.tzinfo is None:
         obs_time = obs_time.replace(tzinfo=timezone.utc)
@@ -92,17 +114,56 @@ def _fetch_tle_catalog(
         )
         return []
 
-    catalog = [
-        (r["object_name"], r["tle_line1"], r["tle_line2"])
-        for r in db_rows
-        if r.get("tle_line1") and r.get("tle_line2")
-    ]
+    catalog = _catalog_from_rows(db_rows)
     logger.debug(
         "TLE manager returned %d records; %d have TLE lines",
         len(db_rows),
         len(catalog),
     )
     return catalog
+
+
+def _catalog_from_rows(db_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Map TLE manager rows into cross-ID catalog entries."""
+    return [
+        {
+            "name": r["object_name"],
+            "line1": r["tle_line1"],
+            "line2": r["tle_line2"],
+            "tle_epoch": r.get("epoch"),
+            "source": r.get("source"),
+            "epoch_drift_hours": r.get("epoch_drift_hours"),
+            "epoch_search_window_days": r.get("epoch_search_window_days"),
+            "tle_search_mode": r.get("tle_search_mode"),
+            "tle_data_fresh_at": r.get("tle_data_fresh_at"),
+        }
+        for r in db_rows
+        if r.get("tle_line1") and r.get("tle_line2")
+    ]
+
+
+def _fetch_current_tle_catalog(obs_time: datetime) -> list[dict[str, Any]]:
+    """Return current fallback TLEs, refreshing stale data through the manager."""
+    if obs_time.tzinfo is None:
+        obs_time = obs_time.replace(tzinfo=timezone.utc)
+    return _catalog_from_rows(_tle_manager.get_current_fallback_tles(obs_time))
+
+
+def _catalog_has_mode(catalog: list[dict[str, Any]], mode: str) -> bool:
+    """Return True when any catalog entry came from a given search mode."""
+    return any(_catalog_entry(entry).get("tle_search_mode") == mode for entry in catalog)
+
+
+def _best_position_score(detections: list[dict]) -> float:
+    """Return the best raw position score currently attached to detections."""
+    best = 0.0
+    for det in detections:
+        for ident in det.get("identifications", []):
+            score = ident.get("position_score")
+            if score is None:
+                continue
+            best = max(best, float(score))
+    return best
 
 
 # ---------------------------------------------------------------------------
@@ -175,6 +236,7 @@ def _propagate_to_radec(
         tle_age_hours = (obs_time - tle_epoch).total_seconds() / 3600.0
     except Exception:
         tle_age_hours = 0.0
+        tle_epoch = None
 
     try:
         ts = _timescale()
@@ -194,6 +256,7 @@ def _propagate_to_radec(
         "predicted_ra":  predicted_ra,
         "predicted_dec": predicted_dec,
         "tle_age_hours": tle_age_hours,
+        "tle_epoch":     tle_epoch,
     }
 
 
@@ -242,6 +305,26 @@ def _gaussian_score(delta: float, sigma: float) -> float:
         Score in [0.0, 1.0].
     """
     return math.exp(-0.5 * (delta / sigma) ** 2)
+
+
+def _confidence_with_epoch_penalty(position_score: float, tle_age_hours: float) -> tuple[float, float]:
+    """Apply the TLE date-drift penalty to positional match confidence.
+
+    The position-only cross-ID score can look deceptively strong when ARGUS is
+    forced to use a broad epoch window or current catalog against an old photo.
+    Reusing the established LEO TLE age penalty makes that date drift explicit:
+    24 h keeps about 61% of the positional confidence, 48 h about 14%, and
+    72 h about 1%.
+
+    Args:
+        position_score: Raw angular-position score in [0, 1].
+        tle_age_hours: Hours between TLE epoch and photo time.
+
+    Returns:
+        ``(penalized_confidence, epoch_penalty)``.
+    """
+    penalty = tle_age_penalty(abs(tle_age_hours))
+    return position_score * penalty, penalty
 
 
 # ---------------------------------------------------------------------------
@@ -374,6 +457,8 @@ def cross_identify(
     observer_alt_m: float,
     epoch_window_days: int = 3,
     exposure_time: float | None = None,
+    _catalog_override: list[dict[str, Any]] | None = None,
+    _allow_current_retry: bool = True,
 ) -> list[dict]:
     """Cross-match detections against Space-Track TLEs.
 
@@ -424,14 +509,17 @@ def cross_identify(
         start_time = obs_time
         end_time   = None
 
-    try:
-        catalog = _fetch_tle_catalog(obs_time, epoch_window_days)
-    except Exception:
-        logger.warning(
-            "TLE catalog fetch failed — skipping cross-identification",
-            exc_info=True,
-        )
-        catalog = []
+    if _catalog_override is not None:
+        catalog = _catalog_override
+    else:
+        try:
+            catalog = _fetch_tle_catalog(obs_time, epoch_window_days)
+        except Exception:
+            logger.warning(
+                "TLE catalog fetch failed — skipping cross-identification",
+                exc_info=True,
+            )
+            catalog = []
 
     if not catalog:
         logger.warning("Empty TLE catalog — all identifications will be empty")
@@ -463,7 +551,11 @@ def cross_identify(
 
         # --- Score every TLE against the midpoint at mid-exposure time -------
         candidates: list[dict] = []
-        for name, line1, line2 in catalog:
+        for raw_entry in catalog:
+            entry = _catalog_entry(raw_entry)
+            name = entry["name"]
+            line1 = entry["line1"]
+            line2 = entry["line2"]
             result = _propagate_to_radec(
                 name, line1, line2, mid_time,
                 observer_lat, observer_lon, observer_alt_m,
@@ -476,13 +568,28 @@ def cross_identify(
                 result["predicted_ra"], result["predicted_dec"],
             )
             pos_score = _gaussian_score(sep_arcsec, sigma=_POSITION_SIGMA_ARCSEC)
+            confidence, epoch_penalty = _confidence_with_epoch_penalty(
+                pos_score,
+                result["tle_age_hours"],
+            )
 
             candidates.append({
                 "satellite_name":    result["object_name"],
                 "norad_id":          result["norad_id"],
-                "confidence":        pos_score,
+                "confidence":        confidence,
+                "position_score":    round(pos_score, 4),
+                "epoch_penalty":     round(epoch_penalty, 4),
                 "separation_arcsec": sep_arcsec,
                 "tle_age_hours":     result["tle_age_hours"],
+                "tle_epoch":         entry.get("tle_epoch") or _format_utc(result.get("tle_epoch")),
+                "photo_taken_at":    _format_utc(obs_time),
+                "tle_data_fresh_at": entry.get("tle_data_fresh_at"),
+                "tle_source":        entry.get("source"),
+                "tle_search_mode":   entry.get("tle_search_mode"),
+                "epoch_search_window_days": entry.get("epoch_search_window_days"),
+                "epoch_drift_hours": entry.get("epoch_drift_hours")
+                    if entry.get("epoch_drift_hours") is not None
+                    else abs(result["tle_age_hours"]),
                 "rank":              0,
                 "_line1":            line1,
                 "_line2":            line2,
@@ -508,7 +615,12 @@ def cross_identify(
 
         # --- Top-1 only: direction disambiguation + expected length ----------
         # Source: SkyTrack (colleague) — StreakDirection, StreakExpectedPos
-        if top3 and has_both_tips and exposure_time is not None:
+        if (
+            top3
+            and has_both_tips
+            and exposure_time is not None
+            and top3[0].get("position_score", 0.0) >= _MIN_VIABLE_POSITION_SCORE
+        ):
             best = top3[0]
 
             # Propagate at exposure start to find which tip is the start
@@ -553,7 +665,7 @@ def cross_identify(
                             length_score = _gaussian_score(rel_err, sigma=_LENGTH_SIGMA_RELATIVE)
                             best["expected_length_px"] = round(exp_length_px, 1)
                             best["length_score"]       = round(length_score, 3)
-                            # Composite confidence: position × length match
+                            # Composite confidence: date-penalized position × length match
                             best["confidence"] = round(best["confidence"] * length_score, 4)
                             logger.debug(
                                 "Expected length: %.0fpx  observed: %.0fpx  "
@@ -576,6 +688,38 @@ def cross_identify(
                 "Best match: %s (NORAD %d) sep=%.1f\" conf=%.3f",
                 top3[0]["satellite_name"], top3[0]["norad_id"],
                 top3[0]["separation_arcsec"], top3[0]["confidence"],
+            )
+
+    if (
+        _allow_current_retry
+        and _catalog_has_mode(catalog, "broad_epoch")
+        and _best_position_score(detections) < _MIN_VIABLE_POSITION_SCORE
+    ):
+        logger.info(
+            "Broad epoch TLE search produced no viable propagated match "
+            "(best position score %.4f); trying current TLE fallback",
+            _best_position_score(detections),
+        )
+        try:
+            current_catalog = _fetch_current_tle_catalog(obs_time)
+        except Exception:
+            logger.warning(
+                "Current TLE fallback fetch failed — keeping broad epoch results",
+                exc_info=True,
+            )
+            current_catalog = []
+
+        if current_catalog:
+            return cross_identify(
+                detections,
+                obs_time,
+                observer_lat,
+                observer_lon,
+                observer_alt_m,
+                epoch_window_days=epoch_window_days,
+                exposure_time=exposure_time,
+                _catalog_override=current_catalog,
+                _allow_current_retry=False,
             )
 
     return detections

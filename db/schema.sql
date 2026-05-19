@@ -36,7 +36,17 @@ CREATE TABLE identifications (
     satellite_name TEXT,
     confidence     REAL,
     separation_deg REAL,
-    rank           INTEGER    -- 1 = best match, up to 3
+    rank           INTEGER,   -- 1 = best match, up to 3
+    tle_epoch      TEXT,
+    tle_age_hours  REAL,
+    photo_taken_at TEXT,
+    tle_data_fresh_at TEXT,
+    tle_source     TEXT,
+    tle_search_mode TEXT,
+    epoch_search_window_days INTEGER,
+    epoch_drift_hours REAL,
+    position_score REAL,
+    epoch_penalty  REAL
 );
 
 CREATE TABLE tracklets (

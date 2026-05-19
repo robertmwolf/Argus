@@ -54,10 +54,9 @@ class TestFetchTleCatalog:
             catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=1)
 
         assert len(catalog) == 1
-        name, line1, line2 = catalog[0]
-        assert name == _TEST_TLE_NAME
-        assert line1 == _TEST_TLE_LINE1
-        assert line2 == _TEST_TLE_LINE2
+        assert catalog[0]["name"] == _TEST_TLE_NAME
+        assert catalog[0]["line1"] == _TEST_TLE_LINE1
+        assert catalog[0]["line2"] == _TEST_TLE_LINE2
 
     def test_skips_records_without_tle_lines(self):
         """Records missing TLE_LINE1 or TLE_LINE2 are silently dropped."""
@@ -72,7 +71,7 @@ class TestFetchTleCatalog:
             catalog = _fetch_tle_catalog(_OBS_TIME, epoch_window_days=1)
 
         assert len(catalog) == 1
-        assert catalog[0][0] == _TEST_TLE_NAME
+        assert catalog[0]["name"] == _TEST_TLE_NAME
 
     def test_empty_response_returns_empty_list(self):
         import inference.crossid as crossid
@@ -219,6 +218,58 @@ class TestCrossIdentifyKnownTle:
         with patch("inference.crossid._fetch_tle_catalog", return_value=[]) as mock_fetch:
             cross_identify(dets, _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT, epoch_window_days=7)
         mock_fetch.assert_called_once_with(_OBS_TIME, 7)
+
+    def test_broad_epoch_without_viable_match_tries_current_fallback(self):
+        """A populated broad catalog with only poor geometry still retries current data."""
+        from inference.crossid import cross_identify
+
+        broad_catalog = [{
+            "name": "BROAD-BAD",
+            "line1": _TEST_TLE_LINE1,
+            "line2": _TEST_TLE_LINE2,
+            "tle_search_mode": "broad_epoch",
+        }]
+        current_catalog = [{
+            "name": "CURRENT-GOOD",
+            "line1": _ISS_LINE1,
+            "line2": _ISS_LINE2,
+            "tle_search_mode": "current_fallback",
+        }]
+
+        def fake_propagate(name, *_args, **_kwargs):
+            if name == "CURRENT-GOOD":
+                return {
+                    "object_name": name,
+                    "norad_id": 25544,
+                    "predicted_ra": 10.0,
+                    "predicted_dec": 20.0,
+                    "tle_age_hours": 0.0,
+                    "tle_epoch": _OBS_TIME,
+                }
+            return {
+                "object_name": name,
+                "norad_id": 44713,
+                "predicted_ra": 180.0,
+                "predicted_dec": -20.0,
+                "tle_age_hours": 0.0,
+                "tle_epoch": _OBS_TIME,
+            }
+
+        dets = [{
+            "ra_tip1_deg": 10.0,
+            "dec_tip1_deg": 20.0,
+            "ra_tip2_deg": 10.0,
+            "dec_tip2_deg": 20.0,
+        }]
+        with patch("inference.crossid._fetch_tle_catalog", return_value=broad_catalog):
+            with patch("inference.crossid._fetch_current_tle_catalog", return_value=current_catalog) as mock_current:
+                with patch("inference.crossid._propagate_to_radec", side_effect=fake_propagate):
+                    result = cross_identify(dets, _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT)
+
+        mock_current.assert_called_once_with(_OBS_TIME)
+        best = result[0]["identifications"][0]
+        assert best["satellite_name"] == "CURRENT-GOOD"
+        assert best["tle_search_mode"] == "current_fallback"
 
 
 # ---------------------------------------------------------------------------
