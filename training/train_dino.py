@@ -87,14 +87,15 @@ _patch_torch_load_weights_only()
 # ---------------------------------------------------------------------------
 
 _CONFIG_MAP: dict[str, str] = {
-    "tiny":         "models/dino/streak_codino_swin_t.py",
-    "large":        "models/dino/streak_codino_swin_l.py",
-    "dinov3_vitb":  "models/dino/streak_dinov3_vitb.py",
-    "dinov3_vitl":  "models/dino/streak_dinov3_vitl.py",
+    "tiny":                    "models/dino/streak_codino_swin_t.py",
+    "large":                   "models/dino/streak_codino_swin_l.py",
+    "dinov3_vitb":             "models/dino/streak_dinov3_vitb.py",
+    "dinov3_vitl":             "models/dino/streak_dinov3_vitl.py",
+    "dinov3_gt_dm_satstreaks": "models/dino/streak_dinov3_vitb.py",
 }
 
 # Backbones that are permanently frozen — Stage2UnfreezeHook is skipped.
-_FROZEN_BACKBONES: frozenset[str] = frozenset({"dinov3_vitb", "dinov3_vitl"})
+_FROZEN_BACKBONES: frozenset[str] = frozenset({"dinov3_vitb", "dinov3_vitl", "dinov3_gt_dm_satstreaks"})
 
 _STAGE2_EPOCH = 21   # epoch at which Swin backbone is unfrozen (not used for DINOv3)
 
