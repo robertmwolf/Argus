@@ -84,7 +84,6 @@ class Observation(Base):
     obs_epoch: Mapped[str | None] = mapped_column(Text)       # ISO8601
     fits_wcs_json: Mapped[str | None] = mapped_column(Text)   # JSON string
     status: Mapped[str] = mapped_column(Text, default="queued", nullable=False)
-    enabled_detectors: Mapped[str | None] = mapped_column(Text)  # JSON list of detector IDs
 
 
 class Detection(Base):
@@ -129,6 +128,16 @@ class Identification(Base):
     confidence: Mapped[float | None] = mapped_column(Float)
     separation_deg: Mapped[float | None] = mapped_column(Float)
     rank: Mapped[int | None] = mapped_column(Integer)  # 1 = best
+    tle_epoch: Mapped[str | None] = mapped_column(Text)
+    tle_age_hours: Mapped[float | None] = mapped_column(Float)
+    photo_taken_at: Mapped[str | None] = mapped_column(Text)
+    tle_data_fresh_at: Mapped[str | None] = mapped_column(Text)
+    tle_source: Mapped[str | None] = mapped_column(Text)
+    tle_search_mode: Mapped[str | None] = mapped_column(Text)
+    epoch_search_window_days: Mapped[int | None] = mapped_column(Integer)
+    epoch_drift_hours: Mapped[float | None] = mapped_column(Float)
+    position_score: Mapped[float | None] = mapped_column(Float)
+    epoch_penalty: Mapped[float | None] = mapped_column(Float)
 
 
 class Tracklet(Base):
@@ -171,6 +180,7 @@ class TleCatalogEntry(Base):
     mean_motion: Mapped[float | None] = mapped_column(Float)    # rev/day
     tle_line1: Mapped[str] = mapped_column(Text, nullable=False)
     tle_line2: Mapped[str] = mapped_column(Text, nullable=False)
+    source: Mapped[str | None] = mapped_column(Text)
     ingested_at: Mapped[str | None] = mapped_column(Text)
 
 
@@ -207,6 +217,29 @@ def _migrate_existing_tables(sync_conn) -> None:
         sync_conn.exec_driver_sql("ALTER TABLE detections ADD COLUMN method TEXT DEFAULT 'ml'")
     if "streak_id" not in columns:
         sync_conn.exec_driver_sql("ALTER TABLE detections ADD COLUMN streak_id INTEGER")
+
+    tle_columns = {col["name"] for col in inspect(sync_conn).get_columns("tle_catalog")}
+    if "source" not in tle_columns:
+        sync_conn.exec_driver_sql("ALTER TABLE tle_catalog ADD COLUMN source TEXT")
+
+    ident_columns = {col["name"] for col in inspect(sync_conn).get_columns("identifications")}
+    ident_additions = {
+        "tle_epoch": "TEXT",
+        "tle_age_hours": "FLOAT",
+        "photo_taken_at": "TEXT",
+        "tle_data_fresh_at": "TEXT",
+        "tle_source": "TEXT",
+        "tle_search_mode": "TEXT",
+        "epoch_search_window_days": "INTEGER",
+        "epoch_drift_hours": "FLOAT",
+        "position_score": "FLOAT",
+        "epoch_penalty": "FLOAT",
+    }
+    for name, ddl_type in ident_additions.items():
+        if name not in ident_columns:
+            sync_conn.exec_driver_sql(
+                f"ALTER TABLE identifications ADD COLUMN {name} {ddl_type}"
+            )
 
 
 if __name__ == "__main__":

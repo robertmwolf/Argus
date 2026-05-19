@@ -73,6 +73,13 @@ function CandidateRow({ id, rank }) {
     conf >= 0.5 ? 'bg-yellow-500' :
     'bg-red-500'
 
+  const photoDate = formatDateTime(id.photo_taken_at)
+  const tleEpoch = formatDateTime(id.tle_epoch)
+  const ageHours = id.tle_age_hours ?? id.epoch_drift_hours
+  const ageLabel = ageHours == null
+    ? null
+    : `${Math.abs(ageHours) >= 48 ? (Math.abs(ageHours) / 24).toFixed(1) + ' d' : Math.abs(ageHours).toFixed(0) + ' h'} TLE age`
+
   return (
     <div className={`px-4 py-3 flex items-center gap-4 ${isBest ? 'bg-yellow-950/20' : 'hover:bg-slate-800/30'} transition-colors`}>
       {/* Rank badge */}
@@ -105,6 +112,10 @@ function CandidateRow({ id, rank }) {
               Δ {(id.separation_deg * 3600).toFixed(1)}″ sep.
             </span>
           )}
+          {photoDate !== '—' && <span>Photo {photoDate}</span>}
+          {tleEpoch !== '—' && <span>TLE {tleEpoch}</span>}
+          {ageLabel && <span>{ageLabel}</span>}
+          {id.epoch_penalty != null && <span>Date penalty {(id.epoch_penalty * 100).toFixed(0)}%</span>}
         </div>
       </div>
 
@@ -122,4 +133,17 @@ function CandidateRow({ id, rank }) {
       </div>
     </div>
   )
+}
+
+function formatDateTime(value) {
+  if (!value) return '—'
+  const dt = new Date(value)
+  if (Number.isNaN(dt.getTime())) return value
+  return dt.toLocaleString(undefined, {
+    year: '2-digit',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }

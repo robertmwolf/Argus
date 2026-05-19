@@ -209,6 +209,56 @@ def get_last_coverage_time(source_tag: str, engine=None) -> datetime | None:
         return None
 
 
+def get_latest_coverage_time(
+    source_tags: list[str] | None = None,
+    min_record_count: int = 0,
+    engine=None,
+) -> datetime | None:
+    """Return the newest ``downloaded_at`` timestamp across coverage records.
+
+    Args:
+        source_tags: Optional subset of source tags to inspect.  When omitted,
+            all coverage records are considered.
+        min_record_count: Ignore coverage rows below this record count.  Use 1
+            when callers need the last time fresh data actually arrived rather
+            than the last attempted refresh.
+        engine: Optional sync engine.
+
+    Returns:
+        UTC datetime of the newest recorded coverage timestamp, or None.
+    """
+    eng = engine or get_engine()
+    init_tle_tables(eng)
+
+    sql = "SELECT downloaded_at FROM tle_catalog_coverage"
+    params: dict[str, Any] = {}
+    clauses: list[str] = []
+    if source_tags:
+        placeholders = ", ".join(f":tag{i}" for i, _ in enumerate(source_tags))
+        clauses.append(f"source_tag IN ({placeholders})")
+        params = {f"tag{i}": tag for i, tag in enumerate(source_tags)}
+    if min_record_count > 0:
+        clauses.append("record_count >= :min_record_count")
+        params["min_record_count"] = min_record_count
+    if clauses:
+        sql += " WHERE " + " AND ".join(clauses)
+
+    with eng.connect() as conn:
+        rows = conn.execute(text(sql), params).fetchall()
+
+    latest: datetime | None = None
+    for row in rows:
+        try:
+            dt = datetime.fromisoformat(str(row[0]).replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+        except Exception:
+            continue
+        if latest is None or dt > latest:
+            latest = dt
+    return latest
+
+
 # ---------------------------------------------------------------------------
 # TLE record normalisation
 # ---------------------------------------------------------------------------
@@ -371,7 +421,7 @@ def query_tles_for_window(
 
     sql = (
         "SELECT norad_id, epoch, object_name, object_type, mean_motion, "
-        "       tle_line1, tle_line2 "
+        "       tle_line1, tle_line2, source "
         "FROM tle_catalog "
         "WHERE epoch >= :start AND epoch <= :end "
     )
@@ -391,6 +441,126 @@ def query_tles_for_window(
         "query_tles_for_window: %d records for window %s → %s",
         len(result), epoch_start, epoch_end,
     )
+    return result
+
+
+def _parse_iso_utc(value: Any) -> datetime | None:
+    """Parse a stored UTC ISO timestamp into an aware datetime."""
+    if value is None:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except Exception:
+        return None
+
+
+def _with_epoch_drift(rows: list[dict[str, Any]], obs_time: datetime) -> list[dict[str, Any]]:
+    """Attach absolute epoch drift and sort rows nearest to the observation."""
+    enriched: list[dict[str, Any]] = []
+    for row in rows:
+        epoch_dt = _parse_iso_utc(row.get("epoch"))
+        drift_hours = (
+            abs((obs_time - epoch_dt).total_seconds()) / 3600.0
+            if epoch_dt is not None else float("inf")
+        )
+        enriched.append({**row, "epoch_drift_hours": drift_hours})
+    enriched.sort(key=lambda r: r["epoch_drift_hours"])
+    return enriched
+
+
+def query_tles_for_epoch_drift(
+    obs_time: datetime,
+    epoch_window_days: int = 30,
+    min_mean_motion: float = 11.25,
+    engine=None,
+) -> list[dict[str, Any]]:
+    """Return TLE records within a broad symmetric epoch window.
+
+    This is the deliberately wide fallback used when the normal local DB
+    window has no candidates.  Rows are ordered by absolute epoch drift from
+    the photo time so downstream scoring can penalize stale or future TLEs.
+
+    Args:
+        obs_time: UTC observation time.
+        epoch_window_days: Days on either side of obs_time to search.
+        min_mean_motion: Minimum mean_motion in rev/day.  Pass 0 for all orbits.
+        engine: Optional sync engine.
+
+    Returns:
+        List of TLE row dicts with ``epoch_drift_hours`` attached.
+    """
+    eng = engine or get_engine()
+    init_tle_tables(eng)
+
+    if obs_time.tzinfo is None:
+        obs_time = obs_time.replace(tzinfo=timezone.utc)
+
+    epoch_start = (obs_time - timedelta(days=epoch_window_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    epoch_end = (obs_time + timedelta(days=epoch_window_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    sql = (
+        "SELECT norad_id, epoch, object_name, object_type, mean_motion, "
+        "       tle_line1, tle_line2, source "
+        "FROM tle_catalog "
+        "WHERE epoch >= :start AND epoch <= :end "
+    )
+    params: dict[str, Any] = {"start": epoch_start, "end": epoch_end}
+    if min_mean_motion > 0:
+        sql += "AND (mean_motion IS NULL OR mean_motion >= :mm) "
+        params["mm"] = min_mean_motion
+
+    with eng.connect() as conn:
+        rows = conn.execute(text(sql), params).fetchall()
+
+    result = _with_epoch_drift([dict(r._mapping) for r in rows], obs_time)
+    logger.debug(
+        "query_tles_for_epoch_drift: %d records for broad window %s → %s",
+        len(result), epoch_start, epoch_end,
+    )
+    return result
+
+
+def query_latest_tles(
+    min_mean_motion: float = 11.25,
+    engine=None,
+) -> list[dict[str, Any]]:
+    """Return the latest locally stored TLE for each NORAD object.
+
+    Used as the final current-data fallback after local observation-window
+    searches fail.  This may include TLEs far from the photo date; callers must
+    apply a confidence penalty based on epoch drift.
+
+    Args:
+        min_mean_motion: Minimum mean_motion in rev/day.  Pass 0 for all orbits.
+        engine: Optional sync engine.
+
+    Returns:
+        Latest TLE row per NORAD ID.
+    """
+    eng = engine or get_engine()
+    init_tle_tables(eng)
+
+    sql = (
+        "SELECT c.norad_id, c.epoch, c.object_name, c.object_type, c.mean_motion, "
+        "       c.tle_line1, c.tle_line2, c.source "
+        "FROM tle_catalog c "
+        "JOIN (SELECT norad_id, MAX(epoch) AS max_epoch FROM tle_catalog GROUP BY norad_id) latest "
+        "  ON c.norad_id = latest.norad_id AND c.epoch = latest.max_epoch "
+    )
+    params: dict[str, Any] = {}
+    if min_mean_motion > 0:
+        sql += "WHERE (c.mean_motion IS NULL OR c.mean_motion >= :mm) "
+        params["mm"] = min_mean_motion
+    sql += "ORDER BY c.norad_id ASC"
+
+    with eng.connect() as conn:
+        rows = conn.execute(text(sql), params).fetchall()
+
+    result = [dict(r._mapping) for r in rows]
+    logger.debug("query_latest_tles: %d latest records", len(result))
     return result
 
 
