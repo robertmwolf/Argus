@@ -99,6 +99,12 @@ DETECTOR_PROFILES: dict[str, DetectorProfile] = {
         recall=0.78,
         notes="est. from mAP@0.5=0.74; update post Phase D",
     ),
+    "dinov3_gt_dm_satstreaks": DetectorProfile(
+        name="DINOv3 GT+DM+SatStreaks",
+        precision=0.80,
+        recall=0.78,
+        notes="mAP@0.5=0.740 on test.json; same precision/recall est. as dinov3_vitb baseline",
+    ),
     # DINOv3 ViT-L: Phase D target (RTX 5070 Ti workstation); conservative estimate
     "dinov3_vitl": DetectorProfile(
         name="DINOv3 ViT-L",

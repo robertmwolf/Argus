@@ -249,13 +249,15 @@ def train_track(
         import torch
         if torch.cuda.is_available():
             device = "cuda"
-        elif torch.backends.mps.is_available():
-            device = "mps"
         else:
+            # Ultralytics 8.4.x OBB loss has a MPS-specific bug where
+            # counts.max() returns a negative value, crashing torch.zeros().
+            # CPU is slower but is the only reliable path on Apple Silicon
+            # for YOLO OBB training until upstream fixes the MPS kernel.
             device = "cpu"
     except Exception:
         device = "cpu"
-    workers = 0 if device in ("mps", "cpu") else min(4, os.cpu_count() or 1)
+    workers = min(2, os.cpu_count() or 1) if device == "cpu" else min(4, os.cpu_count() or 1)
 
     model = YOLO(f"yolo11{model_size}-obb.pt")
     model.train(

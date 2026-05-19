@@ -42,7 +42,7 @@ Full design: [`agent_docs/architecture.md`](agent_docs/architecture.md)
 See [METHODOLOGY.md §§ 3–5](METHODOLOGY.md) for complete algorithmic documentation
 including exact parameters, design rationale, and reproducible algorithm descriptions.
 
-**Summary:** FITS → Z-score normalisation → 5 parallel detectors (DINOv2 ViT-B /
+**Summary:** FITS → Z-score normalisation → 5 parallel detectors (DINOv3 ViT-B /
 DINO-DETR, YOLO11n-OBB × 2, ASTRiDE, OpenCV connected-components) → Radon angle
 refinement → streak extent tracing → per-detector NMS → cross-detector grouping
 (rotated-IoU ≥ 0.5 or IoMin ≥ 0.3) → Unified Confidence Score → SGP4
@@ -117,6 +117,12 @@ Argus/
 ---
 
 ## Setup
+
+For GPU training handoff, use [agent_docs/Training_Handoff.md](agent_docs/Training_Handoff.md)
+first. On Windows hardware, that means WSL2 Ubuntu 22.04, not native Windows.
+The short local setup below is for development and API/inference work; the ML
+training stack has platform-specific PyTorch/MMDetection install steps in
+[agent_docs/dependencies.md](agent_docs/dependencies.md).
 
 ```bash
 # Create and activate the conda environment

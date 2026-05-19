@@ -1,8 +1,31 @@
 # ARGUS Training Handoff
 
-This document is the handoff checklist for training ARGUS on a more powerful
-Windows or Linux workstation with an NVIDIA RTX 5070 Ti 16 GB GPU and a
-24-core i9 CPU.
+## Two Training Routes
+
+Phase D (DINOv3 ViT-L, frozen backbone, full dataset) can be executed via
+either of two independent paths. Choose one — they produce the same target
+artifacts and can be run simultaneously if both resources are available.
+
+| | Route 1 — Colleague's Workstation | Route 2 — Cloud GPU Rental |
+|-|-----------------------------------|---------------------------|
+| **Hardware** | RTX 5070 Ti 16 GB, 24-core i9 (Windows/WSL2) | RTX 4090 24 GB (Vast.ai / RunPod) |
+| **Est. cost** | $0 (colleague's machine) | ~$7–18 on-demand, $5–13 spot |
+| **Est. time** | ~30–40 hrs (50 epochs, 512 px) | ~15–38 hrs (early stopping, 800 px) |
+| **Image size** | 512 px (VRAM-constrained to 16 GB) | 800 px first; fall back to 512 px if OOM |
+| **Setup** | [Route 1 — Workstation](#route-1--workstation-rtx-5070-ti) | [Route 2 — Cloud GPU](#route-2--cloud-gpu-rental-rtx-4090) |
+| **Phase F fallback** | Rent A100 80 GB if targets missed | Included in the $50–150 aspirational path |
+
+> **If both routes run simultaneously**, use separate `--work-dir` paths and
+> separate results directories (e.g. `weights/run_5070ti_dinov3_vitl` vs
+> `weights/run_4090_dinov3_vitl`) so outputs never collide.
+>
+> **Windows note**: Route 1 on a Windows workstation must use WSL2 with Ubuntu
+> 22.04. Native Windows/PowerShell training is not supported because the
+> MMDetection stack requires Linux mmcv CUDA ops.
+
+---
+
+## What Trains (Both Routes)
 
 The DINOv3 backbone is frozen throughout, what specifically needs to be trained is the neck and head:
 
@@ -30,11 +53,38 @@ Follow that document to download training data, run DINOv3 ViT-L training
 (Phase D), evaluate results, and optionally check the outputs back into GitHub.
 ```
 
-## Current Handoff Scope
+## Route 1 — Workstation (RTX 5070 Ti)
 
-This handoff is for workstation training on an NVIDIA RTX 5070 Ti 16 GB GPU.
+The sections below through "Train DINOv3 ViT-L (Phase D — primary run)" cover
+Route 1: the colleague's high-performance Windows workstation (WSL2 + RTX 5070 Ti).
+For Route 2 (cloud GPU rental), jump to
+[Route 2 — Cloud GPU Rental](#route-2--cloud-gpu-rental-rtx-4090).
+
 The historical Lambda A100 path remains valid, but the data download flow and
 expected output branch below are tailored to the 5070 Ti run.
+
+## Windows Workstation Rule
+
+Run the training stack inside **WSL2 Ubuntu 22.04**, even when the physical
+machine is Windows. Do not install the training environment directly in native
+Windows, Anaconda Prompt, or PowerShell.
+
+PowerShell setup on the Windows host:
+
+```powershell
+wsl --install -d Ubuntu-22.04
+```
+
+After rebooting and opening the Ubuntu terminal, verify the GPU is exposed to
+WSL2:
+
+```bash
+nvidia-smi
+```
+
+If `nvidia-smi` does not show the RTX GPU inside Ubuntu, update the Windows
+NVIDIA driver with WSL CUDA support before continuing. Once `nvidia-smi` works,
+treat the machine as Linux for every command in this document.
 
 ## Hardware Requirements
 
@@ -44,7 +94,7 @@ expected output branch below are tailored to the 5070 Ti run.
 | CPU | 8 cores | Intel i9-24 core |
 | RAM | 32 GB | — |
 | Disk | 200 GB free | — |
-| OS | Ubuntu 22.04 LTS | — |
+| OS | Ubuntu 22.04 LTS, including WSL2 Ubuntu | WSL2 Ubuntu 22.04 on Windows |
 | CUDA | 12.6+ | 12.8 recommended for Blackwell |
 | Driver | 560+ | — |
 
@@ -52,6 +102,32 @@ The config is tuned for **16 GB VRAM** (batch_size=1, gradient accumulation=2,
 mixed precision, gradient checkpointing). If you have more VRAM (e.g. A100 40 GB)
 you can raise `batch_size` to 2 in `models/dino/streak_codino_swin_l.py` and
 remove `accumulative_counts`.
+
+## Dependency Model
+
+The training machine should be reproducible from the repository plus the
+external data and weight files listed in this document. Install in this order:
+
+| Layer | Source | Why it is separate |
+|-------|--------|--------------------|
+| Python | conda env `satid`, Python 3.11 | Python 3.12 is not validated with mmcv/numpy compiled packages |
+| PyTorch | PyTorch `cu128` wheel index | Must match RTX 50-series / Blackwell CUDA support |
+| MMDetection | `mmengine==0.10.4`, `mmcv==2.1.0`, `mmdet==3.3.0` | `mmcv` must come from a CUDA-specific Linux wheel with compiled ops |
+| ARGUS packages | `requirements.txt` | Project dependencies only; intentionally excludes torch/mmcv/mmdet |
+| DINOv3 code | `git+https://github.com/facebookresearch/dinov3.git` | Required by `models/dino/dinov3_adapter.py` |
+| Model weights | Shared handoff folder or Meta portal | Large `.pth` files are gitignored and not installed by pip |
+
+`scripts/cloud_setup.sh` performs this order automatically for WSL2/Linux.
+`scripts/prepare_cloud_training.py` verifies the high-risk pieces before a full
+run: CUDA visibility, PyTorch version, mmcv compiled ops, DINOv3 import,
+annotation files, model weights, and a training smoke test.
+
+## Parallel Native PyTorch Spike
+
+If the goal is only streak detection and not preserving the current
+MMDetection/DETR architecture, there is a parallel plain-PyTorch DINOv3 spike in
+`agent_docs/plain_dinov3_spike.md`. It uses a frozen DINOv3 encoder plus a
+small heatmap head and does not require `mmcv`, `mmdet`, or `mmengine`.
 
 ## Dataset Decision — Read This First
 
@@ -668,13 +744,17 @@ scp mac:~/Argus/weights/dinov3_vitl16_lvd1689m.pth weights/
 
 Replace `mac` with the actual hostname or IP of the development Mac.
 
-**Option C — Meta DINOv2/DINOv3 portal**
+**Option C — Meta DINOv3 portal**
 
-Download `dinov2_vitl14_pretrain.pth` (ViT-L/14, no registers) or the LVD-1689M
-variant directly from Meta's DINOv2 repository:
-`https://github.com/facebookresearch/dinov2#pretrained-models`
+Download the ViT-L/16 LVD-1689M checkpoint from Meta's DINOv3 distribution.
+The file used by ARGUS is expected at:
 
-Rename the file to `dinov3_vitl16_lvd1689m.pth` after downloading.
+```text
+weights/dinov3_vitl16_lvd1689m.pth
+```
+
+Do not substitute a DINOv2 ViT-L/14 checkpoint for this run. The adapter and
+config expect DINOv3 ViT-L/16 constructor arguments and checkpoint keys.
 
 **Verify before proceeding:**
 
@@ -871,10 +951,163 @@ Add RTX 5070 Ti DINOv3 ViT-L training results
 
 ---
 
+## Route 2 — Cloud GPU Rental (RTX 4090)
+
+This is the self-contained cloud path for Phase D. It does not require access
+to the colleague's workstation. Results land in a separate directory so both
+routes can coexist if run simultaneously.
+
+**Provider**: Vast.ai or RunPod — RTX 4090 24 GB
+**On-demand rate**: ~$0.44/hr | **Spot rate**: ~$0.30/hr (use `--resume` for recovery)
+**Estimated total cost**: $7–18 on-demand / $5–13 spot
+**Advantage over Route 1**: Tries 800 px image size (more patch coverage for thin
+streaks); early stopping keeps cost low if convergence is fast.
+
+### Step 1 — Pre-flight on Mac (free)
+
+```bash
+MODEL_SIZE=dinov3_vitl USE_DEV_SUBSET=false \
+python scripts/prepare_cloud_training.py
+```
+
+Resolve all failures before provisioning an instance.
+
+### Step 2 — Provision the instance
+
+1. On Vast.ai or RunPod, filter for **RTX 4090** nodes with ≥24 GB VRAM and
+   PyTorch ≥ 2.2 pre-installed (no Blackwell requirement — 4090 is Ada Lovelace).
+2. Prefer on-demand for a first run; spot is fine with `--resume` recovery.
+3. SSH in, then clone the repo and run setup:
+
+```bash
+git clone https://github.com/robertmwolf/Argus.git && cd Argus
+chmod +x scripts/cloud_setup.sh && ./scripts/cloud_setup.sh
+```
+
+4. Copy DINOv3 ViT-L weights from Mac (~1.1 GB):
+
+```bash
+scp mac:~/Argus/weights/dinov3_vitl16_lvd1689m.pth weights/
+```
+
+### Step 3 — Update the cost guardrail rate
+
+In `training/train_dino.py`, update the hardcoded `$1.29/hr` to your actual
+provider rate (e.g. `$0.44/hr`) so the epoch-1 cost estimate is accurate.
+
+### Step 4 — Set image resolution to 800 px
+
+In `models/dino/streak_dinov3_vitl.py`:
+
+```python
+_img_scale = (800, 800)   # change from (512, 512)
+```
+
+At 800 px, frozen ViT-L uses ~18 GB VRAM — within the 4090's 24 GB with
+gradient checkpointing enabled. If the first epoch OOMs, revert to `(512, 512)`
+and resume.
+
+### Step 5 — Set environment variables and train
+
+```bash
+export MODEL_SIZE=dinov3_vitl
+export USE_DEV_SUBSET=false
+export ARGUS_NORM=autostretch
+export DATABASE_URL=sqlite+aiosqlite:///./argus.db
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+python -m training.train_dino \
+    --backbone dinov3_vitl \
+    --work-dir weights/run_4090_dinov3_vitl
+```
+
+To resume after a spot preemption:
+
+```bash
+python -m training.train_dino \
+    --backbone dinov3_vitl \
+    --work-dir weights/run_4090_dinov3_vitl \
+    --resume
+```
+
+**Stop early** if val mAP@0.5 has not improved for 5 consecutive epochs and is
+already ≥ 0.74. Terminate, save the best checkpoint, and proceed to evaluation.
+
+### Step 6 — Evaluate
+
+```bash
+mkdir -p results/4090_dinov3_vitl
+BEST_CKPT="$(ls weights/run_4090_dinov3_vitl/*best*.pth | head -n 1)"
+
+MODEL_WEIGHTS="$BEST_CKPT" \
+MODEL_SIZE=dinov3_vitl USE_DEV_SUBSET=false \
+python -m eval.benchmark \
+    --run-pipeline \
+    --annotations data/annotations/test.json \
+    --output results/4090_dinov3_vitl/phase8_benchmark.json
+
+cp eval/results/dino_predictions.json results/4090_dinov3_vitl/dino_predictions.json
+```
+
+Generate environment metadata:
+
+```bash
+{
+    echo "Date UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "Git commit: $(git rev-parse HEAD)"
+    echo "Route: Cloud GPU (RTX 4090 on Vast.ai/RunPod)"
+    echo "Backbone: DINOv3 ViT-L/16 LVD-1689M (frozen)"
+    nvidia-smi
+    python --version
+    python -c "import torch; print(torch.__version__)"
+    pip freeze
+} > results/4090_dinov3_vitl/environment.txt
+```
+
+### Step 7 — Rsync weights back to Mac and upload to OneDrive
+
+```bash
+# On Mac
+scripts/fetch_weights.sh <user@instance-ip>
+sha256sum weights/run_4090_dinov3_vitl/*.pth \
+    > results/4090_dinov3_vitl/weights_sha256.txt
+```
+
+Upload `weights/run_4090_dinov3_vitl/*.pth` to the shared OneDrive folder under
+`weights/run_4090_dinov3_vitl/`.
+
+### Step 8 — Commit results
+
+```bash
+git add results/4090_dinov3_vitl/
+git commit -m "Add RTX 4090 cloud DINOv3 ViT-L training results"
+git push origin main
+```
+
+### Cost reference
+
+| Scenario | Epochs | Hours (800 px) | On-demand | Spot |
+|----------|--------|----------------|-----------|------|
+| Early stop ~15 epochs | 15 | ~11 hr | ~$5 | ~$3 |
+| Early stop ~25 epochs | 25 | ~19 hr | ~$8 | ~$6 |
+| Full 50 epochs | 50 | ~38 hr | ~$17 | ~$11 |
+
+### Aspirational: $50–150 — Phase F Partial Unfreeze
+
+If Phase D (either route) falls short of targets (precision <94% or recall
+<97%), Phase F unfreezes the last 4 ViT-L transformer blocks (`lr_mult=0.01`,
+10–15 epochs from the Phase D best checkpoint). VRAM at 800 px with unfrozen
+blocks: ~18–22 GB — requires an A100 80 GB instance (~$1.79/hr on RunPod).
+Estimated Phase F cost: $9–14. Do not start Phase F without Phase D eval results
+in hand.
+
+---
+
 ## Phase E — DINOv3 ViT-L vs Swin-T/L Comparison
 
 Run this after the DINOv3 ViT-L training above is complete and the best
-checkpoint is saved in `weights/run_5070ti_dinov3_vitl/`.
+checkpoint is saved in `weights/run_5070ti_dinov3_vitl/` (Route 1) or
+`weights/run_4090_dinov3_vitl/` (Route 2).
 
 ### What Phase E does
 
