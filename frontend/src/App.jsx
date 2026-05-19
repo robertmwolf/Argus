@@ -17,11 +17,19 @@ export default function App() {
   const [error, setError] = useState(null)
   const [highlightIndex, setHighlightIndex] = useState(null)
   const [modelLabel, setModelLabel] = useState(null)
+  const [spaceTrackDataRefreshedAt, setSpaceTrackDataRefreshedAt] = useState(null)
+  const [headerObsEpoch, setHeaderObsEpoch] = useState(null)
   const [disabledStreaks, setDisabledStreaks] = useState(new Set())   // Set of displayDetections indices
   const [methodThresholds, setMethodThresholds] = useState({})        // { method: 0-1 }
 
   useEffect(() => {
-    fetch('/health').then(r => r.json()).then(d => setModelLabel(d.model_label)).catch(() => {})
+    fetch('/health')
+      .then(r => r.json())
+      .then(d => {
+        setModelLabel(d.model_label)
+        setSpaceTrackDataRefreshedAt(d.space_track_data_refreshed_at ?? null)
+      })
+      .catch(() => {})
   }, [])
 
   // Poll for job completion once we have a jobId
@@ -56,6 +64,56 @@ export default function App() {
     }
   }, [jobId, jobStatus])
 
+  useEffect(() => {
+    if (!jobId || jobStatus !== 'complete') return
+
+    let cancelled = false
+    const refreshCompleteResult = async () => {
+      try {
+        const res = await fetch(`/api/result/${jobId}`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (!cancelled && data.status === 'complete') {
+          setResult({ ...data, jobId })
+        }
+      } catch {
+        // completed-result refresh is best-effort
+      }
+    }
+
+    refreshCompleteResult()
+    return () => {
+      cancelled = true
+    }
+  }, [jobId, jobStatus])
+
+  useEffect(() => {
+    if (!jobId || jobStatus !== 'complete') {
+      setHeaderObsEpoch(null)
+      return
+    }
+
+    let cancelled = false
+    const loadHeaderObsEpoch = async () => {
+      try {
+        const res = await fetch(`/api/fits-header/${jobId}`)
+        if (!res.ok) return
+        const data = await res.json()
+        const dateObs = data.cards?.find((card) => card.key === 'DATE-OBS')?.value
+        if (!cancelled && dateObs) {
+          setHeaderObsEpoch(normaliseDateObs(dateObs))
+        }
+      } catch {
+        // header date is a display fallback only
+      }
+    }
+
+    loadHeaderObsEpoch()
+    return () => {
+      cancelled = true
+    }
+  }, [jobId, jobStatus])
+
   const handleThresholdChange = (method, value) => {
     setMethodThresholds(prev => ({ ...prev, [method]: value }))
   }
@@ -73,6 +131,7 @@ export default function App() {
     setError(null)
     setHighlightIndex(null)
     setResult(null)
+    setHeaderObsEpoch(null)
     setDisabledStreaks(new Set())
     setMethodThresholds({})
     setJobId(newJobId)
@@ -87,6 +146,7 @@ export default function App() {
     setResult(null)
     setError(null)
     setHighlightIndex(null)
+    setHeaderObsEpoch(null)
     setDisabledStreaks(new Set())
     setMethodThresholds({})
   }
@@ -129,14 +189,24 @@ export default function App() {
             {modelLabel}
           </span>
         )}
-        {(isProcessing || isComplete) && (
-          <button
-            onClick={handleReset}
-            className="ml-auto text-xs text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500 rounded-lg px-3 py-1.5 transition-colors"
-          >
-            New upload
-          </button>
-        )}
+        <div className="ml-auto flex items-center gap-3">
+          <div className="hidden sm:flex flex-col items-end leading-tight">
+            <span className="text-[10px] uppercase tracking-wide text-slate-500">
+              Space-Track Data Refreshed At
+            </span>
+            <span className="font-mono text-xs text-slate-300">
+              {formatHeaderDateTime(spaceTrackDataRefreshedAt)}
+            </span>
+          </div>
+          {(isProcessing || isComplete) && (
+            <button
+              onClick={handleReset}
+              className="text-xs text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500 rounded-lg px-3 py-1.5 transition-colors"
+            >
+              New upload
+            </button>
+          )}
+        </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8 flex flex-col gap-6">
@@ -218,6 +288,7 @@ export default function App() {
               highlightIndex={highlightIndex}
               onRowClick={setHighlightIndex}
               onToggleStreak={handleToggleStreak}
+              photoTakenAt={result.obs_epoch ?? headerObsEpoch}
             />
 
             <IdentificationPanel
@@ -229,6 +300,26 @@ export default function App() {
       </main>
     </div>
   )
+}
+
+function normaliseDateObs(value) {
+  if (!value) return null
+  const raw = String(value).trim().replace(' ', 'T')
+  if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(raw)) return raw
+  return `${raw}Z`
+}
+
+function formatHeaderDateTime(value) {
+  if (!value) return 'Not available'
+  const dt = new Date(value)
+  if (Number.isNaN(dt.getTime())) return value
+  return dt.toLocaleString(undefined, {
+    year: '2-digit',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 function StatusBadge({ status }) {

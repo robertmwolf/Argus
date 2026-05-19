@@ -12,10 +12,11 @@ function ext(filename) {
  * UploadZone — drag-and-drop FITS/PNG upload.
  *
  * Props:
- *   onQueued(jobId, filename) — called once the file is uploaded and queued
- *   onError(message)          — called on network or validation errors
+ *   onQueued(jobId, filename)  — called once the file is uploaded and queued
+ *   onError(message)           — called on network or validation errors
+ *   enabledDetectors           — Set<string> of detector IDs to run (null = all)
  */
-export default function UploadZone({ onQueued, onError }) {
+export default function UploadZone({ onQueued, onError, enabledDetectors }) {
   const [dragging, setDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
 
@@ -28,6 +29,9 @@ export default function UploadZone({ onQueued, onError }) {
     setUploading(true)
     const form = new FormData()
     form.append('file', file)
+    if (enabledDetectors !== null && enabledDetectors !== undefined) {
+      form.append('enabled_detectors', JSON.stringify([...enabledDetectors]))
+    }
 
     try {
       const res = await fetch('/api/upload', { method: 'POST', body: form })
@@ -42,7 +46,7 @@ export default function UploadZone({ onQueued, onError }) {
       onError?.(err.message)
       setUploading(false)
     }
-  }, [onQueued, onError])
+  }, [onQueued, onError, enabledDetectors])
 
   const onDrop = useCallback((e) => {
     e.preventDefault()

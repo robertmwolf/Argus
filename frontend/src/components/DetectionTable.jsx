@@ -5,7 +5,10 @@
  *   detections     — array of streak dicts from /api/result (one per streak_id)
  *   highlightIndex — index of the row to highlight (synced with canvas hover)
  *   onRowClick(i)  — called when a row is clicked
+ *   photoTakenAt   — observation DATE-OBS fallback from /api/result
  */
+
+import { useEffect, useState } from 'react'
 
 const METHOD_CONFIG = {
   unified:                 { label: 'Confidence Score',                    cls: 'border-emerald-500/80 bg-emerald-900/50 text-emerald-300' },
@@ -61,7 +64,48 @@ function EyeIcon({ visible }) {
   )
 }
 
-export default function DetectionTable({ detections, visibleSet, highlightIndex, onRowClick, onToggleStreak }) {
+function formatDateTime(value) {
+  if (!value) return '—'
+  const dt = new Date(value)
+  if (Number.isNaN(dt.getTime())) return value
+  return dt.toLocaleString(undefined, {
+    year: '2-digit',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function formatTleCurrency(best) {
+  if (!best) return '—'
+  const age = best.tle_age_hours ?? best.epoch_drift_hours
+  const epoch = formatDateTime(best.tle_epoch)
+  if (age == null) return epoch
+  const absAge = Math.abs(age)
+  const unitValue = absAge >= 48 ? absAge / 24 : absAge
+  const unit = absAge >= 48 ? 'd' : 'h'
+  return `${epoch} (${unitValue.toFixed(absAge >= 48 ? 1 : 0)} ${unit})`
+}
+
+export default function DetectionTable({ detections, visibleSet, highlightIndex, onRowClick, onToggleStreak, photoTakenAt }) {
+  const [headerPhotoDate, setHeaderPhotoDate] = useState(null)
+
+  useEffect(() => {
+    if (photoTakenAt) {
+      setHeaderPhotoDate(null)
+      return
+    }
+
+    const rows = Array.from(document.querySelectorAll('table tbody tr'))
+    const dateObsRow = rows.find((row) => {
+      const firstCell = row.children[0]?.textContent?.trim()
+      return firstCell === 'DATE-OBS'
+    })
+    const dateObs = dateObsRow?.children[1]?.textContent?.trim()
+    setHeaderPhotoDate(dateObs ? normaliseDateObs(dateObs) : null)
+  }, [photoTakenAt, detections])
+
   if (!detections || detections.length === 0) {
     return (
       <div className="rounded-xl border border-slate-700 px-4 py-8 text-center">
@@ -95,7 +139,9 @@ export default function DetectionTable({ detections, visibleSet, highlightIndex,
                 { label: 'Length (px)' },
                 { label: 'Angle (°)' },
                 { label: 'Sky Position' },
+                { label: 'Photo Date' },
                 { label: 'Best Match', divider: true },
+                { label: 'TLE Data', sub: 'epoch age', divider: true },
                 { label: 'ID Confidence', sub: 'position × length', divider: true },
               ].map(({ label, sub, divider }) => (
                 <th
@@ -208,6 +254,11 @@ export default function DetectionTable({ detections, visibleSet, highlightIndex,
                     )}
                   </td>
 
+                  {/* Photo date */}
+                  <td className="px-4 py-2.5 font-mono text-xs text-slate-400 whitespace-nowrap">
+                    {formatDateTime(best?.photo_taken_at ?? det.photo_taken_at ?? photoTakenAt ?? headerPhotoDate)}
+                  </td>
+
                   {/* Best match name */}
                   <td className="px-4 py-2.5 border-l border-slate-600/60">
                     {best ? (
@@ -217,6 +268,20 @@ export default function DetectionTable({ detections, visibleSet, highlightIndex,
                     ) : (
                       <span className="text-slate-600">Unidentified</span>
                     )}
+                  </td>
+
+                  {/* TLE data currency */}
+                  <td className="px-4 py-2.5 border-l border-slate-600/60">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-mono text-xs text-slate-300 whitespace-nowrap">
+                        {formatTleCurrency(best)}
+                      </span>
+                      {best?.tle_search_mode && best.tle_search_mode !== 'normal' && (
+                        <span className="text-[10px] uppercase tracking-wide text-amber-400">
+                          {best.tle_search_mode.replaceAll('_', ' ')}
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   {/* ID confidence */}
@@ -241,4 +306,11 @@ export default function DetectionTable({ detections, visibleSet, highlightIndex,
       </div>
     </div>
   )
+}
+
+function normaliseDateObs(value) {
+  if (!value) return null
+  const raw = String(value).trim().replace(' ', 'T')
+  if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(raw)) return raw
+  return `${raw}Z`
 }
