@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import DetectionTable from './components/DetectionTable'
+import DetectorsPanel from './components/DetectorsPanel'
 import FilterPanel from './components/FilterPanel'
 import FitsHeaderPanel from './components/FitsHeaderPanel'
 import IdentificationPanel from './components/IdentificationPanel'
@@ -16,13 +17,10 @@ export default function App() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const [highlightIndex, setHighlightIndex] = useState(null)
-  const [modelLabel, setModelLabel] = useState(null)
+  const [enabledDetectors, setEnabledDetectors] = useState(null) // null until DetectorsPanel loads
   const [disabledStreaks, setDisabledStreaks] = useState(new Set())   // Set of displayDetections indices
   const [methodThresholds, setMethodThresholds] = useState({})        // { method: 0-1 }
 
-  useEffect(() => {
-    fetch('/health').then(r => r.json()).then(d => setModelLabel(d.model_label)).catch(() => {})
-  }, [])
 
   // Poll for job completion once we have a jobId
   useEffect(() => {
@@ -123,12 +121,6 @@ export default function App() {
         </svg>
         <h1 className="text-lg font-semibold tracking-tight text-white">ARGUS</h1>
         <span className="text-slate-500 text-sm">Satellite Streak Detector</span>
-        {modelLabel && (
-          <span className="ml-1 inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border border-cyan-700/50 bg-cyan-950/30 text-cyan-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-            {modelLabel}
-          </span>
-        )}
         {(isProcessing || isComplete) && (
           <button
             onClick={handleReset}
@@ -140,7 +132,7 @@ export default function App() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8 flex flex-col gap-6">
-        {/* Upload zone — shown only when idle */}
+        {/* Upload zone + detector selection — shown only when idle */}
         {!jobId && (
           <>
             <div className="text-center mb-2">
@@ -148,7 +140,12 @@ export default function App() {
                 Upload a FITS or PNG telescope image to detect and identify satellite streaks.
               </p>
             </div>
-            <UploadZone onQueued={handleQueued} onError={setError} />
+            <UploadZone
+              onQueued={handleQueued}
+              onError={setError}
+              enabledDetectors={enabledDetectors}
+            />
+            <DetectorsPanel onSelectionChange={setEnabledDetectors} />
           </>
         )}
 
