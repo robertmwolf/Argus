@@ -31,7 +31,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request, UploadFile, status
+from fastapi import FastAPI, Form, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from sqlalchemy import select, text
@@ -110,8 +110,7 @@ async def lifespan(app: FastAPI):
     app.state.storage = storage
     app.state.queue = queue
     app.state.model_loaded = False
-    app.state.pipeline_model = None
-    app.state.pipeline_device = None
+    app.state.pipeline_models = None   # list[tuple[model, device, spec]] once loaded
 
     worker_task = asyncio.create_task(_worker_loop(app))
 
@@ -172,6 +171,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
             return
         filename = obs.filename
         obs_epoch = obs.obs_epoch
+        enabled_detectors_json = obs.enabled_detectors
         obs.status = "processing"
         await session.commit()
 
@@ -187,7 +187,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
         # pipeline_run is patched in tests via unittest.mock.
         # Set FAST_MODE=true in the environment to skip Radon + cross-ID.
         try:
-            from inference.pipeline import load_model as pipeline_load_model
+            from inference.pipeline import load_models as pipeline_load_models
             from inference.pipeline import run_with_array as pipeline_run
         except ImportError as exc:
             raise RuntimeError(
@@ -196,17 +196,16 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
                 "or use the GPU worker container for Docker deployments."
             ) from exc
 
-        if app.state.pipeline_model is None:
-            model, inference_device = await asyncio.to_thread(pipeline_load_model)
-            app.state.pipeline_model = model
-            app.state.pipeline_device = inference_device
+        if app.state.pipeline_models is None:
+            app.state.pipeline_models = await asyncio.to_thread(pipeline_load_models)
             app.state.model_loaded = True
 
+        enabled = set(json.loads(enabled_detectors_json)) if enabled_detectors_json else None
         detections, fits_array = await asyncio.to_thread(
             pipeline_run,
             fits_path=tmp_path,
-            model=app.state.pipeline_model,
-            inference_device=app.state.pipeline_device,
+            models=app.state.pipeline_models,
+            enabled_detectors=enabled,
         )
         app.state.model_loaded = True
 
@@ -459,7 +458,11 @@ def _render_png(
 
 
 @app.post("/api/upload", status_code=status.HTTP_200_OK)
-async def upload(request: Request, file: UploadFile) -> dict[str, str]:
+async def upload(
+    request: Request,
+    file: UploadFile,
+    enabled_detectors: str | None = Form(None),
+) -> dict[str, str]:
     """Accept a FITS or PNG upload, enqueue it for processing.
 
     Args:
@@ -513,7 +516,12 @@ async def upload(request: Request, file: UploadFile) -> dict[str, str]:
         await request.app.state.storage.save_preview(job_id, data)
 
     async with request.app.state.session_factory() as session:
-        session.add(Observation(id=job_id, filename=filename, status="queued"))
+        session.add(Observation(
+            id=job_id,
+            filename=filename,
+            status="queued",
+            enabled_detectors=enabled_detectors,
+        ))
         await session.commit()
 
     await request.app.state.queue.enqueue(job_id)
@@ -717,6 +725,27 @@ async def fits_header(job_id: str, request: Request) -> dict[str, Any]:
     return {"cards": json.loads(raw)}
 
 
+@app.get("/api/detectors")
+async def detectors() -> dict[str, Any]:
+    """Return availability metadata for all detectors.
+
+    Reports DINO variants (from ARGUS_MODEL_CONFIGS / MODEL_SIZE), YOLO
+    variants, and classical detectors.  Checks weights file existence and
+    required imports; never loads a model.
+
+    Returns:
+        dict with a ``detectors`` list; each item has id, name, type,
+        dataset, and status ('active' | 'no_weights' | 'unavailable').
+    """
+    try:
+        from inference.pipeline import get_detector_statuses
+        items = await asyncio.to_thread(get_detector_statuses)
+    except Exception:
+        logger.exception("Failed to enumerate detector statuses")
+        items = []
+    return {"detectors": items}
+
+
 @app.get("/health")
 async def health(request: Request) -> dict[str, Any]:
     """Liveness and readiness probe.
@@ -732,19 +761,9 @@ async def health(request: Request) -> dict[str, Any]:
     except Exception:
         logger.exception("DB health check failed")
 
-    model_size = os.environ.get("MODEL_SIZE", "tiny")
-    model_labels = {
-        "tiny":                    "DINO Swin-Tiny - SatStreaks",
-        "large":                   "DINO Swin-Large - SatStreaks",
-        "dinov3_vitb":             "DINOv3 ViT-Base - SatStreaks+GTImages",
-        "dinov3_vitl":             "DINOv3 ViT-Large - SatStreaks+GTImages",
-        "dinov3_gt_dm_satstreaks": "DINOv3 - GT+DM+SatStreaks",
-    }
     return {
         "status": "ok",
         "model_loaded": request.app.state.model_loaded,
-        "model_size": model_size,
-        "model_label": model_labels.get(model_size, model_size),
         "db_connected": db_ok,
     }
 

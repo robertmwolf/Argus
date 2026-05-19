@@ -26,6 +26,7 @@ import logging
 import math
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -773,6 +774,250 @@ def load_model(
 
 
 # ---------------------------------------------------------------------------
+# Multi-model configuration helpers
+# ---------------------------------------------------------------------------
+
+def resolve_model_specs() -> list[dict]:
+    """Return normalized DINO model specs from ARGUS_MODEL_CONFIGS or MODEL_SIZE fallback.
+
+    Returns:
+        List of dicts with keys: id, size, weights, label, dataset.
+        Safe to call without loading any model or weights.
+    """
+    import json as _json
+
+    raw = os.environ.get("ARGUS_MODEL_CONFIGS", "")
+    root = Path(__file__).resolve().parent.parent
+    if raw:
+        specs = _json.loads(raw)
+        result = []
+        for s in specs:
+            w = Path(s["weights"])
+            weights_str = str(w if w.is_absolute() else root / w)
+            result.append({
+                "id":      s["id"],
+                "size":    s["size"],
+                "weights": weights_str,
+                "label":   s.get("label", s["id"]),
+                "dataset": s.get("dataset", ""),
+            })
+        return result
+
+    # Single-model fallback
+    model_size = os.environ.get("MODEL_SIZE", "tiny")
+    weights_env = os.environ.get("MODEL_WEIGHTS", "")
+    _dinov3_defaults: dict[str, Path] = {
+        "dinov3_vitb":             root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
+        "dinov3_vitl":             root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
+        "dinov3_gt_dm_satstreaks": root / "weights" / "run_gt_dm_satstreaks_dinov3_vitb" / "best_coco_bbox_mAP_epoch_4.pth",
+    }
+    _meta: dict[str, tuple[str, str]] = {
+        "tiny":                    ("DINO Swin-Tiny",                  "SatStreaks"),
+        "large":                   ("DINO Swin-Large",                 "SatStreaks"),
+        "dinov3_vitb":             ("DINOv3 ViT-B",                    "SatStreaks+GTImages"),
+        "dinov3_vitl":             ("DINOv3 ViT-L",                    "SatStreaks+GTImages"),
+        "dinov3_gt_dm_satstreaks": ("DINOv3 ViT-B — GT+DM+SatStreaks", "GTImages+DM+SatStreaks"),
+    }
+    label, dataset = _meta.get(model_size, (model_size, ""))
+    if weights_env:
+        weights_str = weights_env
+    elif model_size in _dinov3_defaults:
+        weights_str = str(_dinov3_defaults[model_size])
+    else:
+        weights_str = str(root / "weights" / f"dino_{model_size}.pth")
+    return [{"id": model_size, "size": model_size, "weights": weights_str,
+             "label": label, "dataset": dataset}]
+
+
+def load_models() -> list[tuple[Any, Any, dict]]:
+    """Load all DINO model checkpoints defined by ARGUS_MODEL_CONFIGS or MODEL_SIZE.
+
+    Returns:
+        List of (model, inference_device, spec) tuples ready for run_with_array().
+
+    Raises:
+        FileNotFoundError: If any weights file does not exist.
+        EnvironmentError: If a CUDA-only size is requested on a non-CUDA device.
+    """
+    from inference.device import get_device
+    import torch as _torch
+
+    device = get_device()
+    inference_device = device
+    if device.type == "mps" and not _torch.cuda.is_available():
+        inference_device = _torch.device("cpu")
+        logger.debug("MPS device detected — forcing DINO inference to CPU")
+
+    result = []
+    for spec in resolve_model_specs():
+        config_path = _select_config(spec["size"])
+        model = _load_model(config_path, Path(spec["weights"]), inference_device)
+        logger.info("Loaded model %s from %s on %s", spec["id"], spec["weights"], inference_device)
+        result.append((model, inference_device, spec))
+    return result
+
+
+def get_detector_statuses() -> list[dict]:
+    """Return availability metadata for every detector without loading any model.
+
+    Checks weights file existence and required imports; never initialises a model.
+
+    Returns:
+        List of dicts with keys: id, name, type, dataset, status.
+        status is one of 'active' | 'no_weights' | 'unavailable'.
+    """
+    statuses: list[dict] = []
+    root = Path(__file__).resolve().parent.parent
+
+    # DINO models (one or more, from config)
+    for spec in resolve_model_specs():
+        weight_ok = Path(spec["weights"]).exists()
+        statuses.append({
+            "id":      spec["id"],
+            "name":    spec["label"],
+            "type":    "ml",
+            "dataset": spec["dataset"],
+            "status":  "active" if weight_ok else "no_weights",
+        })
+
+    # YOLO variants
+    _yolo_entries = [
+        {
+            "id":      "yolo",
+            "name":    "YOLO11n-OBB",
+            "dataset": "SatStreaks",
+            "weights": Path(os.environ.get("YOLO_WEIGHTS", str(root / "weights" / "yolo_tiled" / "run" / "weights" / "best.pt"))),
+        },
+        {
+            "id":      "yolo_full",
+            "name":    "YOLO11n-OBB — Full Dataset",
+            "dataset": "SatStreaks (14 385 tiles)",
+            "weights": root / "weights" / "run_full_yolo_obb" / "run" / "weights" / "best.pt",
+        },
+        {
+            "id":      "streakmind_yolo",
+            "name":    "StreakMind YOLO",
+            "dataset": "GTImages",
+            "weights": Path(os.environ.get(
+                "STREAKMIND_YOLO_WEIGHTS",
+                str(root / "weights" / "streakmind_yolo_real" / "run" / "weights" / "best.pt"),
+            )),
+        },
+    ]
+    for entry in _yolo_entries:
+        statuses.append({
+            "id":      entry["id"],
+            "name":    entry["name"],
+            "type":    "ml",
+            "dataset": entry["dataset"],
+            "status":  "active" if Path(entry["weights"]).exists() else "no_weights",
+        })
+
+    # Classical / ASTRiDE (share the same import gate)
+    try:
+        from src.detection.classical_detector import detect_streaks as _ds  # noqa: F401
+        classical_status = "active"
+    except ImportError:
+        classical_status = "unavailable"
+
+    statuses.append({
+        "id": "classical", "name": "OpenCV Morphological",
+        "type": "classical", "dataset": "—", "status": classical_status,
+    })
+    statuses.append({
+        "id": "astride", "name": "ASTRiDE",
+        "type": "classical", "dataset": "—", "status": classical_status,
+    })
+    return statuses
+
+
+# ---------------------------------------------------------------------------
+# Parallel detector runner
+# ---------------------------------------------------------------------------
+
+def _run_all_detectors(
+    models_with_specs: list[tuple[Any, Any, dict]],
+    array: "np.ndarray",
+    fits_path: Path,
+    image_size: int,
+    confidence_threshold: float,
+    tta_enabled: bool,
+    enabled_detectors: set[str] | None,
+) -> dict[str, list[dict]]:
+    """Run all enabled detectors concurrently via a ThreadPoolExecutor.
+
+    DINO models and secondary detectors (YOLO, classical, ASTRiDE) are
+    submitted in parallel.  Detectors whose ID is absent from
+    *enabled_detectors* are skipped entirely (None = all enabled).
+
+    Args:
+        models_with_specs: List of (model, device, spec) from load_models().
+        array: uint8 (H, W, 3) image array.
+        fits_path: Path to the FITS file (needed by ASTRiDE).
+        image_size: Inference resolution for DINO.
+        confidence_threshold: Minimum detection score.
+        tta_enabled: Whether to run 3x TTA inference for each DINO model.
+        enabled_detectors: Set of detector IDs to run; None means all.
+
+    Returns:
+        Dict mapping detector ID → raw detection list.
+    """
+    def _enabled(det_id: str) -> bool:
+        return enabled_detectors is None or det_id in enabled_detectors
+
+    tasks: dict[Any, str] = {}
+    results: dict[str, list[dict]] = {}
+
+    n_workers = len(models_with_specs) + 5
+    with ThreadPoolExecutor(max_workers=max(1, n_workers)) as pool:
+        # DINO models
+        for model, _dev, spec in models_with_specs:
+            if not _enabled(spec["id"]):
+                results[spec["id"]] = []
+                continue
+            fn = _run_tta_inference if tta_enabled else _run_inference
+            f = pool.submit(fn, model, array, image_size, confidence_threshold,
+                            model_name=spec["id"])
+            tasks[f] = spec["id"]
+
+        # Secondary detectors
+        if _enabled("classical"):
+            tasks[pool.submit(_run_classical_detector, array)] = "classical"
+        else:
+            results["classical"] = []
+
+        if _enabled("astride"):
+            tasks[pool.submit(_run_astride_detector, fits_path)] = "astride"
+        else:
+            results["astride"] = []
+
+        if _enabled("yolo"):
+            tasks[pool.submit(_run_yolo_detector, array, confidence_threshold)] = "yolo"
+        else:
+            results["yolo"] = []
+
+        if _enabled("yolo_full"):
+            tasks[pool.submit(_run_yolo_full_detector, array, confidence_threshold)] = "yolo_full"
+        else:
+            results["yolo_full"] = []
+
+        if _enabled("streakmind_yolo"):
+            tasks[pool.submit(_run_streakmind_yolo_detector, array, confidence_threshold)] = "streakmind_yolo"
+        else:
+            results["streakmind_yolo"] = []
+
+        for f in as_completed(tasks):
+            key = tasks[f]
+            try:
+                results[key] = f.result()
+            except Exception:
+                logger.exception("Detector %s failed", key)
+                results[key] = []
+
+    return results
+
+
+# ---------------------------------------------------------------------------
 # Main pipeline entry point
 # ---------------------------------------------------------------------------
 
@@ -781,6 +1026,8 @@ def run_with_array(
     fast: bool = False,
     model: Any | None = None,
     inference_device: Any | None = None,
+    models: list[tuple[Any, Any, dict]] | None = None,
+    enabled_detectors: set[str] | None = None,
 ) -> tuple[list[dict], "np.ndarray"]:
     """Run the full ARGUS inference pipeline on a single FITS image.
 
@@ -794,6 +1041,11 @@ def run_with_array(
             eval loops to avoid loading 187 MB per image.
         inference_device: The device the pre-loaded model lives on.
             Required when ``model`` is passed; ignored otherwise.
+        models: List of (model, device, spec) from ``load_models()``.
+            Takes priority over ``model``/``inference_device`` when provided.
+            Enables running multiple DINO checkpoints in parallel.
+        enabled_detectors: Set of detector IDs to run (e.g. {"yolo_full",
+            "classical"}).  None (default) enables all detectors.
 
     Returns:
         Tuple of (detections, array).  ``array`` is the uint8 (H, W, 3) image
@@ -846,7 +1098,7 @@ def run_with_array(
     fits_load_ms = (time.perf_counter() - t0) * 1000
     logger.debug("fits_load_ms=%.1f", fits_load_ms)
 
-    # --- 2. Load model + run DINO inference ----------------------------------
+    # --- 2. Build models list then run all detectors in parallel -------------
     t1 = time.perf_counter()
     from inference.device import get_device, get_device_config
     device     = get_device()
@@ -858,13 +1110,34 @@ def run_with_array(
         # sensor images (~6 k px) are not crushed to ~30 px before detection.
         image_size = max(dev_config["image_size"], _MIN_INFERENCE_IMAGE_SIZE)
 
-    if model is None:
+    # Resolve which DINO model(s) to run:
+    #  - models (plural) is the preferred multi-model path from load_models()
+    #  - model (singular) is the legacy single-model path from load_model()
+    #  - if neither is given, load inline from MODEL_SIZE env
+    if models is not None:
+        _models_with_specs = models
+    elif model is not None:
+        _spec = {"id": model_size, "size": model_size, "label": model_size, "dataset": ""}
+        if inference_device is None:
+            inference_device = device
+        _models_with_specs = [(model, inference_device, _spec)]
+    else:
+        # Load inline — same logic as load_model() but embedded here for the
+        # legacy single-image call path (e.g. CLI eval scripts).
         config_path = _select_config(model_size)
         if weights_env:
             weights_path = Path(weights_env)
         else:
             root = Path(__file__).resolve().parent.parent
-            weights_path = root / "weights" / f"dino_{model_size}.pth"
+            _dinov3_inline: dict[str, Path] = {
+                "dinov3_vitb":             root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
+                "dinov3_vitl":             root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
+                "dinov3_gt_dm_satstreaks": root / "weights" / "run_gt_dm_satstreaks_dinov3_vitb" / "best_coco_bbox_mAP_epoch_4.pth",
+            }
+            if model_size in _dinov3_inline:
+                weights_path = _dinov3_inline[model_size]
+            else:
+                weights_path = root / "weights" / f"dino_{model_size}.pth"
 
         # DINO multi-scale deformable attention exceeds MPS's 4 GB per-allocation
         # limit.  Force CPU on Mac until a memory-efficient MPS path is available.
@@ -875,21 +1148,26 @@ def run_with_array(
             logger.debug("MPS device detected — forcing DINO inference to CPU")
 
         model = _load_model(config_path, weights_path, inference_device)
-    elif inference_device is None:
-        inference_device = device
+        _meta = {"id": model_size, "size": model_size, "label": model_size, "dataset": ""}
+        _models_with_specs = [(model, inference_device, _meta)]
 
-    if tta_enabled:
-        raw_dets = _run_tta_inference(model, array, image_size, confidence_threshold,
-                                      model_name=model_size)
-    else:
-        raw_dets = _run_inference(model, array, image_size, confidence_threshold,
-                                  model_name=model_size)
+    # Run all detectors (DINO variants + YOLO + classical + ASTRiDE) in parallel.
+    all_det_results = _run_all_detectors(
+        _models_with_specs, array, fits_path, image_size,
+        confidence_threshold, tta_enabled, enabled_detectors,
+    )
+
+    # Collect results — DINO detections from all models are merged before NMS.
+    raw_dets: list[dict] = []
+    for _, _, _s in _models_with_specs:
+        raw_dets.extend(all_det_results.get(_s["id"], []))
+
+    classical_dets = all_det_results.get("classical", [])
+    astride_dets   = all_det_results.get("astride", [])
+
     inference_ms = (time.perf_counter() - t1) * 1000
     logger.debug("inference_ms=%.1f  raw_dets=%d  tta=%s  threshold=%.2f",
                  inference_ms, len(raw_dets), tta_enabled, confidence_threshold)
-
-    classical_dets = _run_classical_detector(array)
-    astride_dets   = _run_astride_detector(fits_path)
 
     # --- 3. Postprocess: angle refinement + OBB + NMS -----------------------
     t2 = time.perf_counter()
@@ -947,18 +1225,12 @@ def run_with_array(
     # TTA produces 3 DINOv3 passes on the same image — NMS reduces those to the
     # single best box per streak.  Classical detectors can also fire multiple
     # times on the same streak, so we NMS them individually too.
-    raw_dets       = nms_detections(raw_dets,       iou_threshold=0.5)
-    classical_dets = nms_detections(classical_dets, iou_threshold=0.5)
-    astride_dets   = nms_detections(astride_dets,   iou_threshold=0.5)
-    yolo_dets      = nms_detections(
-        _run_yolo_detector(array, confidence_threshold), iou_threshold=0.5
-    )
-    yolo_full_dets = nms_detections(
-        _run_yolo_full_detector(array, confidence_threshold), iou_threshold=0.5
-    )
-    streakmind_yolo_dets = nms_detections(
-        _run_streakmind_yolo_detector(array, confidence_threshold), iou_threshold=0.5
-    )
+    raw_dets             = nms_detections(raw_dets,                                       iou_threshold=0.5)
+    classical_dets       = nms_detections(classical_dets,                                 iou_threshold=0.5)
+    astride_dets         = nms_detections(astride_dets,                                   iou_threshold=0.5)
+    yolo_dets            = nms_detections(all_det_results.get("yolo", []),            iou_threshold=0.5)
+    yolo_full_dets       = nms_detections(all_det_results.get("yolo_full", []),       iou_threshold=0.5)
+    streakmind_yolo_dets = nms_detections(all_det_results.get("streakmind_yolo", []), iou_threshold=0.5)
 
     # Group across detectors: overlapping detections from different methods share
     # the same streak_id.  Nothing is suppressed — all per-method detections are

@@ -84,6 +84,7 @@ class Observation(Base):
     obs_epoch: Mapped[str | None] = mapped_column(Text)       # ISO8601
     fits_wcs_json: Mapped[str | None] = mapped_column(Text)   # JSON string
     status: Mapped[str] = mapped_column(Text, default="queued", nullable=False)
+    enabled_detectors: Mapped[str | None] = mapped_column(Text)  # JSON list of detector IDs
 
 
 class Detection(Base):

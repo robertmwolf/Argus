@@ -72,8 +72,7 @@ async def client(tmp_path):
     app.state.queue = queue
     app.state.storage = storage
     app.state.model_loaded = False
-    app.state.pipeline_model = None
-    app.state.pipeline_device = None
+    app.state.pipeline_models = None
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
@@ -174,7 +173,8 @@ async def test_full_upload_poll_result_cycle(client, tmp_path):
     from api.main import _process_job, app as _app
 
     _fake_array = np.zeros((10, 10, 3), dtype=np.uint8)
-    with patch("inference.pipeline.load_model", return_value=(object(), object())), \
+    _fake_spec = {"id": "tiny", "size": "tiny", "label": "DINO Swin-Tiny", "dataset": "SatStreaks"}
+    with patch("inference.pipeline.load_models", return_value=[(object(), object(), _fake_spec)]), \
          patch("inference.pipeline.run_with_array", return_value=([fake_detection], _fake_array)):
         queued_id = await _app.state.queue.dequeue()
         await _process_job(queued_id, _app)
