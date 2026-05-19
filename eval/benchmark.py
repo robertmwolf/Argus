@@ -443,14 +443,15 @@ def run_benchmark(
 
 # Display order (unified always first, then ML methods, then classical).
 _METHOD_ORDER = [
-    "unified", "dinov3_vitb", "dinov3_vitl", "tiny", "large",
+    "unified", "dinov3_vitb", "dinov3_vitl", "dinov3_gt_dm_satstreaks", "tiny", "large",
     "streakmind_yolo", "yolo_full", "yolo", "astride", "opencv", "classical", "ml",
 ]
 
 _METHOD_LABELS = {
-    "unified":     "Unified Confidence Score",
-    "dinov3_vitb": "DINOv3 ViT-B",
-    "dinov3_vitl": "DINOv3 ViT-L",
+    "unified":                 "Unified Confidence Score",
+    "dinov3_vitb":             "DINOv3 ViT-B",
+    "dinov3_vitl":             "DINOv3 ViT-L",
+    "dinov3_gt_dm_satstreaks": "DINOv3 GT+DM+SatStreaks",
     "tiny":        "DINO Swin-T",
     "large":       "DINO Swin-L",
     "streakmind_yolo": "StreakMindYOLO",

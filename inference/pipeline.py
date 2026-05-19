@@ -102,10 +102,11 @@ def _select_config(model_size: str) -> Path:
     """
     root = Path(__file__).resolve().parent.parent
     configs = {
-        "tiny":         root / "models" / "dino" / "streak_codino_swin_t.py",
-        "large":        root / "models" / "dino" / "streak_codino_swin_l.py",
-        "dinov3_vitb":  root / "models" / "dino" / "streak_dinov3_vitb.py",
-        "dinov3_vitl":  root / "models" / "dino" / "streak_dinov3_vitl.py",
+        "tiny":                    root / "models" / "dino" / "streak_codino_swin_t.py",
+        "large":                   root / "models" / "dino" / "streak_codino_swin_l.py",
+        "dinov3_vitb":             root / "models" / "dino" / "streak_dinov3_vitb.py",
+        "dinov3_vitl":             root / "models" / "dino" / "streak_dinov3_vitl.py",
+        "dinov3_gt_dm_satstreaks": root / "models" / "dino" / "streak_dinov3_vitb.py",
     }
     if model_size not in configs:
         raise ValueError(
@@ -758,8 +759,9 @@ def load_model(
             root = Path(__file__).resolve().parent.parent
             # DINOv3 variants have dedicated checkpoint directories
             _dinov3_defaults = {
-                "dinov3_vitb": root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
-                "dinov3_vitl": root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
+                "dinov3_vitb":             root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
+                "dinov3_vitl":             root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
+                "dinov3_gt_dm_satstreaks": root / "weights" / "run_gt_dm_satstreaks_dinov3_vitb" / "best_coco_bbox_mAP_epoch_4.pth",
             }
             if model_size in _dinov3_defaults:
                 weights_path = _dinov3_defaults[model_size]
