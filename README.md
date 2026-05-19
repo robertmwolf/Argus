@@ -144,23 +144,67 @@ export CONFIDENCE_THRESHOLD=0.01               # local dev; raise after cloud ca
 export ARGUS_NORM=zscore                       # current local Swin-T weights
 # export ARGUS_NORM=autostretch                # future autostretch-trained Swin-L weights
 
-# Bootstrap the local TLE catalog (one-time per environment):
-# Download a TLE bundle and place it in data/tle_zips/, then run:
-python scripts/bootstrap_tle_catalog.py --zip-dir data/tle_zips/ --years 2025
+# Space-Track credentials (required for TLE bootstrap — free account):
+# Register at https://www.space-track.org/auth/createAccount
+export SPACETRACK_USER=your@email.com
+export SPACETRACK_PASS=yourpassword
 
-# Space-Track credentials — NOT currently used.
-# Live Space-Track API integration is pending evaluation for compliance with
-# their terms of use.  The variables below are defined for future use only;
-# do not set them in production until the integration is cleared.
-# export SPACETRACK_USER=your@email.com
-# export SPACETRACK_PASS=yourpassword
-# export ARGUS_ENV=development
-# export SPACETRACK_BASE_URL=https://for-testing-only.space-track.org/
+# ARGUS_ENV controls which Space-Track endpoint is used:
+#   development (default) → https://for-testing-only.space-track.org/
+#   production            → https://www.space-track.org/
+# Leave unset (or set to development) for all local work — the test site
+# mirrors production data and uses the same credentials.
+export ARGUS_ENV=development   # default; omit to get the same behaviour
 ```
 
-Inference reads only from the local `tle_catalog`. If the catalog has no
-coverage for an observation time window, ARGUS leaves the object unidentified
-(`unknown`) rather than querying Space-Track.
+### TLE Catalog Setup
+
+ARGUS cross-identification reads exclusively from a local `tle_catalog` database.
+Inference never calls Space-Track at runtime — it uses only what is already stored.
+
+**One-time bootstrap (new install):**
+
+```bash
+# Step 1 — Load the 2025 annual bundle (covers Apr 2024–Dec 2025).
+# Skip if data/tle_zips/data/exports/tle2025.txt is already loaded:
+python scripts/bootstrap_tle_catalog.py \
+    --zip data/tle_zips/data/exports/tle2025.txt
+
+# Step 2 — Bootstrap the last 90 days from Space-Track GP_History (~4.5 min).
+# ARGUS_ENV defaults to development (test site), which mirrors production data.
+# No need to switch to production — the same historical records are available.
+python scripts/bootstrap_recent_tles.py
+```
+
+Each day is fetched once and permanently cached; re-running is safe and idempotent.
+
+**Daily keep-up (run once per day after 00:00 UTC):**
+
+The same script fetches only the previous day's TLEs; all earlier days are
+already cached and skipped automatically.
+
+```bash
+# Install the cron job — runs at 00:16 UTC daily (off-hour as required by Space-Track).
+# Crontab requires a single line; no backslash continuations.
+echo '16 0 * * * SPACETRACK_USER=your@email.com SPACETRACK_PASS=yourpassword /Users/robert/miniconda3/envs/satid/bin/python /Users/robert/Argus/scripts/bootstrap_recent_tles.py >> /Users/robert/Argus/logs/tle_keepup.log 2>&1' | crontab -
+
+# Verify it was installed:
+crontab -l
+```
+
+> **Scheduling rule (Space-Track requirement):** Never schedule at :00 or :30
+> past the hour.  Use :16 or :44.  The script warns if run at a busy time.
+
+**To remove the cron job later:**
+```bash
+crontab -r          # removes all cron jobs (use if this is your only one)
+# — or —
+crontab -e          # opens vim; delete the line, then :wq to save
+crontab -l          # verify it's gone
+```
+
+If the catalog has no coverage for an observation time window, ARGUS leaves the
+object unidentified (`unknown`) rather than querying Space-Track at runtime.
 
 ## Running Locally (Dev)
 
