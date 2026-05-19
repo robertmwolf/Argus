@@ -140,6 +140,7 @@ async def test_health_endpoint_returns_expected_keys(client):
     body = response.json()
     assert body["status"] == "ok"
     assert "model_loaded" in body
+    assert "space_track_data_refreshed_at" in body
     assert "db_connected" in body
     assert body["db_connected"] is True
 
@@ -169,6 +170,8 @@ async def test_full_upload_poll_result_cycle(client, tmp_path):
     )
     assert response.status_code == 200
     job_id = response.json()["job_id"]
+    queued_body = (await client.get(f"/api/result/{job_id}")).json()
+    assert queued_body["obs_epoch"] == "2024-04-02T02:00:00Z"
 
     # Drain the queue and run the worker synchronously inside the mock context
     from api.main import _process_job, app as _app
@@ -182,6 +185,7 @@ async def test_full_upload_poll_result_cycle(client, tmp_path):
     # Result should now be complete
     body = (await client.get(f"/api/result/{job_id}")).json()
     assert body["status"] == "complete"
+    assert body["obs_epoch"] == "2024-04-02T02:00:00Z"
     assert body["image_width"] is not None
     assert body["image_height"] is not None
     assert len(body["detections"]) == 1

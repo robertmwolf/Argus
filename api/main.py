@@ -38,6 +38,7 @@ from sqlalchemy import select, text
 
 from db.models import Detection, Identification, Observation, get_engine, get_session_factory, init_db
 from inference.confidence import compute_unified_confidence
+from src.matching.tle_store import get_latest_coverage_time
 
 logger = logging.getLogger(__name__)
 
@@ -172,12 +173,34 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
             return
         filename = obs.filename
         obs_epoch = obs.obs_epoch
+        exposure_time = obs.exposure_time
         obs.status = "processing"
         await session.commit()
 
     tmp_path: Path | None = None
     try:
         fits_data = await storage.load_upload(job_id, filename)
+
+        if obs_epoch is None and Path(filename).suffix.lower() in {".fits", ".fit", ".fts"}:
+            header_cards = await asyncio.to_thread(_extract_fits_header, fits_data)
+            obs_epoch = _normalise_obs_epoch(_header_card_value(header_cards, "DATE-OBS"))
+            if exposure_time is None:
+                exposure_time = _header_card_value(header_cards, "EXPTIME")
+                if exposure_time is None:
+                    exposure_time = _header_card_value(header_cards, "EXPOSURE")
+                if exposure_time is None:
+                    exposure_time = _header_card_value(header_cards, "EXP_TIME")
+                try:
+                    exposure_time = float(exposure_time) if exposure_time is not None else None
+                except (TypeError, ValueError):
+                    exposure_time = None
+            if obs_epoch is not None or exposure_time is not None:
+                async with session_factory() as session:
+                    obs = await session.get(Observation, job_id)
+                    if obs:
+                        obs.obs_epoch = obs.obs_epoch or obs_epoch
+                        obs.exposure_time = obs.exposure_time or exposure_time
+                        await session.commit()
 
         with tempfile.NamedTemporaryFile(suffix=Path(filename).suffix, delete=False) as f:
             f.write(fits_data)
@@ -251,6 +274,16 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
                         confidence=ident_dict.get("confidence"),
                         separation_deg=sep_arcsec / 3600.0,
                         rank=ident_dict.get("rank"),
+                        tle_epoch=ident_dict.get("tle_epoch"),
+                        tle_age_hours=ident_dict.get("tle_age_hours"),
+                        photo_taken_at=ident_dict.get("photo_taken_at") or obs_epoch,
+                        tle_data_fresh_at=ident_dict.get("tle_data_fresh_at"),
+                        tle_source=ident_dict.get("tle_source"),
+                        tle_search_mode=ident_dict.get("tle_search_mode"),
+                        epoch_search_window_days=ident_dict.get("epoch_search_window_days"),
+                        epoch_drift_hours=ident_dict.get("epoch_drift_hours"),
+                        position_score=ident_dict.get("position_score"),
+                        epoch_penalty=ident_dict.get("epoch_penalty"),
                     ))
 
             obs = await session.get(Observation, job_id)
@@ -307,6 +340,51 @@ def _extract_fits_header(data: bytes) -> list[dict] | None:
             return cards
     except Exception:
         logger.exception("FITS header extraction failed")
+        return None
+
+
+def _header_card_value(header_cards: list[dict] | None, key: str) -> Any | None:
+    """Return a FITS header card value by keyword from extracted cards.
+
+    Args:
+        header_cards: List returned by :func:`_extract_fits_header`.
+        key: FITS keyword to look up.
+
+    Returns:
+        Header value, or None if absent.
+    """
+    if not header_cards:
+        return None
+    target = key.upper()
+    for card in header_cards:
+        if str(card.get("key", "")).upper() == target:
+            return card.get("value")
+    return None
+
+
+def _normalise_obs_epoch(value: Any) -> str | None:
+    """Normalize a DATE-OBS-like value to an ISO8601 UTC string.
+
+    Args:
+        value: Raw FITS DATE-OBS value.
+
+    Returns:
+        ISO8601 string ending in ``Z``, or None when parsing fails.
+    """
+    if value is None:
+        return None
+    try:
+        from datetime import datetime, timezone
+
+        raw = str(value).strip().replace(" ", "T")
+        dt = datetime.fromisoformat(raw.rstrip("Z"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            dt = dt.astimezone(timezone.utc)
+        return dt.isoformat().replace("+00:00", "Z")
+    except (TypeError, ValueError):
+        logger.warning("Could not parse DATE-OBS value %r", value)
         return None
 
 
@@ -500,12 +578,24 @@ async def upload(request: Request, file: UploadFile) -> dict[str, str]:
 
     # Extract FITS header and generate preview PNG at upload time so the
     # frontend can display them immediately while the job is queued/processing.
+    obs_epoch: str | None = None
+    exposure_time: float | None = None
     if ext in {".fits", ".fit", ".fts"}:
         header_cards = await asyncio.to_thread(_extract_fits_header, data)
         if header_cards is not None:
             await request.app.state.storage.save_fits_header(
                 job_id, json.dumps(header_cards).encode()
             )
+            obs_epoch = _normalise_obs_epoch(_header_card_value(header_cards, "DATE-OBS"))
+            exposure_time = _header_card_value(header_cards, "EXPTIME")
+            if exposure_time is None:
+                exposure_time = _header_card_value(header_cards, "EXPOSURE")
+            if exposure_time is None:
+                exposure_time = _header_card_value(header_cards, "EXP_TIME")
+            try:
+                exposure_time = float(exposure_time) if exposure_time is not None else None
+            except (TypeError, ValueError):
+                exposure_time = None
         preview_png = await asyncio.to_thread(_render_fits_preview, data)
         if preview_png is not None:
             await request.app.state.storage.save_preview(job_id, preview_png)
@@ -513,7 +603,15 @@ async def upload(request: Request, file: UploadFile) -> dict[str, str]:
         await request.app.state.storage.save_preview(job_id, data)
 
     async with request.app.state.session_factory() as session:
-        session.add(Observation(id=job_id, filename=filename, status="queued"))
+        session.add(
+            Observation(
+                id=job_id,
+                filename=filename,
+                obs_epoch=obs_epoch,
+                exposure_time=exposure_time,
+                status="queued",
+            )
+        )
         await session.commit()
 
     await request.app.state.queue.enqueue(job_id)
@@ -588,6 +686,7 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
                 # Top-level fields reflect the unified score for canvas overlay
                 "method": "unified",
                 "confidence": unified_conf,
+                "photo_taken_at": obs.obs_epoch,
                 "bbox": [primary.bbox_x1, primary.bbox_y1, primary.bbox_x2, primary.bbox_y2],
                 "obb": {
                     "cx": primary.obb_cx,
@@ -608,6 +707,16 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
                         "confidence": i.confidence,
                         "separation_deg": i.separation_deg,
                         "rank": i.rank,
+                        "tle_epoch": i.tle_epoch,
+                        "tle_age_hours": i.tle_age_hours,
+                        "photo_taken_at": i.photo_taken_at or obs.obs_epoch,
+                        "tle_data_fresh_at": i.tle_data_fresh_at,
+                        "tle_source": i.tle_source,
+                        "tle_search_mode": i.tle_search_mode,
+                        "epoch_search_window_days": i.epoch_search_window_days,
+                        "epoch_drift_hours": i.epoch_drift_hours,
+                        "position_score": i.position_score,
+                        "epoch_penalty": i.epoch_penalty,
                     }
                     for i in sorted(ident_rows, key=lambda x: x.rank or 99)
                 ],
@@ -740,11 +849,26 @@ async def health(request: Request) -> dict[str, Any]:
         "dinov3_vitl":             "DINOv3 ViT-Large - SatStreaks+GTImages",
         "dinov3_gt_dm_satstreaks": "DINOv3 - GT+DM+SatStreaks",
     }
+    space_track_refreshed_at = None
+    try:
+        refreshed_at = await asyncio.to_thread(
+            get_latest_coverage_time,
+            None,
+            1,
+        )
+        if refreshed_at is not None:
+            space_track_refreshed_at = (
+                refreshed_at.isoformat().replace("+00:00", "Z")
+            )
+    except Exception:
+        logger.exception("TLE coverage freshness check failed")
+
     return {
         "status": "ok",
         "model_loaded": request.app.state.model_loaded,
         "model_size": model_size,
         "model_label": model_labels.get(model_size, model_size),
+        "space_track_data_refreshed_at": space_track_refreshed_at,
         "db_connected": db_ok,
     }
 
