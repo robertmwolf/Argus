@@ -1,0 +1,28 @@
+{
+  "metrics": {
+    "precision": 0.5202,
+    "recall": 0.5422,
+    "f1": 0.531,
+    "map_50": 0.3392,
+    "map_75": 0.21,
+    "mean_angle_error_deg": 0.356,
+    "per_band": {
+      "short": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "medium": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "long": {
+        "precision": 0.5189,
+        "recall": 0.5464,
+        "f1": 0.5323
+      }
+    }
+  },
+  "n_predictions": 321
+}
