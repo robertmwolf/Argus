@@ -44,33 +44,37 @@ python scripts/convert_gtimages.py \
 
 ---
 
-## 2. Frigate Dataset (Request from Authors)
+## 2. Frigate Dataset (Staged — Partially Annotated)
 
 **What it is:** Wide-field FITS images of LEO specifically collected for
 satellite detection by ExoAnalytic Solutions, using a QHY600M camera
 at 9600×6422 pixels, 0.5-second exposures. Raw and pre-processed versions
 both released. This is purpose-built for exactly this pipeline.
 
-**Status:** Paper published, code on GitHub, raw FITS download link
-marked "TBC" (to be confirmed) in the repo. Email authors to request
-early access.
-
 **GitHub:** https://github.com/DanSRoll/frigate
 **Paper:** https://www.nature.com/articles/s41597-025-06220-0
 
-**Email to send:**
-```
-To: [corresponding author from paper]
-Subject: Request for Frigate dataset access
+**Location:** `/Volumes/External/frigate/` (raw FITS + processed PNGs at 2325×1555)
 
-I am building an automated satellite identification pipeline using
-ASTRiDE + SGP4 matching for Phase 1, and would like to use the
-Frigate dataset for testing and validation. Could you share
-download access to the FITS files? Happy to share any results
-back with your team.
+**Annotation status — ✅ ready for training inclusion:**
+- 350 frames manually reviewed via `scripts/annotate_frigate_streaks.py`
+- 191 frames contain satellite streaks (377 OBBs total) — all **very short streaks**
+  (~20–80 px), filling a morphology gap absent from GTImages and SatStreaks
+- 159 frames confirmed streak-free (explicit negatives)
+- Frames are scattered across the full observation sequence (priority-list ordering),
+  providing diversity across sky conditions throughout the night
+- Annotations: `data/annotations/frigate_streaks.json`
+- Remaining 1,630 frames: unreviewed — do NOT include in training
+
+**To include in a training run:**
+```bash
+python scripts/merge_annotations.py --seed 42 --val-fraction 0.2 --include-frigate
 ```
 
-**When available, download to:** `data/frigate/raw/` and `data/frigate/processed/`
+**Streak characteristics:**
+- Short streaks only (~20–80 px at 2325×1555 px scale)
+- Single site, single night — limited sky-background diversity
+- QHY600M camera (different sensor/optics from GTImages Stellina and HST SatStreaks)
 
 ---
 
