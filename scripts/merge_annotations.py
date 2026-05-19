@@ -1,9 +1,10 @@
-"""Merge SatStreaks and GTImages annotations into train/val COCO JSON splits.
+"""Merge SatStreaks, GTImages, and optionally Frigate annotations into train/val COCO JSON splits.
 
 Reads:
-  data/satstreaks/Data/labels.json   — SatStreaks split (train/val/test keys)
-  data/annotations/gtimages.json     — GTImages labeled streaks (convert first)
+  data/satstreaks/Data/labels.json        — SatStreaks split (train/val/test keys)
+  data/annotations/gtimages.json          — GTImages labeled streaks (convert first)
   data/annotations/gtimages_negatives.json — GTImages no-streak images
+  data/annotations/frigate_streaks.json   — Frigate manual annotations (--include-frigate)
 
 Writes:
   data/annotations/train.json        — 80% split for training
@@ -13,16 +14,19 @@ Writes:
 SatStreaks images reference paths like ``Images/jXXXXXX_flc.fits.jpg``.
 GTImages images are written with paths relative to ``data/``, for example
 ``GTImages/Streak_NNNN_HHMMSS.fits``.
+Frigate images use absolute paths (written by annotate_frigate_streaks.py).
 
 Image ID space:
   SatStreaks images: IDs start at 1
   GTImages images:   IDs start at 1_000_000 (avoids collision)
+  Frigate images:    IDs start at 2_000_000 (avoids collision)
 
 Usage::
 
     python scripts/merge_annotations.py [--seed 42] [--val-fraction 0.2]
-    python scripts/merge_annotations.py --satstreaks-only   # skip GTImages
-    python scripts/merge_annotations.py --gtimages-only     # skip SatStreaks
+    python scripts/merge_annotations.py --satstreaks-only    # skip GTImages and Frigate
+    python scripts/merge_annotations.py --gtimages-only      # skip SatStreaks and Frigate
+    python scripts/merge_annotations.py --include-frigate    # add Frigate manual annotations
 """
 
 from __future__ import annotations
@@ -47,9 +51,11 @@ SATSTREAKS_IMG_DIR = Path("data/satstreaks/Data/Images")
 SATSTREAKS_MSK_DIR = Path("data/satstreaks/Data/Masks")
 GTIMAGES_JSON      = Path("data/annotations/gtimages.json")
 GTIMAGES_NEG_JSON  = Path("data/annotations/gtimages_negatives.json")
+FRIGATE_JSON       = Path("data/annotations/frigate_streaks.json")
 OUT_DIR            = Path("data/annotations")
 
 _GTIMAGES_ID_OFFSET = 1_000_000  # keeps GTImages IDs distinct from SatStreaks
+_FRIGATE_ID_OFFSET  = 2_000_000  # keeps Frigate IDs distinct from SatStreaks and GTImages
 
 
 # ---------------------------------------------------------------------------
@@ -266,14 +272,16 @@ def merge(
     seed: int = 42,
     satstreaks_only: bool = False,
     gtimages_only: bool = False,
+    include_frigate: bool = False,
 ) -> None:
-    """Build train/val/test COCO splits from SatStreaks and GTImages.
+    """Build train/val/test COCO splits from SatStreaks, GTImages, and optionally Frigate.
 
     Args:
         val_fraction: Fraction of the combined pool to use for validation.
         seed: Random seed for the train/val split.
-        satstreaks_only: If True, skip GTImages.
-        gtimages_only: If True, skip SatStreaks.
+        satstreaks_only: If True, skip GTImages and Frigate.
+        gtimages_only: If True, skip SatStreaks and Frigate.
+        include_frigate: If True, include Frigate manual streak annotations.
     """
     rng = random.Random(seed)
 
@@ -382,6 +390,46 @@ def merge(
                 len(gt_train_imgs), len(gt_val_imgs), seed,
             )
 
+    # ---- Frigate (manual positives) ----------------------------------------
+    if include_frigate and not satstreaks_only and not gtimages_only:
+        if not FRIGATE_JSON.exists():
+            logger.warning(
+                "Frigate JSON not found at %s — run scripts/annotate_frigate_streaks.py first",
+                FRIGATE_JSON,
+            )
+        else:
+            logger.info("Loading Frigate manual streak annotations…")
+            fr_imgs, fr_anns = _load_gtimages(
+                FRIGATE_JSON,
+                id_offset=_FRIGATE_ID_OFFSET,
+                ann_id_offset=ann_counter,
+                image_prefix="",   # absolute paths — no prefix needed
+            )
+            ann_counter += len(fr_anns)
+
+            # Randomly split Frigate 80/20 into train/val (same as GTImages)
+            rng.shuffle(fr_imgs)
+            split_idx = int(len(fr_imgs) * (1.0 - val_fraction))
+            fr_train_imgs = fr_imgs[:split_idx]
+            fr_val_imgs   = fr_imgs[split_idx:]
+
+            fr_train_ids = {img["id"] for img in fr_train_imgs}
+            fr_val_ids   = {img["id"] for img in fr_val_imgs}
+
+            for ann in fr_anns:
+                if ann["image_id"] in fr_train_ids:
+                    train_annotations.append(ann)
+                elif ann["image_id"] in fr_val_ids:
+                    val_annotations.append(ann)
+
+            train_images.extend(fr_train_imgs)
+            val_images.extend(fr_val_imgs)
+
+            logger.info(
+                "Frigate: train=%d, val=%d images (80/20 random split, seed=%d)",
+                len(fr_train_imgs), len(fr_val_imgs), seed,
+            )
+
     # ---- Write splits ------------------------------------------------------
     if not train_images:
         logger.error("No training images found — aborting")
@@ -418,9 +466,12 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for GTImages train/val split (default 42)")
     parser.add_argument("--satstreaks-only", action="store_true",
-                        help="Use SatStreaks only (skip GTImages)")
+                        help="Use SatStreaks only (skip GTImages and Frigate)")
     parser.add_argument("--gtimages-only", action="store_true",
-                        help="Use GTImages only (skip SatStreaks)")
+                        help="Use GTImages only (skip SatStreaks and Frigate)")
+    parser.add_argument("--include-frigate", action="store_true",
+                        help="Include Frigate manual streak annotations "
+                             "(requires data/annotations/frigate_streaks.json)")
     args = parser.parse_args()
 
     merge(
@@ -428,4 +479,5 @@ if __name__ == "__main__":
         seed=args.seed,
         satstreaks_only=args.satstreaks_only,
         gtimages_only=args.gtimages_only,
+        include_frigate=args.include_frigate,
     )
