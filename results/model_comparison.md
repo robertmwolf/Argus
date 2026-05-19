@@ -17,7 +17,7 @@ MMDetection's evaluator.
 | YOLO11n-OBB full dataset | YOLO11n | GTImages + SatStreaks (tiled, 14 385 tiles) | 3 023 | 0.673 | 0.572 | 0.846 | Complete — tiled val split; not directly comparable to full-image COCO |
 | **DINOv3 ViT-B (Phase C², best model)** | **DINOv3 ViT-B frozen** | **GTImages + SatStreaks (full, 3 023 imgs)** | **3 023** | **0.740** | — | — | **Complete — test.json, 4 epochs** |
 | DINOv3 ViT-L (Phase D) | DINOv3 ViT-L frozen | GTImages + SatStreaks (full, 3 023 imgs) | 3 023 | — | — | — | Pending — RTX 5070 Ti workstation |
-| **DINOv3 ViT-B — GT + DM + SatStreaks** | **DINOv3 ViT-B frozen** | **GTImages + SatStreaks + DarkMatters (3 172 imgs)** | **3 172** | — | — | — | **Pending training** |
+| **DINOv3 ViT-B — GT + DM + SatStreaks** | **DINOv3 ViT-B frozen** | **GTImages + SatStreaks + DarkMatters (3 172 imgs)** | **3 172** | **0.436** | — | — | **Complete — dm_merged_val.json, 4 epochs (best epoch 4)** |
 
 ## Notes
 
@@ -38,10 +38,14 @@ MMDetection's evaluator.
   split (~2 881 tiles).  Direct mAP comparison to full-image COCO numbers above is
   not valid.  Data from `results/full_yolo_obb/yolo_benchmark.json`.
 
-- **GT + DM + SatStreaks model** (last row): training script at
-  `scripts/train_gt_dm_satstreaks.sh`.  Annotation files at
-  `data/annotations/dm_merged_{train,val,test}.json` — adds 239 annotated
-  DarkMatters CDK20 images (304 OBBs) to the existing 3 023-image corpus.
+- **GT + DM + SatStreaks model** (last row): 4 epochs, 14:25→22:44 on Mac M3 MPS.
+  Evaluated on `dm_merged_val.json` (477 images = original val + DarkMatters val).
+  Per-epoch mAP@0.5: 0.257 → 0.341 → 0.392 → **0.436**.  Per-epoch mAP (0.5:0.95):
+  0.177 → 0.217 → 0.250 → **0.315**.  Best checkpoint:
+  `weights/run_gt_dm_satstreaks_dinov3_vitb/best_coco_bbox_mAP_epoch_4.pth`.
+  Note: val set differs from Phase C² (dm_merged_val vs original val.json), so
+  numbers are not directly comparable — DarkMatters JPEGs are harder than the
+  original HST/GTImages distribution.
 
 ## Phase 8 Targets
 
@@ -49,4 +53,4 @@ MMDetection's evaluator.
 |---|---|---|
 | Precision | ≥ 0.94 | 0.667 (Swin-T dev subset) |
 | Recall | ≥ 0.97 | 0.846 (YOLO11n full dataset, tiled) |
-| mAP@0.5 | maximise | **0.740** (DINOv3 ViT-B Phase C², test.json) |
+| mAP@0.5 | maximise | **0.740** (DINOv3 ViT-B Phase C², test.json) / **0.436** (GT+DM+SatStreaks, dm_merged_val, not directly comparable) |
