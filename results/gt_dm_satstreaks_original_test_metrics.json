@@ -1,0 +1,25 @@
+{
+  "model": "DINOv3 ViT-B — GT + DM + SatStreaks",
+  "checkpoint": "weights/run_gt_dm_satstreaks_dinov3_vitb/best_coco_bbox_mAP_epoch_4.pth",
+  "config": "models/dino/streak_dinov3_vitb.py",
+  "eval_date": "2026-05-19",
+  "test_split": "data/annotations/test.json",
+  "test_images": 308,
+  "note": "Evaluated on original test.json (GTImages + SatStreaks only, no DarkMatters). Directly comparable to Phase C² results.",
+  "metrics": {
+    "coco/bbox_mAP": 0.594,
+    "coco/bbox_mAP_50": 0.740,
+    "coco/bbox_mAP_75": 0.631,
+    "coco/bbox_mAP_s": -1.0,
+    "coco/bbox_mAP_m": 0.306,
+    "coco/bbox_mAP_l": 0.600
+  },
+  "comparison_phase_c2": {
+    "checkpoint": "weights/dinov3_vitb_full/best_coco_bbox_mAP_epoch_4.pth",
+    "coco/bbox_mAP": 0.580,
+    "coco/bbox_mAP_50": 0.740,
+    "coco/bbox_mAP_75": 0.606,
+    "coco/bbox_mAP_m": 0.305,
+    "coco/bbox_mAP_l": 0.585
+  }
+}
