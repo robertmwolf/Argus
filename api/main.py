@@ -734,10 +734,11 @@ async def health(request: Request) -> dict[str, Any]:
 
     model_size = os.environ.get("MODEL_SIZE", "tiny")
     model_labels = {
-        "tiny":        "DINO Swin-Tiny - SatStreaks",
-        "large":       "DINO Swin-Large - SatStreaks",
-        "dinov3_vitb": "DINOv3 ViT-Base - SatStreaks+GTImages",
-        "dinov3_vitl": "DINOv3 ViT-Large - SatStreaks+GTImages",
+        "tiny":                    "DINO Swin-Tiny - SatStreaks",
+        "large":                   "DINO Swin-Large - SatStreaks",
+        "dinov3_vitb":             "DINOv3 ViT-Base - SatStreaks+GTImages",
+        "dinov3_vitl":             "DINOv3 ViT-Large - SatStreaks+GTImages",
+        "dinov3_gt_dm_satstreaks": "DINOv3 - GT+DM+SatStreaks",
     }
     return {
         "status": "ok",

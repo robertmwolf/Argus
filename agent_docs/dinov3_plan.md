@@ -162,7 +162,7 @@ cloud-scale GPU:
 | Phase B ✅ | `pipeline.py --fast` with frozen ViT-B <60 s on Mac | PASS |
 | Phase C ✅ | Frozen ViT-B, dev subset, 50 epochs: mAP@0.5 >0.50 | 0.274 (dev_subset) — expected low from 50-image train |
 | Phase C² ✅ | Frozen ViT-B, full dataset, 4 epochs: mAP@0.5 > Swin-T | **0.74 PASS** (Swin-T = 0.19) |
-| Phase D ⏳ | Frozen ViT-L, full dataset, 50 epochs | RTX 5070 Ti — PENDING |
+| Phase D ⏳ | Frozen ViT-L, full dataset, 50 epochs | **Route 1**: RTX 5070 Ti workstation (WSL2) — PENDING<br>**Route 2**: RTX 4090 cloud rental (Vast.ai/RunPod) — PENDING |
 | Phase D | mAP@0.5 ≥0.74 (match ViT-B), precision ≥94%, recall ≥97% | Phase 8 targets |
 | Phase F (optional) | Partial ViT-L unfreeze if Phase D falls short | A100 only if needed |
 
@@ -174,7 +174,7 @@ cloud-scale GPU:
 | B | `dinov3_adapter.py` + MMDet configs + pipeline smoke test | Mac | ✅ DONE (smoke test loss 37→30) |
 | C | Full 50-epoch frozen ViT-B training, dev subset | Mac MPS | ✅ DONE (best mAP@0.5=0.274 on dev_subset, 0.002 on test — expected from 50-image train) |
 | C² | Frozen ViT-B training, **full merged dataset**, 4 epochs | Mac MPS | ✅ DONE (mAP@0.5=**0.74** on test.json — beats Swin-T by +0.55) |
-| D | Full 50-epoch frozen ViT-L training, full dataset | RTX 5070 Ti | ⏳ PENDING — handoff in Training_Handoff.md |
+| D | Full 50-epoch frozen ViT-L training, full dataset | Route 1: RTX 5070 Ti (WSL2) **or** Route 2: RTX 4090 cloud rental | ⏳ PENDING — see Training_Handoff.md |
 | E | Evaluation vs Co-DINO Swin-T/L baseline on test.json | Mac | ✅ PARTIAL — ViT-B vs Swin-T done; ViT-L column pending Phase D |
 | F (optional) | Partial ViT-L unfreeze if Phase D targets not met | A100 | deferred — evaluate after Phase D |
 

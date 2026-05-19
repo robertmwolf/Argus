@@ -1,0 +1,112 @@
+{
+  "generated_utc": "2026-05-18T04:23:51.011817+00:00",
+  "dataset_dir": "/Volumes/External/DarkMatters/exports",
+  "weights": "weights/run_full_yolo_obb/run/weights/best.pt",
+  "label_counts": {
+    "hard_negative": 267,
+    "good_negative": 588,
+    "positive": 283,
+    "hard_positive": 2,
+    "hard_positive_dup1": 2,
+    "hard_positive_dup2": 2
+  },
+  "total_labeled": 1144,
+  "positive_count": 283,
+  "negative_count": 855,
+  "image_check_positives": {
+    "sampled": 30,
+    "missing": 0,
+    "readable": 30,
+    "unique_sizes": [
+      "(3000, 2001)"
+    ],
+    "unique_modes": [
+      "L"
+    ],
+    "mean_brightness_mean": 0.2543,
+    "mean_brightness_stdev": 0.0046
+  },
+  "image_check_negatives": {
+    "sampled": 30,
+    "missing": 0,
+    "readable": 30,
+    "unique_sizes": [
+      "(3000, 2001)"
+    ],
+    "unique_modes": [
+      "L"
+    ],
+    "mean_brightness_mean": 0.2564,
+    "mean_brightness_stdev": 0.0082
+  },
+  "yolo_probe": {
+    "images_probed": 283,
+    "images_missing": 0,
+    "images_with_any_detection": 2,
+    "images_with_high_conf_detection": 0,
+    "detection_rate": 0.007,
+    "high_conf_detection_rate": 0.0,
+    "conf_threshold": 0.25,
+    "high_conf_threshold": 0.5,
+    "mean_confidence": 0.2807,
+    "mean_angle_deg": -0.02,
+    "elapsed_s": 75.2
+  },
+  "negative_coco_images": 855,
+  "metadata_positives": {
+    "fwhm_mean": 2.242,
+    "fwhm_stdev": 0.514,
+    "eccentricity_mean": 0.403,
+    "filter_distribution": {
+      "OIII": 86,
+      "SII": 45,
+      "HA": 33,
+      "G": 32,
+      "B": 31,
+      "L": 27,
+      "R": 27,
+      "": 2
+    },
+    "top_objects": {
+      "NGC2239": 107,
+      "NGC1055": 57,
+      "B72": 24,
+      "IC5148": 23,
+      "NGC1360": 19,
+      "HCG22": 19,
+      "NGC7049": 16,
+      "IC2177": 9,
+      "GUM53": 3,
+      "NGC6188": 3
+    },
+    "metadata_matched": 281
+  },
+  "metadata_negatives": {
+    "fwhm_mean": 2.373,
+    "fwhm_stdev": 0.55,
+    "eccentricity_mean": 0.433,
+    "filter_distribution": {
+      "HA": 162,
+      "L": 140,
+      "OIII": 135,
+      "G": 110,
+      "B": 105,
+      "R": 70,
+      "": 69,
+      "SII": 64
+    },
+    "top_objects": {
+      "M24-Dust": 133,
+      "IC5148": 90,
+      "NGC7049": 76,
+      "B72": 75,
+      "": 69,
+      "NGC1055": 69,
+      "IC2177": 65,
+      "NGC1360": 62,
+      "HCG22": 54,
+      "GUM53": 49
+    },
+    "metadata_matched": 786
+  }
+}
