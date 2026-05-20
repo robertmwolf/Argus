@@ -38,11 +38,12 @@ cd "$(dirname "$0")/.."
 
 PYTHON="${PYTHON:-/Users/robert/miniconda3/envs/satid/bin/python}"
 EPOCHS="${EPOCHS:-15}"
-IMGSZ="${IMGSZ:-640}"
-BATCH="${BATCH:-4}"
+IMGSZ="${IMGSZ:-1280}"
+BATCH="${BATCH:-2}"
 YOLO_MODEL="${YOLO_MODEL:-n}"
 FRIGATE_RAW="${FRIGATE_RAW:-/Volumes/External/frigate/raw}"
 FRIGATE_PROCESSED="${FRIGATE_PROCESSED:-/Volumes/External/frigate/processed}"
+DATA_ROOT="${DATA_ROOT:-/Volumes/External/TrainingData/raw}"
 TRACKS="${TRACKS:-real_only paper_long adapted gtimages_plus_frigate}"
 RESULTS_DIR="${RESULTS_DIR:-results/streakmind_yolo}"
 SKIP_TRAIN="${SKIP_TRAIN:-0}"
@@ -133,12 +134,14 @@ ${PYTHON} scripts/train_compare_streakmind_yolo.py \
     --imgsz  "${IMGSZ}" \
     --batch  "${BATCH}" \
     --model  "${YOLO_MODEL}" \
-    --data-root data \
+    --data-root "${DATA_ROOT}" \
     --val-ann  data/annotations/gtimages_val.json \
     --test-ann data/annotations/gtimages_test.json \
     --results-dir "${RESULTS_DIR}" \
     --conf 0.25 \
     --eval-batch 4 \
+    --eval-stride $((IMGSZ / 2)) \
+    --rebuild-dataset \
     ${SKIP_TRAIN_FLAG} \
     --verbose
 
