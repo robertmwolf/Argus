@@ -432,6 +432,7 @@ class AnnotationApp(tk.Tk):
             highlightthickness=0,
             troughcolor="#333355",
             length=160,
+            takefocus=0,
         ).pack(side="left", padx=6)
 
         for txt, cmd in [
