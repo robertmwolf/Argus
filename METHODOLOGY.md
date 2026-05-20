@@ -1019,3 +1019,100 @@ https://arxiv.org/abs/2605.03429
 SatStreaks Dataset (2024). Towards Supervised Learning for Delineating Satellite
 Streaks from Astronomical Images. *Computer and Robot Vision (CRV 2024)*.
 https://github.com/jijup/SatStreaks
+
+---
+
+## 12. Raw FITS YOLO-OBB Methodology-Matched Comparison (May 2026)
+
+### 12.1 Motivation
+
+Section 8 established that direct comparison of ARGUS and StreakMind P/R figures
+is invalid across five incomparable factors. This section describes a methodology-
+matched comparison: training YOLO11n-OBB on raw GTImages FITS (same image domain
+as StreakMind) and evaluating at both IoU=0.5 and IoU=0.8 on a held-out GTImages
+test split.
+
+### 12.2 Experiment Design
+
+**Four training tracks** (each 15 epochs, YOLO11n-OBB):
+
+| Track | Training data | Purpose |
+|---|---|---|
+| `real_only` | GTImages real annotations | Baseline |
+| `paper_long` | GTImages real + synthetic long streaks | Match StreakMind's long-streak distribution |
+| `adapted` | GTImages real + synthetic medium streaks | Match GTImages' own length distribution |
+| `gtimages_plus_frigate` | GTImages real + Frigate background frames | Background diversity |
+
+**Evaluation:** held-out GTImages test split (66 images, 57 streak annotations;
+median length 636px, 89% long >400px).
+
+**IoU thresholds:** 0.5 (ARGUS standard) and 0.8 (StreakMind's threshold).
+
+### 12.3 Phase 1 Results — 640px Uniform Tiling (Baseline)
+
+| Track | P | R | F1 | Angle error | IoU=0.8 F1 |
+|---|---:|---:|---:|---:|---:|
+| real_only | 9.3% | 17.5% | 12.2% | 54° | 0.0% |
+| paper_long | 10.9% | 33.3% | 16.4% | 43° | 0.0% |
+| adapted | 9.0% | 19.3% | 12.3% | 57° | 0.0% |
+| gtimages_plus_frigate | 15.3% | 29.8% | 20.2% | 48° | ~0% |
+| **StreakMind** (ref) | 94% | 97% | 95.5% | — | 95.5% |
+
+**Root cause of low IoU=0.8:** 640px tiles clip 636px median streaks across tile
+boundaries during training. The model learns from partial streak fragments, causing
+mean angle error of 43–57°. Even at IoU=0.5, thin OBBs require angle accuracy to
+within ~10° for polygon IoU ≥ 0.5; 50° error produces near-zero IoU for 16px-wide
+streaks.
+
+Key finding: `paper_long` (long-streak synthetics) nearly doubles recall vs
+`real_only`, confirming that training distribution alignment with the test set
+length distribution is critical.
+
+### 12.4 Phase 2 Results — 1280px Streak-Centered Crops
+
+Three fixes applied to address the Phase 1 root causes:
+
+1. **Larger tiles (1280px):** All test streaks (max 1269px) now fit in a single
+   training tile — no more tile-boundary clipping.
+2. **Streak-centered crops:** Each annotation generates one tile centered on the
+   streak, guaranteeing the model trains on the complete streak.
+3. **Overlapping inference stride (640px):** At evaluation, 50% overlap ensures
+   complete streaks are captured in at least one tile.
+
+**Phase 2 results (in progress — paper_long/adapted/gtimages_plus_frigate pending):**
+
+| Track | P | R | F1 | Angle error | IoU=0.8 F1 |
+|---|---:|---:|---:|---:|---:|
+| real_only | 52.1% | 43.9% | 47.6% | 32° | 0.0% |
+
+F1 improved ~4× and angle error reduced by 40% vs Phase 1. IoU=0.8 remains 0%
+because 32° residual angle error still produces near-zero Shapely OBB IoU for
+16px-wide streaks. IoU=0.8 requires angle precision ~5°.
+
+**Medium-streak regression (known issue):** Medium streaks (150–400px, 5 of 57 GT)
+dropped from 80% recall (640px) to 0% (1280px). Root cause: medium streaks occupy
+only ~20% of a 1280px tile; the model under-trained on this scale regresses box
+dimensions to ~11px (near-point) instead of ~262px, and confidence falls below the
+0.25 inference threshold. The model correctly localises the streak centre (cx/cy
+within 20px) but fails to fit the full extent.
+
+**Planned follow-up:** Re-evaluate all Phase 2 tracks with `--conf 0.10` after
+training completes. This will capture medium-streak detections (conf 0.12–0.14
+observed) at the cost of more false positives. The `adapted` track (synthetic
+medium streaks in training) should naturally raise confidence for medium targets
+without threshold lowering.
+
+### 12.5 Why StreakMind Achieves IoU=0.8
+
+StreakMind's F1=95.5% at IoU=0.8 is explained by:
+
+1. **Ephemeris-derived labels:** Streak annotations come from tracked-satellite
+   ephemeris, giving sub-pixel endpoint accuracy and thus correct angles.
+2. **No tile-boundary clipping:** La Sagra frames are processed at a scale where
+   streaks fit within single inference windows.
+3. **2,335 training frames** vs our 469 GTImages frames — 5× more data.
+4. **In-domain test set:** StreakMind tests on its own observatory's data (La
+   Sagra), eliminating site/instrument generalisation as a factor.
+
+Direct numerical comparison of ARGUS Phase 2 vs StreakMind remains approximate
+(different site, instrument, and sky background diversity).

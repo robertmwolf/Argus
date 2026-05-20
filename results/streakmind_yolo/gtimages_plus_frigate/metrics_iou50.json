@@ -1,0 +1,25 @@
+{
+  "precision": 0.1532,
+  "recall": 0.2982,
+  "f1": 0.2024,
+  "map_50": 0.1452,
+  "map_75": 0.0006,
+  "mean_angle_error_deg": 47.727,
+  "per_band": {
+    "short": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "medium": {
+      "precision": 0.0645,
+      "recall": 0.8,
+      "f1": 0.1194
+    },
+    "long": {
+      "precision": 0.375,
+      "recall": 0.1176,
+      "f1": 0.1791
+    }
+  }
+}

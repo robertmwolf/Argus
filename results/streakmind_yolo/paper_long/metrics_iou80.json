@@ -2,8 +2,8 @@
   "precision": 0.0,
   "recall": 0.0,
   "f1": 0.0,
-  "map_50": 0.0098,
-  "map_75": 0.0,
+  "map_50": 0.0834,
+  "map_75": 0.0003,
   "mean_angle_error_deg": 0.0,
   "per_band": {
     "short": {

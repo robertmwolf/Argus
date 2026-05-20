@@ -105,7 +105,20 @@ def _materialize_split(
     tile_size: int,
     max_bg_tiles: int,
     seed: int,
+    centered: bool = True,
 ) -> int:
+    """Materialize one YOLO-OBB split.
+
+    When ``centered=True`` (default), annotated frames use streak-centered
+    crops instead of blind uniform tiling.  Each annotation gets its own
+    tile_size × tile_size crop centered on the streak, so the model always
+    sees the complete streak rather than a clipped fragment.  This is the key
+    fix for the angle-prediction failure observed with 640px tiles and long
+    streaks (median 636px in GTImages test set).
+
+    Background-only frames (e.g. Frigate negatives) always use random sampling
+    regardless of the ``centered`` flag.
+    """
     loader = FITSLoader()
     anns_by_img = _anns_by_image(coco)
     rng = np.random.default_rng(seed)
@@ -139,44 +152,83 @@ def _materialize_split(
             n_tiles += 1
             continue
 
-        pos_tiles: list[tuple[int, int, list[tuple[float, float, float, float, float]]]] = []
-        bg_tiles: list[tuple[int, int]] = []
-        for ty in range(0, h_arr - tile_size + 1, tile_size):
-            for tx in range(0, w_arr - tile_size + 1, tile_size):
-                clipped = []
-                for ann in anns:
-                    cx, cy, w, h, angle_deg = _obb_fields(ann["obb"])
-                    result = _clip_obb_to_tile(cx, cy, w, h, angle_deg, tx, ty, tile_size)
+        if centered and anns:
+            # --- Streak-centered crops (Fix 2) ---
+            # One tile per annotation, centered on the streak so the model
+            # always trains on the complete streak and can learn the true angle.
+            for i, ann in enumerate(anns):
+                cx, cy, _w, _h, _a = _obb_fields(ann["obb"])
+                x0 = int(max(0, min(cx - tile_size / 2, w_arr - tile_size)))
+                y0 = int(max(0, min(cy - tile_size / 2, h_arr - tile_size)))
+                patch = arr[y0:y0 + tile_size, x0:x0 + tile_size]
+                # Include all annotations that fall inside this crop
+                labels = []
+                for ann2 in anns:
+                    cx2, cy2, w2, h2, ang2 = _obb_fields(ann2["obb"])
+                    result = _clip_obb_to_tile(cx2, cy2, w2, h2, ang2, x0, y0, tile_size)
                     if result is not None:
-                        clipped.append(result)
-                if clipped:
-                    pos_tiles.append((tx, ty, clipped))
-                else:
-                    bg_tiles.append((tx, ty))
+                        cx_t, cy_t, w_t, h_t, ang_t = result
+                        labels.append(_obb_label_line(cx_t, cy_t, w_t, h_t, ang_t, norm=float(tile_size)))
+                tile_id = f"{stem}_c{i:04d}"
+                _write_tile(
+                    patch,
+                    out_dir / "images" / split / f"{tile_id}.png",
+                    out_dir / "labels" / split / f"{tile_id}.txt",
+                    labels,
+                )
+                n_tiles += 1
 
-        rng.shuffle(bg_tiles)
-        for tx, ty, clipped in pos_tiles:
-            tile_id = f"{stem}_t{tx:04d}_{ty:04d}"
-            patch = arr[ty:ty + tile_size, tx:tx + tile_size]
-            labels = [_obb_label_line(cx, cy, w, h, ad, norm=float(tile_size)) for cx, cy, w, h, ad in clipped]
-            _write_tile(
-                patch,
-                out_dir / "images" / split / f"{tile_id}.png",
-                out_dir / "labels" / split / f"{tile_id}.txt",
-                labels,
-            )
-            n_tiles += 1
+            # Random background tiles from the same frame (no annotation check —
+            # occasional overlap is harmless and helps background diversity).
+            for bg_i in range(max_bg_tiles):
+                bx0 = int(rng.integers(0, max(1, w_arr - tile_size)))
+                by0 = int(rng.integers(0, max(1, h_arr - tile_size)))
+                tile_id = f"{stem}_bg{bg_i:04d}"
+                patch = arr[by0:by0 + tile_size, bx0:bx0 + tile_size]
+                _write_tile(
+                    patch,
+                    out_dir / "images" / split / f"{tile_id}.png",
+                    out_dir / "labels" / split / f"{tile_id}.txt",
+                    [],
+                )
+                n_tiles += 1
 
-        for tx, ty in bg_tiles[:max_bg_tiles]:
-            tile_id = f"{stem}_bg{tx:04d}_{ty:04d}"
-            patch = arr[ty:ty + tile_size, tx:tx + tile_size]
-            _write_tile(
-                patch,
-                out_dir / "images" / split / f"{tile_id}.png",
-                out_dir / "labels" / split / f"{tile_id}.txt",
-                [],
-            )
-            n_tiles += 1
+        else:
+            # --- Original blind tiling (background-only frames / Frigate) ---
+            bg_tiles: list[tuple[int, int]] = []
+            for ty in range(0, h_arr - tile_size + 1, tile_size):
+                for tx in range(0, w_arr - tile_size + 1, tile_size):
+                    clipped = []
+                    for ann in anns:
+                        cx, cy, w, h, angle_deg = _obb_fields(ann["obb"])
+                        result = _clip_obb_to_tile(cx, cy, w, h, angle_deg, tx, ty, tile_size)
+                        if result is not None:
+                            clipped.append(result)
+                    if clipped:
+                        tile_id = f"{stem}_t{tx:04d}_{ty:04d}"
+                        patch = arr[ty:ty + tile_size, tx:tx + tile_size]
+                        labels = [_obb_label_line(cx, cy, w, h, ad, norm=float(tile_size)) for cx, cy, w, h, ad in clipped]
+                        _write_tile(
+                            patch,
+                            out_dir / "images" / split / f"{tile_id}.png",
+                            out_dir / "labels" / split / f"{tile_id}.txt",
+                            labels,
+                        )
+                        n_tiles += 1
+                    else:
+                        bg_tiles.append((tx, ty))
+
+            rng.shuffle(bg_tiles)
+            for tx, ty in bg_tiles[:max_bg_tiles]:
+                tile_id = f"{stem}_bg{tx:04d}_{ty:04d}"
+                patch = arr[ty:ty + tile_size, tx:tx + tile_size]
+                _write_tile(
+                    patch,
+                    out_dir / "images" / split / f"{tile_id}.png",
+                    out_dir / "labels" / split / f"{tile_id}.txt",
+                    [],
+                )
+                n_tiles += 1
 
     return n_tiles
 
@@ -190,6 +242,7 @@ def materialize_yolo_dataset(
     max_bg_tiles: int,
     seed: int,
     rebuild: bool = False,
+    centered: bool = True,
 ) -> Path:
     """Materialize explicit train/val YOLO-OBB tiles."""
     yaml_path = out_dir / "dataset.yaml"
@@ -202,8 +255,8 @@ def materialize_yolo_dataset(
 
     train_coco = _read_json(train_ann)
     val_coco = _read_json(val_ann)
-    n_train = _materialize_split(train_coco, data_root, out_dir, "train", tile_size, max_bg_tiles, seed)
-    n_val = _materialize_split(val_coco, data_root, out_dir, "val", tile_size, max_bg_tiles, seed + 1)
+    n_train = _materialize_split(train_coco, data_root, out_dir, "train", tile_size, max_bg_tiles, seed, centered=centered)
+    n_val = _materialize_split(val_coco, data_root, out_dir, "val", tile_size, max_bg_tiles, seed + 1, centered=centered)
     yaml_path.write_text(
         f"path: {out_dir.resolve()}\n"
         "train: images/train\n"
@@ -224,6 +277,7 @@ def train_track(
     data_root: Path,
     val_ann: Path,
     rebuild_dataset: bool,
+    centered: bool = True,
 ) -> Path:
     """Train one StreakMindYOLO track and return best checkpoint path."""
     try:
@@ -243,6 +297,7 @@ def train_track(
         max_bg_tiles=2,
         seed=42,
         rebuild=rebuild_dataset,
+        centered=centered,
     )
 
     try:
@@ -384,6 +439,7 @@ def run_comparison(
     eval_stride: int | None,
     rebuild_dataset: bool,
     skip_train: bool,
+    centered: bool = True,
 ) -> dict[str, Any]:
     os.environ["ARGUS_NORM"] = "zscale"
     results_dir.mkdir(parents=True, exist_ok=True)
@@ -408,7 +464,7 @@ def run_comparison(
             continue
         weights = cfg["work_dir"] / "run" / "weights" / "best.pt"
         if not skip_train or not weights.exists():
-            weights = train_track(track, epochs, imgsz, batch, model_size, data_root, val_ann, rebuild_dataset)
+            weights = train_track(track, epochs, imgsz, batch, model_size, data_root, val_ann, rebuild_dataset, centered=centered)
         preds = predict_yolo(weights, test_ann, data_root, imgsz, conf, eval_batch, eval_stride)
         metrics_50 = evaluate(preds, gt, iou_threshold=0.5)
         metrics_80 = evaluate(preds, gt, iou_threshold=0.8)
@@ -489,8 +545,9 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tracks", nargs="+", default=["real_only", "paper_long", "adapted", "gtimages_plus_frigate"], choices=sorted(TRACKS))
     parser.add_argument("--epochs", type=int, default=15)
-    parser.add_argument("--imgsz", type=int, default=640)
-    parser.add_argument("--batch", type=int, default=8)
+    parser.add_argument("--imgsz", type=int, default=1280)
+    parser.add_argument("--batch", type=int, default=2)
+    parser.add_argument("--no-centered", action="store_true", help="Disable streak-centered crops (use legacy uniform tiling)")
     parser.add_argument("--model", default="n", choices=["n", "s", "m", "l", "x"])
     parser.add_argument("--data-root", type=Path, default=Path("data"))
     parser.add_argument("--val-ann", type=Path, default=Path("data/annotations/gtimages_val.json"))
@@ -531,6 +588,7 @@ def main() -> None:
         eval_stride=args.eval_stride,
         rebuild_dataset=args.rebuild_dataset,
         skip_train=args.skip_train,
+        centered=not args.no_centered,
     )
 
 

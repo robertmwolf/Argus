@@ -1,10 +1,10 @@
 {
-  "precision": 0.0707,
-  "recall": 0.1228,
-  "f1": 0.0897,
-  "map_50": 0.0098,
-  "map_75": 0.0,
-  "mean_angle_error_deg": 25.901,
+  "precision": 0.1086,
+  "recall": 0.3333,
+  "f1": 0.1638,
+  "map_50": 0.0834,
+  "map_75": 0.0003,
+  "mean_angle_error_deg": 42.861,
   "per_band": {
     "short": {
       "precision": 0.0,
@@ -12,14 +12,14 @@
       "f1": 0.0
     },
     "medium": {
-      "precision": 0.0182,
-      "recall": 0.2,
-      "f1": 0.0333
+      "precision": 0.0635,
+      "recall": 0.8,
+      "f1": 0.1176
     },
     "long": {
-      "precision": 0.2857,
-      "recall": 0.0784,
-      "f1": 0.1231
+      "precision": 0.3,
+      "recall": 0.1176,
+      "f1": 0.169
     }
   }
 }
