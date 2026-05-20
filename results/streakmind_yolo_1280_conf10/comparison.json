@@ -1,0 +1,324 @@
+{
+  "model": "StreakMindYOLO",
+  "epochs": 15,
+  "imgsz": 1280,
+  "batch": 2,
+  "tracks": {
+    "real_only": {
+      "weights": "weights/streakmind_yolo_real/run/weights/best.pt",
+      "predictions": 56,
+      "metrics_iou50": {
+        "precision": 0.5357,
+        "recall": 0.5263,
+        "f1": 0.531,
+        "map_50": 0.3082,
+        "map_75": 0.0034,
+        "mean_angle_error_deg": 38.997,
+        "per_band": {
+          "short": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "medium": {
+            "precision": 0.1333,
+            "recall": 0.8,
+            "f1": 0.2286
+          },
+          "long": {
+            "precision": 0.6154,
+            "recall": 0.3137,
+            "f1": 0.4156
+          }
+        }
+      },
+      "metrics_iou80": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "map_50": 0.3082,
+        "map_75": 0.0034,
+        "mean_angle_error_deg": 0.0,
+        "per_band": {
+          "short": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "medium": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "long": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          }
+        }
+      },
+      "metrics": {
+        "precision": 0.5357,
+        "recall": 0.5263,
+        "f1": 0.531,
+        "map_50": 0.3082,
+        "map_75": 0.0034,
+        "mean_angle_error_deg": 38.997,
+        "per_band": {
+          "short": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "medium": {
+            "precision": 0.1333,
+            "recall": 0.8,
+            "f1": 0.2286
+          },
+          "long": {
+            "precision": 0.6154,
+            "recall": 0.3137,
+            "f1": 0.4156
+          }
+        }
+      }
+    },
+    "paper_long": {
+      "weights": "weights/streakmind_yolo_paper_long/run/weights/best.pt",
+      "predictions": 61,
+      "metrics_iou50": {
+        "precision": 0.2623,
+        "recall": 0.2807,
+        "f1": 0.2712,
+        "map_50": 0.0752,
+        "map_75": 0.0004,
+        "mean_angle_error_deg": 33.787,
+        "per_band": {
+          "short": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "medium": {
+            "precision": 0.0513,
+            "recall": 0.4,
+            "f1": 0.0909
+          },
+          "long": {
+            "precision": 0.4091,
+            "recall": 0.1765,
+            "f1": 0.2466
+          }
+        }
+      },
+      "metrics_iou80": {
+        "precision": 0.0164,
+        "recall": 0.0175,
+        "f1": 0.0169,
+        "map_50": 0.0752,
+        "map_75": 0.0004,
+        "mean_angle_error_deg": 0.23,
+        "per_band": {
+          "short": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "medium": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "long": {
+            "precision": 0.0455,
+            "recall": 0.0196,
+            "f1": 0.0274
+          }
+        }
+      },
+      "metrics": {
+        "precision": 0.2623,
+        "recall": 0.2807,
+        "f1": 0.2712,
+        "map_50": 0.0752,
+        "map_75": 0.0004,
+        "mean_angle_error_deg": 33.787,
+        "per_band": {
+          "short": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "medium": {
+            "precision": 0.0513,
+            "recall": 0.4,
+            "f1": 0.0909
+          },
+          "long": {
+            "precision": 0.4091,
+            "recall": 0.1765,
+            "f1": 0.2466
+          }
+        }
+      }
+    },
+    "adapted": {
+      "weights": "weights/streakmind_yolo_adapted/run/weights/best.pt",
+      "predictions": 62,
+      "metrics_iou50": {
+        "precision": 0.2419,
+        "recall": 0.2632,
+        "f1": 0.2521,
+        "map_50": 0.0647,
+        "map_75": 0.0,
+        "mean_angle_error_deg": 59.792,
+        "per_band": {
+          "short": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "medium": {
+            "precision": 0.0889,
+            "recall": 0.8,
+            "f1": 0.16
+          },
+          "long": {
+            "precision": 0.2353,
+            "recall": 0.0784,
+            "f1": 0.1176
+          }
+        }
+      },
+      "metrics_iou80": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "map_50": 0.0647,
+        "map_75": 0.0,
+        "mean_angle_error_deg": 0.0,
+        "per_band": {
+          "short": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "medium": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "long": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          }
+        }
+      },
+      "metrics": {
+        "precision": 0.2419,
+        "recall": 0.2632,
+        "f1": 0.2521,
+        "map_50": 0.0647,
+        "map_75": 0.0,
+        "mean_angle_error_deg": 59.792,
+        "per_band": {
+          "short": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "medium": {
+            "precision": 0.0889,
+            "recall": 0.8,
+            "f1": 0.16
+          },
+          "long": {
+            "precision": 0.2353,
+            "recall": 0.0784,
+            "f1": 0.1176
+          }
+        }
+      }
+    },
+    "gtimages_plus_frigate": {
+      "weights": "weights/streakmind_yolo_combined/run/weights/best.pt",
+      "predictions": 59,
+      "metrics_iou50": {
+        "precision": 0.0847,
+        "recall": 0.0877,
+        "f1": 0.0862,
+        "map_50": 0.0083,
+        "map_75": 0.0,
+        "mean_angle_error_deg": 89.81,
+        "per_band": {
+          "short": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "medium": {
+            "precision": 0.0508,
+            "recall": 0.6,
+            "f1": 0.0938
+          },
+          "long": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          }
+        }
+      },
+      "metrics_iou80": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "map_50": 0.0083,
+        "map_75": 0.0,
+        "mean_angle_error_deg": 0.0,
+        "per_band": {
+          "short": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "medium": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "long": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          }
+        }
+      },
+      "metrics": {
+        "precision": 0.0847,
+        "recall": 0.0877,
+        "f1": 0.0862,
+        "map_50": 0.0083,
+        "map_75": 0.0,
+        "mean_angle_error_deg": 89.81,
+        "per_band": {
+          "short": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "medium": {
+            "precision": 0.0508,
+            "recall": 0.6,
+            "f1": 0.0938
+          },
+          "long": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          }
+        }
+      }
+    }
+  }
+}

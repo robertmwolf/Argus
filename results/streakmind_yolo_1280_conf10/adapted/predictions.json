@@ -1,0 +1,808 @@
+[
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_44782_214323.fits",
+    "confidence": 0.19178569316864014,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3474.2522583007812,
+      "cy": 1856.095947265625,
+      "w": 16.405961990356445,
+      "h": 301.8522033691406,
+      "angle_deg": 50.98412805957319
+    },
+    "streak_length_px": 301.8522033691406
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_57166_221936.fits",
+    "confidence": 0.6105678081512451,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3609.106689453125,
+      "cy": 2633.3433227539062,
+      "w": 470.9851989746094,
+      "h": 18.122093200683594,
+      "angle_deg": 50.62652326029341
+    },
+    "streak_length_px": 470.9851989746094
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_47772_214705.fits",
+    "confidence": 0.38571277260780334,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 2726.194091796875,
+      "cy": 999.3697509765625,
+      "w": 471.1791687011719,
+      "h": 16.142066955566406,
+      "angle_deg": 70.10716533927524
+    },
+    "streak_length_px": 471.1791687011719
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_58932_212131.fits",
+    "confidence": 0.707273542881012,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 2923.9608764648438,
+      "cy": 2051.1907348632812,
+      "w": 239.80062866210938,
+      "h": 16.385929107666016,
+      "angle_deg": -1.251398017982352
+    },
+    "streak_length_px": 239.80062866210938
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_64855_214546.fits",
+    "confidence": 0.2580728828907013,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 2926.66064453125,
+      "cy": 2114.143798828125,
+      "w": 424.286376953125,
+      "h": 14.069557189941406,
+      "angle_deg": 64.11663181449967
+    },
+    "streak_length_px": 424.286376953125
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_59542_214421.fits",
+    "confidence": 0.4074694514274597,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3333.5923461914062,
+      "cy": 2519.6904907226562,
+      "w": 470.79644775390625,
+      "h": 16.068893432617188,
+      "angle_deg": 67.01110889040017
+    },
+    "streak_length_px": 470.79644775390625
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_52331_211041.fits",
+    "confidence": 0.15819644927978516,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3148.5263671875,
+      "cy": 2066.175994873047,
+      "w": 12.71147346496582,
+      "h": 230.0779571533203,
+      "angle_deg": 28.991885403899683
+    },
+    "streak_length_px": 230.0779571533203
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_66221_214352.fits",
+    "confidence": 0.18024572730064392,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3138.1588745117188,
+      "cy": 2168.9529571533203,
+      "w": 12.626795768737793,
+      "h": 292.74267578125,
+      "angle_deg": 21.42704108676036
+    },
+    "streak_length_px": 292.74267578125
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_63594_211929.fits",
+    "confidence": 0.37545931339263916,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3430.2279052734375,
+      "cy": 3095.9406127929688,
+      "w": 473.49114990234375,
+      "h": 16.606891632080078,
+      "angle_deg": 72.94128403348033
+    },
+    "streak_length_px": 473.49114990234375
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_44768_211732.fits",
+    "confidence": 0.438894122838974,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3191.710693359375,
+      "cy": 1529.5269165039062,
+      "w": 25.812679290771484,
+      "h": 356.16546630859375,
+      "angle_deg": 5.882208005199641
+    },
+    "streak_length_px": 356.16546630859375
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_58354_223322.fits",
+    "confidence": 0.45405784249305725,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3048.0552978515625,
+      "cy": 2283.3548583984375,
+      "w": 18.06104278564453,
+      "h": 346.4012756347656,
+      "angle_deg": 33.27817744773036
+    },
+    "streak_length_px": 346.4012756347656
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_55489_220633.fits",
+    "confidence": 0.5590976476669312,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3397.0240478515625,
+      "cy": 846.7163696289062,
+      "w": 22.079753875732422,
+      "h": 358.5904846191406,
+      "angle_deg": 15.232371990713323
+    },
+    "streak_length_px": 358.5904846191406
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_57973_213747.fits",
+    "confidence": 0.5604474544525146,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3398.9724731445312,
+      "cy": 1293.5405883789062,
+      "w": 21.61237335205078,
+      "h": 352.36932373046875,
+      "angle_deg": 14.19528033600682
+    },
+    "streak_length_px": 352.36932373046875
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_55489_220739.fits",
+    "confidence": 0.37264284491539,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3607.377899169922,
+      "cy": 3600.0770568847656,
+      "w": 474.8433532714844,
+      "h": 17.277910232543945,
+      "angle_deg": 76.37532556324432
+    },
+    "streak_length_px": 474.8433532714844
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_65474_222335.fits",
+    "confidence": 0.46652767062187195,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 2807.5992431640625,
+      "cy": 3049.685760498047,
+      "w": 17.01565170288086,
+      "h": 334.0599365234375,
+      "angle_deg": 16.09205375059698
+    },
+    "streak_length_px": 334.0599365234375
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_49445_213942.fits",
+    "confidence": 0.6663818359375,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 4344.946746826172,
+      "cy": 3664.1622314453125,
+      "w": 474.7971496582031,
+      "h": 19.131668090820312,
+      "angle_deg": 53.42705108416038
+    },
+    "streak_length_px": 474.7971496582031
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_43071_220206.fits",
+    "confidence": 0.5268833041191101,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3580.1163940429688,
+      "cy": 2045.794921875,
+      "w": 239.49462890625,
+      "h": 16.40317726135254,
+      "angle_deg": -4.032095027924423
+    },
+    "streak_length_px": 239.49462890625
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_47772_214812.fits",
+    "confidence": 0.3716377019882202,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 2727.9345703125,
+      "cy": 1126.9093627929688,
+      "w": 469.1950988769531,
+      "h": 16.118534088134766,
+      "angle_deg": 68.53432303758305
+    },
+    "streak_length_px": 469.1950988769531
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_66494_220200.fits",
+    "confidence": 0.3997913599014282,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3137.103759765625,
+      "cy": 2323.9902954101562,
+      "w": 15.969943046569824,
+      "h": 340.79583740234375,
+      "angle_deg": 39.825600201199165
+    },
+    "streak_length_px": 340.79583740234375
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_51771_223710.fits",
+    "confidence": 0.5860552787780762,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3847.792236328125,
+      "cy": 1767.266357421875,
+      "w": 26.913433074951172,
+      "h": 360.3185729980469,
+      "angle_deg": 67.04486368527836
+    },
+    "streak_length_px": 360.3185729980469
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_39012_211114.fits",
+    "confidence": 0.6550742387771606,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3651.9215698242188,
+      "cy": 2101.0938110351562,
+      "w": 239.67727661132812,
+      "h": 16.32192611694336,
+      "angle_deg": 3.610784627369118
+    },
+    "streak_length_px": 239.67727661132812
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_49436_205730.fits",
+    "confidence": 0.5171356797218323,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3354.1984252929688,
+      "cy": 2359.7334899902344,
+      "w": 472.36602783203125,
+      "h": 19.013290405273438,
+      "angle_deg": 46.10920348288165
+    },
+    "streak_length_px": 472.36602783203125
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_40339_211626.fits",
+    "confidence": 0.34109705686569214,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 2787.6121826171875,
+      "cy": 2365.5868225097656,
+      "w": 15.224773406982422,
+      "h": 323.1103515625,
+      "angle_deg": 53.66967306385757
+    },
+    "streak_length_px": 323.1103515625
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_63994_223152.fits",
+    "confidence": 0.21970750391483307,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 2169.7381591796875,
+      "cy": 1725.5994567871094,
+      "w": 16.817060470581055,
+      "h": 318.9749755859375,
+      "angle_deg": 5.450334717092911
+    },
+    "streak_length_px": 318.9749755859375
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_63994_223152.fits",
+    "confidence": 0.21709221601486206,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 1978.5133666992188,
+      "cy": 3430.696731567383,
+      "w": 16.211318969726562,
+      "h": 301.08685302734375,
+      "angle_deg": 7.741493499643362
+    },
+    "streak_length_px": 301.08685302734375
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_63994_223152.fits",
+    "confidence": 0.16616980731487274,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 2090.005126953125,
+      "cy": 2441.968994140625,
+      "w": 13.689516067504883,
+      "h": 278.3101501464844,
+      "angle_deg": 8.38620530068462
+    },
+    "streak_length_px": 278.3101501464844
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_63994_223152.fits",
+    "confidence": 0.14603208005428314,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 2331.5523986816406,
+      "cy": 199.46685791015625,
+      "w": 16.607515335083008,
+      "h": 307.8924560546875,
+      "angle_deg": 10.036906636273084
+    },
+    "streak_length_px": 307.8924560546875
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_62895_212544.fits",
+    "confidence": 0.687475323677063,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 2871.4895629882812,
+      "cy": 2586.4647827148438,
+      "w": 21.97991943359375,
+      "h": 357.45562744140625,
+      "angle_deg": 33.100824755741804
+    },
+    "streak_length_px": 357.45562744140625
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_41188_213328.fits",
+    "confidence": 0.5472375750541687,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3521.3614807128906,
+      "cy": 1899.4680786132812,
+      "w": 19.073867797851562,
+      "h": 350.1881408691406,
+      "angle_deg": 62.54787396593114
+    },
+    "streak_length_px": 350.1881408691406
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_59542_214202.fits",
+    "confidence": 0.6122430562973022,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3401.6752319335938,
+      "cy": 1667.4122924804688,
+      "w": 19.72797393798828,
+      "h": 352.99151611328125,
+      "angle_deg": 34.161129662116245
+    },
+    "streak_length_px": 352.99151611328125
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_54062_224852.fits",
+    "confidence": 0.3870480954647064,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3512.157012939453,
+      "cy": 1958.6725463867188,
+      "w": 25.683914184570312,
+      "h": 346.9942626953125,
+      "angle_deg": 71.33233052164628
+    },
+    "streak_length_px": 346.9942626953125
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_42954_212408.fits",
+    "confidence": 0.2467627227306366,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3044.9739685058594,
+      "cy": 2493.9595947265625,
+      "w": 11.954490661621094,
+      "h": 283.66455078125,
+      "angle_deg": 17.370366342447177
+    },
+    "streak_length_px": 283.66455078125
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_41188_213253.fits",
+    "confidence": 0.38968580961227417,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3485.227294921875,
+      "cy": 1948.651611328125,
+      "w": 14.534832000732422,
+      "h": 294.47052001953125,
+      "angle_deg": 65.85468273183614
+    },
+    "streak_length_px": 294.47052001953125
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_39012_210847.fits",
+    "confidence": 0.6371195912361145,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3579.9874877929688,
+      "cy": 2091.544921875,
+      "w": 239.69696044921875,
+      "h": 15.942748069763184,
+      "angle_deg": 2.930635243592895
+    },
+    "streak_length_px": 239.69696044921875
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_53923_211450.fits",
+    "confidence": 0.1758863478899002,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 4770.360748291016,
+      "cy": 2228.0015258789062,
+      "w": 239.47230529785156,
+      "h": 13.495891571044922,
+      "angle_deg": 87.4641445109492
+    },
+    "streak_length_px": 239.47230529785156
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_48093_210446.fits",
+    "confidence": 0.36015841364860535,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 2920.0043029785156,
+      "cy": 968.3018798828125,
+      "w": 472.96380615234375,
+      "h": 16.691104888916016,
+      "angle_deg": 76.98261817291767
+    },
+    "streak_length_px": 472.96380615234375
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_55463_213848.fits",
+    "confidence": 0.687348484992981,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3810.2719116210938,
+      "cy": 1122.322265625,
+      "w": 21.07662582397461,
+      "h": 356.830078125,
+      "angle_deg": 32.800767715313974
+    },
+    "streak_length_px": 356.830078125
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_60418_212548.fits",
+    "confidence": 0.3836125135421753,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3462.519287109375,
+      "cy": 955.8505859375,
+      "w": 15.050413131713867,
+      "h": 328.56939697265625,
+      "angle_deg": 14.433717971063734
+    },
+    "streak_length_px": 328.56939697265625
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_52331_211459.fits",
+    "confidence": 0.44085946679115295,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3166.31494140625,
+      "cy": 2161.2877197265625,
+      "w": 418.65179443359375,
+      "h": 14.080533027648926,
+      "angle_deg": 55.086489939244586
+    },
+    "streak_length_px": 418.65179443359375
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_41188_213437.fits",
+    "confidence": 0.762505829334259,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3480.7883911132812,
+      "cy": 1622.6813354492188,
+      "w": 23.107860565185547,
+      "h": 362.94818115234375,
+      "angle_deg": 37.5120204689245
+    },
+    "streak_length_px": 362.94818115234375
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_66494_220309.fits",
+    "confidence": 0.6493867635726929,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3125.1685791015625,
+      "cy": 2732.754150390625,
+      "w": 22.358142852783203,
+      "h": 364.3646240234375,
+      "angle_deg": 21.744948826584018
+    },
+    "streak_length_px": 364.3646240234375
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_62895_212517.fits",
+    "confidence": 0.5939639210700989,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 2917.0504455566406,
+      "cy": 2445.3128051757812,
+      "w": 16.927753448486328,
+      "h": 351.681884765625,
+      "angle_deg": 37.54846635833569
+    },
+    "streak_length_px": 351.681884765625
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_51137_205951.fits",
+    "confidence": 0.6223703622817993,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3269.2283325195312,
+      "cy": 2010.1583251953125,
+      "w": 26.056516647338867,
+      "h": 370.83172607421875,
+      "angle_deg": 55.84930254122453
+    },
+    "streak_length_px": 370.83172607421875
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_47772_214639.fits",
+    "confidence": 0.32310977578163147,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 2821.2598571777344,
+      "cy": 1095.9074401855469,
+      "w": 469.05694580078125,
+      "h": 15.508907318115234,
+      "angle_deg": 73.49133965790897
+    },
+    "streak_length_px": 469.05694580078125
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_40339_211651.fits",
+    "confidence": 0.38740143179893494,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 2775.8536987304688,
+      "cy": 2389.75341796875,
+      "w": 15.213839530944824,
+      "h": 325.10882568359375,
+      "angle_deg": 52.327486250436706
+    },
+    "streak_length_px": 325.10882568359375
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_59486_211831.fits",
+    "confidence": 0.6707078814506531,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3511.3738403320312,
+      "cy": 1559.6661987304688,
+      "w": 22.76644515991211,
+      "h": 367.4627685546875,
+      "angle_deg": 30.15950965760795
+    },
+    "streak_length_px": 367.4627685546875
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_57166_222110.fits",
+    "confidence": 0.2118431031703949,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3036.753387451172,
+      "cy": 2497.6663818359375,
+      "w": 13.730365753173828,
+      "h": 294.8282775878906,
+      "angle_deg": 10.073379846440954
+    },
+    "streak_length_px": 294.8282775878906
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_57166_221626.fits",
+    "confidence": 0.7148916721343994,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3467.7261962890625,
+      "cy": 2276.413330078125,
+      "w": 239.8318634033203,
+      "h": 17.01869010925293,
+      "angle_deg": 30.113149748616486
+    },
+    "streak_length_px": 239.8318634033203
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_43071_220308.fits",
+    "confidence": 0.8000144958496094,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 2451.9464721679688,
+      "cy": 1988.2733154296875,
+      "w": 239.8984375,
+      "h": 17.65756607055664,
+      "angle_deg": 9.53753869944876
+    },
+    "streak_length_px": 239.8984375
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_48104_205520.fits",
+    "confidence": 0.5873135924339294,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3257.9550170898438,
+      "cy": 1792.7952880859375,
+      "w": 18.555034637451172,
+      "h": 339.91693115234375,
+      "angle_deg": 22.154194978630965
+    },
+    "streak_length_px": 339.91693115234375
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_49436_205619.fits",
+    "confidence": 0.31708934903144836,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3143.660888671875,
+      "cy": 1751.6564331054688,
+      "w": 476.1292419433594,
+      "h": 17.837282180786133,
+      "angle_deg": 85.45789938566301
+    },
+    "streak_length_px": 476.1292419433594
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_47772_214627.fits",
+    "confidence": 0.30421504378318787,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 2887.10546875,
+      "cy": 1206.650390625,
+      "w": 459.2102355957031,
+      "h": 14.248035430908203,
+      "angle_deg": 74.24453193844296
+    },
+    "streak_length_px": 459.2102355957031
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_47799_215001.fits",
+    "confidence": 0.5179445147514343,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3380.0241088867188,
+      "cy": 1741.2297668457031,
+      "w": 17.848846435546875,
+      "h": 352.3998107910156,
+      "angle_deg": 46.1384810887589
+    },
+    "streak_length_px": 352.3998107910156
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_57166_221950.fits",
+    "confidence": 0.5108291506767273,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3498.392578125,
+      "cy": 2619.6333618164062,
+      "w": 461.5390319824219,
+      "h": 16.687850952148438,
+      "angle_deg": 57.14727412505332
+    },
+    "streak_length_px": 461.5390319824219
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_52331_211300.fits",
+    "confidence": 0.37571337819099426,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3063.048095703125,
+      "cy": 1848.0645141601562,
+      "w": 474.05511474609375,
+      "h": 16.816743850708008,
+      "angle_deg": 75.9872820259284
+    },
+    "streak_length_px": 474.05511474609375
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_39012_211102.fits",
+    "confidence": 0.6445482969284058,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3675.954864501953,
+      "cy": 2116.1826782226562,
+      "w": 239.76187133789062,
+      "h": 17.339574813842773,
+      "angle_deg": 5.202240902096892
+    },
+    "streak_length_px": 239.76187133789062
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_49436_205835.fits",
+    "confidence": 0.6127286553382874,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3211.8514404296875,
+      "cy": 2212.13720703125,
+      "w": 239.885009765625,
+      "h": 15.145398139953613,
+      "angle_deg": 40.17490973573196
+    },
+    "streak_length_px": 239.885009765625
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_41188_213627.fits",
+    "confidence": 0.37930989265441895,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3409.3750610351562,
+      "cy": 2385.4990844726562,
+      "w": 423.53326416015625,
+      "h": 15.309479713439941,
+      "angle_deg": 48.36018794650773
+    },
+    "streak_length_px": 423.53326416015625
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_39012_211049.fits",
+    "confidence": 0.7155333757400513,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3739.939453125,
+      "cy": 2124.5368041992188,
+      "w": 239.79635620117188,
+      "h": 16.320430755615234,
+      "angle_deg": 5.730132135782014
+    },
+    "streak_length_px": 239.79635620117188
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_51771_223832.fits",
+    "confidence": 0.7103101015090942,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3619.877685546875,
+      "cy": 2436.1423950195312,
+      "w": 239.9106903076172,
+      "h": 16.049360275268555,
+      "angle_deg": 34.54393102924419
+    },
+    "streak_length_px": 239.9106903076172
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_45081_214403.fits",
+    "confidence": 0.4551105201244354,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3543.7100219726562,
+      "cy": 1436.0890502929688,
+      "w": 19.6735897064209,
+      "h": 339.64453125,
+      "angle_deg": 28.505526416123292
+    },
+    "streak_length_px": 339.64453125
+  },
+  {
+    "image_id": "BrentImages/Img_20260412_Atwood/Streak_59504_214913.fits",
+    "confidence": 0.2075236737728119,
+    "method": "streakmind_yolo",
+    "obb": {
+      "cx": 3412.8162231445312,
+      "cy": 1793.307373046875,
+      "w": 12.39893627166748,
+      "h": 264.6220397949219,
+      "angle_deg": 41.744664791919305
+    },
+    "streak_length_px": 264.6220397949219
+  }
+]
