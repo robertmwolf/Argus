@@ -14,7 +14,7 @@
   "images": [
     {
       "id": 1,
-      "file_name": "GTImages/Streak_43071_220509.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43071_220509.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T02:05:09.942",
@@ -27,7 +27,7 @@
     },
     {
       "id": 2,
-      "file_name": "GTImages/Streak_54068_222541.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54068_222541.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:25:41.872",
@@ -40,7 +40,7 @@
     },
     {
       "id": 3,
-      "file_name": "GTImages/Streak_48104_205508.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48104_205508.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T00:55:08.099",
@@ -53,7 +53,7 @@
     },
     {
       "id": 4,
-      "file_name": "GTImages/Streak_51128_212716.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51128_212716.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:27:16.847",
@@ -66,7 +66,7 @@
     },
     {
       "id": 5,
-      "file_name": "GTImages/Streak_59397_215721.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59397_215721.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:57:21.275",
@@ -79,7 +79,7 @@
     },
     {
       "id": 6,
-      "file_name": "GTImages/Streak_62895_212735.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_62895_212735.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:27:35.203",
@@ -92,7 +92,7 @@
     },
     {
       "id": 7,
-      "file_name": "GTImages/Streak_57166_222057.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_222057.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:20:57.884",
@@ -105,7 +105,7 @@
     },
     {
       "id": 8,
-      "file_name": "GTImages/Streak_40358_213520.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40358_213520.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:35:20.126",
@@ -118,7 +118,7 @@
     },
     {
       "id": 9,
-      "file_name": "GTImages/Streak_44768_211747.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44768_211747.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:17:47.447",
@@ -131,7 +131,7 @@
     },
     {
       "id": 10,
-      "file_name": "GTImages/Streak_57166_222003.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_222003.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:20:03.939",
@@ -144,7 +144,7 @@
     },
     {
       "id": 11,
-      "file_name": "GTImages/Streak_43071_220251.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43071_220251.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T02:02:51.086",
@@ -157,7 +157,7 @@
     },
     {
       "id": 12,
-      "file_name": "GTImages/Streak_59504_214949.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59504_214949.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:49:49.507",
@@ -170,7 +170,7 @@
     },
     {
       "id": 13,
-      "file_name": "GTImages/Streak_59542_214232.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59542_214232.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:42:32.052",
@@ -183,7 +183,7 @@
     },
     {
       "id": 14,
-      "file_name": "GTImages/Streak_49445_214024.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49445_214024.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:40:24.732",
@@ -196,7 +196,7 @@
     },
     {
       "id": 15,
-      "file_name": "GTImages/Streak_44768_211629.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44768_211629.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:16:29.219",
@@ -209,7 +209,7 @@
     },
     {
       "id": 16,
-      "file_name": "GTImages/Streak_59486_211750.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59486_211750.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:17:50.777",
@@ -222,7 +222,7 @@
     },
     {
       "id": 17,
-      "file_name": "GTImages/Streak_44768_211935.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44768_211935.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:19:35.971",
@@ -235,7 +235,7 @@
     },
     {
       "id": 18,
-      "file_name": "GTImages/Streak_48390_212238.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48390_212238.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:22:38.278",
@@ -248,7 +248,7 @@
     },
     {
       "id": 19,
-      "file_name": "GTImages/Streak_54062_225100.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54062_225100.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:51:00.323",
@@ -261,7 +261,7 @@
     },
     {
       "id": 20,
-      "file_name": "GTImages/Streak_57166_221839.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_221839.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:18:39.923",
@@ -274,7 +274,7 @@
     },
     {
       "id": 21,
-      "file_name": "GTImages/Streak_47772_214652.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47772_214652.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:46:52.272",
@@ -287,7 +287,7 @@
     },
     {
       "id": 22,
-      "file_name": "GTImages/Streak_52339_213012.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52339_213012.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:30:12.158",
@@ -300,7 +300,7 @@
     },
     {
       "id": 23,
-      "file_name": "GTImages/Streak_65474_222246.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65474_222246.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:22:46.189",
@@ -313,7 +313,7 @@
     },
     {
       "id": 24,
-      "file_name": "GTImages/Streak_59486_211803.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59486_211803.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:18:03.030",
@@ -326,7 +326,7 @@
     },
     {
       "id": 25,
-      "file_name": "GTImages/Streak_52331_211411.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52331_211411.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:14:11.161",
@@ -339,7 +339,7 @@
     },
     {
       "id": 26,
-      "file_name": "GTImages/Streak_39012_211010.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_39012_211010.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:10:10.698",
@@ -352,7 +352,7 @@
     },
     {
       "id": 27,
-      "file_name": "GTImages/Streak_41188_213639.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_41188_213639.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:36:39.732",
@@ -365,7 +365,7 @@
     },
     {
       "id": 28,
-      "file_name": "GTImages/Streak_53923_211401.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_53923_211401.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:14:01.154",
@@ -378,7 +378,7 @@
     },
     {
       "id": 29,
-      "file_name": "GTImages/Streak_54062_224822.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54062_224822.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:48:22.972",
@@ -391,7 +391,7 @@
     },
     {
       "id": 30,
-      "file_name": "GTImages/Streak_60418_212535.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_60418_212535.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:25:35.654",
@@ -404,7 +404,7 @@
     },
     {
       "id": 31,
-      "file_name": "GTImages/Streak_50193_205733.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_50193_205733.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T00:57:33.932",
@@ -417,7 +417,7 @@
     },
     {
       "id": 32,
-      "file_name": "GTImages/Streak_41188_213340.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_41188_213340.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:33:40.789",
@@ -430,7 +430,7 @@
     },
     {
       "id": 33,
-      "file_name": "GTImages/Streak_63594_211728.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_63594_211728.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:17:28.724",
@@ -443,7 +443,7 @@
     },
     {
       "id": 34,
-      "file_name": "GTImages/Streak_54062_225032.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54062_225032.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:50:32.283",
@@ -456,7 +456,7 @@
     },
     {
       "id": 35,
-      "file_name": "GTImages/Streak_58354_223245.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_58354_223245.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:32:45.065",
@@ -469,7 +469,7 @@
     },
     {
       "id": 36,
-      "file_name": "GTImages/Streak_59542_214124.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59542_214124.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:41:24.292",
@@ -482,7 +482,7 @@
     },
     {
       "id": 37,
-      "file_name": "GTImages/Streak_48140_212512.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48140_212512.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:25:12.704",
@@ -495,7 +495,7 @@
     },
     {
       "id": 38,
-      "file_name": "GTImages/Streak_49436_205743.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49436_205743.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T00:57:43.872",
@@ -508,7 +508,7 @@
     },
     {
       "id": 39,
-      "file_name": "GTImages/Streak_45081_214417.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_45081_214417.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:44:17.225",
@@ -521,7 +521,7 @@
     },
     {
       "id": 40,
-      "file_name": "GTImages/Streak_63994_223048.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_63994_223048.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:30:48.481",
@@ -534,7 +534,7 @@
     },
     {
       "id": 41,
-      "file_name": "GTImages/Streak_66221_214403.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_66221_214403.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:44:03.534",
@@ -547,7 +547,7 @@
     },
     {
       "id": 42,
-      "file_name": "GTImages/Streak_64855_214811.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_64855_214811.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:48:11.277",
@@ -560,7 +560,7 @@
     },
     {
       "id": 43,
-      "file_name": "GTImages/Streak_60418_212859.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_60418_212859.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:28:59.946",
@@ -573,7 +573,7 @@
     },
     {
       "id": 44,
-      "file_name": "GTImages/Streak_57166_222157.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_222157.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:21:57.879",
@@ -586,7 +586,7 @@
     },
     {
       "id": 45,
-      "file_name": "GTImages/Streak_64855_214529.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_64855_214529.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:45:29.555",
@@ -599,7 +599,7 @@
     },
     {
       "id": 46,
-      "file_name": "GTImages/Streak_59504_214937.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59504_214937.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:49:37.393",
@@ -612,7 +612,7 @@
     },
     {
       "id": 47,
-      "file_name": "GTImages/Streak_53923_211105.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_53923_211105.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:11:05.578",
@@ -625,7 +625,7 @@
     },
     {
       "id": 48,
-      "file_name": "GTImages/Streak_53923_211051.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_53923_211051.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:10:51.561",
@@ -638,7 +638,7 @@
     },
     {
       "id": 49,
-      "file_name": "GTImages/Streak_47799_214935.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47799_214935.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:49:35.928",
@@ -651,7 +651,7 @@
     },
     {
       "id": 50,
-      "file_name": "GTImages/Streak_63994_223035.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_63994_223035.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:30:35.177",
@@ -664,7 +664,7 @@
     },
     {
       "id": 51,
-      "file_name": "GTImages/Streak_42954_212345.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_42954_212345.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:23:45.472",
@@ -677,7 +677,7 @@
     },
     {
       "id": 52,
-      "file_name": "GTImages/Streak_60418_212601.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_60418_212601.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:26:01.709",
@@ -690,7 +690,7 @@
     },
     {
       "id": 53,
-      "file_name": "GTImages/Streak_65474_222419.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65474_222419.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:24:19.315",
@@ -703,7 +703,7 @@
     },
     {
       "id": 54,
-      "file_name": "GTImages/Streak_41188_213406.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_41188_213406.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:34:06.156",
@@ -716,7 +716,7 @@
     },
     {
       "id": 55,
-      "file_name": "GTImages/Streak_42954_212018.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_42954_212018.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:20:18.868",
@@ -729,7 +729,7 @@
     },
     {
       "id": 56,
-      "file_name": "GTImages/Streak_62895_212703.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_62895_212703.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:27:03.752",
@@ -742,7 +742,7 @@
     },
     {
       "id": 57,
-      "file_name": "GTImages/Streak_57166_221718.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_221718.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:17:18.068",
@@ -755,7 +755,7 @@
     },
     {
       "id": 58,
-      "file_name": "GTImages/Streak_52334_210633.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52334_210633.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:06:33.261",
@@ -768,7 +768,7 @@
     },
     {
       "id": 59,
-      "file_name": "GTImages/Streak_48390_212412.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48390_212412.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:24:12.133",
@@ -781,7 +781,7 @@
     },
     {
       "id": 60,
-      "file_name": "GTImages/Streak_54068_222648.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54068_222648.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:26:48.618",
@@ -794,7 +794,7 @@
     },
     {
       "id": 61,
-      "file_name": "GTImages/Streak_40358_213135.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40358_213135.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:31:35.249",
@@ -807,7 +807,7 @@
     },
     {
       "id": 62,
-      "file_name": "GTImages/Streak_40339_211545.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40339_211545.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:15:45.143",
@@ -820,7 +820,7 @@
     },
     {
       "id": 63,
-      "file_name": "GTImages/Streak_54068_222554.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54068_222554.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:25:54.070",
@@ -833,7 +833,7 @@
     },
     {
       "id": 64,
-      "file_name": "GTImages/Streak_51137_210049.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51137_210049.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:00:49.549",
@@ -846,7 +846,7 @@
     },
     {
       "id": 65,
-      "file_name": "GTImages/Streak_39012_211023.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_39012_211023.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:10:23.428",
@@ -859,7 +859,7 @@
     },
     {
       "id": 66,
-      "file_name": "GTImages/Streak_51771_223556.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51771_223556.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:35:56.183",
@@ -872,7 +872,7 @@
     },
     {
       "id": 67,
-      "file_name": "GTImages/Streak_52331_211316.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52331_211316.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:13:16.058",
@@ -885,7 +885,7 @@
     },
     {
       "id": 68,
-      "file_name": "GTImages/Streak_49436_205757.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49436_205757.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T00:57:57.512",
@@ -898,7 +898,7 @@
     },
     {
       "id": 69,
-      "file_name": "GTImages/Streak_43071_220154.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43071_220154.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T02:01:54.860",
@@ -911,7 +911,7 @@
     },
     {
       "id": 70,
-      "file_name": "GTImages/Streak_43071_220442.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43071_220442.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T02:04:42.364",
@@ -924,7 +924,7 @@
     },
     {
       "id": 71,
-      "file_name": "GTImages/Streak_57166_222220.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_222220.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:22:21.006",
@@ -937,7 +937,7 @@
     },
     {
       "id": 72,
-      "file_name": "GTImages/Streak_59542_214433.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59542_214433.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:44:33.742",
@@ -950,7 +950,7 @@
     },
     {
       "id": 73,
-      "file_name": "GTImages/Streak_65437_213159.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65437_213159.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:31:59.469",
@@ -963,7 +963,7 @@
     },
     {
       "id": 74,
-      "file_name": "GTImages/Streak_48390_212144.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48390_212144.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:21:44.604",
@@ -976,7 +976,7 @@
     },
     {
       "id": 75,
-      "file_name": "GTImages/Streak_47509_214326.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47509_214326.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:43:26.731",
@@ -989,7 +989,7 @@
     },
     {
       "id": 76,
-      "file_name": "GTImages/Streak_49445_213759.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49445_213759.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:37:59.763",
@@ -1002,7 +1002,7 @@
     },
     {
       "id": 77,
-      "file_name": "GTImages/Streak_48140_212501.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48140_212501.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:25:01.610",
@@ -1015,7 +1015,7 @@
     },
     {
       "id": 78,
-      "file_name": "GTImages/Streak_48390_212354.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48390_212354.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:23:54.611",
@@ -1028,7 +1028,7 @@
     },
     {
       "id": 79,
-      "file_name": "GTImages/Streak_53923_211038.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_53923_211038.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:10:38.935",
@@ -1041,7 +1041,7 @@
     },
     {
       "id": 80,
-      "file_name": "GTImages/Streak_52331_211423.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52331_211423.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:14:23.435",
@@ -1054,7 +1054,7 @@
     },
     {
       "id": 81,
-      "file_name": "GTImages/Streak_51771_223653.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51771_223653.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:36:53.180",
@@ -1067,7 +1067,7 @@
     },
     {
       "id": 82,
-      "file_name": "GTImages/Streak_57973_213955.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57973_213955.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:39:55.621",
@@ -1080,7 +1080,7 @@
     },
     {
       "id": 83,
-      "file_name": "GTImages/Streak_47799_214924.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47799_214924.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:49:24.691",
@@ -1093,7 +1093,7 @@
     },
     {
       "id": 84,
-      "file_name": "GTImages/Streak_58932_212210.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_58932_212210.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:22:10.436",
@@ -1106,7 +1106,7 @@
     },
     {
       "id": 85,
-      "file_name": "GTImages/Streak_59542_214249.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59542_214249.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:42:49.221",
@@ -1119,7 +1119,7 @@
     },
     {
       "id": 86,
-      "file_name": "GTImages/Streak_57166_221759.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_221759.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:17:59.206",
@@ -1132,7 +1132,7 @@
     },
     {
       "id": 87,
-      "file_name": "GTImages/Streak_66494_220225.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_66494_220225.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:02:25.525",
@@ -1145,7 +1145,7 @@
     },
     {
       "id": 88,
-      "file_name": "GTImages/Streak_52334_210846.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52334_210846.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:08:46.050",
@@ -1158,7 +1158,7 @@
     },
     {
       "id": 89,
-      "file_name": "GTImages/Streak_49445_213956.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49445_213956.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:39:56.551",
@@ -1171,7 +1171,7 @@
     },
     {
       "id": 90,
-      "file_name": "GTImages/Streak_49436_205847.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49436_205847.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T00:58:47.018",
@@ -1184,7 +1184,7 @@
     },
     {
       "id": 91,
-      "file_name": "GTImages/Streak_40339_211820.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40339_211820.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:18:20.470",
@@ -1197,7 +1197,7 @@
     },
     {
       "id": 92,
-      "file_name": "GTImages/Streak_53923_211306.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_53923_211306.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:13:06.312",
@@ -1210,7 +1210,7 @@
     },
     {
       "id": 93,
-      "file_name": "GTImages/Streak_59504_215015.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59504_215015.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:50:15.421",
@@ -1223,7 +1223,7 @@
     },
     {
       "id": 94,
-      "file_name": "GTImages/Streak_42954_212123.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_42954_212123.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:21:23.018",
@@ -1236,7 +1236,7 @@
     },
     {
       "id": 95,
-      "file_name": "GTImages/Streak_55489_220602.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_55489_220602.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:06:02.627",
@@ -1249,7 +1249,7 @@
     },
     {
       "id": 96,
-      "file_name": "GTImages/Streak_65437_213145.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65437_213145.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:31:45.999",
@@ -1262,7 +1262,7 @@
     },
     {
       "id": 97,
-      "file_name": "GTImages/Streak_51771_223938.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51771_223938.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:39:38.190",
@@ -1275,7 +1275,7 @@
     },
     {
       "id": 98,
-      "file_name": "GTImages/Streak_59486_212036.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59486_212036.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:20:36.122",
@@ -1288,7 +1288,7 @@
     },
     {
       "id": 99,
-      "file_name": "GTImages/Streak_44782_214334.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44782_214334.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:43:34.311",
@@ -1301,7 +1301,7 @@
     },
     {
       "id": 100,
-      "file_name": "GTImages/Streak_62895_212453.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_62895_212453.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:24:53.452",
@@ -1314,7 +1314,7 @@
     },
     {
       "id": 101,
-      "file_name": "GTImages/Streak_57973_213851.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57973_213851.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:38:51.335",
@@ -1327,7 +1327,7 @@
     },
     {
       "id": 102,
-      "file_name": "GTImages/Streak_47836_211314.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47836_211314.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:13:14.758",
@@ -1340,7 +1340,7 @@
     },
     {
       "id": 103,
-      "file_name": "GTImages/Streak_50193_205953.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_50193_205953.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T00:59:53.964",
@@ -1353,7 +1353,7 @@
     },
     {
       "id": 104,
-      "file_name": "GTImages/Streak_57973_213945.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57973_213945.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:39:45.116",
@@ -1366,7 +1366,7 @@
     },
     {
       "id": 105,
-      "file_name": "GTImages/Streak_65437_213401.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65437_213401.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:34:01.460",
@@ -1379,7 +1379,7 @@
     },
     {
       "id": 106,
-      "file_name": "GTImages/Streak_47772_214825.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47772_214825.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:48:25.722",
@@ -1392,7 +1392,7 @@
     },
     {
       "id": 107,
-      "file_name": "GTImages/Streak_64855_214743.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_64855_214743.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:47:43.885",
@@ -1405,7 +1405,7 @@
     },
     {
       "id": 108,
-      "file_name": "GTImages/Streak_51771_223543.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51771_223543.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:35:43.352",
@@ -1418,7 +1418,7 @@
     },
     {
       "id": 109,
-      "file_name": "GTImages/Streak_52334_210732.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52334_210732.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:07:32.538",
@@ -1431,7 +1431,7 @@
     },
     {
       "id": 110,
-      "file_name": "GTImages/Streak_43071_220523.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43071_220523.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T02:05:23.599",
@@ -1444,7 +1444,7 @@
     },
     {
       "id": 111,
-      "file_name": "GTImages/Streak_60418_212809.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_60418_212809.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:28:09.067",
@@ -1457,7 +1457,7 @@
     },
     {
       "id": 112,
-      "file_name": "GTImages/Streak_40358_213048.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40358_213048.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:30:48.635",
@@ -1470,7 +1470,7 @@
     },
     {
       "id": 113,
-      "file_name": "GTImages/Streak_43778_213156.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43778_213156.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:31:56.094",
@@ -1483,7 +1483,7 @@
     },
     {
       "id": 114,
-      "file_name": "GTImages/Streak_46146_212243.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_46146_212243.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:22:43.302",
@@ -1496,7 +1496,7 @@
     },
     {
       "id": 115,
-      "file_name": "GTImages/Streak_58932_212327.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_58932_212327.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:23:27.318",
@@ -1509,7 +1509,7 @@
     },
     {
       "id": 116,
-      "file_name": "GTImages/Streak_48381_215552.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48381_215552.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:55:52.789",
@@ -1522,7 +1522,7 @@
     },
     {
       "id": 117,
-      "file_name": "GTImages/Streak_57166_221825.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_221825.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:18:25.909",
@@ -1535,7 +1535,7 @@
     },
     {
       "id": 118,
-      "file_name": "GTImages/Streak_46146_212135.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_46146_212135.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:21:35.747",
@@ -1548,7 +1548,7 @@
     },
     {
       "id": 119,
-      "file_name": "GTImages/Streak_52331_211052.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52331_211052.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:10:52.880",
@@ -1561,7 +1561,7 @@
     },
     {
       "id": 120,
-      "file_name": "GTImages/Streak_52331_211126.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52331_211126.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:11:26.854",
@@ -1574,7 +1574,7 @@
     },
     {
       "id": 121,
-      "file_name": "GTImages/Streak_59552_220929.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59552_220929.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:09:29.035",
@@ -1587,7 +1587,7 @@
     },
     {
       "id": 122,
-      "file_name": "GTImages/Streak_43071_220121.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43071_220121.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T02:01:21.912",
@@ -1600,7 +1600,7 @@
     },
     {
       "id": 123,
-      "file_name": "GTImages/Streak_55463_213919.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_55463_213919.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:39:19.094",
@@ -1613,7 +1613,7 @@
     },
     {
       "id": 124,
-      "file_name": "GTImages/Streak_57166_221639.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_221639.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:16:39.094",
@@ -1626,7 +1626,7 @@
     },
     {
       "id": 125,
-      "file_name": "GTImages/Streak_51137_210156.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51137_210156.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:01:56.837",
@@ -1639,7 +1639,7 @@
     },
     {
       "id": 126,
-      "file_name": "GTImages/Streak_48381_215620.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48381_215620.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:56:20.847",
@@ -1652,7 +1652,7 @@
     },
     {
       "id": 127,
-      "file_name": "GTImages/Streak_55463_214140.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_55463_214140.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:41:40.178",
@@ -1665,7 +1665,7 @@
     },
     {
       "id": 128,
-      "file_name": "GTImages/Streak_58932_212143.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_58932_212143.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:21:43.821",
@@ -1678,7 +1678,7 @@
     },
     {
       "id": 129,
-      "file_name": "GTImages/Streak_46146_212201.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_46146_212201.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:22:01.733",
@@ -1691,7 +1691,7 @@
     },
     {
       "id": 130,
-      "file_name": "GTImages/Streak_52339_213039.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52339_213039.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:30:39.055",
@@ -1704,7 +1704,7 @@
     },
     {
       "id": 131,
-      "file_name": "GTImages/Streak_48093_210545.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48093_210545.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:05:45.530",
@@ -1717,7 +1717,7 @@
     },
     {
       "id": 132,
-      "file_name": "GTImages/Streak_57973_213731.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57973_213731.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:37:31.565",
@@ -1730,7 +1730,7 @@
     },
     {
       "id": 133,
-      "file_name": "GTImages/Streak_54068_222829.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54068_222829.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:28:29.682",
@@ -1743,7 +1743,7 @@
     },
     {
       "id": 134,
-      "file_name": "GTImages/Streak_43776_212536.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43776_212536.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:25:36.138",
@@ -1756,7 +1756,7 @@
     },
     {
       "id": 135,
-      "file_name": "GTImages/Streak_46146_212323.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_46146_212323.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:23:23.593",
@@ -1769,7 +1769,7 @@
     },
     {
       "id": 136,
-      "file_name": "GTImages/Streak_62895_212802.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_62895_212802.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:28:02.241",
@@ -1782,7 +1782,7 @@
     },
     {
       "id": 137,
-      "file_name": "GTImages/Streak_65437_213044.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65437_213044.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:30:44.858",
@@ -1795,7 +1795,7 @@
     },
     {
       "id": 138,
-      "file_name": "GTImages/Streak_64855_214517.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_64855_214517.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:45:17.007",
@@ -1808,7 +1808,7 @@
     },
     {
       "id": 139,
-      "file_name": "GTImages/Streak_39012_210824.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_39012_210824.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:08:24.261",
@@ -1821,7 +1821,7 @@
     },
     {
       "id": 140,
-      "file_name": "GTImages/Streak_59504_215218.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59504_215218.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:52:18.785",
@@ -1834,7 +1834,7 @@
     },
     {
       "id": 141,
-      "file_name": "GTImages/Streak_47587_215425.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47587_215425.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:54:25.154",
@@ -1847,7 +1847,7 @@
     },
     {
       "id": 142,
-      "file_name": "GTImages/Streak_52334_210620.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52334_210620.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:06:20.642",
@@ -1860,7 +1860,7 @@
     },
     {
       "id": 143,
-      "file_name": "GTImages/Streak_55463_214104.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_55463_214104.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:41:04.083",
@@ -1873,7 +1873,7 @@
     },
     {
       "id": 144,
-      "file_name": "GTImages/Streak_52334_210935.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52334_210935.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:09:35.718",
@@ -1886,7 +1886,7 @@
     },
     {
       "id": 145,
-      "file_name": "GTImages/Streak_62895_212814.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_62895_212814.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:28:14.161",
@@ -1899,7 +1899,7 @@
     },
     {
       "id": 146,
-      "file_name": "GTImages/Streak_55463_213724.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_55463_213724.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:37:24.599",
@@ -1912,7 +1912,7 @@
     },
     {
       "id": 147,
-      "file_name": "GTImages/Streak_65437_212855.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65437_212855.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:28:55.599",
@@ -1925,7 +1925,7 @@
     },
     {
       "id": 148,
-      "file_name": "GTImages/Streak_54062_225014.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54062_225014.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:50:14.637",
@@ -1938,7 +1938,7 @@
     },
     {
       "id": 149,
-      "file_name": "GTImages/Streak_57973_213624.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57973_213624.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:36:24.899",
@@ -1951,7 +1951,7 @@
     },
     {
       "id": 150,
-      "file_name": "GTImages/Streak_40358_213438.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40358_213438.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:34:38.840",
@@ -1964,7 +1964,7 @@
     },
     {
       "id": 151,
-      "file_name": "GTImages/Streak_65474_222348.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65474_222348.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:23:48.978",
@@ -1977,7 +1977,7 @@
     },
     {
       "id": 152,
-      "file_name": "GTImages/Streak_63594_211650.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_63594_211650.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:16:50.423",
@@ -1990,7 +1990,7 @@
     },
     {
       "id": 153,
-      "file_name": "GTImages/Streak_57973_213637.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57973_213637.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:36:37.038",
@@ -2003,7 +2003,7 @@
     },
     {
       "id": 154,
-      "file_name": "GTImages/Streak_57166_222209.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_222209.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:22:09.427",
@@ -2016,7 +2016,7 @@
     },
     {
       "id": 155,
-      "file_name": "GTImages/Streak_58354_223335.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_58354_223335.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:33:35.650",
@@ -2029,7 +2029,7 @@
     },
     {
       "id": 156,
-      "file_name": "GTImages/Streak_65474_222310.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65474_222310.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:23:10.645",
@@ -2042,7 +2042,7 @@
     },
     {
       "id": 157,
-      "file_name": "GTImages/Streak_51137_210036.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51137_210036.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:00:36.205",
@@ -2055,7 +2055,7 @@
     },
     {
       "id": 158,
-      "file_name": "GTImages/Streak_63594_211956.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_63594_211956.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:19:56.671",
@@ -2068,7 +2068,7 @@
     },
     {
       "id": 159,
-      "file_name": "GTImages/Streak_46146_212213.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_46146_212213.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:22:13.736",
@@ -2081,7 +2081,7 @@
     },
     {
       "id": 160,
-      "file_name": "GTImages/Streak_40358_213419.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40358_213419.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:34:19.404",
@@ -2094,7 +2094,7 @@
     },
     {
       "id": 161,
-      "file_name": "GTImages/Streak_41188_213316.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_41188_213316.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:33:16.197",
@@ -2107,7 +2107,7 @@
     },
     {
       "id": 162,
-      "file_name": "GTImages/Streak_42954_212044.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_42954_212044.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:20:44.439",
@@ -2120,7 +2120,7 @@
     },
     {
       "id": 163,
-      "file_name": "GTImages/Streak_47509_214311.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47509_214311.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:43:11.957",
@@ -2133,7 +2133,7 @@
     },
     {
       "id": 164,
-      "file_name": "GTImages/Streak_46146_212100.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_46146_212100.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:21:00.023",
@@ -2146,7 +2146,7 @@
     },
     {
       "id": 165,
-      "file_name": "GTImages/Streak_49436_205535.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49436_205535.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T00:55:35.433",
@@ -2159,7 +2159,7 @@
     },
     {
       "id": 166,
-      "file_name": "GTImages/Streak_57166_222031.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_222031.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:20:31.228",
@@ -2172,7 +2172,7 @@
     },
     {
       "id": 167,
-      "file_name": "GTImages/Streak_48381_215502.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48381_215502.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:55:02.698",
@@ -2185,7 +2185,7 @@
     },
     {
       "id": 168,
-      "file_name": "GTImages/Streak_43071_220143.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43071_220143.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T02:01:43.844",
@@ -2198,7 +2198,7 @@
     },
     {
       "id": 169,
-      "file_name": "GTImages/Streak_51128_212642.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51128_212642.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:26:42.519",
@@ -2211,7 +2211,7 @@
     },
     {
       "id": 170,
-      "file_name": "GTImages/Streak_51128_212618.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51128_212618.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:26:18.070",
@@ -2224,7 +2224,7 @@
     },
     {
       "id": 171,
-      "file_name": "GTImages/Streak_47799_214948.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47799_214948.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:49:48.103",
@@ -2237,7 +2237,7 @@
     },
     {
       "id": 172,
-      "file_name": "GTImages/Streak_44408_210457.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44408_210457.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:04:57.533",
@@ -2250,7 +2250,7 @@
     },
     {
       "id": 173,
-      "file_name": "GTImages/Streak_60418_212834.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_60418_212834.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:28:34.632",
@@ -2263,7 +2263,7 @@
     },
     {
       "id": 174,
-      "file_name": "GTImages/Streak_57973_214006.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57973_214006.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:40:06.397",
@@ -2276,7 +2276,7 @@
     },
     {
       "id": 175,
-      "file_name": "GTImages/Streak_43071_220132.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43071_220132.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T02:01:32.885",
@@ -2289,7 +2289,7 @@
     },
     {
       "id": 176,
-      "file_name": "GTImages/Streak_57973_213918.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57973_213918.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:39:18.890",
@@ -2302,7 +2302,7 @@
     },
     {
       "id": 177,
-      "file_name": "GTImages/Streak_42954_212203.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_42954_212203.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:22:03.189",
@@ -2315,7 +2315,7 @@
     },
     {
       "id": 178,
-      "file_name": "GTImages/Streak_52331_211138.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52331_211138.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:11:38.820",
@@ -2328,7 +2328,7 @@
     },
     {
       "id": 179,
-      "file_name": "GTImages/Streak_60418_212935.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_60418_212935.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:29:35.384",
@@ -2341,7 +2341,7 @@
     },
     {
       "id": 180,
-      "file_name": "GTImages/Streak_66221_214509.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_66221_214509.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:45:09.214",
@@ -2354,7 +2354,7 @@
     },
     {
       "id": 181,
-      "file_name": "GTImages/Streak_59486_211737.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59486_211737.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:17:37.856",
@@ -2367,7 +2367,7 @@
     },
     {
       "id": 182,
-      "file_name": "GTImages/Streak_55463_214050.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_55463_214050.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:40:50.731",
@@ -2380,7 +2380,7 @@
     },
     {
       "id": 183,
-      "file_name": "GTImages/Streak_44782_214303.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44782_214303.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:43:03.414",
@@ -2393,7 +2393,7 @@
     },
     {
       "id": 184,
-      "file_name": "GTImages/Streak_52331_211150.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52331_211150.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:11:50.971",
@@ -2406,7 +2406,7 @@
     },
     {
       "id": 185,
-      "file_name": "GTImages/Streak_48381_215403.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48381_215403.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:54:03.473",
@@ -2419,7 +2419,7 @@
     },
     {
       "id": 186,
-      "file_name": "GTImages/Streak_58932_212401.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_58932_212401.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:24:01.485",
@@ -2432,7 +2432,7 @@
     },
     {
       "id": 187,
-      "file_name": "GTImages/Streak_60418_212524.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_60418_212524.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:25:24.203",
@@ -2445,7 +2445,7 @@
     },
     {
       "id": 188,
-      "file_name": "GTImages/Streak_48381_215418.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48381_215418.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:54:18.222",
@@ -2458,7 +2458,7 @@
     },
     {
       "id": 189,
-      "file_name": "GTImages/Streak_41188_213245.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_41188_213245.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:32:11.804",
@@ -2471,7 +2471,7 @@
     },
     {
       "id": 190,
-      "file_name": "GTImages/Streak_47836_211337.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47836_211337.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:13:37.362",
@@ -2484,7 +2484,7 @@
     },
     {
       "id": 191,
-      "file_name": "GTImages/Streak_43776_212500.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43776_212500.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:25:00.943",
@@ -2497,7 +2497,7 @@
     },
     {
       "id": 192,
-      "file_name": "GTImages/Streak_53923_211220.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_53923_211220.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:12:20.757",
@@ -2510,7 +2510,7 @@
     },
     {
       "id": 193,
-      "file_name": "GTImages/Streak_52339_212902.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52339_212902.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:29:02.528",
@@ -2523,7 +2523,7 @@
     },
     {
       "id": 194,
-      "file_name": "GTImages/Streak_47509_214257.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47509_214257.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:42:57.414",
@@ -2536,7 +2536,7 @@
     },
     {
       "id": 195,
-      "file_name": "GTImages/Streak_58932_212053.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_58932_212053.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:20:53.629",
@@ -2549,7 +2549,7 @@
     },
     {
       "id": 196,
-      "file_name": "GTImages/Streak_45081_214432.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_45081_214432.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:44:32.093",
@@ -2562,7 +2562,7 @@
     },
     {
       "id": 197,
-      "file_name": "GTImages/Streak_59552_220901.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59552_220901.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:09:01.459",
@@ -2575,7 +2575,7 @@
     },
     {
       "id": 198,
-      "file_name": "GTImages/Streak_54068_222843.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54068_222843.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:28:43.951",
@@ -2588,7 +2588,7 @@
     },
     {
       "id": 199,
-      "file_name": "GTImages/Streak_59397_215813.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59397_215813.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:58:13.106",
@@ -2601,7 +2601,7 @@
     },
     {
       "id": 200,
-      "file_name": "GTImages/Streak_55463_213903.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_55463_213903.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:39:03.078",
@@ -2614,7 +2614,7 @@
     },
     {
       "id": 201,
-      "file_name": "GTImages/Streak_43776_212439.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43776_212439.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:24:39.073",
@@ -2627,7 +2627,7 @@
     },
     {
       "id": 202,
-      "file_name": "GTImages/Streak_48093_210336.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48093_210336.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:03:36.495",
@@ -2640,7 +2640,7 @@
     },
     {
       "id": 203,
-      "file_name": "GTImages/Streak_58932_212105.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_58932_212105.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:21:05.367",
@@ -2653,7 +2653,7 @@
     },
     {
       "id": 204,
-      "file_name": "GTImages/Streak_57166_221922.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_221922.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:19:22.032",
@@ -2666,7 +2666,7 @@
     },
     {
       "id": 205,
-      "file_name": "GTImages/Streak_54062_225046.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54062_225046.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:50:46.916",
@@ -2679,7 +2679,7 @@
     },
     {
       "id": 206,
-      "file_name": "GTImages/Streak_52339_212916.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52339_212916.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:29:16.220",
@@ -2692,7 +2692,7 @@
     },
     {
       "id": 207,
-      "file_name": "GTImages/Streak_57166_221731.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_221731.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:17:31.448",
@@ -2705,7 +2705,7 @@
     },
     {
       "id": 208,
-      "file_name": "GTImages/Streak_50193_205709.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_50193_205709.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T00:57:09.007",
@@ -2718,7 +2718,7 @@
     },
     {
       "id": 209,
-      "file_name": "GTImages/Streak_52331_211230.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52331_211230.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:12:30.745",
@@ -2731,7 +2731,7 @@
     },
     {
       "id": 210,
-      "file_name": "GTImages/Streak_52334_210832.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52334_210832.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:08:32.458",
@@ -2744,7 +2744,7 @@
     },
     {
       "id": 211,
-      "file_name": "GTImages/Streak_48390_212209.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48390_212209.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:22:09.606",
@@ -2757,7 +2757,7 @@
     },
     {
       "id": 212,
-      "file_name": "GTImages/Streak_49445_213812.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49445_213812.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:38:12.101",
@@ -2770,7 +2770,7 @@
     },
     {
       "id": 213,
-      "file_name": "GTImages/Streak_47799_215032.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47799_215032.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:50:32.116",
@@ -2783,7 +2783,7 @@
     },
     {
       "id": 214,
-      "file_name": "GTImages/Streak_51137_210222.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51137_210222.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:02:22.594",
@@ -2796,7 +2796,7 @@
     },
     {
       "id": 215,
-      "file_name": "GTImages/Streak_51137_210108.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51137_210108.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:01:08.295",
@@ -2809,7 +2809,7 @@
     },
     {
       "id": 216,
-      "file_name": "GTImages/Streak_64855_214635.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_64855_214635.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:46:35.018",
@@ -2822,7 +2822,7 @@
     },
     {
       "id": 217,
-      "file_name": "GTImages/Streak_60418_212847.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_60418_212847.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:28:47.571",
@@ -2835,7 +2835,7 @@
     },
     {
       "id": 218,
-      "file_name": "GTImages/Streak_50193_205800.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_50193_205800.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T00:58:00.994",
@@ -2848,7 +2848,7 @@
     },
     {
       "id": 219,
-      "file_name": "GTImages/Streak_59504_215232.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59504_215232.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:52:32.568",
@@ -2861,7 +2861,7 @@
     },
     {
       "id": 220,
-      "file_name": "GTImages/Streak_59542_214216.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59542_214216.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:42:16.644",
@@ -2874,7 +2874,7 @@
     },
     {
       "id": 221,
-      "file_name": "GTImages/Streak_41188_213614.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_41188_213614.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:36:14.403",
@@ -2887,7 +2887,7 @@
     },
     {
       "id": 222,
-      "file_name": "GTImages/Streak_59552_220914.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59552_220914.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:09:14.693",
@@ -2900,7 +2900,7 @@
     },
     {
       "id": 223,
-      "file_name": "GTImages/Streak_39012_210909.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_39012_210909.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:09:09.135",
@@ -2913,7 +2913,7 @@
     },
     {
       "id": 224,
-      "file_name": "GTImages/Streak_62895_212505.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_62895_212505.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:25:05.845",
@@ -2926,7 +2926,7 @@
     },
     {
       "id": 225,
-      "file_name": "GTImages/Streak_49436_205717.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49436_205717.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T00:57:17.526",
@@ -2939,7 +2939,7 @@
     },
     {
       "id": 226,
-      "file_name": "GTImages/Streak_65437_213251.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65437_213251.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:32:51.133",
@@ -2952,7 +2952,7 @@
     },
     {
       "id": 227,
-      "file_name": "GTImages/Streak_51771_223817.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51771_223817.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:38:17.425",
@@ -2965,7 +2965,7 @@
     },
     {
       "id": 228,
-      "file_name": "GTImages/Streak_58354_223309.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_58354_223309.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:33:09.299",
@@ -2978,7 +2978,7 @@
     },
     {
       "id": 229,
-      "file_name": "GTImages/Streak_44768_211803.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44768_211803.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:18:03.059",
@@ -2991,7 +2991,7 @@
     },
     {
       "id": 230,
-      "file_name": "GTImages/Streak_47772_214718.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47772_214718.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:47:18.564",
@@ -3004,7 +3004,7 @@
     },
     {
       "id": 231,
-      "file_name": "GTImages/Streak_65437_212937.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65437_212937.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:29:37.906",
@@ -3017,7 +3017,7 @@
     },
     {
       "id": 232,
-      "file_name": "GTImages/Streak_63994_222957.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_63994_222957.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:29:57.934",
@@ -3030,7 +3030,7 @@
     },
     {
       "id": 233,
-      "file_name": "GTImages/Streak_51128_212555.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51128_212555.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:25:55.435",
@@ -3043,7 +3043,7 @@
     },
     {
       "id": 234,
-      "file_name": "GTImages/Streak_42954_212309.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_42954_212309.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:23:09.642",
@@ -3056,7 +3056,7 @@
     },
     {
       "id": 235,
-      "file_name": "GTImages/Streak_49022_221120.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49022_221120.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:11:20.360",
@@ -3069,7 +3069,7 @@
     },
     {
       "id": 236,
-      "file_name": "GTImages/Streak_59486_211953.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59486_211953.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:19:53.913",
@@ -3082,7 +3082,7 @@
     },
     {
       "id": 237,
-      "file_name": "GTImages/Streak_47836_211251.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47836_211251.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:12:51.777",
@@ -3095,7 +3095,7 @@
     },
     {
       "id": 238,
-      "file_name": "GTImages/Streak_44311_205614.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44311_205614.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T00:56:14.733",
@@ -3108,7 +3108,7 @@
     },
     {
       "id": 239,
-      "file_name": "GTImages/Streak_57166_221744.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_221744.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:17:44.893",
@@ -3121,7 +3121,7 @@
     },
     {
       "id": 240,
-      "file_name": "GTImages/Streak_59504_215002.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59504_215002.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:50:02.420",
@@ -3134,7 +3134,7 @@
     },
     {
       "id": 241,
-      "file_name": "GTImages/Streak_43776_212512.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43776_212512.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:25:12.117",
@@ -3147,7 +3147,7 @@
     },
     {
       "id": 242,
-      "file_name": "GTImages/Streak_47836_211349.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47836_211349.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:13:49.531",
@@ -3160,7 +3160,7 @@
     },
     {
       "id": 243,
-      "file_name": "GTImages/Streak_62895_212719.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_62895_212719.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:27:19.997",
@@ -3173,7 +3173,7 @@
     },
     {
       "id": 244,
-      "file_name": "GTImages/Streak_49436_205645.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49436_205645.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T00:56:45.940",
@@ -3186,7 +3186,7 @@
     },
     {
       "id": 245,
-      "file_name": "GTImages/Streak_62895_212613.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_62895_212613.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:26:13.685",
@@ -3199,7 +3199,7 @@
     },
     {
       "id": 246,
-      "file_name": "GTImages/Streak_63594_211638.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_63594_211638.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:16:38.399",
@@ -3212,7 +3212,7 @@
     },
     {
       "id": 247,
-      "file_name": "GTImages/Streak_41188_213600.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_41188_213600.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:36:00.640",
@@ -3225,7 +3225,7 @@
     },
     {
       "id": 248,
-      "file_name": "GTImages/Streak_66494_220148.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_66494_220148.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:01:48.214",
@@ -3238,7 +3238,7 @@
     },
     {
       "id": 249,
-      "file_name": "GTImages/Streak_44768_211618.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44768_211618.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:16:18.102",
@@ -3251,7 +3251,7 @@
     },
     {
       "id": 250,
-      "file_name": "GTImages/Streak_53923_211321.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_53923_211321.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:13:21.387",
@@ -3264,7 +3264,7 @@
     },
     {
       "id": 251,
-      "file_name": "GTImages/Streak_48093_210724.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48093_210724.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:07:24.147",
@@ -3277,7 +3277,7 @@
     },
     {
       "id": 252,
-      "file_name": "GTImages/Streak_62895_212558.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_62895_212558.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:25:58.329",
@@ -3290,7 +3290,7 @@
     },
     {
       "id": 253,
-      "file_name": "GTImages/Streak_51771_223758.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51771_223758.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:37:58.887",
@@ -3303,7 +3303,7 @@
     },
     {
       "id": 254,
-      "file_name": "GTImages/Streak_53923_211438.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_53923_211438.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:14:38.565",
@@ -3316,7 +3316,7 @@
     },
     {
       "id": 255,
-      "file_name": "GTImages/Streak_47836_211218.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47836_211218.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:12:18.505",
@@ -3329,7 +3329,7 @@
     },
     {
       "id": 256,
-      "file_name": "GTImages/Streak_42954_212137.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_42954_212137.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:21:37.108",
@@ -3342,7 +3342,7 @@
     },
     {
       "id": 257,
-      "file_name": "GTImages/Streak_48381_215337.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48381_215337.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:53:37.305",
@@ -3355,7 +3355,7 @@
     },
     {
       "id": 258,
-      "file_name": "GTImages/Streak_47799_215132.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47799_215132.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:51:32.261",
@@ -3368,7 +3368,7 @@
     },
     {
       "id": 259,
-      "file_name": "GTImages/Streak_41188_213530.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_41188_213530.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:35:30.042",
@@ -3381,7 +3381,7 @@
     },
     {
       "id": 260,
-      "file_name": "GTImages/Streak_46146_212111.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_46146_212111.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:21:11.750",
@@ -3394,7 +3394,7 @@
     },
     {
       "id": 261,
-      "file_name": "GTImages/Streak_39012_210932.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_39012_210932.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:09:32.966",
@@ -3407,7 +3407,7 @@
     },
     {
       "id": 262,
-      "file_name": "GTImages/Streak_49436_205603.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49436_205603.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T00:56:03.387",
@@ -3420,7 +3420,7 @@
     },
     {
       "id": 263,
-      "file_name": "GTImages/Streak_48093_210712.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48093_210712.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:07:12.489",
@@ -3433,7 +3433,7 @@
     },
     {
       "id": 264,
-      "file_name": "GTImages/Streak_45081_214351.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_45081_214351.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:43:51.588",
@@ -3446,7 +3446,7 @@
     },
     {
       "id": 265,
-      "file_name": "GTImages/Streak_49445_214050.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49445_214050.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:40:50.477",
@@ -3459,7 +3459,7 @@
     },
     {
       "id": 266,
-      "file_name": "GTImages/Streak_53923_211251.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_53923_211251.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:12:51.998",
@@ -3472,7 +3472,7 @@
     },
     {
       "id": 267,
-      "file_name": "GTImages/Streak_49445_213842.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49445_213842.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:38:42.036",
@@ -3485,7 +3485,7 @@
     },
     {
       "id": 268,
-      "file_name": "GTImages/Streak_40339_211741.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40339_211741.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:17:41.910",
@@ -3498,7 +3498,7 @@
     },
     {
       "id": 269,
-      "file_name": "GTImages/Streak_66221_214524.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_66221_214524.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:45:24.807",
@@ -3511,7 +3511,7 @@
     },
     {
       "id": 270,
-      "file_name": "GTImages/Streak_64855_214836.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_64855_214836.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:48:36.033",
@@ -3524,7 +3524,7 @@
     },
     {
       "id": 271,
-      "file_name": "GTImages/Streak_58932_212339.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_58932_212339.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:23:39.612",
@@ -3537,7 +3537,7 @@
     },
     {
       "id": 272,
-      "file_name": "GTImages/Streak_66494_220125.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_66494_220125.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:01:25.523",
@@ -3550,7 +3550,7 @@
     },
     {
       "id": 273,
-      "file_name": "GTImages/Streak_43071_220049.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43071_220049.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T02:00:49.104",
@@ -3563,7 +3563,7 @@
     },
     {
       "id": 274,
-      "file_name": "GTImages/Streak_58354_223350.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_58354_223350.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:33:50.860",
@@ -3576,7 +3576,7 @@
     },
     {
       "id": 275,
-      "file_name": "GTImages/Streak_57973_213649.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57973_213649.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:36:49.883",
@@ -3589,7 +3589,7 @@
     },
     {
       "id": 276,
-      "file_name": "GTImages/Streak_48390_212426.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48390_212426.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:24:26.435",
@@ -3602,7 +3602,7 @@
     },
     {
       "id": 277,
-      "file_name": "GTImages/Streak_39012_210921.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_39012_210921.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:09:21.088",
@@ -3615,7 +3615,7 @@
     },
     {
       "id": 278,
-      "file_name": "GTImages/Streak_63594_211915.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_63594_211915.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:19:15.204",
@@ -3628,7 +3628,7 @@
     },
     {
       "id": 279,
-      "file_name": "GTImages/Streak_65437_212843.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65437_212843.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:28:43.837",
@@ -3641,7 +3641,7 @@
     },
     {
       "id": 280,
-      "file_name": "GTImages/Streak_52339_213026.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52339_213026.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:30:26.028",
@@ -3654,7 +3654,7 @@
     },
     {
       "id": 281,
-      "file_name": "GTImages/Streak_57166_222044.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_222044.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:20:44.127",
@@ -3667,7 +3667,7 @@
     },
     {
       "id": 282,
-      "file_name": "GTImages/Streak_54062_224836.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54062_224836.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:48:36.673",
@@ -3680,7 +3680,7 @@
     },
     {
       "id": 283,
-      "file_name": "GTImages/Streak_46146_212123.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_46146_212123.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:21:23.732",
@@ -3693,7 +3693,7 @@
     },
     {
       "id": 284,
-      "file_name": "GTImages/Streak_48381_215349.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48381_215349.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:53:49.691",
@@ -3706,7 +3706,7 @@
     },
     {
       "id": 285,
-      "file_name": "GTImages/Streak_63994_222946.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_63994_222946.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:29:46.690",
@@ -3719,7 +3719,7 @@
     },
     {
       "id": 286,
-      "file_name": "GTImages/Streak_54068_222736.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54068_222736.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:27:36.000",
@@ -3732,7 +3732,7 @@
     },
     {
       "id": 287,
-      "file_name": "GTImages/Streak_52331_211330.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52331_211330.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:13:30.471",
@@ -3745,7 +3745,7 @@
     },
     {
       "id": 288,
-      "file_name": "GTImages/Streak_47772_214759.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47772_214759.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:47:59.357",
@@ -3758,7 +3758,7 @@
     },
     {
       "id": 289,
-      "file_name": "GTImages/Streak_54062_224932.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54062_224932.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:49:32.590",
@@ -3771,7 +3771,7 @@
     },
     {
       "id": 290,
-      "file_name": "GTImages/Streak_51128_212705.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51128_212705.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:27:05.601",
@@ -3784,7 +3784,7 @@
     },
     {
       "id": 291,
-      "file_name": "GTImages/Streak_42954_212243.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_42954_212243.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:22:43.440",
@@ -3797,7 +3797,7 @@
     },
     {
       "id": 292,
-      "file_name": "GTImages/Streak_66494_220212.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_66494_220212.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:02:12.470",
@@ -3810,7 +3810,7 @@
     },
     {
       "id": 293,
-      "file_name": "GTImages/Streak_48140_212622.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48140_212622.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:26:22.163",
@@ -3823,7 +3823,7 @@
     },
     {
       "id": 294,
-      "file_name": "GTImages/Streak_40358_213316.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40358_213316.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:33:16.550",
@@ -3836,7 +3836,7 @@
     },
     {
       "id": 295,
-      "file_name": "GTImages/Streak_63994_223009.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_63994_223009.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:30:09.965",
@@ -3849,7 +3849,7 @@
     },
     {
       "id": 296,
-      "file_name": "GTImages/Streak_51771_223530.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51771_223530.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:35:30.543",
@@ -3862,7 +3862,7 @@
     },
     {
       "id": 297,
-      "file_name": "GTImages/Streak_47799_214913.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47799_214913.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:49:13.405",
@@ -3875,7 +3875,7 @@
     },
     {
       "id": 298,
-      "file_name": "GTImages/Streak_53923_211335.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_53923_211335.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:13:35.528",
@@ -3888,7 +3888,7 @@
     },
     {
       "id": 299,
-      "file_name": "GTImages/Streak_66494_220253.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_66494_220253.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:02:53.180",
@@ -3901,7 +3901,7 @@
     },
     {
       "id": 300,
-      "file_name": "GTImages/Streak_65437_213116.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65437_213116.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:31:16.962",
@@ -3914,7 +3914,7 @@
     },
     {
       "id": 301,
-      "file_name": "GTImages/Streak_55463_213821.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_55463_213821.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:38:21.880",
@@ -3927,7 +3927,7 @@
     },
     {
       "id": 302,
-      "file_name": "GTImages/Streak_43071_220110.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43071_220110.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T02:01:10.977",
@@ -3940,7 +3940,7 @@
     },
     {
       "id": 303,
-      "file_name": "GTImages/Streak_48093_210401.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48093_210401.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:04:01.783",
@@ -3953,7 +3953,7 @@
     },
     {
       "id": 304,
-      "file_name": "GTImages/Streak_40358_213158.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40358_213158.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:31:58.946",
@@ -3966,7 +3966,7 @@
     },
     {
       "id": 305,
-      "file_name": "GTImages/Streak_49436_205459.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49436_205459.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T00:54:59.491",
@@ -3979,7 +3979,7 @@
     },
     {
       "id": 306,
-      "file_name": "GTImages/Streak_51771_223622.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51771_223622.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:36:22.742",
@@ -3992,7 +3992,7 @@
     },
     {
       "id": 307,
-      "file_name": "GTImages/Streak_66221_214414.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_66221_214414.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:44:14.758",
@@ -4005,7 +4005,7 @@
     },
     {
       "id": 308,
-      "file_name": "GTImages/Streak_55463_213834.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_55463_213834.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:38:34.123",
@@ -4018,7 +4018,7 @@
     },
     {
       "id": 309,
-      "file_name": "GTImages/Streak_51137_210126.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51137_210126.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:01:26.736",
@@ -4031,7 +4031,7 @@
     },
     {
       "id": 310,
-      "file_name": "GTImages/Streak_53923_211119.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_53923_211119.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:11:19.221",
@@ -4044,7 +4044,7 @@
     },
     {
       "id": 311,
-      "file_name": "GTImages/Streak_51137_210005.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51137_210005.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:00:05.631",
@@ -4057,7 +4057,7 @@
     },
     {
       "id": 312,
-      "file_name": "GTImages/Streak_60418_212821.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_60418_212821.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:28:21.662",
@@ -4070,7 +4070,7 @@
     },
     {
       "id": 313,
-      "file_name": "GTImages/Streak_52331_211447.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52331_211447.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:14:47.875",
@@ -4083,7 +4083,7 @@
     },
     {
       "id": 314,
-      "file_name": "GTImages/Streak_43776_212524.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43776_212524.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:25:24.158",
@@ -4096,7 +4096,7 @@
     },
     {
       "id": 315,
-      "file_name": "GTImages/Streak_51771_223928.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51771_223928.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:39:28.130",
@@ -4109,7 +4109,7 @@
     },
     {
       "id": 316,
-      "file_name": "GTImages/Streak_44408_210447.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44408_210447.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:04:48.014",
@@ -4122,7 +4122,7 @@
     },
     {
       "id": 317,
-      "file_name": "GTImages/Streak_40358_213112.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40358_213112.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:31:12.313",
@@ -4135,7 +4135,7 @@
     },
     {
       "id": 318,
-      "file_name": "GTImages/Streak_50193_205657.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_50193_205657.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T00:56:57.113",
@@ -4148,7 +4148,7 @@
     },
     {
       "id": 319,
-      "file_name": "GTImages/Streak_47587_215407.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47587_215407.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:54:07.959",
@@ -4161,7 +4161,7 @@
     },
     {
       "id": 320,
-      "file_name": "GTImages/Streak_44311_205604.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44311_205604.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T00:56:04.381",
@@ -4174,7 +4174,7 @@
     },
     {
       "id": 321,
-      "file_name": "GTImages/Streak_40358_213028.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40358_213028.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:30:28.586",
@@ -4187,7 +4187,7 @@
     },
     {
       "id": 322,
-      "file_name": "GTImages/Streak_42954_212109.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_42954_212109.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:21:09.685",
@@ -4200,7 +4200,7 @@
     },
     {
       "id": 323,
-      "file_name": "GTImages/Streak_52339_212850.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52339_212850.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:28:50.580",
@@ -4213,7 +4213,7 @@
     },
     {
       "id": 324,
-      "file_name": "GTImages/Streak_52331_211203.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52331_211203.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:12:03.819",
@@ -4226,7 +4226,7 @@
     },
     {
       "id": 325,
-      "file_name": "GTImages/Streak_52339_212944.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52339_212944.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:29:44.771",
@@ -4239,7 +4239,7 @@
     },
     {
       "id": 326,
-      "file_name": "GTImages/Streak_63594_211626.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_63594_211626.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:16:26.981",
@@ -4252,7 +4252,7 @@
     },
     {
       "id": 327,
-      "file_name": "GTImages/Streak_59542_214321.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59542_214321.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:43:21.034",
@@ -4265,7 +4265,7 @@
     },
     {
       "id": 328,
-      "file_name": "GTImages/Streak_63594_211715.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_63594_211715.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:17:15.435",
@@ -4278,7 +4278,7 @@
     },
     {
       "id": 329,
-      "file_name": "GTImages/Streak_59542_214136.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59542_214136.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:41:36.600",
@@ -4291,7 +4291,7 @@
     },
     {
       "id": 330,
-      "file_name": "GTImages/Streak_52331_211103.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52331_211103.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:11:03.820",
@@ -4304,7 +4304,7 @@
     },
     {
       "id": 331,
-      "file_name": "GTImages/Streak_44768_211949.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44768_211949.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:19:49.670",
@@ -4317,7 +4317,7 @@
     },
     {
       "id": 332,
-      "file_name": "GTImages/Streak_57973_213905.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57973_213905.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:39:05.878",
@@ -4330,7 +4330,7 @@
     },
     {
       "id": 333,
-      "file_name": "GTImages/Streak_51128_212654.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51128_212654.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:26:54.560",
@@ -4343,7 +4343,7 @@
     },
     {
       "id": 334,
-      "file_name": "GTImages/Streak_43071_220356.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43071_220356.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T02:03:56.895",
@@ -4356,7 +4356,7 @@
     },
     {
       "id": 335,
-      "file_name": "GTImages/Streak_51128_212606.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51128_212606.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:26:06.842",
@@ -4369,7 +4369,7 @@
     },
     {
       "id": 336,
-      "file_name": "GTImages/Streak_53923_211426.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_53923_211426.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:14:26.287",
@@ -4382,7 +4382,7 @@
     },
     {
       "id": 337,
-      "file_name": "GTImages/Streak_59542_214336.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59542_214336.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:43:36.782",
@@ -4395,7 +4395,7 @@
     },
     {
       "id": 338,
-      "file_name": "GTImages/Streak_48140_212523.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48140_212523.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:25:23.887",
@@ -4408,7 +4408,7 @@
     },
     {
       "id": 339,
-      "file_name": "GTImages/Streak_51128_212803.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51128_212803.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:28:03.806",
@@ -4421,7 +4421,7 @@
     },
     {
       "id": 340,
-      "file_name": "GTImages/Streak_50193_205939.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_50193_205939.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T00:59:39.595",
@@ -4434,7 +4434,7 @@
     },
     {
       "id": 341,
-      "file_name": "GTImages/Streak_51137_210142.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51137_210142.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:01:42.718",
@@ -4447,7 +4447,7 @@
     },
     {
       "id": 342,
-      "file_name": "GTImages/Streak_57166_222017.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_222017.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:20:17.264",
@@ -4460,7 +4460,7 @@
     },
     {
       "id": 343,
-      "file_name": "GTImages/Streak_48140_212729.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48140_212729.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:27:29.998",
@@ -4473,7 +4473,7 @@
     },
     {
       "id": 344,
-      "file_name": "GTImages/Streak_57973_213702.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57973_213702.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:37:02.084",
@@ -4486,7 +4486,7 @@
     },
     {
       "id": 345,
-      "file_name": "GTImages/Streak_52331_211245.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52331_211245.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:12:45.544",
@@ -4499,7 +4499,7 @@
     },
     {
       "id": 346,
-      "file_name": "GTImages/Streak_53923_211348.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_53923_211348.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:13:48.247",
@@ -4512,7 +4512,7 @@
     },
     {
       "id": 347,
-      "file_name": "GTImages/Streak_48093_210348.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48093_210348.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:03:48.650",
@@ -4525,7 +4525,7 @@
     },
     {
       "id": 348,
-      "file_name": "GTImages/Streak_41188_213304.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_41188_213304.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:33:04.313",
@@ -4538,7 +4538,7 @@
     },
     {
       "id": 349,
-      "file_name": "GTImages/Streak_40339_211703.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40339_211703.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:17:03.965",
@@ -4551,7 +4551,7 @@
     },
     {
       "id": 350,
-      "file_name": "GTImages/Streak_51771_223918.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51771_223918.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:39:18.119",
@@ -4564,7 +4564,7 @@
     },
     {
       "id": 351,
-      "file_name": "GTImages/Streak_54068_222619.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54068_222619.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:26:19.998",
@@ -4577,7 +4577,7 @@
     },
     {
       "id": 352,
-      "file_name": "GTImages/Streak_65437_213225.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65437_213225.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:32:25.896",
@@ -4590,7 +4590,7 @@
     },
     {
       "id": 353,
-      "file_name": "GTImages/Streak_59542_214407.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59542_214407.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:44:07.229",
@@ -4603,7 +4603,7 @@
     },
     {
       "id": 354,
-      "file_name": "GTImages/Streak_48381_215634.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48381_215634.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:56:34.210",
@@ -4616,7 +4616,7 @@
     },
     {
       "id": 355,
-      "file_name": "GTImages/Streak_52153_211450.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52153_211450.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:14:50.052",
@@ -4629,7 +4629,7 @@
     },
     {
       "id": 356,
-      "file_name": "GTImages/Streak_48140_212535.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48140_212535.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:25:35.333",
@@ -4642,7 +4642,7 @@
     },
     {
       "id": 357,
-      "file_name": "GTImages/Streak_52334_210818.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52334_210818.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:08:18.884",
@@ -4655,7 +4655,7 @@
     },
     {
       "id": 358,
-      "file_name": "GTImages/Streak_43765_215831.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43765_215831.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:58:31.731",
@@ -4668,7 +4668,7 @@
     },
     {
       "id": 359,
-      "file_name": "GTImages/Streak_41188_213546.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_41188_213546.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:35:46.029",
@@ -4681,7 +4681,7 @@
     },
     {
       "id": 360,
-      "file_name": "GTImages/Streak_66221_214439.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_66221_214439.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:44:39.990",
@@ -4694,7 +4694,7 @@
     },
     {
       "id": 361,
-      "file_name": "GTImages/Streak_49445_213746.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49445_213746.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:37:46.814",
@@ -4707,7 +4707,7 @@
     },
     {
       "id": 362,
-      "file_name": "GTImages/Streak_47836_211229.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47836_211229.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:12:29.396",
@@ -4720,7 +4720,7 @@
     },
     {
       "id": 363,
-      "file_name": "GTImages/Streak_52339_212837.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52339_212837.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:28:37.372",
@@ -4733,7 +4733,7 @@
     },
     {
       "id": 364,
-      "file_name": "GTImages/Streak_52339_212958.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52339_212958.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:29:58.052",
@@ -4746,7 +4746,7 @@
     },
     {
       "id": 365,
-      "file_name": "GTImages/Streak_65437_213101.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65437_213101.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:31:01.186",
@@ -4759,7 +4759,7 @@
     },
     {
       "id": 366,
-      "file_name": "GTImages/Streak_40339_211729.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40339_211729.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:17:29.183",
@@ -4772,7 +4772,7 @@
     },
     {
       "id": 367,
-      "file_name": "GTImages/Streak_42954_212230.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_42954_212230.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:22:30.099",
@@ -4785,7 +4785,7 @@
     },
     {
       "id": 368,
-      "file_name": "GTImages/Streak_47836_211240.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47836_211240.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:12:40.526",
@@ -4798,7 +4798,7 @@
     },
     {
       "id": 369,
-      "file_name": "GTImages/Streak_39012_210945.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_39012_210945.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:09:45.569",
@@ -4811,7 +4811,7 @@
     },
     {
       "id": 370,
-      "file_name": "GTImages/Streak_44768_211921.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44768_211921.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:19:21.486",
@@ -4824,7 +4824,7 @@
     },
     {
       "id": 371,
-      "file_name": "GTImages/Streak_52334_210716.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52334_210716.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:07:16.206",
@@ -4837,7 +4837,7 @@
     },
     {
       "id": 372,
-      "file_name": "GTImages/Streak_49022_221139.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49022_221139.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:11:39.289",
@@ -4850,7 +4850,7 @@
     },
     {
       "id": 373,
-      "file_name": "GTImages/Streak_59486_212048.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59486_212048.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:20:48.072",
@@ -4863,7 +4863,7 @@
     },
     {
       "id": 374,
-      "file_name": "GTImages/Streak_65437_213238.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65437_213238.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:32:38.918",
@@ -4876,7 +4876,7 @@
     },
     {
       "id": 375,
-      "file_name": "GTImages/Streak_59486_211937.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59486_211937.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:19:37.908",
@@ -4889,7 +4889,7 @@
     },
     {
       "id": 376,
-      "file_name": "GTImages/Streak_51771_223608.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51771_223608.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:36:09.001",
@@ -4902,7 +4902,7 @@
     },
     {
       "id": 377,
-      "file_name": "GTImages/Streak_52334_210701.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52334_210701.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:07:01.314",
@@ -4915,7 +4915,7 @@
     },
     {
       "id": 378,
-      "file_name": "GTImages/Streak_46146_212227.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_46146_212227.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:22:27.591",
@@ -4928,7 +4928,7 @@
     },
     {
       "id": 379,
-      "file_name": "GTImages/Streak_40358_213211.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40358_213211.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:32:11.645",
@@ -4941,7 +4941,7 @@
     },
     {
       "id": 380,
-      "file_name": "GTImages/Streak_44408_210434.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44408_210434.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:04:34.555",
@@ -4954,7 +4954,7 @@
     },
     {
       "id": 381,
-      "file_name": "GTImages/Streak_51128_212739.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51128_212739.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:27:40.007",
@@ -4967,7 +4967,7 @@
     },
     {
       "id": 382,
-      "file_name": "GTImages/Streak_63994_223022.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_63994_223022.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:30:22.076",
@@ -4980,7 +4980,7 @@
     },
     {
       "id": 383,
-      "file_name": "GTImages/Streak_40358_213236.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40358_213236.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:32:37.002",
@@ -4993,7 +4993,7 @@
     },
     {
       "id": 384,
-      "file_name": "GTImages/Streak_49445_213734.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49445_213734.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:37:34.661",
@@ -5006,7 +5006,7 @@
     },
     {
       "id": 385,
-      "file_name": "GTImages/Streak_54068_222857.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54068_222857.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:28:57.092",
@@ -5019,7 +5019,7 @@
     },
     {
       "id": 386,
-      "file_name": "GTImages/Streak_50193_205908.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_50193_205908.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T00:59:08.244",
@@ -5032,7 +5032,7 @@
     },
     {
       "id": 387,
-      "file_name": "GTImages/Streak_41188_213512.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_41188_213512.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:35:12.019",
@@ -5045,7 +5045,7 @@
     },
     {
       "id": 388,
-      "file_name": "GTImages/Streak_53923_211205.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_53923_211205.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:12:05.026",
@@ -5058,7 +5058,7 @@
     },
     {
       "id": 389,
-      "file_name": "GTImages/Streak_57973_214017.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57973_214017.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:40:17.116",
@@ -5071,7 +5071,7 @@
     },
     {
       "id": 390,
-      "file_name": "GTImages/Streak_59486_212008.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59486_212008.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:20:08.370",
@@ -5084,7 +5084,7 @@
     },
     {
       "id": 391,
-      "file_name": "GTImages/Streak_54068_222606.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54068_222606.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:26:06.920",
@@ -5097,7 +5097,7 @@
     },
     {
       "id": 392,
-      "file_name": "GTImages/Streak_48140_212547.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48140_212547.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:25:47.893",
@@ -5110,7 +5110,7 @@
     },
     {
       "id": 393,
-      "file_name": "GTImages/Streak_54068_222633.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54068_222633.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:26:33.533",
@@ -5123,7 +5123,7 @@
     },
     {
       "id": 394,
-      "file_name": "GTImages/Streak_48390_212132.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48390_212132.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:21:32.251",
@@ -5136,7 +5136,7 @@
     },
     {
       "id": 395,
-      "file_name": "GTImages/Streak_59542_214352.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59542_214352.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:43:52.413",
@@ -5149,7 +5149,7 @@
     },
     {
       "id": 396,
-      "file_name": "GTImages/Streak_57973_213606.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57973_213606.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:35:40.146",
@@ -5162,7 +5162,7 @@
     },
     {
       "id": 397,
-      "file_name": "GTImages/Streak_55463_213808.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_55463_213808.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:38:08.945",
@@ -5175,7 +5175,7 @@
     },
     {
       "id": 398,
-      "file_name": "GTImages/Streak_52153_211438.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52153_211438.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:14:38.923",
@@ -5188,7 +5188,7 @@
     },
     {
       "id": 399,
-      "file_name": "GTImages/Streak_44768_211641.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44768_211641.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:16:41.191",
@@ -5201,7 +5201,7 @@
     },
     {
       "id": 400,
-      "file_name": "GTImages/Streak_47836_211326.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47836_211326.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:13:26.085",
@@ -5214,7 +5214,7 @@
     },
     {
       "id": 401,
-      "file_name": "GTImages/Streak_52339_212930.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52339_212930.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:29:30.575",
@@ -5227,7 +5227,7 @@
     },
     {
       "id": 402,
-      "file_name": "GTImages/Streak_65474_222403.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65474_222403.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:24:03.323",
@@ -5240,7 +5240,7 @@
     },
     {
       "id": 403,
-      "file_name": "GTImages/Streak_44768_211705.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44768_211705.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:17:05.490",
@@ -5253,7 +5253,7 @@
     },
     {
       "id": 404,
-      "file_name": "GTImages/Streak_40358_213329.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40358_213329.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:33:29.892",
@@ -5266,7 +5266,7 @@
     },
     {
       "id": 405,
-      "file_name": "GTImages/Streak_52153_211513.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52153_211513.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:15:13.976",
@@ -5279,7 +5279,7 @@
     },
     {
       "id": 406,
-      "file_name": "GTImages/Streak_52334_210948.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52334_210948.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:09:48.055",
@@ -5292,7 +5292,7 @@
     },
     {
       "id": 407,
-      "file_name": "GTImages/Streak_49436_205823.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49436_205823.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T00:58:23.342",
@@ -5305,7 +5305,7 @@
     },
     {
       "id": 408,
-      "file_name": "GTImages/Streak_52331_211216.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52331_211216.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:12:16.971",
@@ -5318,7 +5318,7 @@
     },
     {
       "id": 409,
-      "file_name": "GTImages/Streak_40339_211615.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40339_211615.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:16:15.672",
@@ -5331,7 +5331,7 @@
     },
     {
       "id": 410,
-      "file_name": "GTImages/Streak_58354_223407.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_58354_223407.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:34:07.054",
@@ -5344,7 +5344,7 @@
     },
     {
       "id": 411,
-      "file_name": "GTImages/Streak_57166_221651.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_221651.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:16:51.821",
@@ -5357,7 +5357,7 @@
     },
     {
       "id": 412,
-      "file_name": "GTImages/Streak_63994_223103.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_63994_223103.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:31:03.742",
@@ -5370,7 +5370,7 @@
     },
     {
       "id": 413,
-      "file_name": "GTImages/Streak_47799_215148.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47799_215148.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:51:48.281",
@@ -5383,7 +5383,7 @@
     },
     {
       "id": 414,
-      "file_name": "GTImages/Streak_42954_212006.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_42954_212006.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:20:06.980",
@@ -5396,7 +5396,7 @@
     },
     {
       "id": 415,
-      "file_name": "GTImages/Streak_53923_211236.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_53923_211236.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:12:36.527",
@@ -5409,7 +5409,7 @@
     },
     {
       "id": 416,
-      "file_name": "GTImages/Streak_42954_212031.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_42954_212031.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:20:31.500",
@@ -5422,7 +5422,7 @@
     },
     {
       "id": 417,
-      "file_name": "GTImages/Streak_63594_211943.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_63594_211943.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:19:43.108",
@@ -5435,7 +5435,7 @@
     },
     {
       "id": 418,
-      "file_name": "GTImages/Streak_44768_211607.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44768_211607.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:16:07.033",
@@ -5448,7 +5448,7 @@
     },
     {
       "id": 419,
-      "file_name": "GTImages/Streak_57166_222134.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_57166_222134.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:21:34.131",
@@ -5461,7 +5461,7 @@
     },
     {
       "id": 420,
-      "file_name": "GTImages/Streak_47799_215052.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47799_215052.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:50:52.646",
@@ -5474,7 +5474,7 @@
     },
     {
       "id": 421,
-      "file_name": "GTImages/Streak_48390_212439.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48390_212439.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:24:39.999",
@@ -5487,7 +5487,7 @@
     },
     {
       "id": 422,
-      "file_name": "GTImages/Streak_40358_213458.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40358_213458.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:34:58.902",
@@ -5500,7 +5500,7 @@
     },
     {
       "id": 423,
-      "file_name": "GTImages/Streak_51128_212630.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51128_212630.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:26:30.646",
@@ -5513,7 +5513,7 @@
     },
     {
       "id": 424,
-      "file_name": "GTImages/Streak_40358_213343.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40358_213343.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:33:43.294",
@@ -5526,7 +5526,7 @@
     },
     {
       "id": 425,
-      "file_name": "GTImages/Streak_43071_220537.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43071_220537.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T02:05:37.336",
@@ -5539,7 +5539,7 @@
     },
     {
       "id": 426,
-      "file_name": "GTImages/Streak_64855_214506.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_64855_214506.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:45:06.152",
@@ -5552,7 +5552,7 @@
     },
     {
       "id": 427,
-      "file_name": "GTImages/Streak_44768_211907.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44768_211907.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:19:07.279",
@@ -5565,7 +5565,7 @@
     },
     {
       "id": 428,
-      "file_name": "GTImages/Streak_59504_214925.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59504_214925.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:49:25.472",
@@ -5578,7 +5578,7 @@
     },
     {
       "id": 429,
-      "file_name": "GTImages/Streak_48093_210518.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48093_210518.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:05:18.231",
@@ -5591,7 +5591,7 @@
     },
     {
       "id": 430,
-      "file_name": "GTImages/Streak_54068_222813.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54068_222813.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:28:13.603",
@@ -5604,7 +5604,7 @@
     },
     {
       "id": 431,
-      "file_name": "GTImages/Streak_65437_212908.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65437_212908.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:29:08.202",
@@ -5617,7 +5617,7 @@
     },
     {
       "id": 432,
-      "file_name": "GTImages/Streak_47836_211401.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47836_211401.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:14:01.813",
@@ -5630,7 +5630,7 @@
     },
     {
       "id": 433,
-      "file_name": "GTImages/Streak_60418_212923.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_60418_212923.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:29:23.698",
@@ -5643,7 +5643,7 @@
     },
     {
       "id": 434,
-      "file_name": "GTImages/Streak_42954_212256.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_42954_212256.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:22:56.763",
@@ -5656,7 +5656,7 @@
     },
     {
       "id": 435,
-      "file_name": "GTImages/Streak_51771_223845.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51771_223845.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:38:45.164",
@@ -5669,7 +5669,7 @@
     },
     {
       "id": 436,
-      "file_name": "GTImages/Streak_64855_214615.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_64855_214615.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:46:15.048",
@@ -5682,7 +5682,7 @@
     },
     {
       "id": 437,
-      "file_name": "GTImages/Streak_59552_220849.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59552_220849.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:08:49.328",
@@ -5695,7 +5695,7 @@
     },
     {
       "id": 438,
-      "file_name": "GTImages/Streak_39012_210835.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_39012_210835.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:08:35.375",
@@ -5708,7 +5708,7 @@
     },
     {
       "id": 439,
-      "file_name": "GTImages/Streak_52331_211435.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_52331_211435.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:14:35.621",
@@ -5721,7 +5721,7 @@
     },
     {
       "id": 440,
-      "file_name": "GTImages/Streak_48381_215607.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48381_215607.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:56:07.425",
@@ -5734,7 +5734,7 @@
     },
     {
       "id": 441,
-      "file_name": "GTImages/Streak_42954_212333.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_42954_212333.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:23:33.981",
@@ -5747,7 +5747,7 @@
     },
     {
       "id": 442,
-      "file_name": "GTImages/Streak_40358_213147.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40358_213147.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:31:47.087",
@@ -5760,7 +5760,7 @@
     },
     {
       "id": 443,
-      "file_name": "GTImages/Streak_50193_205849.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_50193_205849.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T00:58:49.769",
@@ -5773,7 +5773,7 @@
     },
     {
       "id": 444,
-      "file_name": "GTImages/Streak_59397_215744.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59397_215744.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:57:44.840",
@@ -5786,7 +5786,7 @@
     },
     {
       "id": 445,
-      "file_name": "GTImages/Streak_47836_211304.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47836_211304.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:13:04.516",
@@ -5799,7 +5799,7 @@
     },
     {
       "id": 446,
-      "file_name": "GTImages/Streak_48390_212253.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48390_212253.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:22:53.987",
@@ -5812,7 +5812,7 @@
     },
     {
       "id": 447,
-      "file_name": "GTImages/Streak_55489_220522.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_55489_220522.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:05:22.620",
@@ -5825,7 +5825,7 @@
     },
     {
       "id": 448,
-      "file_name": "GTImages/Streak_65437_213132.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_65437_213132.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:31:32.059",
@@ -5838,7 +5838,7 @@
     },
     {
       "id": 449,
-      "file_name": "GTImages/Streak_39012_210958.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_39012_210958.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:09:58.188",
@@ -5851,7 +5851,7 @@
     },
     {
       "id": 450,
-      "file_name": "GTImages/Streak_39012_211036.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_39012_211036.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:10:36.525",
@@ -5864,7 +5864,7 @@
     },
     {
       "id": 451,
-      "file_name": "GTImages/Streak_54062_224809.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54062_224809.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:48:09.104",
@@ -5877,7 +5877,7 @@
     },
     {
       "id": 452,
-      "file_name": "GTImages/Streak_43071_220427.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_43071_220427.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T02:04:27.911",
@@ -5890,7 +5890,7 @@
     },
     {
       "id": 453,
-      "file_name": "GTImages/Streak_44768_211653.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44768_211653.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:16:53.240",
@@ -5903,7 +5903,7 @@
     },
     {
       "id": 454,
-      "file_name": "GTImages/Streak_42954_212321.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_42954_212321.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:23:21.773",
@@ -5916,7 +5916,7 @@
     },
     {
       "id": 455,
-      "file_name": "GTImages/Streak_55463_214117.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_55463_214117.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-24T01:41:17.599",
@@ -5929,7 +5929,7 @@
     },
     {
       "id": 456,
-      "file_name": "GTImages/Streak_40358_213100.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40358_213100.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:31:00.534",
@@ -5942,7 +5942,7 @@
     },
     {
       "id": 457,
-      "file_name": "GTImages/Streak_48381_215536.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_48381_215536.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:55:36.674",
@@ -5955,7 +5955,7 @@
     },
     {
       "id": 458,
-      "file_name": "GTImages/Streak_40339_211716.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40339_211716.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-12T01:17:16.739",
@@ -5968,7 +5968,7 @@
     },
     {
       "id": 459,
-      "file_name": "GTImages/Streak_40358_213038.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_40358_213038.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:30:38.404",
@@ -5981,7 +5981,7 @@
     },
     {
       "id": 460,
-      "file_name": "GTImages/Streak_54062_224908.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_54062_224908.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:49:08.072",
@@ -5994,7 +5994,7 @@
     },
     {
       "id": 461,
-      "file_name": "GTImages/Streak_49445_214011.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49445_214011.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:40:11.131",
@@ -6007,7 +6007,7 @@
     },
     {
       "id": 462,
-      "file_name": "GTImages/Streak_49436_205522.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49436_205522.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T00:55:22.363",
@@ -6020,7 +6020,7 @@
     },
     {
       "id": 463,
-      "file_name": "GTImages/Streak_51771_223518.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_51771_223518.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:35:18.523",
@@ -6033,7 +6033,7 @@
     },
     {
       "id": 464,
-      "file_name": "GTImages/Streak_59486_212022.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59486_212022.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:20:22.974",
@@ -6046,7 +6046,7 @@
     },
     {
       "id": 465,
-      "file_name": "GTImages/Streak_55489_220535.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_55489_220535.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T02:05:35.528",
@@ -6059,7 +6059,7 @@
     },
     {
       "id": 466,
-      "file_name": "GTImages/Streak_44768_211717.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_44768_211717.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:17:17.807",
@@ -6072,7 +6072,7 @@
     },
     {
       "id": 467,
-      "file_name": "GTImages/Streak_49436_205548.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_49436_205548.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T00:55:48.952",
@@ -6085,7 +6085,7 @@
     },
     {
       "id": 468,
-      "file_name": "GTImages/Streak_47772_214602.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_47772_214602.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-23T01:46:02.274",
@@ -6098,7 +6098,7 @@
     },
     {
       "id": 469,
-      "file_name": "GTImages/Streak_59397_215732.fits",
+      "file_name": "BrentImages/Img_20260412_Atwood/Streak_59397_215732.fits",
       "width": 6248,
       "height": 4176,
       "date_captured": "2026-04-27T01:57:32.589",

@@ -1,0 +1,208 @@
+{
+  "info": {
+    "description": "GTImages satellite streak dataset \u2014 SkyTrack 1.9.8",
+    "version": "1.0",
+    "year": 2026,
+    "contributor": "GTImages ground station (43.67N, 81.02W)",
+    "date_created": "2026/05/20"
+  },
+  "categories": [
+    {
+      "id": 1,
+      "name": "satellite_streak",
+      "supercategory": "streak"
+    }
+  ],
+  "images": [
+    {
+      "id": 54,
+      "file_name": "Streak_54870_224114.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:41:14.394"
+    },
+    {
+      "id": 55,
+      "file_name": "Streak_54870_224123.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:41:23.785"
+    },
+    {
+      "id": 56,
+      "file_name": "Streak_54870_224134.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:41:34.150"
+    },
+    {
+      "id": 57,
+      "file_name": "Streak_54870_224145.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:41:45.127"
+    },
+    {
+      "id": 58,
+      "file_name": "Streak_53001_224210.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:41:56.940"
+    },
+    {
+      "id": 87,
+      "file_name": "Streak_57051_223742.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:37:42.037"
+    },
+    {
+      "id": 88,
+      "file_name": "Streak_57051_223751.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:37:51.664"
+    },
+    {
+      "id": 89,
+      "file_name": "Streak_57051_223802.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:38:02.456"
+    },
+    {
+      "id": 90,
+      "file_name": "Streak_57051_223813.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:38:13.638"
+    },
+    {
+      "id": 91,
+      "file_name": "Streak_57051_223825.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:38:25.484"
+    },
+    {
+      "id": 116,
+      "file_name": "Streak_57943_232458.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T03:24:58.577"
+    },
+    {
+      "id": 131,
+      "file_name": "Streak_60544_233446.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T03:34:46.239"
+    },
+    {
+      "id": 132,
+      "file_name": "Streak_60544_233459.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T03:34:59.884"
+    },
+    {
+      "id": 133,
+      "file_name": "Streak_60544_233512.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T03:35:12.520"
+    },
+    {
+      "id": 149,
+      "file_name": "Streak_62386_231649.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T03:16:49.680"
+    },
+    {
+      "id": 169,
+      "file_name": "Streak_66016_224631.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:46:31.352"
+    },
+    {
+      "id": 170,
+      "file_name": "Streak_66016_224643.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:46:43.476"
+    },
+    {
+      "id": 171,
+      "file_name": "Streak_66016_224656.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:46:56.652"
+    },
+    {
+      "id": 189,
+      "file_name": "Streak_66098_225659.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:56:59.606"
+    },
+    {
+      "id": 190,
+      "file_name": "Streak_66098_225710.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:57:10.680"
+    },
+    {
+      "id": 191,
+      "file_name": "Streak_66098_225722.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:57:22.107"
+    },
+    {
+      "id": 192,
+      "file_name": "Streak_66098_225734.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:57:34.030"
+    },
+    {
+      "id": 193,
+      "file_name": "Streak_66098_225746.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:57:46.510"
+    },
+    {
+      "id": 194,
+      "file_name": "Streak_66098_225813.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:58:14.009"
+    },
+    {
+      "id": 216,
+      "file_name": "Streak_67608_224836.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:48:36.581"
+    },
+    {
+      "id": 227,
+      "file_name": "Streak_67625_225609.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:56:09.152"
+    },
+    {
+      "id": 228,
+      "file_name": "Streak_67625_225619.fits",
+      "width": 6248,
+      "height": 4176,
+      "date_captured": "2026-05-16T02:56:19.600"
+    }
+  ],
+  "annotations": []
+}

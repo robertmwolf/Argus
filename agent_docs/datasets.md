@@ -1,46 +1,89 @@
 # Datasets
 
 ## Overview
-Three data sources support the ARGUS pipeline. GTImages is the primary
-validation and negative-example source — it is already present in `data/GTImages/`.
+Four data sources support the ARGUS pipeline. BrentImages (which subsumes the
+original GTImages night) is the primary ground-truth and ongoing capture source.
+All BrentImages data lives on the external drive under
+`/Volumes/External/TrainingData/raw/BrentImages/`.
 
 ---
 
-## 1. GTImages — Primary Validation & Negative Source (Available Locally)
+## 1. BrentImages — Ongoing Ground-Truth Capture Source
 
-**What it is:** 759 FITS images of intentional satellite streak observations
-captured by a fixed ground station (43.67°N, 81.02°W — Ontario, Canada) using
-SkyTrack 1.9.8. Images are 6248×4176 pixels, 16-bit, 0.5 s exposures, GAIN=300,
-with ASTAP plate solutions provided as `.wcs` / `.ini` sidecar files.
+**What it is:** FITS images of intentional satellite streak passes captured from
+a fixed private observatory at Atwood, Ontario (43.6735556°N, 81.0204722°W,
+365 m). Camera: ZWO ASI2600MM Pro, 6248×4176 pixels, 16-bit, 0.5 s exposures,
+Lum filter, dark + flat calibrated. SkyTrack 1.9.8 schedules passes and writes
+rich FITS headers including NORAD ID, full TLE elements, object name, and
+atmospheric data. New capture nights are added as additional subdirectories.
 
-**Annotations:** 68 `.strk` files (one per tracked NORAD ID) containing
-pixel-precise start/end coordinates of every streak, peak/mean SNR, streak
-length, full TLE elements for the tracked satellite, and a reject flag.
+**Naming convention:** Each night is a subdirectory named `Img_YYYYMMDD_Atwood/`
+containing `Streak_NORADID_HHMMSS.fits` files. Unlike the original GTImages
+night, BrentImages FITS files do **not** include ASTAP `.wcs`/`.ini` plate
+solution sidecars.
 
-**Key statistics:**
+**Location:** `/Volumes/External/TrainingData/raw/BrentImages/`
+
+### Current nights
+
+| Directory | Date | Frames | NORAD IDs | Annotation status |
+|---|---|---|---|---|
+| `Img_20260412_Atwood/` | 2026-04-12 | 759 | 68 | ✅ Fully annotated (.strk + .ini/.wcs sidecars, GAIN=300) |
+| `Img_20260515_Atwood/` | 2026-05-15 | 300 | 39 | ⏳ .strk stubs generated, pixel coords pending manual annotation |
+
+The `Img_20260412_Atwood/` night is the original GTImages dataset — it has
+ASTAP plate solutions and fully pixel-annotated `.strk` files from SkyTrack.
+Subsequent nights (starting with `Img_20260515_Atwood/`) have rich FITS
+headers but no plate solutions; `.strk` stubs are generated from headers and
+pixel coordinates are filled in via the manual annotation workflow.
+
+**Key statistics (Img_20260412_Atwood — fully annotated):**
 - 593 usable labeled streak images (reject=0)
-- 93 real no-streak images (reject=−1) — valuable as negative training examples
+- 93 real no-streak images (reject=−1) — valuable negative training examples
 - 68 unique NORAD IDs (79% Starlink; also Meteor-M2, Yaogan, Cosmos, Iridium)
 - Streak lengths: median 624 px, p10=373 px, p90=1003 px (mostly long streaks)
-- Single night (2026-04-27), single site — no sky-background diversity
 
 **Role in ARGUS:**
-- **Negative examples:** 93 no-streak images fill the gap in SatStreaks
-- **Cross-ID benchmark:** every image has a known NORAD ID — run pipeline and
-  check whether crossid.py recovers the correct satellite
-- **Supplemental training:** fold 593 labeled images into training alongside
-  SatStreaks, but do not replace SatStreaks (GTImages lacks short streaks and
-  scene diversity)
+- **Negative examples:** no-streak images fill the negative-example gap in SatStreaks
+- **Cross-ID benchmark:** every annotated image has a known NORAD ID
+- **Supplemental training:** fold labeled images alongside SatStreaks; BrentImages
+  alone lacks short streaks and scene diversity
 
-**Convert to COCO JSON:**
+### Workflow for a new capture night
+
+```bash
+# 1. Generate .strk stubs from FITS headers (one per NORAD ID, Reject=2 pending):
+python scripts/generate_brentimages_strk.py \
+    --night-dir /Volumes/External/TrainingData/raw/BrentImages/Img_YYYYMMDD_Atwood
+
+# 2. Manually annotate pixel coordinates using the annotation tool, which flips
+#    Reject to 0 (streak present) or -1 (no streak).
+
+# 3. Convert annotated night to COCO JSON:
+python scripts/convert_gtimages.py \
+    --strk-dir /Volumes/External/TrainingData/raw/BrentImages/Img_YYYYMMDD_Atwood \
+    --output data/annotations/brentimages_YYYYMMDD.json \
+    --negatives-output data/annotations/brentimages_YYYYMMDD_negatives.json
+
+# 4. Rebuild training splits to include the new night:
+python scripts/merge_annotations.py --seed 42 --val-fraction 0.2
+```
+
+**Notes on `generate_brentimages_strk.py`:**
+- Reads NORAD ID, TLE elements, site info, and DATE-OBS directly from FITS headers
+- GPBSTAR header uses a non-standard value format; the script calls
+  `hdul.verify('silentfix')` to handle this transparently
+- All OBS rows are written with Reject=2 so `convert_gtimages.py` skips them
+  until pixel coordinates are annotated
+- Re-running with `--force` overwrites existing stubs
+
+**Convert fully-annotated night to COCO JSON** (same command for all nights):
 ```bash
 python scripts/convert_gtimages.py \
-    --strk-dir data/GTImages \
+    --strk-dir /Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood \
     --output data/annotations/gtimages.json \
     --negatives-output data/annotations/gtimages_negatives.json
 ```
-
-**Location:** `data/GTImages/` — already present, no download needed.
 
 ---
 
@@ -54,7 +97,7 @@ both released. This is purpose-built for exactly this pipeline.
 **GitHub:** https://github.com/DanSRoll/frigate
 **Paper:** https://www.nature.com/articles/s41597-025-06220-0
 
-**Location:** `/Volumes/External/frigate/` (raw FITS + processed PNGs at 2325×1555)
+**Location:** `/Volumes/External/TrainingData/raw/frigate/` (raw FITS + processed PNGs at 2325×1555)
 
 **Annotation status — ✅ ready for training inclusion:**
 - 350 frames manually reviewed via `scripts/annotate_frigate_streaks.py`
@@ -175,8 +218,9 @@ merged into the train/validation pool unless `--satstreaks-only` is supplied.
 Current training split generation uses:
 
 ```bash
+# Convert the fully-annotated BrentImages night (former GTImages):
 python scripts/convert_gtimages.py \
-    --strk-dir data/GTImages \
+    --strk-dir /Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood \
     --output data/annotations/gtimages.json \
     --negatives-output data/annotations/gtimages_negatives.json
 
@@ -275,13 +319,13 @@ if __name__ == '__main__':
 
 ---
 
-## Cross-ID Ground Truth (GTImages)
+## Cross-ID Ground Truth (BrentImages)
 
-GTImages provides ready-made cross-ID ground truth — every image has a known
-NORAD ID and embedded TLE.  The converter (`scripts/convert_gtimages.py`) writes
-`data/annotations/gtimages.json` which the eval benchmark can use directly.
+Every fully-annotated BrentImages frame has a known NORAD ID embedded in the
+FITS header and confirmed by the `.strk` annotation.  The converter writes
+`data/annotations/gtimages.json` which the eval benchmark uses directly.
 
-To run a cross-ID accuracy check against GTImages:
+To run a cross-ID accuracy check:
 ```bash
 python -m eval.benchmark \
     --run-pipeline \
@@ -290,4 +334,5 @@ python -m eval.benchmark \
 ```
 
 The benchmark reports whether the correct NORAD ID appears in the top-3
-`CandidateMatch` results for each image.
+`CandidateMatch` results for each image.  As additional BrentImages nights are
+annotated and merged, re-run the benchmark against the updated annotation file.
