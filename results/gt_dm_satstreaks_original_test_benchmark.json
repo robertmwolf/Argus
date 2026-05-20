@@ -1,0 +1,39 @@
+{
+  "date_recorded": "2026-05-19T16:24:40Z",
+  "model": "dino_swin_l",
+  "map_50": 0.0,
+  "map_75": 0.0,
+  "recall": 0.0,
+  "precision": 0.0,
+  "f1": 0.0,
+  "mean_angle_error_deg": 0.0,
+  "per_band": {
+    "short": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "medium": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "long": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    }
+  },
+  "confusion_matrix": {
+    "TP": 0,
+    "FP": 0,
+    "FN": 308,
+    "TN": 0,
+    "confusion_matrix_png": "results/confusion_matrix.png"
+  },
+  "yolo_baseline": {
+    "map_50": 0.0,
+    "recall": 0.0,
+    "precision": 0.0
+  }
+}
