@@ -93,6 +93,7 @@ Argus/
 │       ├── streak_dinov3_vitl.py     ← DINOv3 ViT-L/16 cloud config (GPU)
 │       └── dinov3_adapter.py         ← PatchToPyramid adapter + MMDet backbone
 ├── scripts/
+│   ├── README.md                 ← inventory: active/manual/provenance scripts
 │   ├── make_test_fits.py           ← synthetic FITS generator
 │   ├── download_weights.py         ← pretrained weight downloader
 │   ├── bootstrap_tle_catalog.py    ← one-time TLE catalog setup
