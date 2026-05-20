@@ -487,7 +487,7 @@ class AnnotationApp(tk.Tk):
         self._selected_obb_idx: int | None = None
         self._img_obbs: list[dict] = []          # confirmed OBBs for current frame
         self._img_suggestions: list[dict] = []
-        self._show_suggestions: bool = bool(suggestions)
+        self._show_suggestions: bool = True  # global — not reset per frame
         self._is_blank: bool = False             # True if frame marked no-streak
 
         # display cache
@@ -547,6 +547,17 @@ class AnnotationApp(tk.Tk):
         )
         self.lbl_progress.pack(side="left")
 
+        tk.Label(top, text="  Go to:", fg="#778899", bg="#1a1a2e",
+                 font=("Helvetica", 10)).pack(side="left", padx=(20, 2))
+        self._goto_var = tk.StringVar()
+        _goto_entry = tk.Entry(
+            top, textvariable=self._goto_var, width=6,
+            bg="#2a2a4a", fg="#ccccee", insertbackground="#ccccee",
+            relief="flat", font=("Helvetica", 10),
+        )
+        _goto_entry.pack(side="left")
+        _goto_entry.bind("<Return>", lambda _: (self._goto_index(), self.focus_set()))
+
         self.lbl_hint = tk.Label(
             top, text="", fg="#88ffcc", bg="#1a1a2e", font=("Helvetica", 11, "italic"),
         )
@@ -572,12 +583,13 @@ class AnnotationApp(tk.Tk):
         bot.pack(fill="x", padx=6, pady=4)
 
         tk.Label(bot, text="Width (px):", fg="#aaaacc", bg="#1a1a2e").pack(side="left")
-        self.width_var = tk.IntVar(value=16)
+        self.width_var = tk.IntVar(value=10)
         self.width_var.trace_add("write", lambda *_: self._draw_overlays())
         tk.Scale(
             bot, from_=1, to=200, orient="horizontal",
             variable=self.width_var, bg="#1a1a2e", fg="#aaaacc",
             highlightthickness=0, troughcolor="#333355", length=180,
+            takefocus=0,
         ).pack(side="left", padx=6)
 
         for txt, cmd in [
@@ -910,6 +922,18 @@ class AnnotationApp(tk.Tk):
     def _prev(self) -> None:
         if self.idx > 0:
             self._load_frame(self.idx - 1)
+
+    def _goto_index(self) -> None:
+        """Jump to a 1-based frame number entered in the Go-to field."""
+        raw = self._goto_var.get().strip()
+        if not raw:
+            return
+        try:
+            n = int(raw)
+        except ValueError:
+            return
+        self._load_frame(n - 1)
+        self._goto_var.set("")
 
     def _next_pass(self) -> None:
         """Jump to first unannotated frame of the next satellite pass."""

@@ -334,6 +334,7 @@ class AnnotationApp(tk.Tk):
         self._selected_obb_idx: int | None = None
         self._img_obbs: list[dict] = []
         self._img_suggestions: list[dict] = []  # Hough candidates for current image
+        self._show_suggestions: bool = True
 
         # cached display image (avoid re-encoding on every overlay update)
         self._photo: ImageTk.PhotoImage | None = None
@@ -398,6 +399,7 @@ class AnnotationApp(tk.Tk):
             highlightthickness=0,
             troughcolor="#333355",
             length=180,
+            takefocus=0,
         ).pack(side="left", padx=6)
 
         for txt, cmd in [
@@ -406,6 +408,8 @@ class AnnotationApp(tk.Tk):
             ("Accept  [Y]", self._accept_suggestion),
             ("Dismiss  [Esc]", self._cancel_pending),
             ("Delete  [Del]", self._delete_selected),
+            ("Blank  [B]", self._mark_blank),
+            ("Hints  [T]", self._toggle_suggestions),
             ("Save  [S]", self._save),
         ]:
             tk.Button(
@@ -436,6 +440,8 @@ class AnnotationApp(tk.Tk):
         self.bind("<Return>",  lambda _: self._accept_suggestion())
         self.bind("<s>",       lambda _: self._save())
         self.bind("<q>",       lambda _: self._quit())
+        self.bind("<b>",       lambda _: self._mark_blank())
+        self.bind("<t>",       lambda _: self._toggle_suggestions())
 
         self.canvas.bind("<Button-1>",        self._on_click)
         self.canvas.bind("<Button-2>",        self._on_pan_start)
@@ -501,6 +507,8 @@ class AnnotationApp(tk.Tk):
 
         self._pending_a = None
         self._selected_obb_idx = None
+        # Re-enable suggestions on each new image (user toggle resets per image)
+        self._show_suggestions = True
 
         # Set width slider to match first suggestion's estimated width
         if self._img_suggestions and not self._img_obbs:
@@ -574,8 +582,8 @@ class AnnotationApp(tk.Tk):
         self.canvas.delete("confirmed")
         self.canvas.delete("pending")
 
-        # Suggestions — amber dashed polygons
-        for i, obb in enumerate(self._img_suggestions):
+        # Suggestions — amber dashed polygons (only when toggle is on)
+        for i, obb in enumerate(self._img_suggestions if self._show_suggestions else []):
             corners = obb_corners(obb["cx"], obb["cy"], obb["w"], obb["h"], obb["angle_deg"])
             pts = self._corners_to_canvas(corners)
             self.canvas.create_polygon(
@@ -623,22 +631,30 @@ class AnnotationApp(tk.Tk):
 
     def _update_labels(self) -> None:
         n = len(self.images)
-        done = sum(
-            1 for img in self.coco["images"]
-            if any(a["image_id"] == img["id"] for a in self.coco["annotations"])
-        )
+        annotated_ids = {a["image_id"] for a in self.coco["annotations"]}
+        blank_ids = {img["id"] for img in self.coco["images"] if img.get("blank")}
+        done = len(annotated_ids | blank_ids)
         self.lbl_progress.config(text=f"Image {self.idx + 1} / {n}  |  Annotated: {done}")
         self.lbl_fname.config(text=self.images[self.idx]["path"].name[:60])
-        self.lbl_count.config(text=f"OBBs: {len(self._img_obbs)}")
-        self.lbl_zoom.config(text=f"zoom {self.zoom:.2f}×")
+
+        # Show blank status on current image
+        entry = self.images[self.idx]
+        cur_blank = any(
+            img.get("blank") and img["file_name"] == str(entry["path"])
+            for img in self.coco["images"]
+        )
+        count_text = "BLANK" if cur_blank else f"OBBs: {len(self._img_obbs)}"
+        count_color = "#ff8844" if cur_blank else "#66ff88"
+        self.lbl_count.config(text=count_text, fg=count_color)
+        self.lbl_zoom.config(text=f"zoom {self.zoom:.2f}×  {'[hints OFF]' if not self._show_suggestions else ''}")
 
         if self._pending_a is not None:
             hint, color = "→ Click streak END", "#88ffcc"
-        elif self._img_suggestions:
+        elif self._img_suggestions and self._show_suggestions:
             hint = f"Y = accept {len(self._img_suggestions)} suggestion(s)  |  or click to annotate manually"
             color = SUGGESTION_COLOR
         else:
-            hint, color = "Click streak START", "#88ffcc"
+            hint, color = "Click streak START  |  B = blank  |  T = toggle hints", "#88ffcc"
         self.lbl_hint.config(text=hint, fg=color)
 
     # ---- interaction ---------------------------------------------------------
@@ -787,6 +803,29 @@ class AnnotationApp(tk.Tk):
             self._update_labels(),
         ))
 
+    def _mark_blank(self) -> None:
+        """Mark current image as explicitly blank (no streak) and advance."""
+        entry = self.images[self.idx]
+        img_id = self._get_or_create_image_id(entry)
+        # Remove any existing OBBs for this image
+        self.coco["annotations"] = [
+            a for a in self.coco["annotations"] if a["image_id"] != img_id
+        ]
+        self._img_obbs = []
+        # Flag the image entry as a confirmed blank
+        for img in self.coco["images"]:
+            if img["id"] == img_id:
+                img["blank"] = True
+                break
+        self._autosave()
+        self._next()
+
+    def _toggle_suggestions(self) -> None:
+        """Toggle Hough suggestion overlays on/off."""
+        self._show_suggestions = not self._show_suggestions
+        self._draw_overlays()
+        self._update_labels()
+
     def _quit(self) -> None:
         self._autosave()
         self.destroy()
@@ -833,12 +872,11 @@ def main() -> None:
         log.info("No suggestion cache found — run with --precompute first for auto-hints")
 
     coco = load_existing_annotations(args.output)
-    already_done = sum(
-        1 for img in coco["images"]
-        if any(a["image_id"] == img["id"] for a in coco["annotations"])
-    )
+    annotated_ids = {a["image_id"] for a in coco["annotations"]}
+    blank_ids = {img["id"] for img in coco["images"] if img.get("blank")}
+    already_done = len(annotated_ids | blank_ids)
     if already_done:
-        log.info("Resuming — %d images already annotated", already_done)
+        log.info("Resuming — %d images already reviewed (%d blanks)", already_done, len(blank_ids))
 
     app = AnnotationApp(images, coco, args.output, suggestions=suggestions)
     if args.start_at:
