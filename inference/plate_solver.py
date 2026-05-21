@@ -128,7 +128,43 @@ def solve(
         logger.debug("ASTAP not found — skipping plate solve")
         return None
 
-    cmd = [bin_path, "-f", str(fits_path)]
+    # ASTAP crashes on macOS when FITS headers contain non-ASCII bytes: the
+    # Pascal ANSISTRING→NSString conversion returns nil, which the AppKit text
+    # view rejects with NSInvalidArgumentException.  Patch the file at the raw
+    # byte level — only replacing bytes >127 inside the header block(s) with
+    # '?' — so the data section is untouched and the FITS structure stays
+    # identical.  (Rewriting via astropy.writeto changes enough of the structure
+    # to confuse ASTAP's own FITS parser and still triggers the crash.)
+    clean_path: Path | None = None
+    solve_path = fits_path
+    try:
+        with open(fits_path, "rb") as fh:
+            file_bytes = bytearray(fh.read())
+
+        # Locate the primary HDU header end: FITS cards are 80 bytes each;
+        # the END card starts exactly on an 80-byte boundary.  Header blocks
+        # are 2880 bytes; the data section begins at the next 2880-byte
+        # boundary after the END card.  Scan up to 100 header blocks.
+        header_end = 2880  # conservative fallback: assume at least one block
+        max_scan = min(100 * 2880, len(file_bytes) - 79)
+        for card_start in range(0, max_scan, 80):
+            if file_bytes[card_start : card_start + 3] == b"END":
+                header_end = ((card_start + 80 + 2879) // 2880) * 2880
+                break
+
+        if any(b > 127 for b in file_bytes[:header_end]):
+            for i in range(header_end):
+                if file_bytes[i] > 127:
+                    file_bytes[i] = 0x3F  # '?'
+            clean_path = fits_path.with_name(fits_path.stem + "_astap_clean.fits")
+            with open(clean_path, "wb") as fh:
+                fh.write(file_bytes)
+            solve_path = clean_path
+            logger.debug("ASTAP: wrote header-sanitized copy %s", clean_path.name)
+    except Exception as exc:
+        logger.debug("ASTAP: header sanitization check failed (%s); using original", exc)
+
+    cmd = [bin_path, "-f", str(solve_path)]
 
     if ra_deg is not None:
         cmd += ["-ra", f"{ra_deg / 15.0:.6f}"]   # ASTAP uses decimal hours
@@ -164,9 +200,12 @@ def solve(
     except Exception as exc:
         logger.warning("ASTAP subprocess failed: %s", exc)
         return None
+    finally:
+        if clean_path is not None:
+            clean_path.unlink(missing_ok=True)
 
-    wcs_path = fits_path.with_suffix(".wcs")
-    ini_path = fits_path.with_suffix(".ini")
+    wcs_path = solve_path.with_suffix(".wcs")
+    ini_path = solve_path.with_suffix(".ini")
 
     if not wcs_path.exists():
         logger.debug(
