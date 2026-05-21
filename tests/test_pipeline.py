@@ -106,6 +106,10 @@ class TestRunFastMode:
         with patch.object(pl, "_load_model", return_value=mock_model), \
              patch.object(pl, "_run_inference", return_value=list(fake_dets)), \
              patch.object(pl, "_run_classical_detector", return_value=[]), \
+             patch.object(pl, "_run_astride_detector", return_value=[]), \
+             patch.object(pl, "_run_yolo_detector", return_value=[]), \
+             patch.object(pl, "_run_yolo_full_detector", return_value=[]), \
+             patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
              patch.dict(os.environ, extra_env, clear=False):
             return pl.run(_SYNTH_FITS, fast=fast)
 
@@ -136,7 +140,7 @@ class TestRunFastMode:
 
     def test_ml_detections_have_method(self):
         for det in self._run_patched():
-            assert det["method"] == "ml"
+            assert det["method"] == "tiny"
 
     def test_empty_detections_returns_empty_list(self):
         result = self._run_patched(n_dets=0)
@@ -156,6 +160,10 @@ class TestRunFastMode:
         with patch.object(pl, "_load_model", return_value=MagicMock()), \
              patch.object(pl, "_run_inference", return_value=[]), \
              patch.object(pl, "_run_classical_detector", return_value=[classical]), \
+             patch.object(pl, "_run_astride_detector", return_value=[]), \
+             patch.object(pl, "_run_yolo_detector", return_value=[]), \
+             patch.object(pl, "_run_yolo_full_detector", return_value=[]), \
+             patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
              patch.dict(os.environ,
                         {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS)},
                         clear=False):
@@ -177,6 +185,10 @@ class TestRunFastMode:
         with patch.object(pl, "_load_model", return_value=MagicMock()), \
              patch.object(pl, "_run_inference", return_value=list(_FAKE_DETS[:1])), \
              patch.object(pl, "_run_classical_detector", return_value=[]), \
+             patch.object(pl, "_run_astride_detector", return_value=[]), \
+             patch.object(pl, "_run_yolo_detector", return_value=[]), \
+             patch.object(pl, "_run_yolo_full_detector", return_value=[]), \
+             patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
              patch.dict(os.environ,
                         {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS),
                          "FAST_MODE": "true"},
@@ -207,12 +219,33 @@ class TestAngleRefinement:
                  {"bbox": [50.0, 60.0, 200.0, 80.0], "confidence": 0.92},
              ]), \
              patch.object(pl, "_run_classical_detector", return_value=[]), \
+             patch.object(pl, "_run_astride_detector", return_value=[]), \
+             patch.object(pl, "_run_yolo_detector", return_value=[]), \
+             patch.object(pl, "_run_yolo_full_detector", return_value=[]), \
+             patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
              patch.object(pp, "refine_angle", return_value=45.0) as mock_refine, \
              patch.dict(os.environ,
                         {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS)},
                         clear=False):
             pl.run(_SYNTH_FITS, fast=True)
         assert mock_refine.call_count >= 1
+
+
+class TestAstrideFiltering:
+    def test_drop_astride_only_groups(self):
+        import inference.pipeline as pl
+
+        detections = [
+            {"streak_id": 1, "method": "astride", "confidence": 0.99},
+            {"streak_id": 2, "method": "astride", "confidence": 0.99},
+            {"streak_id": 2, "method": "yolo", "confidence": 0.86},
+            {"streak_id": 3, "method": "dinov3_vitb", "confidence": 0.80},
+        ]
+
+        result = pl._drop_astride_only_groups(detections)
+
+        assert {d["streak_id"] for d in result} == {2, 3}
+        assert any(d["method"] == "astride" for d in result)
 
     def test_refine_angle_called_in_non_fast_mode(self):
         """refine_angle must be invoked for each detection when fast=False."""
@@ -225,6 +258,10 @@ class TestAngleRefinement:
                  {"bbox": [50.0, 60.0, 200.0, 80.0], "confidence": 0.92},
              ]), \
              patch.object(pl, "_run_classical_detector", return_value=[]), \
+             patch.object(pl, "_run_astride_detector", return_value=[]), \
+             patch.object(pl, "_run_yolo_detector", return_value=[]), \
+             patch.object(pl, "_run_yolo_full_detector", return_value=[]), \
+             patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
              patch.object(pp, "refine_angle", return_value=45.0) as mock_refine, \
              patch.object(crossid, "cross_identify", return_value=None), \
              patch.dict(os.environ,

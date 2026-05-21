@@ -160,9 +160,10 @@ into a single pool before post-processing.
 **Relationship to Kim et al. 2017:** ARGUS follows the same boundary-tracing +
 shape_factor filtering pipeline as the reference implementation. The primary
 difference is ensemble integration: in ARGUS, ASTRiDE's output is one of five
-detector streams, its effective confidence is capped at 0.6 (see §5.2), and its
-contribution to the Unified Confidence Score is weighted by its empirical F-0.5
-reliability score.
+detector streams, but it is treated as corroboration-only. ASTRiDE-only streak
+groups are dropped after cross-detector grouping and before WCS/cross-ID. When
+ASTRiDE overlaps a non-ASTRiDE detector, it can add only a small bounded boost to
+the Unified Confidence Score rather than acting as a full weighted vote.
 
 **JPEG limitation:** This detector requires raw integer-valued FITS pixel data.
 On JPEG-compressed SatStreaks exports the sigma threshold and shape_factor criteria
@@ -575,18 +576,18 @@ Beta = 0.5 gives a precision-heavy weight: a detector with high precision
 contributes more than one with high recall at the same F1. This reflects the
 goal of raising precision while the recall cost is acceptable.
 
-**Step 2 — Confidence ceiling:**
+**Step 2 — Confidence ceiling for non-ASTRiDE detectors:**
 
 ```
 eff_i = min(conf_i, ceiling_i)    if ceiling_i is set
 eff_i = conf_i                    otherwise
 ```
 
-The ceiling addresses detectors whose raw confidence magnitude is miscalibrated.
-ASTRiDE routinely reports confidence ≥ 0.95 on false positives; its ceiling is
-set to 0.6. With a ceiling, the formula trusts that the detector *fired* (presence
-of the detection), but not *how confidently* it claims to have detected a streak
-(magnitude of the confidence).
+The ceiling addresses non-ASTRiDE detectors whose raw confidence magnitude is
+miscalibrated. With a ceiling, the formula trusts that the detector *fired*
+(presence of the detection), but not *how confidently* it claims to have detected
+a streak (magnitude of the confidence). ASTRiDE is handled separately because
+ASTRiDE-only streaks are highly unlikely to be real in this pipeline.
 
 **Step 3 — Weighted Noisy-OR combination:**
 
@@ -594,10 +595,10 @@ of the detection), but not *how confidently* it claims to have detected a streak
 P_weighted = 1 − ∏_i (1 − w_i · eff_i)
 ```
 
-Each detector's weighted effective confidence is treated as an independent
-probabilistic vote for the streak existing. Multiple agreeing high-weight detectors
-push the score toward 1. A single low-weight detector with high confidence can
-contribute at most `w_i · ceiling_i`.
+Each non-ASTRiDE detector's weighted effective confidence is treated as an
+independent probabilistic vote for the streak existing. Multiple agreeing
+high-weight detectors push the score toward 1. A single low-weight detector with
+high confidence can contribute at most `w_i · ceiling_i`.
 
 **Step 4 — False-negative adjustment:**
 
@@ -611,7 +612,7 @@ carries information — the streak may not exist. The coefficient 0.2 keeps this
 adjustment mild; even a high-recall detector completely silent (eff = 0) reduces
 the score by at most ~14%.
 
-**Step 5 — Divergence penalty:**
+**Step 5 — Divergence penalty, then ASTRiDE corroboration:**
 
 ```
 divergence      = std(eff_i)                         [over all detectors in group]
@@ -621,6 +622,13 @@ score_final     = min(0.99, score_fn · (1 − 0.15 · divergence))
 When detectors strongly disagree (high variance in effective confidences), the
 ensemble cannot resolve the ambiguity. The coefficient 0.15 is mild — complete
 disagreement (std ≈ 0.5) reduces the score by only 7.5%.
+
+ASTRiDE is excluded from the weighted Noisy-OR, false-negative adjustment, and
+divergence terms so it cannot drag down a corroborated ML/OpenCV detection.
+Instead, if a streak group contains at least one non-ASTRiDE detector, ASTRiDE can
+raise the final score by at most `0.04 × best_astride_conf`, bounded at 0.99 and
+never below the weighted non-ASTRiDE result. For example, YOLO OBB confidence
+0.86 plus ASTRiDE confidence 0.99 yields approximately 0.90.
 
 ### 5.3 Detector Profiles
 
@@ -633,7 +641,7 @@ Current `DETECTOR_PROFILES` from `inference/confidence.py`:
 | `dinov3_vitb` | DINOv3 ViT-B | 0.80 | 0.78 | 0.793 | None | **Estimated** from mAP@0.5=0.74; update post Phase D |
 | `dinov3_vitl` | DINOv3 ViT-L | 0.85 | 0.82 | 0.842 | None | **Estimated** Phase D target |
 | `large` | DINO Swin-L | 0.75 | 0.75 | 0.750 | None | **Estimated** pre-Phase D |
-| `astride` | ASTRiDE | 0.50 | 0.70 | 0.543 | 0.6 | **Estimated**; ceiling set for miscalibrated FP confidence |
+| `astride` | ASTRiDE | 0.50 | 0.70 | 0.543 | 0.6 | **Estimated**; profile retained for diagnostics, but scorer treats ASTRiDE as corroboration-only |
 
 > **Important:** The `dinov3_vitb` profile values (P=0.80, R=0.78) are *estimated*
 > and do not reflect the benchmark results in §7 (P=9.3%, R=89.3%). The benchmark
@@ -814,8 +822,9 @@ ARGUS integrates ASTRiDE as its Phase 0 classical detector, adopting the same
 boundary-tracing + shape_factor filtering algorithm from the reference
 implementation (`github.com/dwkim78/ASTRiDE`). The ARGUS integration adds: SEP
 background subtraction upstream of ASTRiDE's contour detection; ensemble weighting
-via F-0.5 score; and a confidence ceiling (0.6) to suppress ASTRiDE's tendency
-to report high raw confidence on false positives. Kim et al. do not publish a
+via F-0.5 score for non-ASTRiDE detectors; ASTRiDE-only group rejection before
+WCS/cross-ID; and a bounded corroboration boost when ASTRiDE overlaps another
+detector. Kim et al. do not publish a
 precision/recall benchmark on a standardised dataset, so numerical comparison is
 not possible. ASTRiDE's primary value in ARGUS is on raw FITS images where its
 sigma-threshold approach can detect faint streaks that escape ML detectors trained

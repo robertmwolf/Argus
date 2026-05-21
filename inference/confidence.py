@@ -8,6 +8,8 @@ Replaces the plain Noisy-OR formula with an F-beta weighted fusion that:
      detectors whose raw confidence magnitude is miscalibrated, e.g. ASTRiDE)
   3. Applies a false-negative adjustment when high-recall detectors are silent
   4. Applies a divergence penalty when detectors strongly disagree
+  5. Treats ASTRiDE as corroboration-only: it cannot create a standalone
+     streak confidence and can only add a small boost to non-ASTRiDE detections.
 
 The score represents how confident we can be that a detection is a real streak,
 accounting for each detector's known reliability profile.
@@ -140,15 +142,75 @@ _DEFAULT_PROFILE = DetectorProfile(
     notes="default — no benchmark data",
 )
 
+_ASTRIDE_METHODS = {"astride"}
+_ASTRIDE_MAX_CORROBORATION_BOOST = 0.04
+
 
 def _get_profile(method: str) -> DetectorProfile:
     return DETECTOR_PROFILES.get(method, _DEFAULT_PROFILE)
 
 
+def _weighted_noisy_or(sources: list[dict]) -> dict:
+    """Compute the weighted Noisy-OR score for non-ASTRiDE detector outputs."""
+    if not sources:
+        return {"score": 0.0, "components": [], "divergence": 0.0, "fn_penalty": 0.0}
+
+    components: list[dict] = []
+    eff_confs: list[float] = []
+
+    for src in sources:
+        method = src.get("method", "")
+        raw_conf = float(src.get("confidence", 0.0))
+        profile = _get_profile(method)
+        ceiling = profile.confidence_ceiling
+        eff_conf = min(raw_conf, ceiling) if ceiling is not None else raw_conf
+        w = profile.f_beta_weight
+        contribution = w * eff_conf
+        components.append({
+            "method": method,
+            "raw_conf": raw_conf,
+            "eff_conf": round(eff_conf, 4),
+            "weight": round(w, 4),
+            "contribution": round(contribution, 4),
+            "ceiling": ceiling,
+        })
+        eff_confs.append(eff_conf)
+
+    # Weighted Noisy-OR (uses effective confidences)
+    p_weighted = 1.0 - math.prod(1.0 - c["contribution"] for c in components)
+
+    # False-negative adjustment.
+    n = len(sources)
+    fn_sum = sum(
+        _get_profile(s.get("method", "")).recall
+        * max(0.0, 0.5 - eff_confs[i])
+        for i, s in enumerate(sources)
+    )
+    fn_penalty_raw = fn_sum / n
+    p_fn_adjusted = p_weighted * (1.0 - 0.2 * fn_penalty_raw)
+
+    # Divergence factor — penalise strong inter-detector disagreement.
+    if n > 1:
+        divergence = statistics.stdev(eff_confs)
+        divergence_factor = 1.0 - 0.15 * divergence
+    else:
+        divergence = 0.0
+        divergence_factor = 1.0
+
+    score = min(0.99, p_fn_adjusted * divergence_factor)
+
+    return {
+        "score": round(score, 6),
+        "components": components,
+        "divergence": round(divergence, 4),
+        "fn_penalty": round(fn_penalty_raw, 4),
+    }
+
+
 def compute_unified_confidence(sources: list[dict]) -> dict:
     """Compute a calibrated Unified Confidence Score from multiple detector outputs.
 
-    Four-step weighted Noisy-OR formula:
+    Five-step weighted Noisy-OR formula:
 
       1. w_i = F-0.5(precision_i, recall_i)             -- precision-heavy reliability weight
       2. eff_i = min(conf_i, ceiling_i)                  -- optional confidence ceiling
@@ -156,11 +218,13 @@ def compute_unified_confidence(sources: list[dict]) -> dict:
       4. fn_penalty: mild downward adjustment when high-recall detectors are silent
       5. divergence_factor: mild penalty when detectors strongly disagree
 
-    The ceiling (step 2) addresses detectors whose raw confidence magnitude is
-    unreliable — e.g. a classical detector that routinely emits 0.95+ on false
-    positives.  Capping eff_i means we trust that the detector fired, but not
-    how confidently it claims to have done so.  All downstream steps (fn_penalty,
-    divergence) use eff_i so the ceiling is applied consistently.
+    ASTRiDE is special-cased as corroboration-only.  An ASTRiDE-only source list
+    returns score 0.0 because those candidates should be dropped upstream.  When
+    ASTRiDE overlaps another detector, it is excluded from weighted Noisy-OR,
+    false-negative adjustment, and divergence so it cannot drag a score down.
+    Instead, its raw confidence adds at most a small boost to the best
+    non-ASTRiDE raw confidence.  For example, YOLO OBB 0.86 plus ASTRiDE 0.99
+    yields roughly 0.90.
 
     A detector's maximum single-detector contribution equals w_i × ceiling_i
     (or w_i if no ceiling is set).  Multiple agreeing detectors push the score
@@ -186,58 +250,43 @@ def compute_unified_confidence(sources: list[dict]) -> dict:
     if not detector_sources:
         return {"score": 0.0, "components": [], "divergence": 0.0, "fn_penalty": 0.0}
 
-    components: list[dict] = []
-    eff_confs: list[float] = []
+    non_astride_sources = [
+        s for s in detector_sources
+        if str(s.get("method", "")).lower() not in _ASTRIDE_METHODS
+    ]
+    astride_sources = [
+        s for s in detector_sources
+        if str(s.get("method", "")).lower() in _ASTRIDE_METHODS
+    ]
 
-    for src in detector_sources:
-        method = src.get("method", "")
-        raw_conf = float(src.get("confidence", 0.0))
-        profile = _get_profile(method)
-        ceiling = profile.confidence_ceiling
-        eff_conf = min(raw_conf, ceiling) if ceiling is not None else raw_conf
-        w = profile.f_beta_weight
-        contribution = w * eff_conf
-        components.append({
-            "method": method,
-            "raw_conf": raw_conf,
-            "eff_conf": round(eff_conf, 4),
-            "weight": round(w, 4),
-            "contribution": round(contribution, 4),
-            "ceiling": ceiling,
-        })
-        eff_confs.append(eff_conf)
+    if not non_astride_sources:
+        return {"score": 0.0, "components": [], "divergence": 0.0, "fn_penalty": 0.0}
 
-    # Step 3: weighted Noisy-OR (uses effective confidences)
-    p_weighted = 1.0 - math.prod(1.0 - c["contribution"] for c in components)
+    result = _weighted_noisy_or(non_astride_sources)
+    if not astride_sources:
+        return result
 
-    # Step 4: false-negative adjustment
-    # If a high-recall detector has low effective confidence (< 0.5), that silence
-    # is meaningful — the streak may not exist.  Coefficient 0.2 keeps this mild.
-    n = len(detector_sources)
-    fn_sum = sum(
-        _get_profile(s.get("method", "")).recall
-        * max(0.0, 0.5 - eff_confs[i])
-        for i, s in enumerate(detector_sources)
+    best_non_astride_conf = max(float(s.get("confidence", 0.0)) for s in non_astride_sources)
+    best_astride_conf = max(float(s.get("confidence", 0.0)) for s in astride_sources)
+    corroborated_score = min(
+        0.99,
+        best_non_astride_conf + _ASTRIDE_MAX_CORROBORATION_BOOST * best_astride_conf,
     )
-    fn_penalty_raw = fn_sum / n
-    p_fn_adjusted = p_weighted * (1.0 - 0.2 * fn_penalty_raw)
+    result["score"] = round(max(result["score"], corroborated_score), 6)
 
-    # Step 5: divergence factor — penalise strong inter-detector disagreement
-    if n > 1:
-        divergence = statistics.stdev(eff_confs)
-        divergence_factor = 1.0 - 0.15 * divergence
-    else:
-        divergence = 0.0
-        divergence_factor = 1.0
+    for src in astride_sources:
+        raw_conf = float(src.get("confidence", 0.0))
+        result["components"].append({
+            "method": src.get("method", ""),
+            "raw_conf": raw_conf,
+            "eff_conf": round(raw_conf, 4),
+            "weight": 0.0,
+            "contribution": round(_ASTRIDE_MAX_CORROBORATION_BOOST * raw_conf, 4),
+            "ceiling": DETECTOR_PROFILES["astride"].confidence_ceiling,
+            "role": "corroboration_only",
+        })
 
-    score = min(0.99, p_fn_adjusted * divergence_factor)
-
-    return {
-        "score": round(score, 6),
-        "components": components,
-        "divergence": round(divergence, 4),
-        "fn_penalty": round(fn_penalty_raw, 4),
-    }
+    return result
 
 
 if __name__ == "__main__":
@@ -252,10 +301,12 @@ if __name__ == "__main__":
             {"method": "dinov3_vitb", "confidence": 0.90},
             {"method": "yolo", "confidence": 0.15},
         ]),
-        ("ASTRiDE high-conf FP (conf=0.99, ceiling=0.6)", [{"method": "astride", "confidence": 0.99}]),
-        ("ASTRiDE same result at conf=0.75 — ceiling flattens top end", [{"method": "astride", "confidence": 0.75}]),
-        ("ASTRiDE below ceiling (conf=0.45) — no cap applied", [{"method": "astride", "confidence": 0.45}]),
-        ("DINOv3 ViT-B + ASTRiDE FP (0.9 + 0.99 capped to 0.6)", [
+        ("ASTRiDE-only high-conf FP is disregarded", [{"method": "astride", "confidence": 0.99}]),
+        ("YOLO OBB + ASTRiDE corroboration (0.86 + 0.99 ≈ 0.90)", [
+            {"method": "yolo", "confidence": 0.86},
+            {"method": "astride", "confidence": 0.99},
+        ]),
+        ("DINOv3 ViT-B + ASTRiDE corroboration", [
             {"method": "dinov3_vitb", "confidence": 0.90},
             {"method": "astride", "confidence": 0.99},
         ]),
