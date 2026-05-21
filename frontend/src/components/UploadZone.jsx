@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 
-const ACCEPTED = '.fits,.fit,.fts,.png'
-const ACCEPTED_SET = new Set(['.fits', '.fit', '.fts', '.png'])
+const ACCEPTED = '.fits,.fit,.fts,.png,.jpg,.jpeg'
+const ACCEPTED_SET = new Set(['.fits', '.fit', '.fts', '.png', '.jpg', '.jpeg'])
 
 function ext(filename) {
   const i = filename.lastIndexOf('.')
@@ -9,7 +9,7 @@ function ext(filename) {
 }
 
 /**
- * UploadZone — drag-and-drop FITS/PNG upload.
+ * UploadZone — drag-and-drop FITS/PNG/JPEG upload.
  *
  * Props:
  *   onQueued(jobId, filename)  — called once the file is uploaded and queued
@@ -103,7 +103,7 @@ export default function UploadZone({ onQueued, onError, enabledDetectors }) {
           <p className="text-sm text-slate-400">
             Drag &amp; drop, or <span className="text-cyan-400 underline">browse</span>
           </p>
-          <p className="text-xs text-slate-500">FITS · FIT · FTS · PNG · up to 100 MB</p>
+          <p className="text-xs text-slate-500">FITS · FIT · FTS · PNG · JPG · up to 100 MB</p>
         </>
       )}
     </div>

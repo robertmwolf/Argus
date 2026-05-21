@@ -215,7 +215,7 @@ export default function App() {
           <>
             <div className="text-center mb-2">
               <p className="text-slate-400 text-sm">
-                Upload a FITS or PNG telescope image to detect and identify satellite streaks.
+                Upload a FITS, PNG, or JPEG telescope image to detect and identify satellite streaks.
               </p>
             </div>
             <UploadZone onQueued={handleQueued} onError={setError} />

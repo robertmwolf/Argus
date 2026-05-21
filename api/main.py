@@ -1,7 +1,7 @@
 """ARGUS FastAPI application.
 
 Endpoints:
-  POST /api/upload             — accept FITS/PNG, enqueue for processing
+  POST /api/upload             — accept FITS/PNG/JPEG, enqueue for processing
   GET  /api/result/{job_id}   — poll job status and detections
   GET  /api/image/{job_id}    — fetch processed PNG overlay
   GET  /health                 — liveness + readiness probe
@@ -43,7 +43,9 @@ from src.matching.tle_store import get_latest_coverage_time
 logger = logging.getLogger(__name__)
 
 _MAX_UPLOAD_BYTES = 300 * 1024 * 1024  # 100 MB
-_ALLOWED_EXTENSIONS = {".fits", ".fit", ".fts", ".png"}
+_FITS_EXTENSIONS = {".fits", ".fit", ".fts"}
+_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+_ALLOWED_EXTENSIONS = _FITS_EXTENSIONS | _IMAGE_EXTENSIONS
 # FITS magic: first 8 bytes are "SIMPLE  " (with trailing spaces)
 _FITS_MAGIC = b"SIMPLE  "
 
@@ -181,7 +183,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
     try:
         fits_data = await storage.load_upload(job_id, filename)
 
-        if obs_epoch is None and Path(filename).suffix.lower() in {".fits", ".fit", ".fts"}:
+        if obs_epoch is None and Path(filename).suffix.lower() in _FITS_EXTENSIONS:
             header_cards = await asyncio.to_thread(_extract_fits_header, fits_data)
             obs_epoch = _normalise_obs_epoch(_header_card_value(header_cards, "DATE-OBS"))
             if exposure_time is None:
@@ -392,7 +394,7 @@ def _extract_image_shape(data: bytes, filename: str) -> tuple[int, int] | None:
     """Return original image dimensions as ``(width, height)``.
 
     Args:
-        data: Raw uploaded FITS or PNG bytes.
+        data: Raw uploaded FITS, PNG, or JPEG bytes.
         filename: Original upload filename, used to select the parser.
 
     Returns:
@@ -400,7 +402,7 @@ def _extract_image_shape(data: bytes, filename: str) -> tuple[int, int] | None:
     """
     try:
         ext = Path(filename).suffix.lower()
-        if ext in {".fits", ".fit", ".fts"}:
+        if ext in _FITS_EXTENSIONS:
             from astropy.io import fits as afits
 
             with afits.open(io.BytesIO(data)) as hdul:
@@ -412,7 +414,7 @@ def _extract_image_shape(data: bytes, filename: str) -> tuple[int, int] | None:
                         img_data = img_data[0]
                     height, width = img_data.shape[:2]
                     return int(width), int(height)
-        if ext == ".png":
+        if ext in _IMAGE_EXTENSIONS:
             from PIL import Image
 
             with Image.open(io.BytesIO(data)) as img:
@@ -473,6 +475,37 @@ def _render_fits_preview(data: bytes) -> bytes | None:
         return buf.getvalue()
     except Exception:
         logger.exception("FITS preview generation failed")
+        return None
+
+
+def _render_image_preview(data: bytes) -> bytes | None:
+    """Render an uploaded raster image to preview PNG bytes.
+
+    Args:
+        data: Raw PNG or JPEG file bytes.
+
+    Returns:
+        PNG bytes, or None on failure.
+    """
+    try:
+        from PIL import Image
+
+        with Image.open(io.BytesIO(data)) as src:
+            img = src.convert("RGB")
+
+        max_side = 1200
+        if max(img.width, img.height) > max_side:
+            scale = max_side / max(img.width, img.height)
+            img = img.resize(
+                (int(img.width * scale), int(img.height * scale)),
+                Image.LANCZOS,
+            )
+
+        buf = io.BytesIO()
+        img.save(buf, format="PNG", optimize=True)
+        return buf.getvalue()
+    except Exception:
+        logger.exception("Image preview generation failed")
         return None
 
 
@@ -538,7 +571,7 @@ def _render_png(
 
 @app.post("/api/upload", status_code=status.HTTP_200_OK)
 async def upload(request: Request, file: UploadFile) -> dict[str, str]:
-    """Accept a FITS or PNG upload, enqueue it for processing.
+    """Accept a FITS, PNG, or JPEG upload and enqueue it for processing.
 
     Args:
         request: FastAPI Request (for app state access).
@@ -567,7 +600,7 @@ async def upload(request: Request, file: UploadFile) -> dict[str, str]:
         )
 
     # Validate FITS magic bytes when a FITS extension is used
-    if ext in {".fits", ".fit", ".fts"} and not data[:8] == _FITS_MAGIC:
+    if ext in _FITS_EXTENSIONS and not data[:8] == _FITS_MAGIC:
         # Permit synthetic test files that may not have the magic (warn only)
         logger.warning("FITS file %s missing SIMPLE magic bytes", file.filename)
 
@@ -580,7 +613,7 @@ async def upload(request: Request, file: UploadFile) -> dict[str, str]:
     # frontend can display them immediately while the job is queued/processing.
     obs_epoch: str | None = None
     exposure_time: float | None = None
-    if ext in {".fits", ".fit", ".fts"}:
+    if ext in _FITS_EXTENSIONS:
         header_cards = await asyncio.to_thread(_extract_fits_header, data)
         if header_cards is not None:
             await request.app.state.storage.save_fits_header(
@@ -599,8 +632,10 @@ async def upload(request: Request, file: UploadFile) -> dict[str, str]:
         preview_png = await asyncio.to_thread(_render_fits_preview, data)
         if preview_png is not None:
             await request.app.state.storage.save_preview(job_id, preview_png)
-    elif ext == ".png":
-        await request.app.state.storage.save_preview(job_id, data)
+    elif ext in _IMAGE_EXTENSIONS:
+        preview_png = await asyncio.to_thread(_render_image_preview, data)
+        if preview_png is not None:
+            await request.app.state.storage.save_preview(job_id, preview_png)
 
     async with request.app.state.session_factory() as session:
         session.add(
@@ -775,7 +810,7 @@ async def image(job_id: str, request: Request) -> Response:
 async def preview(job_id: str, request: Request) -> Response:
     """Return the raw preview PNG for a job (no detection overlays).
 
-    Available immediately after upload for FITS files and PNGs.
+    Available immediately after upload for FITS files, PNGs, and JPEGs.
 
     Args:
         job_id: UUID of the observation.
