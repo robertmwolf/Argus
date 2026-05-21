@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -24,6 +25,15 @@ _SYNTH_FITS = Path("data/sample/synth_streak_000.fits")
 
 # Minimal valid FITS-like bytes (magic bytes + padding)
 _FITS_MAGIC_BYTES = b"SIMPLE  " + b" " * 2872  # 2880-byte FITS block
+
+
+def _make_jpeg_bytes() -> bytes:
+    """Return a tiny valid JPEG image for upload tests."""
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (8, 6), color=(32, 64, 96)).save(buf, format="JPEG")
+    return buf.getvalue()
 
 
 def _make_app(tmp_path: Path):
@@ -103,6 +113,24 @@ async def test_upload_valid_fits_returns_job_id(client, tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_upload_valid_jpeg_returns_job_id_and_preview(client):
+    """POST /api/upload with a valid JPEG file should return 200 and save a PNG preview."""
+    response = await client.post(
+        "/api/upload",
+        files={"file": ("image.jpg", _make_jpeg_bytes(), "image/jpeg")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "job_id" in body
+    assert body["status"] == "queued"
+
+    preview = await app.state.storage.load_preview(body["job_id"])
+    assert preview is not None
+    assert preview.startswith(b"\x89PNG\r\n\x1a\n")
+
+
+@pytest.mark.asyncio
 async def test_upload_oversized_file_returns_413(client):
     """POST /api/upload with a file exceeding the size limit should return 413."""
     import api.main as api_main
@@ -120,7 +148,7 @@ async def test_upload_invalid_extension_returns_422(client):
     """POST /api/upload with an unsupported extension should return 422."""
     response = await client.post(
         "/api/upload",
-        files={"file": ("image.jpg", b"some_data", "image/jpeg")},
+        files={"file": ("image.gif", b"some_data", "image/gif")},
     )
     assert response.status_code == 422
 
