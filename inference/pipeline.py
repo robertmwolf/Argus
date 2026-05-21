@@ -993,11 +993,23 @@ def _run_all_detectors(
     Returns:
         Dict mapping detector ID → raw detection list.
     """
+    def _timed_detector(det_id: str, fn: Any, *args: Any) -> tuple[list[dict], float]:
+        start = time.perf_counter()
+        detections = fn(*args)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        return detections, elapsed_ms
+
     def _enabled(det_id: str) -> bool:
         return enabled_detectors is None or det_id in enabled_detectors
 
     tasks: dict[Any, str] = {}
     results: dict[str, list[dict]] = {}
+    enabled_label = (
+        "all"
+        if enabled_detectors is None
+        else ",".join(sorted(enabled_detectors)) or "none"
+    )
+    logger.info("Enabled detectors: %s", enabled_label)
 
     n_workers = len(models_with_specs) + 5
     with ThreadPoolExecutor(max_workers=max(1, n_workers)) as pool:
@@ -1007,43 +1019,55 @@ def _run_all_detectors(
                 results[spec["id"]] = []
                 continue
             fn = _run_tta_inference if tta_enabled else _run_inference
-            f = pool.submit(fn, model, array, image_size, confidence_threshold,
-                            model_name=spec["id"])
+            f = pool.submit(
+                _timed_detector,
+                spec["id"],
+                fn,
+                model,
+                array,
+                image_size,
+                confidence_threshold,
+                spec["id"],
+            )
             tasks[f] = spec["id"]
 
         # Secondary detectors
         if _enabled("classical"):
-            tasks[pool.submit(_run_classical_detector, array)] = "classical"
+            tasks[pool.submit(_timed_detector, "classical", _run_classical_detector, array)] = "classical"
         else:
             results["classical"] = []
 
         if _enabled("astride"):
-            tasks[pool.submit(_run_astride_detector, fits_path)] = "astride"
+            tasks[pool.submit(_timed_detector, "astride", _run_astride_detector, fits_path)] = "astride"
         else:
             results["astride"] = []
 
         if _enabled("yolo"):
-            tasks[pool.submit(_run_yolo_detector, array, confidence_threshold)] = "yolo"
+            tasks[pool.submit(_timed_detector, "yolo", _run_yolo_detector, array, confidence_threshold)] = "yolo"
         else:
             results["yolo"] = []
 
         if _enabled("yolo_full"):
-            tasks[pool.submit(_run_yolo_full_detector, array, confidence_threshold)] = "yolo_full"
+            tasks[pool.submit(_timed_detector, "yolo_full", _run_yolo_full_detector, array, confidence_threshold)] = "yolo_full"
         else:
             results["yolo_full"] = []
 
         if _enabled("streakmind_yolo"):
-            tasks[pool.submit(_run_streakmind_yolo_detector, array, confidence_threshold)] = "streakmind_yolo"
+            tasks[pool.submit(_timed_detector, "streakmind_yolo", _run_streakmind_yolo_detector, array, confidence_threshold)] = "streakmind_yolo"
         else:
             results["streakmind_yolo"] = []
 
         for f in as_completed(tasks):
             key = tasks[f]
             try:
-                dets = f.result()
+                dets, elapsed_ms = f.result()
                 for det in dets:
                     det.setdefault("method", key)
                 results[key] = dets
+                logger.info(
+                    "detector_timing detector=%s elapsed_ms=%.1f detections=%d",
+                    key, elapsed_ms, len(dets),
+                )
             except Exception:
                 logger.exception("Detector %s failed", key)
                 results[key] = []
@@ -1131,6 +1155,7 @@ def run_with_array(
     obs_time = fits_data.get("obs_time")
     fits_load_ms = (time.perf_counter() - t0) * 1000
     logger.debug("fits_load_ms=%.1f", fits_load_ms)
+    logger.info("fits_load_ms=%.1f", fits_load_ms)
 
     # --- 2. Build models list then run all detectors in parallel -------------
     t1 = time.perf_counter()
@@ -1202,6 +1227,10 @@ def run_with_array(
     inference_ms = (time.perf_counter() - t1) * 1000
     logger.debug("inference_ms=%.1f  raw_dets=%d  tta=%s  threshold=%.2f",
                  inference_ms, len(raw_dets), tta_enabled, confidence_threshold)
+    logger.info(
+        "inference_ms=%.1f raw_dets=%d tta=%s threshold=%.2f",
+        inference_ms, len(raw_dets), tta_enabled, confidence_threshold,
+    )
 
     # --- 3. Postprocess: angle refinement + OBB + NMS -----------------------
     t2 = time.perf_counter()
@@ -1277,6 +1306,7 @@ def run_with_array(
     detections = _drop_astride_only_groups(detections)
     postprocess_ms = (time.perf_counter() - t2) * 1000
     logger.debug("postprocess_ms=%.1f  after_nms=%d", postprocess_ms, len(detections))
+    logger.info("postprocess_ms=%.1f after_nms=%d", postprocess_ms, len(detections))
 
     # --- 4. WCS: pixel → sky coordinates (both streak endpoints) ------------
     for det in detections:
@@ -1306,6 +1336,14 @@ def run_with_array(
         for det in detections:
             det["identifications"] = []
         crossid_ms = 0.0
+    elif not any(
+        det.get("ra_tip1_deg") is not None or det.get("ra_tip2_deg") is not None
+        for det in detections
+    ):
+        for det in detections:
+            det["identifications"] = []
+        crossid_ms = 0.0
+        logger.info("Skipping cross-ID: no detections have sky coordinates")
     else:
         from inference.crossid import cross_identify
         # Extract observer location from FITS header (may be None)
@@ -1322,6 +1360,7 @@ def run_with_array(
         crossid_ms = (time.perf_counter() - t3) * 1000
 
     logger.debug("crossid_ms=%.1f", crossid_ms)
+    logger.info("crossid_ms=%.1f", crossid_ms)
     logger.debug("db_write_ms=0.0  (Phase 4 — not yet implemented)")
 
     logger.info(

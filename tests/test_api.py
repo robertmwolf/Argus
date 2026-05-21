@@ -84,6 +84,7 @@ async def client(tmp_path):
     app.state.model_loaded = False
     app.state.pipeline_model = None
     app.state.pipeline_device = None
+    app.state.pipeline_model_key = None
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
@@ -226,3 +227,32 @@ async def test_full_upload_poll_result_cycle(client, tmp_path):
     sources = det["sources"]
     assert sources[0]["method"] == "unified"
     assert sources[1]["method"] == "ml"
+
+
+@pytest.mark.asyncio
+async def test_upload_detector_selection_is_passed_to_pipeline(client):
+    """Selected upload detectors should be persisted and used by the worker."""
+    response = await client.post(
+        "/api/upload",
+        files={"file": ("image.jpg", _make_jpeg_bytes(), "image/jpeg")},
+        data={"enabled_detectors": '["streakmind_yolo"]'},
+    )
+    assert response.status_code == 200
+    job_id = response.json()["job_id"]
+
+    from api.main import _process_job, app as _app
+
+    _fake_array = np.zeros((8, 6, 3), dtype=np.uint8)
+    with patch("inference.pipeline.load_model") as mock_load_model, \
+         patch("inference.pipeline.resolve_model_specs", return_value=[
+             {"id": "dinov3_vitb", "size": "dinov3_vitb"},
+         ]), \
+         patch("inference.pipeline.run_with_array", return_value=([], _fake_array)) as mock_run:
+        queued_id = await _app.state.queue.dequeue()
+        await _process_job(queued_id, _app)
+
+    assert queued_id == job_id
+    mock_load_model.assert_not_called()
+    _, kwargs = mock_run.call_args
+    assert kwargs["enabled_detectors"] == {"streakmind_yolo"}
+    assert kwargs["models"] == []

@@ -77,6 +77,43 @@ def _load_sidecar_wcs(path: Path) -> WCS | None:
     return None
 
 
+def _truthy_env(name: str) -> bool:
+    """Return True when an environment variable explicitly enables a feature."""
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _header_float(header: fits.Header, key: str) -> float | None:
+    """Return a float header value, or None when absent/unparseable."""
+    val = header.get(key)
+    if val is None:
+        return None
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return None
+
+
+def _has_plate_solve_hints(header: fits.Header) -> bool:
+    """Return True when ASTAP has enough header hints for a constrained solve."""
+    has_pointing = (
+        _header_float(header, "RA") is not None
+        and _header_float(header, "DEC") is not None
+    )
+    has_fov = (
+        _header_float(header, "FOCALLEN") is not None
+        and _header_float(header, "XPIXSZ") is not None
+        and header.get("NAXIS1") is not None
+    )
+    return has_pointing and has_fov
+
+
+def _should_attempt_plate_solve(header: fits.Header) -> bool:
+    """Return True when missing WCS should fall through to ASTAP plate solving."""
+    if _truthy_env("ARGUS_ENABLE_PLATE_SOLVE"):
+        return True
+    return _has_plate_solve_hints(header)
+
+
 def _normalise_zscore(arr: np.ndarray) -> np.ndarray:
     """Z-score normalisation with 3-sigma clipping → uint8 [0, 255].
 
@@ -238,10 +275,17 @@ class FITSLoader:
                 if wcs is None:
                     wcs = _load_sidecar_wcs(path)
                     wcs_source = "sidecar" if wcs is not None else None
-                if wcs is None:
+                if wcs is None and _should_attempt_plate_solve(header):
                     from inference.plate_solver import solve_from_header as _astap_solve
                     wcs = _astap_solve(path, header)
                     wcs_source = "astap" if wcs is not None else None
+                elif wcs is None:
+                    logger.info(
+                        "Skipping ASTAP plate solve for %s: set "
+                        "ARGUS_ENABLE_PLATE_SOLVE=true or provide RA/DEC and "
+                        "FOCALLEN/XPIXSZ/NAXIS1 header hints",
+                        path.name,
+                    )
 
                 # --- Exposure time (accept common header spellings) ----------
                 exposure_time: float | None = None

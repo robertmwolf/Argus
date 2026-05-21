@@ -74,6 +74,24 @@ async def test_schema_creates_without_error(engine):
 
 
 @pytest.mark.asyncio
+async def test_lookup_indexes_created(engine):
+    """init_db() should create indexes used by result polling."""
+    from sqlalchemy import inspect
+
+    async with engine.connect() as conn:
+        indexes = await conn.run_sync(
+            lambda sync_conn: {
+                (table, index["name"])
+                for table in ("detections", "identifications")
+                for index in inspect(sync_conn).get_indexes(table)
+            }
+        )
+
+    assert ("detections", "idx_detections_observation_id") in indexes
+    assert ("identifications", "idx_identifications_detection_id") in indexes
+
+
+@pytest.mark.asyncio
 async def test_observation_insert_and_query_by_id(session):
     """Inserting an Observation and fetching it by primary key returns the same row."""
     obs_id = _obs_id()

@@ -83,6 +83,7 @@ class Observation(Base):
     exposure_time: Mapped[float | None] = mapped_column(Float)
     obs_epoch: Mapped[str | None] = mapped_column(Text)       # ISO8601
     fits_wcs_json: Mapped[str | None] = mapped_column(Text)   # JSON string
+    enabled_detectors_json: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text, default="queued", nullable=False)
 
 
@@ -212,11 +213,26 @@ async def init_db(engine: AsyncEngine) -> None:
 
 def _migrate_existing_tables(sync_conn) -> None:
     """Apply lightweight schema additions for existing local databases."""
+    obs_columns = {col["name"] for col in inspect(sync_conn).get_columns("observations")}
+    if "enabled_detectors_json" not in obs_columns:
+        sync_conn.exec_driver_sql(
+            "ALTER TABLE observations ADD COLUMN enabled_detectors_json TEXT"
+        )
+
     columns = {col["name"] for col in inspect(sync_conn).get_columns("detections")}
     if "method" not in columns:
         sync_conn.exec_driver_sql("ALTER TABLE detections ADD COLUMN method TEXT DEFAULT 'ml'")
     if "streak_id" not in columns:
         sync_conn.exec_driver_sql("ALTER TABLE detections ADD COLUMN streak_id INTEGER")
+
+    sync_conn.exec_driver_sql(
+        "CREATE INDEX IF NOT EXISTS idx_detections_observation_id "
+        "ON detections(observation_id)"
+    )
+    sync_conn.exec_driver_sql(
+        "CREATE INDEX IF NOT EXISTS idx_identifications_detection_id "
+        "ON identifications(detection_id)"
+    )
 
     tle_columns = {col["name"] for col in inspect(sync_conn).get_columns("tle_catalog")}
     if "source" not in tle_columns:
