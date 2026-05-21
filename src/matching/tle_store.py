@@ -394,7 +394,7 @@ def upsert_tles(records: list[dict[str, Any]], engine=None, *, source: str | Non
 def query_tles_for_window(
     obs_time: datetime,
     epoch_window_days: int = 3,
-    min_mean_motion: float = 11.25,
+    min_mean_motion: float = 0,
     engine=None,
 ) -> list[dict[str, Any]]:
     """Return TLE records whose epoch falls in (obs_time - window, obs_time].
@@ -402,8 +402,8 @@ def query_tles_for_window(
     Args:
         obs_time: UTC observation time.
         epoch_window_days: How many days before obs_time to search.
-        min_mean_motion: Minimum mean_motion in rev/day (11.25 = LEO).
-            Pass 0 to return all orbit classes.
+        min_mean_motion: Minimum mean_motion in rev/day (0 = all orbit classes,
+            11.25 = LEO only).
         engine: Optional sync engine.
 
     Returns:
@@ -474,7 +474,7 @@ def _with_epoch_drift(rows: list[dict[str, Any]], obs_time: datetime) -> list[di
 def query_tles_for_epoch_drift(
     obs_time: datetime,
     epoch_window_days: int = 30,
-    min_mean_motion: float = 11.25,
+    min_mean_motion: float = 0,
     engine=None,
 ) -> list[dict[str, Any]]:
     """Return TLE records within a broad symmetric epoch window.
@@ -486,7 +486,7 @@ def query_tles_for_epoch_drift(
     Args:
         obs_time: UTC observation time.
         epoch_window_days: Days on either side of obs_time to search.
-        min_mean_motion: Minimum mean_motion in rev/day.  Pass 0 for all orbits.
+        min_mean_motion: Minimum mean_motion in rev/day (0 = all orbit classes).
         engine: Optional sync engine.
 
     Returns:
@@ -524,7 +524,7 @@ def query_tles_for_epoch_drift(
 
 
 def query_latest_tles(
-    min_mean_motion: float = 11.25,
+    min_mean_motion: float = 0,
     engine=None,
 ) -> list[dict[str, Any]]:
     """Return the latest locally stored TLE for each NORAD object.
@@ -534,7 +534,7 @@ def query_latest_tles(
     apply a confidence penalty based on epoch drift.
 
     Args:
-        min_mean_motion: Minimum mean_motion in rev/day.  Pass 0 for all orbits.
+        min_mean_motion: Minimum mean_motion in rev/day (0 = all orbit classes).
         engine: Optional sync engine.
 
     Returns:
