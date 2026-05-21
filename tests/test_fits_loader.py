@@ -206,24 +206,22 @@ class TestExtractWcsMetadata:
 # ASTAP plate-solver integration tests
 # ---------------------------------------------------------------------------
 
-def _make_astap_wcs_text(ra: float = 122.6, dec: float = 18.3) -> str:
-    """Build a minimal ASTAP-style .wcs text output for mocking."""
+def _write_astap_wcs_fits(wcs_path: Path, ra: float = 122.6, dec: float = 18.3) -> None:
+    """Write a minimal ASTAP-style .wcs FITS file (Astrometry.net format) for mocking."""
     ps = 0.000332  # ~1.2 arcsec/px in degrees
-    lines = [
-        f"CRVAL1  =  {ra:.6f}",
-        f"CRVAL2  =  {dec:.6f}",
-        "CRPIX1  =  3124.0",
-        "CRPIX2  =  2088.0",
-        f"CD1_1   =  {-ps:.8f}",
-        "CD1_2   =  0.00000000",
-        "CD2_1   =  0.00000000",
-        f"CD2_2   =  {ps:.8f}",
-        "CTYPE1  = 'RA---TAN'",
-        "CTYPE2  = 'DEC--TAN'",
-        "EQUINOX =  2000.0",
-        "END",
-    ]
-    return "\n".join(lines)
+    hdr = fits.Header()
+    hdr["CRVAL1"] = ra
+    hdr["CRVAL2"] = dec
+    hdr["CRPIX1"] = 3124.0
+    hdr["CRPIX2"] = 2088.0
+    hdr["CD1_1"] = -ps
+    hdr["CD1_2"] = 0.0
+    hdr["CD2_1"] = 0.0
+    hdr["CD2_2"] = ps
+    hdr["CTYPE1"] = "RA---TAN"
+    hdr["CTYPE2"] = "DEC--TAN"
+    hdr["EQUINOX"] = 2000.0
+    fits.PrimaryHDU(header=hdr).writeto(str(wcs_path), overwrite=True)
 
 
 def _make_fits_with_pointing(tmp_path: Path) -> Path:
@@ -248,7 +246,7 @@ class TestASTAPPlateSolver:
     """FITSLoader ASTAP plate-solve fallback (subprocess mocked)."""
 
     def _write_mock_wcs(self, fits_path: Path) -> None:
-        fits_path.with_suffix(".wcs").write_text(_make_astap_wcs_text())
+        _write_astap_wcs_fits(fits_path.with_suffix(".wcs"))
 
     def test_wcs_source_is_astap_on_success(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

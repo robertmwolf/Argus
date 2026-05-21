@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_SEARCH_RADIUS_DEG = 5.0
 _HINT_SEARCH_RADIUS_DEG = 2.0   # tighter when RA/DEC hint is available
-_DEFAULT_DOWNSAMPLE = 2
+_DEFAULT_DOWNSAMPLE = 0  # 0 = auto-select; ASTAP picks best factor per image size
 _DEFAULT_TIMEOUT_S = 60
 
 # Common installation paths checked when ASTAP_BIN is not set
@@ -178,6 +178,7 @@ def solve(
         search_radius_deg = _HINT_SEARCH_RADIUS_DEG
     cmd += ["-r", f"{search_radius_deg:.2f}"]
     cmd += ["-z", str(downsample)]
+    cmd += ["-wcs"]  # Astrometry.net FITS format output (vs. default text style)
 
     catalog_dir = os.environ.get("ASTAP_CATALOG_DIR", "").strip()
     if catalog_dir:
@@ -216,7 +217,8 @@ def solve(
         return None
 
     try:
-        header = fits.Header.fromtextfile(str(wcs_path))
+        with fits.open(str(wcs_path)) as hdul:
+            header = hdul[0].header
     except Exception as exc:
         logger.warning(
             "Could not read ASTAP .wcs output %s: %s", wcs_path.name, exc
