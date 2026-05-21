@@ -276,6 +276,30 @@ class TestASTAPPlateSolver:
 
         assert result["wcs"] is None
 
+    def test_astap_skipped_without_header_hints(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("ARGUS_ENABLE_PLATE_SOLVE", raising=False)
+        fits_path = _make_fits(tmp_path, with_wcs=False)
+
+        with patch("inference.plate_solver._find_astap") as mock_find_astap:
+            result = FITSLoader().load(fits_path)
+
+        assert result["wcs"] is None
+        mock_find_astap.assert_not_called()
+
+    def test_astap_explicit_enable_overrides_missing_hints(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("ARGUS_ENABLE_PLATE_SOLVE", "true")
+        fits_path = _make_fits(tmp_path, with_wcs=False)
+
+        with patch("inference.plate_solver._find_astap", return_value=None) as mock_find_astap:
+            result = FITSLoader().load(fits_path)
+
+        assert result["wcs"] is None
+        mock_find_astap.assert_called_once()
+
     def test_wcs_none_when_astap_produces_no_wcs_file(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

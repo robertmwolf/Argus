@@ -18,6 +18,7 @@ import json
 import logging
 import os
 import shutil
+import time
 
 # Load .env before any os.environ reads — safe no-op if python-dotenv not installed
 try:
@@ -31,7 +32,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request, UploadFile, status
+from fastapi import FastAPI, Form, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from sqlalchemy import select, text
@@ -41,6 +42,9 @@ from inference.confidence import compute_unified_confidence
 from src.matching.tle_store import get_latest_coverage_time
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logging.getLogger("inference.pipeline").setLevel(logging.INFO)
+logging.getLogger("inference.fits_loader").setLevel(logging.INFO)
 
 _MAX_UPLOAD_BYTES = 300 * 1024 * 1024  # 100 MB
 _FITS_EXTENSIONS = {".fits", ".fit", ".fts"}
@@ -48,6 +52,32 @@ _IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
 _ALLOWED_EXTENSIONS = _FITS_EXTENSIONS | _IMAGE_EXTENSIONS
 # FITS magic: first 8 bytes are "SIMPLE  " (with trailing spaces)
 _FITS_MAGIC = b"SIMPLE  "
+
+
+def _parse_enabled_detectors(raw: str | None) -> set[str] | None:
+    """Parse the optional upload detector-selection JSON field."""
+    if raw is None or raw == "":
+        return None
+    try:
+        values = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="enabled_detectors must be a JSON array of detector IDs",
+        ) from exc
+    if not isinstance(values, list) or not all(isinstance(v, str) for v in values):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="enabled_detectors must be a JSON array of detector IDs",
+        )
+    return set(values)
+
+
+def _enabled_detectors_json(enabled_detectors: set[str] | None) -> str | None:
+    """Serialize detector selection for storage on the observation row."""
+    if enabled_detectors is None:
+        return None
+    return json.dumps(sorted(enabled_detectors))
 
 
 def _copy_matching_wcs_sidecar(filename: str, fits_path: Path, job_id: str | None = None) -> Path | None:
@@ -115,6 +145,7 @@ async def lifespan(app: FastAPI):
     app.state.model_loaded = False
     app.state.pipeline_model = None
     app.state.pipeline_device = None
+    app.state.pipeline_model_key = None
 
     worker_task = asyncio.create_task(_worker_loop(app))
 
@@ -176,6 +207,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
         filename = obs.filename
         obs_epoch = obs.obs_epoch
         exposure_time = obs.exposure_time
+        enabled_detectors = _parse_enabled_detectors(obs.enabled_detectors_json)
         obs.status = "processing"
         await session.commit()
 
@@ -213,6 +245,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
         # Set FAST_MODE=true in the environment to skip Radon + cross-ID.
         try:
             from inference.pipeline import load_model as pipeline_load_model
+            from inference.pipeline import resolve_model_specs
             from inference.pipeline import run_with_array as pipeline_run
         except ImportError as exc:
             raise RuntimeError(
@@ -221,23 +254,55 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
                 "or use the GPU worker container for Docker deployments."
             ) from exc
 
-        if app.state.pipeline_model is None:
-            model, inference_device = await asyncio.to_thread(pipeline_load_model)
-            app.state.pipeline_model = model
-            app.state.pipeline_device = inference_device
-            app.state.model_loaded = True
+        dino_ids = {spec["id"] for spec in resolve_model_specs()}
+        should_run_dino = (
+            enabled_detectors is None
+            or bool(enabled_detectors & dino_ids)
+        )
+        logger.info(
+            "Processing job %s with enabled_detectors=%s",
+            job_id,
+            "all" if enabled_detectors is None else sorted(enabled_detectors),
+        )
 
+        pipeline_kwargs: dict[str, Any] = {
+            "fits_path": tmp_path,
+            "enabled_detectors": enabled_detectors,
+        }
+        if should_run_dino:
+            model_size = os.environ.get("MODEL_SIZE", "tiny")
+            weights_key = os.environ.get("MODEL_WEIGHTS", "")
+            model_key = f"{model_size}:{weights_key}"
+            if (
+                app.state.pipeline_model is None
+                or getattr(app.state, "pipeline_model_key", None) != model_key
+            ):
+                model, inference_device = await asyncio.to_thread(pipeline_load_model)
+                app.state.pipeline_model = model
+                app.state.pipeline_device = inference_device
+                app.state.pipeline_model_key = model_key
+                app.state.model_loaded = True
+            pipeline_kwargs["model"] = app.state.pipeline_model
+            pipeline_kwargs["inference_device"] = app.state.pipeline_device
+        else:
+            pipeline_kwargs["models"] = []
+
+        pipeline_t0 = time.perf_counter()
         detections, fits_array = await asyncio.to_thread(
             pipeline_run,
-            fits_path=tmp_path,
-            model=app.state.pipeline_model,
-            inference_device=app.state.pipeline_device,
+            **pipeline_kwargs,
         )
-        app.state.model_loaded = True
+        pipeline_ms = (time.perf_counter() - pipeline_t0) * 1000
+        logger.info(
+            "job_timing job_id=%s pipeline_ms=%.1f detections=%d",
+            job_id, pipeline_ms, len(detections),
+        )
+        app.state.model_loaded = app.state.model_loaded or should_run_dino
 
         png_bytes = await asyncio.to_thread(_render_png, tmp_path, detections, fits_array)
         await storage.save_image(job_id, png_bytes)
 
+        db_t0 = time.perf_counter()
         async with session_factory() as session:
             for det_dict in detections:
                 obb = det_dict.get("obb") or {}
@@ -291,6 +356,8 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
             obs = await session.get(Observation, job_id)
             obs.status = "complete"
             await session.commit()
+        db_write_ms = (time.perf_counter() - db_t0) * 1000
+        logger.info("job_timing job_id=%s db_write_ms=%.1f", job_id, db_write_ms)
 
     except Exception as exc:
         logger.exception("Job %s failed: %s", job_id, exc)
@@ -570,7 +637,11 @@ def _render_png(
 
 
 @app.post("/api/upload", status_code=status.HTTP_200_OK)
-async def upload(request: Request, file: UploadFile) -> dict[str, str]:
+async def upload(
+    request: Request,
+    file: UploadFile,
+    enabled_detectors: str | None = Form(None),
+) -> dict[str, str]:
     """Accept a FITS, PNG, or JPEG upload and enqueue it for processing.
 
     Args:
@@ -590,6 +661,7 @@ async def upload(request: Request, file: UploadFile) -> dict[str, str]:
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Unsupported file type {ext!r}. Allowed: {sorted(_ALLOWED_EXTENSIONS)}",
         )
+    enabled_detector_set = _parse_enabled_detectors(enabled_detectors)
 
     data = await file.read()
 
@@ -644,6 +716,7 @@ async def upload(request: Request, file: UploadFile) -> dict[str, str]:
                 filename=filename,
                 obs_epoch=obs_epoch,
                 exposure_time=exposure_time,
+                enabled_detectors_json=_enabled_detectors_json(enabled_detector_set),
                 status="queued",
             )
         )
