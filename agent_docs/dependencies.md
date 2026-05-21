@@ -23,6 +23,94 @@ pre-built wheel availability for the new Python + CUDA combination.
 
 ---
 
+## Dependency Freshness Policy
+
+Last reviewed: 2026-05-21.
+
+Do not upgrade ARGUS to the latest available versions across the board just to
+"future proof" the project.  For this codebase, reproducibility and binary
+compatibility are the future-proofing strategy.  The ML and astronomy stack has
+several native-extension boundaries where a newest-version install can silently
+move the project onto an untested ABI, a missing CUDA wheel, or a different
+training runtime.
+
+### Why not latest everything?
+
+- **Python stays on 3.11 for now.**  Python 3.11 is still supported until
+  October 2027, and the OpenMMLab stack is much easier to install on Python
+  3.11 than on newer interpreters.  Do not move to Python 3.12+ until the full
+  PyTorch + mmcv + mmdet + CUDA wheel matrix has been verified on Mac, Docker,
+  and WSL2/cloud GPU environments.
+- **NumPy stays on 1.26.4 for now.**  `sep` and `astride` are native-extension
+  packages used by the classical astronomy pipeline.  NumPy 2.x changed the C
+  ABI for compiled extension modules, so upgrading NumPy requires explicitly
+  testing every compiled dependency rather than treating it as a routine bump.
+- **MMCV/MMDetection are wheel-matrix constrained.**  `mmcv` must match the
+  active PyTorch and CUDA combination.  If a pre-built wheel is not available,
+  installs fall back to source builds, which are brittle on Linux and not a
+  viable native-Windows path for this project.
+- **Training results must remain comparable.**  ARGUS is research software with
+  recorded DINOv3/YOLO/classical baselines.  Major upgrades to PyTorch,
+  Ultralytics, Albumentations, Astropy, Photutils, or OpenCV can change model
+  behaviour, augmentation semantics, image processing, or numerical outputs.
+  Those upgrades need benchmark notes, not drive-by version changes.
+
+### Current environment notes
+
+The local `satid` environment is useful for development but has accumulated
+organically.  Treat it as an environment snapshot, not as the canonical install
+contract.  On 2026-05-21 the active environment differed from
+`requirements.txt` in several ways:
+
+- `torch==2.11.0` and `torchvision==0.26.0` are installed locally, while the
+  documented Mac/Docker baseline still uses PyTorch 2.2 where appropriate.
+- `albumentations==2.0.8`, `spacetrack==1.4.0`, `ultralytics==8.4.46`, and
+  `pydantic==2.13.3` are installed locally, while `requirements.txt` pins older
+  versions.
+- Both `opencv-python` and `opencv-python-headless` are installed locally, and
+  `cv2` imports from the headless package.  Production/API installs should keep
+  only the headless package unless a GUI dependency is deliberately needed.
+- `pip check` reports `openxlab` dependency conflicts with local `filelock` and
+  `rich` versions.  This appears isolated to OpenMIM/OpenXLab tooling, but it
+  is another reason to create clean training environments before important
+  runs.
+
+Before a paper run, cloud training run, or long benchmark, create a clean
+environment from the documented install path and run the verification and test
+suite.  Do not rely on the current workstation environment merely because it
+imports successfully.
+
+### Upgrade lanes
+
+Use separate upgrade lanes instead of a single "latest" sweep:
+
+- **Low risk:** frontend patch/minor updates within the current major versions
+  of React, Vite, Tailwind, ESLint, and type packages.  On 2026-05-21 the
+  frontend was already modern and only a few patch/minor releases behind; npm
+  reported no production audit vulnerabilities.
+- **Medium risk:** API/runtime patch updates such as FastAPI, SQLAlchemy,
+  Uvicorn, requests, Pillow, and boto3.  These still require API tests and an
+  upload/inference smoke test.
+- **High risk:** Python, NumPy, PyTorch, torchvision, mmcv, mmdet, Ultralytics,
+  Albumentations, Astropy, Photutils, OpenCV, `sep`, and `astride`.  Upgrade
+  these only in a dedicated branch with environment notes, import checks, unit
+  tests, and benchmark comparison.
+
+Minimum acceptance for a high-risk dependency upgrade:
+
+1. Build a fresh environment using the target platform install path.
+2. Run `python -m pip check`.
+3. Verify imports for `torch`, `torchvision`, `mmcv.ops`, `mmdet`, `numpy`,
+   `cv2`, `sep`, `astride`, `astropy`, `fastapi`, and `ultralytics`.
+4. Run the offline pytest suite.
+5. Run at least one API/inference smoke test.
+6. Re-run the relevant evaluation benchmark if preprocessing, training,
+   detection, or numerical libraries changed.
+7. Record the old and new versions plus any metric movement in the PR or
+   experiment notes.
+
+---
+
 ## What is OpenMIM?
 
 `openmim` (installed via `pip install openmim`) is the official package manager
