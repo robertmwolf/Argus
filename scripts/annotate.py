@@ -3,8 +3,9 @@
 Accepts FITS, PNG, or JPEG image directories. Outputs COCO JSON compatible
 with merge_annotations.py.
 
-Replaces annotate_streaks.py (DarkMatters) and annotate_frigate_streaks.py
-(Frigate). For BrentImages .strk output use annotate_brentimages_streaks.py.
+Replaces the old dataset-specific streak labelers:
+annotate_streaks.py, annotate_frigate_streaks.py, and
+annotate_brentimages_streaks.py.
 
 Usage:
     # DarkMatters JPEG positives (loads image list from curated_streak CSV):
@@ -22,6 +23,11 @@ Usage:
     python scripts/annotate.py \\
         --image-dir /path/to/fits \\
         --output data/annotations/my_dataset.json \\
+        --hough-preset brentimages
+
+    # BrentImages FITS night with .strk write-back:
+    python scripts/annotate.py \\
+        --night-dir /Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood \\
         --hough-preset brentimages
 
     # Pre-compute Hough suggestion cache (run once before annotating):
@@ -52,7 +58,7 @@ import sys
 import tkinter as tk
 from datetime import datetime, timezone
 from tkinter import ttk
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 from PIL import Image, ImageTk
@@ -70,6 +76,7 @@ SUGGESTION_COLOR = "#ffaa33"
 BLANK_COLOR = "#ff4444"
 OBB_LINE_WIDTH = 2
 DEFAULT_WIDTH = 10
+DEFAULT_STRK_WIDTH = 16.0
 
 # ---- geometry ----------------------------------------------------------------
 
@@ -374,6 +381,280 @@ def save_annotations(coco: dict[str, Any], output_path: pathlib.Path) -> None:
     tmp.replace(output_path)
 
 
+# ---- BrentImages .strk support ----------------------------------------------
+
+def load_strk_lines(strk_path: pathlib.Path) -> list[str]:
+    """Read a BrentImages .strk file as raw lines."""
+    return strk_path.read_text(encoding="utf-8").splitlines()
+
+
+def write_strk_lines(strk_path: pathlib.Path, lines: list[str]) -> None:
+    """Atomically write updated BrentImages .strk lines."""
+    tmp = strk_path.with_suffix(".strk.tmp")
+    tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    tmp.replace(strk_path)
+
+
+def update_strk_obs(
+    lines: list[str],
+    filename: str,
+    x1: float,
+    y1: float,
+    x2: float,
+    y2: float,
+    reject: str,
+    jd: float = 0.0,
+    exposure: float = 0.5,
+    gain: float = 0.0,
+) -> list[str]:
+    """Update one OBS row in a BrentImages .strk file.
+
+    Args:
+        lines: Existing .strk file lines.
+        filename: FITS basename to update.
+        x1: Streak start x pixel.
+        y1: Streak start y pixel.
+        x2: Streak end x pixel.
+        y2: Streak end y pixel.
+        reject: "0" for streak, "-1" for no streak, "2" for pending.
+        jd: Julian date midpoint.
+        exposure: Exposure time in seconds.
+        gain: Camera gain.
+
+    Returns:
+        Updated .strk file lines.
+    """
+    dx, dy = x2 - x1, y2 - y1
+    length = round(math.hypot(dx, dy), 1)
+    cx = round((x1 + x2) / 2, 1)
+    cy = round((y1 + y2) / 2, 1)
+    elongation = round(math.degrees(math.atan2(abs(dy), abs(dx))), 1) if length > 0 else 0.0
+
+    new_fields = [
+        filename,
+        "",
+        f"{jd:.10f}",
+        f"{x1:.0f}", f"{y1:.0f}",
+        f"{x2:.0f}", f"{y2:.0f}",
+        f"{cx:.1f}", f"{cy:.1f}",
+        "0", "0",
+        f"{elongation:.1f}",
+        f"{length:.1f}",
+        reject,
+        "0", "0",
+        "0", "0",
+        "0", "0",
+        "0", "0",
+        "0",
+        f"{exposure:.4f}",
+        f"{gain:.1f}",
+        "Manual annotation" if reject == "0" else (
+            "Confirmed no streak" if reject == "-1" else "Pending manual annotation"
+        ),
+    ]
+
+    result: list[str] = []
+    in_obs = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped == "[OBS]":
+            in_obs = True
+            result.append(line)
+            continue
+        if in_obs and stripped and not stripped.startswith("["):
+            parts = stripped.split("\t")
+            if parts[0].strip() == filename:
+                orig_date = parts[1].strip() if len(parts) > 1 else ""
+                if orig_date:
+                    new_fields[1] = orig_date
+                    if jd == 0.0:
+                        try:
+                            from astropy.time import Time
+                            new_fields[2] = f"{Time(orig_date, format='isot', scale='utc').jd:.10f}"
+                        except Exception:
+                            pass
+                result.append("\t".join(new_fields))
+                continue
+        result.append(line)
+    return result
+
+
+def load_night_frames(night_dir: pathlib.Path) -> list[dict]:
+    """Load BrentImages FITS frames from a night directory of .strk stubs."""
+    strk_files = sorted(night_dir.glob("*.strk"))
+    if not strk_files:
+        raise FileNotFoundError(
+            f"No .strk files found in {night_dir} - run generate_brentimages_strk.py first"
+        )
+
+    passes: list[list[dict]] = []
+    for strk_path in strk_files:
+        lines = load_strk_lines(strk_path)
+        norad_id: int | None = None
+        sat_name = ""
+        in_obs = False
+        obs_entries: list[dict] = []
+
+        for line in lines:
+            stripped = line.strip()
+            if stripped == "[OBS]":
+                in_obs = False
+                continue
+            if stripped.startswith("Image\t"):
+                in_obs = True
+                continue
+            if stripped.startswith("[") or not stripped:
+                in_obs = False
+                continue
+
+            parts = stripped.split("\t")
+            if (
+                not in_obs
+                and len(parts) >= 16
+                and parts[0].strip().isdigit()
+                and not parts[0].strip().startswith("Image")
+            ):
+                norad_id = int(parts[0].strip())
+                sat_name = parts[15].strip()
+                continue
+
+            if in_obs and len(parts) >= 14:
+                fname = parts[0].strip()
+                fits_path = night_dir / fname
+                if not fits_path.exists():
+                    continue
+                try:
+                    obs_entries.append({
+                        "path": fits_path,
+                        "fits_path": fits_path,
+                        "filename": fname,
+                        "norad_id": norad_id,
+                        "sat_name": sat_name,
+                        "strk_path": strk_path,
+                        "date_obs": parts[1].strip(),
+                        "jd": float(parts[2]) if parts[2].strip() else 0.0,
+                        "x_start": float(parts[3]) if parts[3].strip() else 0.0,
+                        "y_start": float(parts[4]) if parts[4].strip() else 0.0,
+                        "x_end": float(parts[5]) if parts[5].strip() else 0.0,
+                        "y_end": float(parts[6]) if parts[6].strip() else 0.0,
+                        "reject": parts[13].strip(),
+                        "exposure": float(parts[23].strip()) if len(parts) > 23 and parts[23].strip() else 0.5,
+                        "gain": float(parts[24].strip()) if len(parts) > 24 and parts[24].strip() else 0.0,
+                    })
+                except (ValueError, IndexError):
+                    continue
+
+        if obs_entries and norad_id is not None:
+            obs_entries.sort(key=lambda e: e["date_obs"])
+            passes.append(obs_entries)
+
+    frames: list[dict] = []
+    for pass_idx, pass_frames in enumerate(passes):
+        for frame_idx, frame in enumerate(pass_frames):
+            frame["pass_idx"] = pass_idx
+            frame["frame_in_pass"] = frame_idx
+            frame["total_in_pass"] = len(pass_frames)
+            frame["num_passes"] = len(passes)
+            frame["score"] = 0.0
+            frames.append(frame)
+    return frames
+
+
+def seed_coco_from_strk(coco: dict[str, Any], frames: list[dict], source_name: str) -> None:
+    """Populate COCO state from existing BrentImages .strk decisions."""
+    existing = {img["file_name"] for img in coco.get("images", [])}
+    max_img_id = max((img["id"] for img in coco.get("images", [])), default=0)
+    max_ann_id = max((ann["id"] for ann in coco.get("annotations", [])), default=0)
+
+    for frame in frames:
+        fname = str(frame["path"])
+        if fname in existing:
+            continue
+        max_img_id += 1
+        coco["images"].append({
+            "id": max_img_id,
+            "file_name": fname,
+            "width": 0,
+            "height": 0,
+            "date_captured": frame.get("date_obs", ""),
+            "source": source_name,
+            "norad_id": frame.get("norad_id"),
+            "sat_name": frame.get("sat_name", ""),
+            "strk_path": str(frame.get("strk_path", "")),
+            "frame_in_pass": frame.get("frame_in_pass", 0),
+            "pass_idx": frame.get("pass_idx", 0),
+            "blank": frame.get("reject") == "-1",
+        })
+        existing.add(fname)
+
+        if frame.get("reject") == "0" and frame.get("x_end", 0.0) != 0.0:
+            obb = endpoints_to_obb(
+                frame["x_start"],
+                frame["y_start"],
+                frame["x_end"],
+                frame["y_end"],
+                DEFAULT_STRK_WIDTH,
+            )
+            max_ann_id += 1
+            coco["annotations"].append({
+                "id": max_ann_id,
+                "image_id": max_img_id,
+                "category_id": 1,
+                "bbox": obb_to_bbox(obb),
+                "area": round(obb["w"] * obb["h"], 1),
+                "iscrowd": 0,
+                "segmentation": [[coord for corner in obb_corners(**obb) for coord in corner]],
+                "obb": {k: round(v, 2) for k, v in obb.items()},
+                "attributes": {"source": source_name, "strk_path": str(frame["strk_path"])},
+            })
+
+
+def write_coco_to_strk(coco: dict[str, Any], frames: list[dict]) -> None:
+    """Write unified annotator COCO decisions back into BrentImages .strk files."""
+    image_by_file = {img["file_name"]: img for img in coco.get("images", [])}
+    anns_by_image: dict[int, list[dict]] = {}
+    for ann in coco.get("annotations", []):
+        anns_by_image.setdefault(ann["image_id"], []).append(ann)
+
+    line_cache: dict[pathlib.Path, list[str]] = {}
+    for frame in frames:
+        img = image_by_file.get(str(frame["path"]))
+        if img is None:
+            continue
+
+        strk_path = frame["strk_path"]
+        lines = line_cache.setdefault(strk_path, load_strk_lines(strk_path))
+        anns = anns_by_image.get(img["id"], [])
+
+        if img.get("blank"):
+            line_cache[strk_path] = update_strk_obs(
+                lines, frame["filename"], 0, 0, 0, 0, "-1",
+                frame["jd"], frame["exposure"], frame["gain"],
+            )
+            continue
+        if not anns:
+            line_cache[strk_path] = update_strk_obs(
+                lines, frame["filename"], 0, 0, 0, 0, "2",
+                frame["jd"], frame["exposure"], frame["gain"],
+            )
+            continue
+
+        obb = anns[0]["obb"]
+        angle = math.radians(obb["angle_deg"])
+        half_width = obb["w"] / 2
+        x1 = round(obb["cx"] - math.cos(angle) * half_width, 1)
+        y1 = round(obb["cy"] - math.sin(angle) * half_width, 1)
+        x2 = round(obb["cx"] + math.cos(angle) * half_width, 1)
+        y2 = round(obb["cy"] + math.sin(angle) * half_width, 1)
+        line_cache[strk_path] = update_strk_obs(
+            lines, frame["filename"], x1, y1, x2, y2, "0",
+            frame["jd"], frame["exposure"], frame["gain"],
+        )
+
+    for strk_path, lines in line_cache.items():
+        write_strk_lines(strk_path, lines)
+
+
 # ---- main application --------------------------------------------------------
 
 class AnnotationApp(tk.Tk):
@@ -385,6 +666,7 @@ class AnnotationApp(tk.Tk):
         suggestions: dict[str, list[dict]] | None = None,
         source_name: str = "manual",
         demo_dir: pathlib.Path | None = None,
+        save_hook: Callable[[dict[str, Any]], None] | None = None,
     ) -> None:
         super().__init__()
         self.title("ARGUS Streak Annotator")
@@ -397,6 +679,7 @@ class AnnotationApp(tk.Tk):
         self.suggestions = suggestions or {}
         self.source_name = source_name
         self.demo_dir = demo_dir or pathlib.Path.home() / "Desktop" / "Demo Images"
+        self.save_hook = save_hook
         self.idx = 0
 
         # zoom / pan
@@ -608,6 +891,9 @@ class AnnotationApp(tk.Tk):
         fname = str(entry["path"])
         for img in self.coco["images"]:
             if img["file_name"] == fname:
+                if self._pil_img is not None and (not img.get("width") or not img.get("height")):
+                    img["width"] = self._pil_img.width
+                    img["height"] = self._pil_img.height
                 return img["id"]
         new_id = max((i["id"] for i in self.coco["images"]), default=0) + 1
         self.coco["images"].append({
@@ -952,6 +1238,8 @@ class AnnotationApp(tk.Tk):
 
     def _autosave(self) -> None:
         save_annotations(self.coco, self.output_path)
+        if self.save_hook is not None:
+            self.save_hook(self.coco)
 
     def _save(self) -> None:
         self._autosave()
@@ -974,9 +1262,14 @@ def main() -> None:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument(
-        "--image-dir", type=pathlib.Path, required=True,
+        "--image-dir", type=pathlib.Path, default=None,
         help="Directory containing images (FITS, PNG, or JPEG). "
              "For DarkMatters, pass the exports/ directory — images are loaded from curated_streak CSV.",
+    )
+    parser.add_argument(
+        "--night-dir", type=pathlib.Path, default=None,
+        help="BrentImages night directory containing FITS files and .strk stubs. "
+             "When set, annotations are also written back to .strk files.",
     )
     parser.add_argument(
         "--output", type=pathlib.Path,
@@ -1024,28 +1317,52 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    suggestions_path = args.output.parent / (args.output.stem + ".suggestions.json")
+    if bool(args.image_dir) == bool(args.night_dir):
+        parser.error("Provide exactly one of --image-dir or --night-dir")
 
-    # Detect DarkMatters CSV layout vs plain directory
-    log.info("Loading image list from %s", args.image_dir)
-    csv_files = list(args.image_dir.glob("curated_streak_v*.csv"))
-    if csv_files:
+    strk_frames: list[dict] = []
+    strk_save_hook: Callable[[dict[str, Any]], None] | None = None
+
+    if args.night_dir:
+        if args.output == pathlib.Path("data/annotations/streak_annotations.json"):
+            args.output = args.night_dir / "brentimages_annotations.json"
+        suggestions_path = args.night_dir / "brentimages_suggestions.json"
+        log.info("Loading BrentImages night from %s", args.night_dir)
         try:
-            images = load_from_csv(args.image_dir)
-            log.info("Loaded %d positive images from curated_streak CSV", len(images))
+            strk_frames = load_night_frames(args.night_dir)
         except FileNotFoundError as exc:
             log.error("%s", exc)
             sys.exit(1)
+        images = strk_frames
+        log.info(
+            "Loaded %d frames across %d passes",
+            len(images),
+            max((f["pass_idx"] for f in images), default=-1) + 1,
+        )
+        strk_save_hook = lambda coco: write_coco_to_strk(coco, strk_frames)
     else:
-        try:
-            images = load_from_dir(args.image_dir, args.priority_list, args.min_score)
-            log.info("Loaded %d images from directory", len(images))
-        except FileNotFoundError as exc:
-            log.error("%s", exc)
-            sys.exit(1)
+        suggestions_path = args.output.parent / (args.output.stem + ".suggestions.json")
+
+        # Detect DarkMatters CSV layout vs plain directory
+        log.info("Loading image list from %s", args.image_dir)
+        csv_files = list(args.image_dir.glob("curated_streak_v*.csv"))
+        if csv_files:
+            try:
+                images = load_from_csv(args.image_dir)
+                log.info("Loaded %d positive images from curated_streak CSV", len(images))
+            except FileNotFoundError as exc:
+                log.error("%s", exc)
+                sys.exit(1)
+        else:
+            try:
+                images = load_from_dir(args.image_dir, args.priority_list, args.min_score)
+                log.info("Loaded %d images from directory", len(images))
+            except FileNotFoundError as exc:
+                log.error("%s", exc)
+                sys.exit(1)
 
     if not images:
-        log.error("No images found in %s", args.image_dir)
+        log.error("No images found")
         sys.exit(1)
 
     if args.precompute:
@@ -1066,8 +1383,12 @@ def main() -> None:
     else:
         log.info("No suggestion cache — run with --precompute for auto-hints")
 
-    source_name = args.source_name or args.image_dir.name
+    source_name = args.source_name or (
+        args.night_dir.name if args.night_dir else args.image_dir.name
+    )
     coco = load_existing_annotations(args.output, source_name)
+    if strk_frames:
+        seed_coco_from_strk(coco, strk_frames, source_name)
 
     annotated_ids = {a["image_id"] for a in coco["annotations"]}
     blank_ids = {img["id"] for img in coco["images"] if img.get("blank")}
@@ -1093,11 +1414,13 @@ def main() -> None:
 
     app = AnnotationApp(images, coco, args.output,
                         suggestions=suggestions, source_name=source_name,
-                        demo_dir=args.demo_dir)
+                        demo_dir=args.demo_dir, save_hook=strk_save_hook)
     app._load_image(start_idx)
     app.mainloop()
 
     save_annotations(coco, args.output)
+    if strk_save_hook is not None:
+        strk_save_hook(coco)
     n_ann = len(coco["annotations"])
     n_img = len({a["image_id"] for a in coco["annotations"]})
     n_blank = sum(1 for img in coco["images"] if img.get("blank"))

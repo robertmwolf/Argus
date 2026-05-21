@@ -14,7 +14,7 @@ Writes:
 SatStreaks images reference paths like ``Images/jXXXXXX_flc.fits.jpg``.
 GTImages images are written with paths relative to ``data/``, for example
 ``GTImages/Streak_NNNN_HHMMSS.fits``.
-Frigate images use absolute paths (written by annotate_frigate_streaks.py).
+Frigate images use absolute paths (written by scripts/annotate.py).
 
 Image ID space:
   SatStreaks images: IDs start at 1
@@ -394,7 +394,7 @@ def merge(
     if include_frigate and not satstreaks_only and not gtimages_only:
         if not FRIGATE_JSON.exists():
             logger.warning(
-                "Frigate JSON not found at %s — run scripts/annotate_frigate_streaks.py first",
+                "Frigate JSON not found at %s — run scripts/annotate.py first",
                 FRIGATE_JSON,
             )
         else:
