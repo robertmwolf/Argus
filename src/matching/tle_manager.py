@@ -68,15 +68,15 @@ class TLECatalogManager:
         self,
         obs_time: datetime,
         epoch_window_days: int = 3,
-        min_mean_motion: float = 11.25,
+        min_mean_motion: float = 0,
     ) -> list[dict[str, Any]]:
         """Return TLE records for *obs_time*, refreshing CelesTrak if needed.
 
         Args:
             obs_time: UTC observation time from the FITS header.
             epoch_window_days: How many days before obs_time to search.
-            min_mean_motion: Minimum mean_motion in rev/day (11.25 = LEO only).
-                Pass 0 to include all orbit classes.
+            min_mean_motion: Minimum mean_motion in rev/day (0 = all orbit
+                classes including GEO; 11.25 = LEO only).
 
         Returns:
             List of TLE row dicts with keys: norad_id, epoch, object_name,
@@ -150,7 +150,7 @@ class TLECatalogManager:
     def get_current_fallback_tles(
         self,
         obs_time: datetime,
-        min_mean_motion: float = 11.25,
+        min_mean_motion: float = 0,
     ) -> list[dict[str, Any]]:
         """Return latest current TLEs, refreshing if the catalog is stale.
 

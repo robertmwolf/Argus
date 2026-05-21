@@ -81,6 +81,7 @@ def _catalog_entry(raw: Any) -> dict[str, Any]:
 def _fetch_tle_catalog(
     obs_time: datetime,
     epoch_window_days: int,
+    min_mean_motion: float = 0,
 ) -> list[dict[str, Any]]:
     """Return TLEs for the observation window via the two-track TLE manager.
 
@@ -95,6 +96,8 @@ def _fetch_tle_catalog(
     Args:
         obs_time: UTC observation time.
         epoch_window_days: Days before obs_time to search.
+        min_mean_motion: Minimum mean_motion in rev/day (0 = all orbit classes
+            including GEO; 11.25 = LEO only).
 
     Returns:
         List of catalog dicts ready for SGP4 propagation and scoring.
@@ -102,7 +105,7 @@ def _fetch_tle_catalog(
     if obs_time.tzinfo is None:
         obs_time = obs_time.replace(tzinfo=timezone.utc)
 
-    db_rows = _tle_manager.get_tles(obs_time, epoch_window_days)
+    db_rows = _tle_manager.get_tles(obs_time, epoch_window_days, min_mean_motion)
     if not db_rows:
         age_hours = (datetime.now(tz=timezone.utc) - obs_time).total_seconds() / 3600
         logger.warning(
@@ -457,6 +460,7 @@ def cross_identify(
     observer_alt_m: float,
     epoch_window_days: int = 3,
     exposure_time: float | None = None,
+    min_mean_motion: float = 0,
     _catalog_override: list[dict[str, Any]] | None = None,
     _allow_current_retry: bool = True,
 ) -> list[dict]:
@@ -491,6 +495,9 @@ def cross_identify(
         exposure_time: Exposure duration in seconds.  When provided, scoring
             uses the true mid-exposure time and direction disambiguation is
             performed.
+        min_mean_motion: Minimum mean_motion in rev/day (0 = all orbit classes
+            including GEO/MEO; 11.25 = LEO only).  Default 0 so GEO targets
+            are not silently excluded.
 
     Returns:
         The mutated *detections* list (same objects, with 'identifications'
@@ -513,7 +520,7 @@ def cross_identify(
         catalog = _catalog_override
     else:
         try:
-            catalog = _fetch_tle_catalog(obs_time, epoch_window_days)
+            catalog = _fetch_tle_catalog(obs_time, epoch_window_days, min_mean_motion)
         except Exception:
             logger.warning(
                 "TLE catalog fetch failed — skipping cross-identification",
@@ -718,6 +725,7 @@ def cross_identify(
                 observer_alt_m,
                 epoch_window_days=epoch_window_days,
                 exposure_time=exposure_time,
+                min_mean_motion=min_mean_motion,
                 _catalog_override=current_catalog,
                 _allow_current_retry=False,
             )

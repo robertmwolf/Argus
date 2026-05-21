@@ -217,7 +217,7 @@ class TestCrossIdentifyKnownTle:
         dets = [{"ra_tip1_deg": None, "dec_tip1_deg": None, "ra_tip2_deg": None, "dec_tip2_deg": None}]
         with patch("inference.crossid._fetch_tle_catalog", return_value=[]) as mock_fetch:
             cross_identify(dets, _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT, epoch_window_days=7)
-        mock_fetch.assert_called_once_with(_OBS_TIME, 7)
+        mock_fetch.assert_called_once_with(_OBS_TIME, 7, 0)
 
     def test_broad_epoch_without_viable_match_tries_current_fallback(self):
         """A populated broad catalog with only poor geometry still retries current data."""
