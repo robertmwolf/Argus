@@ -424,39 +424,87 @@ data = cache.get(cache_key)  # Returns None if expired or missing
 
 ---
 
-## Optional: astrometry.net (for plate solving without WCS headers)
+## Optional: ASTAP plate solver (for WCS-less FITS images)
 
-MILAN FITS files from Stellina usually have valid WCS headers.
-Frigate files may not. If WCS is missing, you need astrometry.net.
+ARGUS uses ASTAP to derive WCS when a FITS image lacks native WCS keywords
+and no `.wcs` sidecar is present.  ASTAP is invoked via subprocess from
+`inference/plate_solver.py`; the solve is skipped gracefully when ASTAP is
+not installed.
 
-**Install astrometry.net (local):**
+ASTAP is fast (sub-second for constrained solves) and works offline.  When
+`RA`/`DEC` header keywords are present (as in Brent's capture software),
+ARGUS passes them as a pointing hint with a 2° search radius instead of the
+default 5° blind radius.
+
+### Installation
+
+**macOS:**
 ```bash
-# macOS
-brew install astrometry-net
-
-# Ubuntu/Debian
-sudo apt-get install astrometry.net
-
-# Download index files (needed for solving, choose based on your FOV):
-# For MILAN (~1° FOV): download index-4107 through index-4119
-wget -P /usr/share/astrometry/ \
-  http://data.astrometry.net/4100/index-4107.fits
+# Download from https://www.hnsky.org/astap.htm
+# Install the .dmg — binary lands at:
+#   /Applications/ASTAP.app/Contents/MacOS/astap
 ```
 
-**Python wrapper:**
-```python
-import subprocess
+**Linux:**
+```bash
+# Download the .deb or .rpm from https://www.hnsky.org/astap.htm
+sudo dpkg -i astap_amd64.deb   # or rpm -i astap_amd64.rpm
+# Binary lands at /usr/local/bin/astap
+```
 
-def solve_field(fits_path: str, timeout_sec: int = 60) -> bool:
-    """Run astrometry.net plate solver. Returns True if solved."""
-    result = subprocess.run([
-        'solve-field', fits_path,
-        '--no-plots', '--overwrite',
-        '--downsample', '2',
-        '--scale-units', 'arcsecperpix',
-        '--scale-low', '1.0', '--scale-high', '2.0',
-    ], capture_output=True, timeout=timeout_sec)
-    return result.returncode == 0
+### Star catalog (one-time download)
+
+ASTAP requires a star catalog.  The H18 catalog covers all fields; G18 is
+smaller and sufficient for most work.  Download from the ASTAP site or
+directly:
+
+```bash
+# H18 — full sky, ~2.5 GB, recommended
+# G18 — smaller subset, ~500 MB, adequate for typical telescope FOVs
+# Both available at https://www.hnsky.org/astap.htm → "Star databases"
+# Place the downloaded files in the default catalog location:
+#   macOS:  /Applications/ASTAP.app/Contents/MacOS/
+#   Linux:  /usr/local/lib/astap/  (or alongside the binary)
+```
+
+If the catalog is in a non-default location, set `ASTAP_CATALOG_DIR`:
+```bash
+export ASTAP_CATALOG_DIR=/path/to/catalog
+```
+
+### Configuration
+
+```bash
+# Required only if ASTAP is not in a standard location:
+export ASTAP_BIN=/Applications/ASTAP.app/Contents/MacOS/astap   # macOS
+export ASTAP_BIN=/usr/local/bin/astap                            # Linux
+
+# Optional tuning:
+export ASTAP_CATALOG_DIR=/path/to/catalog   # non-default catalog location
+export ASTAP_TIMEOUT=60                      # subprocess timeout (seconds)
+export ASTAP_DOWNSAMPLE=2                    # 1=full res, 2=half (default)
+```
+
+### Verification
+
+```bash
+# Quick smoke test — should print the solved centre coordinates:
+python -m inference.plate_solver data/uploads/<job_id>/<filename>.fits
+```
+
+### Alternative: astrometry.net
+
+astrometry.net (`solve-field`) can also plate-solve FITS files but is not
+integrated into the ARGUS pipeline.  Use it manually if ASTAP is unavailable:
+
+```bash
+brew install astrometry-net    # macOS
+# or: sudo apt-get install astrometry.net
+
+solve-field image.fits --no-plots --overwrite --downsample 2 \
+    --scale-units arcsecperpix --scale-low 1.0 --scale-high 2.0
+# Writes image.new (solved FITS) and image.wcs — copy the .wcs beside the
+# original FITS and ARGUS will pick it up automatically on next upload.
 ```
 
 ---
