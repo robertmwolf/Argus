@@ -654,6 +654,37 @@ def _run_astride_detector(
     return detections
 
 
+def _drop_astride_only_groups(detections: list[dict]) -> list[dict]:
+    """Drop grouped streaks that were detected only by ASTRiDE.
+
+    ASTRiDE is treated as corroboration-only in ARGUS.  Once detections have
+    been grouped across methods, this is the earliest point where the pipeline
+    can know whether an ASTRiDE candidate has independent support.  Dropping
+    here prevents ASTRiDE-only candidates from receiving WCS coordinates,
+    quality flags, cross-identifications, or database rows.
+
+    Args:
+        detections: Grouped detections with ``streak_id`` and ``method`` keys.
+
+    Returns:
+        Detections whose streak group contains at least one non-ASTRiDE method.
+    """
+    methods_by_group: dict[Any, set[str]] = {}
+    for det in detections:
+        group_key = det.get("streak_id")
+        method = str(det.get("method", "")).lower()
+        methods_by_group.setdefault(group_key, set()).add(method)
+
+    filtered = [
+        det for det in detections
+        if methods_by_group.get(det.get("streak_id"), set()) != {"astride"}
+    ]
+    dropped = len(detections) - len(filtered)
+    if dropped:
+        logger.debug("Dropped %d ASTRiDE-only detection(s) before WCS/cross-ID", dropped)
+    return filtered
+
+
 # ---------------------------------------------------------------------------
 # Pixel → sky coordinate conversion
 # ---------------------------------------------------------------------------
@@ -1009,7 +1040,10 @@ def _run_all_detectors(
         for f in as_completed(tasks):
             key = tasks[f]
             try:
-                results[key] = f.result()
+                dets = f.result()
+                for det in dets:
+                    det.setdefault("method", key)
+                results[key] = dets
             except Exception:
                 logger.exception("Detector %s failed", key)
                 results[key] = []
@@ -1240,6 +1274,7 @@ def run_with_array(
         + yolo_dets + yolo_full_dets + streakmind_yolo_dets
     )
     detections = group_detections(combined, iou_threshold=0.5)
+    detections = _drop_astride_only_groups(detections)
     postprocess_ms = (time.perf_counter() - t2) * 1000
     logger.debug("postprocess_ms=%.1f  after_nms=%d", postprocess_ms, len(detections))
 

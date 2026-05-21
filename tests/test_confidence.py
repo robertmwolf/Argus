@@ -1,5 +1,4 @@
 """Tests for inference/confidence.py — Unified Confidence Score."""
-import math
 import pytest
 
 from inference.confidence import (
@@ -135,17 +134,17 @@ class TestComputeUnifiedConfidence:
         ])
         assert result["score"] == pytest.approx(0.0, abs=1e-6)
 
-    def test_high_recall_detector_silent_lowers_score(self):
-        # With a high-recall detector (astride, R=0.70) silent vs unknown detector silent
-        silent_high_recall = compute_unified_confidence([
+    def test_low_confidence_non_astride_detector_lowers_score(self):
+        # Low-confidence ML detectors still participate in divergence/FN logic.
+        silent_yolo = compute_unified_confidence([
             {"method": "dinov3_vitb", "confidence": 0.85},
-            {"method": "astride", "confidence": 0.05},   # high recall, silent
+            {"method": "yolo", "confidence": 0.05},
         ])
-        silent_low_recall = compute_unified_confidence([
+        silent_unknown = compute_unified_confidence([
             {"method": "dinov3_vitb", "confidence": 0.85},
-            {"method": "yolo", "confidence": 0.05},       # lower recall (0.40)
+            {"method": "mystery_detector", "confidence": 0.05},
         ])
-        assert silent_high_recall["score"] < silent_low_recall["score"]
+        assert silent_unknown["score"] < silent_yolo["score"]
 
     def test_score_capped_at_0_99(self):
         # Stacking many high-confidence detectors should never exceed 0.99
@@ -199,63 +198,37 @@ class TestComputeUnifiedConfidence:
 # ---------------------------------------------------------------------------
 
 class TestConfidenceCeiling:
-    def test_ceiling_caps_high_confidence(self):
-        # ASTRiDE ceiling=0.6: conf=0.99 should behave the same as conf=0.6
-        result_high = compute_unified_confidence([{"method": "astride", "confidence": 0.99}])
-        result_at_ceil = compute_unified_confidence([{"method": "astride", "confidence": 0.60}])
-        assert result_high["score"] == pytest.approx(result_at_ceil["score"])
-
-    def test_ceiling_does_not_affect_conf_below_it(self):
-        # conf=0.45 is below ceiling=0.6, so it should pass through unchanged
-        result = compute_unified_confidence([{"method": "astride", "confidence": 0.45}])
-        assert result["components"][0]["eff_conf"] == pytest.approx(0.45)
-        assert result["components"][0]["ceiling"] == DETECTOR_PROFILES["astride"].confidence_ceiling
-
-    def test_scores_above_ceiling_are_identical(self):
-        # Any conf >= ceiling should produce the same score for ASTRiDE
-        ceiling = DETECTOR_PROFILES["astride"].confidence_ceiling
-        scores = [
-            compute_unified_confidence([{"method": "astride", "confidence": c}])["score"]
-            for c in [ceiling, ceiling + 0.1, ceiling + 0.2, 0.99, 1.0]
-            if c <= 1.0
-        ]
-        assert all(s == pytest.approx(scores[0]) for s in scores)
-
-    def test_ceiling_limits_contribution_to_weight_times_ceiling(self):
-        ceiling = DETECTOR_PROFILES["astride"].confidence_ceiling
-        w = DETECTOR_PROFILES["astride"].f_beta_weight
+    def test_astride_only_scores_zero(self):
+        # ASTRiDE-only detections are disregarded upstream; scorer returns 0
+        # for legacy callers that still pass one through.
         result = compute_unified_confidence([{"method": "astride", "confidence": 0.99}])
-        max_contribution = w * ceiling
-        assert result["components"][0]["contribution"] == pytest.approx(max_contribution, rel=1e-4)
+        assert result["score"] == 0.0
+        assert result["components"] == []
 
-    def test_ceiling_reduces_score_vs_no_ceiling(self):
-        # A detector with ceiling should score lower at conf=0.99 than one without
-        ceiling = DETECTOR_PROFILES["astride"].confidence_ceiling
-        profile_no_ceil = DetectorProfile(
-            name="ASTRiDE (no ceiling)",
-            precision=DETECTOR_PROFILES["astride"].precision,
-            recall=DETECTOR_PROFILES["astride"].recall,
-            confidence_ceiling=None,
-        )
-        # Temporarily inject uncapped profile
-        from inference import confidence as conf_mod
-        original = conf_mod.DETECTOR_PROFILES.copy()
-        conf_mod.DETECTOR_PROFILES["astride_test"] = profile_no_ceil
-        try:
-            with_ceil = compute_unified_confidence([{"method": "astride", "confidence": 0.99}])
-            without_ceil = compute_unified_confidence([{"method": "astride_test", "confidence": 0.99}])
-        finally:
-            conf_mod.DETECTOR_PROFILES.clear()
-            conf_mod.DETECTOR_PROFILES.update(original)
-        assert with_ceil["score"] < without_ceil["score"]
+    def test_astride_corroborates_without_lowering_score(self):
+        single = compute_unified_confidence([{"method": "dinov3_vitb", "confidence": 0.80}])
+        with_astride = compute_unified_confidence([
+            {"method": "dinov3_vitb", "confidence": 0.80},
+            {"method": "astride", "confidence": 0.60},
+        ])
+        assert with_astride["score"] > single["score"]
+        assert with_astride["score"] >= 0.80
 
-    def test_eff_conf_stored_in_component(self):
-        ceiling = DETECTOR_PROFILES["astride"].confidence_ceiling
-        result = compute_unified_confidence([{"method": "astride", "confidence": 0.99}])
-        comp = result["components"][0]
-        assert comp["raw_conf"] == pytest.approx(0.99)
-        assert comp["eff_conf"] == pytest.approx(ceiling)
-        assert comp["ceiling"] == ceiling
+    def test_yolo_plus_high_astride_lands_near_ninety_percent(self):
+        result = compute_unified_confidence([
+            {"method": "yolo", "confidence": 0.86},
+            {"method": "astride", "confidence": 0.99},
+        ])
+        assert result["score"] == pytest.approx(0.8996)
+
+    def test_astride_component_marked_corroboration_only(self):
+        result = compute_unified_confidence([
+            {"method": "dinov3_vitb", "confidence": 0.87},
+            {"method": "astride", "confidence": 0.99},
+        ])
+        comp = next(c for c in result["components"] if c["method"] == "astride")
+        assert comp["role"] == "corroboration_only"
+        assert comp["weight"] == 0.0
 
     def test_no_ceiling_detector_eff_conf_equals_raw(self):
         result = compute_unified_confidence([{"method": "dinov3_vitb", "confidence": 0.87}])
@@ -263,13 +236,12 @@ class TestConfidenceCeiling:
         assert comp["eff_conf"] == pytest.approx(comp["raw_conf"])
         assert comp["ceiling"] is None
 
-    def test_divergence_uses_effective_not_raw_conf(self):
-        # With ceiling, divergence should reflect capped values
-        ceiling = DETECTOR_PROFILES["astride"].confidence_ceiling
+    def test_astride_does_not_create_divergence_penalty(self):
+        # ASTRiDE is excluded from divergence, so it cannot drag down a strong
+        # corroborated ML detection.
         result = compute_unified_confidence([
-            {"method": "astride", "confidence": 0.99},   # capped to ceiling
             {"method": "dinov3_vitb", "confidence": 0.85},
+            {"method": "astride", "confidence": 0.10},
         ])
-        import statistics
-        expected_div = statistics.stdev([ceiling, 0.85])
-        assert result["divergence"] == pytest.approx(expected_div, abs=1e-4)
+        assert result["divergence"] == 0.0
+        assert result["score"] >= 0.85

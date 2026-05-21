@@ -854,6 +854,10 @@ scores on false positives (i.e. its confidence magnitude does not correlate with
 true-positive probability).  ML detectors trained with cross-entropy loss are
 generally well-calibrated and should leave this as `None`.
 
+ASTRiDE is the exception to the normal detector-profile flow: ASTRiDE-only groups
+are dropped in `inference/pipeline.py`, and corroborated ASTRiDE detections only
+apply the bounded boost implemented in `inference/confidence.py`.
+
 Verify:
 ```bash
 python -m inference.confidence          # scores should reflect new weights
@@ -1254,6 +1258,8 @@ After evaluation, open `inference/confidence.py` and update the `"large"` entry 
 
 Only set `confidence_ceiling` if the detector emits unreliably high scores on false
 positives.  ML detectors are generally well-calibrated and should leave this as `None`.
+Do not tune ASTRiDE as a standalone weighted detector; it is intentionally
+corroboration-only.
 
 Verify:
 ```bash

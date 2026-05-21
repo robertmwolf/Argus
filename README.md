@@ -7,6 +7,9 @@ in parallel — three ML-based (DINO-DETR with DINOv3 ViT-B backbone, YOLO11n-OB
 YOLO11n-OBB full-dataset) and two classical (ASTRiDE-derived, OpenCV connected-components) —
 then merges their results by grouping overlapping detections and fusing them into a
 **Unified Confidence Score** weighted by each detector's empirical precision and recall.
+ASTRiDE is treated as corroboration-only: ASTRiDE-only streak groups are dropped
+before WCS/cross-identification, and corroborated ASTRiDE detections can only add
+a small confidence boost.
 Streak orientation is refined via the Radon transform, each streak is traced to its
 true endpoints across the full image, and detected objects are cross-identified
 against a local TLE catalog using SGP4 propagation and multi-factor confidence
@@ -45,8 +48,8 @@ including exact parameters, design rationale, and reproducible algorithm descrip
 **Summary:** FITS → Z-score normalisation → 5 parallel detectors (DINOv3 ViT-B /
 DINO-DETR, YOLO11n-OBB × 2, ASTRiDE, OpenCV connected-components) → Radon angle
 refinement → streak extent tracing → per-detector NMS → cross-detector grouping
-(rotated-IoU ≥ 0.5 or IoMin ≥ 0.3) → Unified Confidence Score → SGP4
-cross-identification → FastAPI + React canvas.
+(rotated-IoU ≥ 0.5 or IoMin ≥ 0.3) → drop ASTRiDE-only groups → Unified
+Confidence Score → SGP4 cross-identification → FastAPI + React canvas.
 
 ---
 
@@ -78,7 +81,7 @@ Argus/
 │   ├── pipeline.py            ← inference orchestrator
 │   ├── postprocess.py         ← Radon angle refinement + streak extent + NMS
 │   ├── crossid.py             ← satellite cross-matching
-│   └── confidence.py          ← Unified Confidence Score (F-beta weighted fusion)
+│   └── confidence.py          ← Unified Confidence Score (F-beta fusion + ASTRiDE corroboration)
 ├── training/
 │   ├── convert_labels.py      ← YOLO OBB → COCO JSON
 │   ├── dataset.py             ← FITSStreakDataset
@@ -373,9 +376,10 @@ python -m eval.benchmark \
 
 Every time a detector is retrained or a new model is evaluated, update its entry
 in `DETECTOR_PROFILES` inside [`inference/confidence.py`](inference/confidence.py).
-The Unified Confidence Score weights each detector's contribution by its F-0.5 score
-(`w = 1.25 × P × R / (0.25 × P + R)`), so stale values silently under- or
-over-weight a detector's evidence.
+The Unified Confidence Score weights non-ASTRiDE detector contributions by their
+F-0.5 score (`w = 1.25 × P × R / (0.25 × P + R)`), so stale values silently
+under- or over-weight a detector's evidence. ASTRiDE is a special case: it is
+corroboration-only and should not be tuned into a standalone confidence source.
 
 ### Step 1 — Run the benchmark to get per-method P/R
 
@@ -406,19 +410,21 @@ update `precision`, `recall`, and `notes`:
 Detector keys must match the `method` string written by the inference pipeline.
 Check `api/main.py` or the benchmark output for exact key names.
 
-**Confidence ceiling** — if a detector is known to emit unreliably high scores on
-false positives (its confidence magnitude is miscalibrated), set `confidence_ceiling`
-to cap its effective contribution.  ASTRiDE ships with `confidence_ceiling=0.6`
-for this reason.  To tune it, adjust the value and observe the score changes via
-`python -m inference.confidence`; the ceiling should sit just above the typical
-true-positive confidence for that detector.  Leave `confidence_ceiling=None` for
-ML detectors with well-calibrated outputs.
+**Confidence ceiling** — if a new non-ASTRiDE detector is known to emit unreliably
+high scores on false positives (its confidence magnitude is miscalibrated), set
+`confidence_ceiling` to cap its effective contribution. Leave
+`confidence_ceiling=None` for ML detectors with well-calibrated outputs. ASTRiDE
+keeps its profile entry for diagnostics, but the pipeline drops ASTRiDE-only
+groups and the scorer excludes ASTRiDE from weighted fusion, false-negative
+adjustment, and divergence. When ASTRiDE corroborates another detector, it can
+only add a small bounded boost; for example, YOLO OBB 0.86 plus ASTRiDE 0.99
+scores about 0.90.
 
 ### Step 3 — Verify
 
 ```bash
 python -m inference.confidence      # prints example scores with updated weights
-python -m pytest tests/test_confidence.py -v   # all 21 tests must pass
+python -m pytest tests/test_confidence.py -v
 ```
 
 The test `test_registered_profiles_have_valid_weights` will catch any weight

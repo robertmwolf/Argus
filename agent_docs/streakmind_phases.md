@@ -423,16 +423,21 @@ raising precision from 9.3 % to 29.9 % while retaining 72 % recall (F1 42.3 %).
 On long streaks (≥ 1 000 px, 92 % of test set) Unified F1 = 49 % vs 16.9 % for
 DINOv3 alone.
 
-The Unified Confidence Score is computed by `inference/confidence.py`.  The formula:
+The Unified Confidence Score is computed by `inference/confidence.py`.  ASTRiDE is
+corroboration-only: groups where ASTRiDE is the only detector are dropped in
+`inference/pipeline.py` before WCS/cross-ID, and corroborated ASTRiDE detections
+can only add a small bounded score boost. The non-ASTRiDE fusion formula:
 
-1. Cap each detector's raw confidence at its optional `confidence_ceiling` before
-   any weighting.  ASTRiDE has `confidence_ceiling=0.6` because it routinely emits
-   0.95+ on false positives — the cap trusts the *presence* of its detection, not
-   the stated magnitude.
-2. Weight each capped confidence by its F-0.5 score (`w = 1.25×P×R / (0.25×P + R)`).
+1. Cap each non-ASTRiDE detector's raw confidence at its optional
+   `confidence_ceiling` before any weighting.
+2. Weight each effective confidence by its F-0.5 score
+   (`w = 1.25×P×R / (0.25×P + R)`).
 3. Combine via weighted Noisy-OR with false-negative and divergence adjustments.
+4. If ASTRiDE corroborates a non-ASTRiDE group, add only a small bounded boost
+   (`0.04 × best_astride_conf`), never letting ASTRiDE lower the fused score.
 
 This is *not* equal Noisy-OR.  **After each new training run, update `DETECTOR_PROFILES`
 in `inference/confidence.py` with the measured precision and recall** — see the README
 section "Updating Detector Profiles After Training".  If a newly added detector emits
-unreliable confidence magnitudes, also set its `confidence_ceiling`.
+unreliable confidence magnitudes, also set its `confidence_ceiling`. Do not convert
+ASTRiDE back into a normal weighted detector.
