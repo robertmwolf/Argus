@@ -238,6 +238,10 @@ class FITSLoader:
                 if wcs is None:
                     wcs = _load_sidecar_wcs(path)
                     wcs_source = "sidecar" if wcs is not None else None
+                if wcs is None:
+                    from inference.plate_solver import solve_from_header as _astap_solve
+                    wcs = _astap_solve(path, header)
+                    wcs_source = "astap" if wcs is not None else None
 
                 # --- Exposure time (accept common header spellings) ----------
                 exposure_time: float | None = None

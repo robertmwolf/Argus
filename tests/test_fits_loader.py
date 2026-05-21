@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -101,7 +103,8 @@ class TestFITSLoaderLoad:
         result = FITSLoader().load(fits_path)
         assert result["exposure_time"] is None
 
-    def test_wcs_none_when_no_wcs_headers(self, tmp_path: Path) -> None:
+    def test_wcs_none_when_no_wcs_headers(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("ASTAP_BIN", raising=False)
         fits_path = _make_fits(tmp_path, with_wcs=False)
         result = FITSLoader().load(fits_path)
         assert result["wcs"] is None
@@ -197,3 +200,141 @@ class TestExtractWcsMetadata:
         loader = FITSLoader()
         wcs = loader.load(fits_path)["wcs"]
         assert loader.extract_wcs_metadata(wcs, []) == []
+
+
+# ---------------------------------------------------------------------------
+# ASTAP plate-solver integration tests
+# ---------------------------------------------------------------------------
+
+def _make_astap_wcs_text(ra: float = 122.6, dec: float = 18.3) -> str:
+    """Build a minimal ASTAP-style .wcs text output for mocking."""
+    ps = 0.000332  # ~1.2 arcsec/px in degrees
+    lines = [
+        f"CRVAL1  =  {ra:.6f}",
+        f"CRVAL2  =  {dec:.6f}",
+        "CRPIX1  =  3124.0",
+        "CRPIX2  =  2088.0",
+        f"CD1_1   =  {-ps:.8f}",
+        "CD1_2   =  0.00000000",
+        "CD2_1   =  0.00000000",
+        f"CD2_2   =  {ps:.8f}",
+        "CTYPE1  = 'RA---TAN'",
+        "CTYPE2  = 'DEC--TAN'",
+        "EQUINOX =  2000.0",
+        "END",
+    ]
+    return "\n".join(lines)
+
+
+def _make_fits_with_pointing(tmp_path: Path) -> Path:
+    """FITS with RA/DEC/FOCALLEN/XPIXSZ but no WCS projection keywords."""
+    rng = np.random.default_rng(7)
+    data = rng.normal(1000.0, 100.0, (64, 64)).astype(np.float32)
+    hdu = fits.PrimaryHDU(data)
+    hdu.header["NAXIS1"] = 64
+    hdu.header["NAXIS2"] = 64
+    hdu.header["RA"] = 122.60775
+    hdu.header["DEC"] = 18.301664
+    hdu.header["FOCALLEN"] = 648.0
+    hdu.header["XPIXSZ"] = 3.76
+    hdu.header["YPIXSZ"] = 3.76
+    hdu.header["EQUINOX"] = 2000.0
+    out = tmp_path / "pointing.fits"
+    hdu.writeto(out, overwrite=True)
+    return out
+
+
+class TestASTAPPlateSolver:
+    """FITSLoader ASTAP plate-solve fallback (subprocess mocked)."""
+
+    def _write_mock_wcs(self, fits_path: Path) -> None:
+        fits_path.with_suffix(".wcs").write_text(_make_astap_wcs_text())
+
+    def test_wcs_source_is_astap_on_success(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        fits_path = _make_fits_with_pointing(tmp_path)
+
+        def _fake_run(cmd, **kwargs):
+            self._write_mock_wcs(Path(cmd[2]))
+            return MagicMock(returncode=0, stdout="", stderr="")
+
+        with patch("inference.plate_solver._find_astap", return_value="/fake/astap"), \
+             patch("subprocess.run", side_effect=_fake_run):
+            result = FITSLoader().load(fits_path)
+
+        assert result["wcs"] is not None
+        assert isinstance(result["wcs"], WCS)
+        assert result["wcs_source"] == "astap"
+
+    def test_wcs_none_when_astap_not_found(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("ASTAP_BIN", raising=False)
+        fits_path = _make_fits_with_pointing(tmp_path)
+
+        with patch("inference.plate_solver._find_astap", return_value=None):
+            result = FITSLoader().load(fits_path)
+
+        assert result["wcs"] is None
+
+    def test_wcs_none_when_astap_produces_no_wcs_file(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        fits_path = _make_fits_with_pointing(tmp_path)
+
+        def _fake_run(cmd, **kwargs):
+            # ASTAP ran but found no solution — no .wcs written
+            return MagicMock(returncode=1, stdout="", stderr="No stars found")
+
+        with patch("inference.plate_solver._find_astap", return_value="/fake/astap"), \
+             patch("subprocess.run", side_effect=_fake_run):
+            result = FITSLoader().load(fits_path)
+
+        assert result["wcs"] is None
+
+    def test_wcs_none_when_astap_times_out(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        fits_path = _make_fits_with_pointing(tmp_path)
+
+        with patch("inference.plate_solver._find_astap", return_value="/fake/astap"), \
+             patch("subprocess.run", side_effect=subprocess.TimeoutExpired("astap", 60)):
+            result = FITSLoader().load(fits_path)
+
+        assert result["wcs"] is None
+
+    def test_wcs_file_cleaned_up_after_solve(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        fits_path = _make_fits_with_pointing(tmp_path)
+
+        def _fake_run(cmd, **kwargs):
+            self._write_mock_wcs(Path(cmd[2]))
+            return MagicMock(returncode=0, stdout="", stderr="")
+
+        with patch("inference.plate_solver._find_astap", return_value="/fake/astap"), \
+             patch("subprocess.run", side_effect=_fake_run):
+            FITSLoader().load(fits_path)
+
+        assert not fits_path.with_suffix(".wcs").exists()
+
+    def test_astap_uses_ra_dec_hint(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        fits_path = _make_fits_with_pointing(tmp_path)
+        captured: list[list[str]] = []
+
+        def _fake_run(cmd, **kwargs):
+            captured.append(list(cmd))
+            self._write_mock_wcs(Path(cmd[2]))
+            return MagicMock(returncode=0, stdout="", stderr="")
+
+        with patch("inference.plate_solver._find_astap", return_value="/fake/astap"), \
+             patch("subprocess.run", side_effect=_fake_run):
+            FITSLoader().load(fits_path)
+
+        assert captured, "subprocess.run was never called"
+        cmd = captured[0]
+        assert "-ra" in cmd
+        assert "-spd" in cmd
