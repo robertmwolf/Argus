@@ -100,7 +100,7 @@ both released. This is purpose-built for exactly this pipeline.
 **Location:** `/Volumes/External/TrainingData/raw/frigate/` (raw FITS + processed PNGs at 2325×1555)
 
 **Annotation status — ✅ ready for training inclusion:**
-- 350 frames manually reviewed via `scripts/annotate_frigate_streaks.py`
+- 350 frames manually reviewed via the Frigate mode in `scripts/annotate.py`
 - 191 frames contain satellite streaks (377 OBBs total) — all **very short streaks**
   (~20–80 px), filling a morphology gap absent from GTImages and SatStreaks
 - 159 frames confirmed streak-free (explicit negatives)

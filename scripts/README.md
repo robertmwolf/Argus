@@ -72,10 +72,13 @@ handling that will likely be useful for future labeling passes.
 
 | Script | Status | Purpose | Notes |
 |---|---:|---|---|
-| `annotate_streaks.py` | Manual | Tkinter OBB annotation tool for DarkMatters positive images. | Currently untracked in this worktree; preserve unless deliberately superseded. |
-| `annotate_frigate_streaks.py` | Manual | Tkinter OBB annotation tool for Frigate processed PNGs. | Uses priority lists and short-streak Hough suggestions. |
+| `annotate.py` | Manual | Unified Tkinter OBB streak annotation tool for FITS, PNG, and JPEG inputs. | Handles DarkMatters CSV exports, Frigate priority lists, generic image directories, and BrentImages `.strk` write-back via `--night-dir`. |
 | `annotate_frigate.py` | Manual | Builds Frigate negative-example COCO corpus. | Also serves as provenance for Frigate-as-background decision. |
 | `screen_frigate.py` | Manual | Ranks Frigate frames by short-streak likelihood. | Produces priority JSON/contact sheet for annotation. |
+
+Archived superseded entry points live under `scripts/archive/` for provenance:
+`annotate_streaks.py`, `annotate_frigate_streaks.py`, and
+`annotate_brentimages_streaks.py`.
 
 ## Test And Development Support
 
@@ -96,4 +99,3 @@ Use this order for future cleanup:
    `METHODOLOGY.md`.
 5. Keep manual annotation tools available unless a replacement can read the same
    inputs, write the same COCO fields, and preserve existing suggestion caches.
-
