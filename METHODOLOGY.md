@@ -628,45 +628,45 @@ miscalibrated. With a ceiling, the formula trusts that the detector *fired*
 a streak (magnitude of the confidence). ASTRiDE is handled separately because
 ASTRiDE-only streaks are highly unlikely to be real in this pipeline.
 
-**Step 3 — Weighted Noisy-OR combination:**
+**Step 3 — Single-detector floor:**
 
 ```
-P_weighted = 1 − ∏_i (1 − w_i · eff_i)
+baseline = max(eff_i)
 ```
 
-Each non-ASTRiDE detector's weighted effective confidence is treated as an
-independent probabilistic vote for the streak existing. Multiple agreeing
-high-weight detectors push the score toward 1. A single low-weight detector with
-high confidence can contribute at most `w_i · ceiling_i`.
+A single non-ASTRiDE detector keeps its own effective confidence. This prevents
+the unified score from penalizing a detection merely because no other model
+found the same streak.
 
-**Step 4 — False-negative adjustment:**
+**Step 4 — Corroboration boost:**
 
 ```
-fn_penalty = (1/n) · Σ_i recall_i · max(0, 0.5 − eff_i)
-score_fn   = P_weighted · (1 − 0.2 · fn_penalty)
+corroboration = 1 − ∏_{i≠best} (1 − w_i · eff_i)
+score_corr    = baseline + (1 − baseline) · corroboration
 ```
 
-When a high-recall detector has low effective confidence (below 0.5), its silence
-carries information — the streak may not exist. The coefficient 0.2 keeps this
-adjustment mild; even a high-recall detector completely silent (eff = 0) reduces
-the score by at most ~14%.
+Each additional non-ASTRiDE detector's weighted effective confidence is treated
+as corroborating evidence. Multiple agreeing high-weight detectors push the score
+toward 1 by filling part of the remaining confidence mass; the strongest detector
+is excluded from this boost because it already defines the floor.
 
 **Step 5 — Divergence penalty, then ASTRiDE corroboration:**
 
 ```
-divergence      = std(eff_i)                         [over all detectors in group]
-score_final     = min(0.99, score_fn · (1 − 0.15 · divergence))
+divergence      = std(eff_i)                         [over non-ASTRiDE detectors in group]
+score_final     = min(0.99, baseline + (score_corr − baseline) · (1 − 0.15 · divergence))
 ```
 
 When detectors strongly disagree (high variance in effective confidences), the
-ensemble cannot resolve the ambiguity. The coefficient 0.15 is mild — complete
-disagreement (std ≈ 0.5) reduces the score by only 7.5%.
+coefficient 0.15 tempers only the corroboration boost. The score never drops
+below the best detector's effective confidence because another detector was
+low-confidence or uncertain.
 
-ASTRiDE is excluded from the weighted Noisy-OR, false-negative adjustment, and
-divergence terms so it cannot drag down a corroborated ML/OpenCV detection.
+ASTRiDE is excluded from non-ASTRiDE corroboration and divergence terms so it
+cannot drag down a corroborated ML/OpenCV detection.
 Instead, if a streak group contains at least one non-ASTRiDE detector, ASTRiDE can
 raise the final score by at most `0.04 × best_astride_conf`, bounded at 0.99 and
-never below the weighted non-ASTRiDE result. For example, YOLO OBB confidence
+never below the non-ASTRiDE result. For example, YOLO OBB confidence
 0.86 plus ASTRiDE confidence 0.99 yields approximately 0.90.
 
 ### 5.3 Detector Profiles
@@ -693,8 +693,9 @@ Current `DETECTOR_PROFILES` from `inference/confidence.py`:
 
 After any new training run, update the relevant `DetectorProfile` in
 `inference/confidence.py` with measured P and R from `eval/benchmark.py`. Stale
-values silently under- or over-weight a detector's contribution. See the README
-"Updating Detector Profiles After Training" section for the mechanical steps.
+values silently under- or over-weight a detector's corroboration boost. See the
+README "Updating Detector Profiles After Training" section for the mechanical
+steps.
 
 ---
 
@@ -861,8 +862,8 @@ length, this corresponds to 0.03 px displacement.
 ARGUS integrates ASTRiDE as its Phase 0 classical detector, adopting the same
 boundary-tracing + shape_factor filtering algorithm from the reference
 implementation (`github.com/dwkim78/ASTRiDE`). The ARGUS integration adds: SEP
-background subtraction upstream of ASTRiDE's contour detection; ensemble weighting
-via F-0.5 score for non-ASTRiDE detectors; conservative confidence lowering for
+background subtraction upstream of ASTRiDE's contour detection; F-0.5-weighted
+corroboration for non-ASTRiDE detector agreement; conservative confidence lowering for
 ASTRiDE-only groups; and a bounded corroboration boost when ASTRiDE overlaps another
 detector. Kim et al. do not publish a
 precision/recall benchmark on a standardised dataset, so numerical comparison is

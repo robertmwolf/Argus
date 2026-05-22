@@ -427,7 +427,7 @@ Confusion matrix PNGs in `results/confusion_matrices/`.
 
 | Method | Precision | Recall | F1 | mAP@0.5 | mAP@0.75 | n preds |
 |--------|----------:|-------:|---:|---------:|---------:|--------:|
-| **Unified Confidence Score** (F-beta weighted) | **29.9 %** | 72.1 % | **42.3 %** | 40.6 % | 31.8 % | 742 |
+| **Unified Confidence Score** (confidence floor + F-beta corroboration) | **29.9 %** | 72.1 % | **42.3 %** | 40.6 % | 31.8 % | 742 |
 | DINOv3 ViT-B | 9.3 % | **89.3 %** | 16.8 % | **75.5 %** | **59.4 %** | 2 969 |
 | OpenCV | 1.4 % | 1.0 % | 1.1 % | 0.01 % | 0.01 % | 223 |
 
@@ -443,10 +443,13 @@ detections can only add a small bounded score boost. The non-ASTRiDE fusion form
 
 1. Cap each non-ASTRiDE detector's raw confidence at its optional
    `confidence_ceiling` before any weighting.
-2. Weight each effective confidence by its F-0.5 score
+2. Use the best effective non-ASTRiDE confidence as the score floor, so a
+   single detector is not penalized merely because no other model agreed.
+3. Weight each additional detector's corroborating evidence by its F-0.5 score
    (`w = 1.25×P×R / (0.25×P + R)`).
-3. Combine via weighted Noisy-OR with false-negative and divergence adjustments.
-4. If ASTRiDE corroborates a non-ASTRiDE group, add only a small bounded boost
+4. Combine corroborating contributions into the remaining confidence mass,
+   tempering only that boost when non-ASTRiDE detectors strongly disagree.
+5. If ASTRiDE corroborates a non-ASTRiDE group, add only a small bounded boost
    (`0.04 × best_astride_conf`), never letting ASTRiDE lower the fused score.
 
 This is *not* equal Noisy-OR.  **After each new training run, update `DETECTOR_PROFILES`

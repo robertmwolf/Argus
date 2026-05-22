@@ -7,7 +7,8 @@ in parallel — three ML-based (DINO-DETR with DINOv3 ViT-B backbone, YOLO11n-OB
 YOLO11n-OBB full-dataset) and two classical (ASTRiDE-derived, OpenCV connected-components) —
 then merges their results by grouping overlapping or collinear detections and
 fusing them into a single streak-level geometry plus a
-**Unified Confidence Score** weighted by each detector's empirical precision and recall.
+**Unified Confidence Score** that preserves a lone detector's confidence and uses
+each detector's empirical precision and recall to boost corroborated detections.
 ASTRiDE is treated as corroboration-only: ASTRiDE-only streak groups are kept at
 a conservative display confidence, and corroborated ASTRiDE detections can only
 add a small confidence boost.
@@ -84,7 +85,7 @@ Argus/
 │   ├── pipeline.py            ← inference orchestrator
 │   ├── postprocess.py         ← Radon angle refinement + extent, NMS, grouping/fusion
 │   ├── crossid.py             ← satellite cross-matching
-│   └── confidence.py          ← Unified Confidence Score (F-beta fusion + ASTRiDE corroboration)
+│   └── confidence.py          ← Unified Confidence Score (single-detector floor + F-beta corroboration)
 ├── training/
 │   ├── convert_labels.py      ← YOLO OBB → COCO JSON
 │   ├── dataset.py             ← FITSStreakDataset
@@ -390,10 +391,11 @@ python -m eval.benchmark \
 
 Every time a detector is retrained or a new model is evaluated, update its entry
 in `DETECTOR_PROFILES` inside [`inference/confidence.py`](inference/confidence.py).
-The Unified Confidence Score weights non-ASTRiDE detector contributions by their
-F-0.5 score (`w = 1.25 × P × R / (0.25 × P + R)`), so stale values silently
-under- or over-weight a detector's evidence. ASTRiDE is a special case: it is
-corroboration-only and should not be tuned into a standalone confidence source.
+The Unified Confidence Score preserves the best non-ASTRiDE detector confidence
+as the score floor, then weights corroborating detector boosts by their F-0.5
+score (`w = 1.25 × P × R / (0.25 × P + R)`). Stale values silently under- or
+over-weight a detector's corroborating evidence. ASTRiDE is a special case: it
+is corroboration-only and should not be tuned into a standalone confidence source.
 
 ### Step 1 — Run the benchmark to get per-method P/R
 
@@ -430,9 +432,9 @@ high scores on false positives (its confidence magnitude is miscalibrated), set
 `confidence_ceiling=None` for ML detectors with well-calibrated outputs. ASTRiDE
 keeps its profile entry for diagnostics, but the pipeline lowers ASTRiDE-only
 groups to conservative display confidence and the scorer excludes ASTRiDE from
-weighted fusion, false-negative adjustment, and divergence. When ASTRiDE
-corroborates another detector, it can only add a small bounded boost; for
-example, YOLO OBB 0.86 plus ASTRiDE 0.99 scores about 0.90.
+non-ASTRiDE corroboration and divergence. When ASTRiDE corroborates another
+detector, it can only add a small bounded boost; for example, YOLO OBB 0.86 plus
+ASTRiDE 0.99 scores about 0.90.
 
 ### Step 3 — Verify
 
@@ -442,8 +444,8 @@ python -m pytest tests/test_confidence.py -v
 ```
 
 The test `test_registered_profiles_have_valid_weights` will catch any weight
-outside [0, 1].  Scores for single-detector runs will shift proportionally to
-the precision change — review that the new values look sensible.
+outside [0, 1].  Single-detector scores keep their detector confidence; review
+multi-detector examples to confirm the corroboration boosts look sensible.
 
 ---
 
