@@ -848,8 +848,8 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
             )
 
             # Precision-recall calibrated Unified Confidence Score.
-            # Each detector is weighted by its empirical F-0.5 score so that
-            # detectors with more false positives contribute proportionally less.
+            # The best detector confidence is the floor; empirical F-0.5
+            # weights control how much additional detectors can corroborate it.
             unified_result = compute_unified_confidence(sources)
             unified_conf = unified_result["score"]
             sources_with_unified = [

@@ -2,12 +2,12 @@
 
 Precision-recall calibrated Unified Confidence Score for ARGUS streak detections.
 
-Replaces the plain Noisy-OR formula with an F-beta weighted fusion that:
-  1. Weights each detector by its empirical F-0.5 score (precision-heavy)
-  2. Caps each detector's effective confidence at an optional ceiling (for
+Replaces the plain Noisy-OR formula with an F-beta weighted corroboration score that:
+  1. Uses the best detector confidence as the score floor
+  2. Weights corroborating detectors by their empirical F-0.5 score
+  3. Caps each detector's effective confidence at an optional ceiling (for
      detectors whose raw confidence magnitude is miscalibrated, e.g. ASTRiDE)
-  3. Applies a false-negative adjustment when high-recall detectors are silent
-  4. Applies a divergence penalty when detectors strongly disagree
+  4. Tempers the corroboration boost when detectors strongly disagree
   5. Treats ASTRiDE as corroboration-only: it cannot create a standalone
      streak confidence and can only add a small boost to non-ASTRiDE detections.
 
@@ -150,8 +150,14 @@ def _get_profile(method: str) -> DetectorProfile:
     return DETECTOR_PROFILES.get(method, _DEFAULT_PROFILE)
 
 
-def _weighted_noisy_or(sources: list[dict]) -> dict:
-    """Compute the weighted Noisy-OR score for non-ASTRiDE detector outputs."""
+def _confidence_floor_with_corroboration(sources: list[dict]) -> dict:
+    """Compute confidence for non-ASTRiDE detector outputs.
+
+    The strongest detector keeps its own effective confidence. Additional
+    detectors contribute reliability-weighted corroboration into the remaining
+    probability mass, so agreement can raise confidence but a lone detector is
+    not discounted merely because other models did not fire.
+    """
     if not sources:
         return {"score": 0.0, "components": [], "divergence": 0.0, "fn_penalty": 0.0}
 
@@ -176,20 +182,23 @@ def _weighted_noisy_or(sources: list[dict]) -> dict:
         })
         eff_confs.append(eff_conf)
 
-    # Weighted Noisy-OR (uses effective confidences)
-    p_weighted = 1.0 - math.prod(1.0 - c["contribution"] for c in components)
-
-    # False-negative adjustment.
     n = len(sources)
-    fn_sum = sum(
-        _get_profile(s.get("method", "")).recall
-        * max(0.0, 0.5 - eff_confs[i])
-        for i, s in enumerate(sources)
-    )
-    fn_penalty_raw = fn_sum / n
-    p_fn_adjusted = p_weighted * (1.0 - 0.2 * fn_penalty_raw)
+    best_idx = max(range(n), key=lambda i: eff_confs[i])
+    baseline = eff_confs[best_idx]
 
-    # Divergence factor — penalise strong inter-detector disagreement.
+    # Corroboration boost: additional detectors fill some of the remaining
+    # confidence mass. The best detector establishes the floor and is excluded
+    # from the boost so single-detector groups are not reliability-discounted.
+    corroborating_contributions = [
+        c["contribution"] for i, c in enumerate(components) if i != best_idx
+    ]
+    corroboration = (
+        1.0 - math.prod(1.0 - contribution for contribution in corroborating_contributions)
+        if corroborating_contributions
+        else 0.0
+    )
+
+    # Divergence tempers only the boost, never the baseline detector confidence.
     if n > 1:
         divergence = statistics.stdev(eff_confs)
         divergence_factor = 1.0 - 0.15 * divergence
@@ -197,39 +206,38 @@ def _weighted_noisy_or(sources: list[dict]) -> dict:
         divergence = 0.0
         divergence_factor = 1.0
 
-    score = min(0.99, p_fn_adjusted * divergence_factor)
+    score = min(0.99, baseline + (1.0 - baseline) * corroboration * divergence_factor)
 
     return {
         "score": round(score, 6),
         "components": components,
         "divergence": round(divergence, 4),
-        "fn_penalty": round(fn_penalty_raw, 4),
+        "fn_penalty": 0.0,
     }
 
 
 def compute_unified_confidence(sources: list[dict]) -> dict:
     """Compute a calibrated Unified Confidence Score from multiple detector outputs.
 
-    Five-step weighted Noisy-OR formula:
+    Five-step calibrated corroboration formula:
 
       1. w_i = F-0.5(precision_i, recall_i)             -- precision-heavy reliability weight
       2. eff_i = min(conf_i, ceiling_i)                  -- optional confidence ceiling
-      3. P_weighted = 1 - Π(1 - w_i × eff_i)            -- weighted Noisy-OR combination
-      4. fn_penalty: mild downward adjustment when high-recall detectors are silent
-      5. divergence_factor: mild penalty when detectors strongly disagree
+      3. baseline = max(eff_i)                           -- no single-detector penalty
+      4. corroboration = 1 - Π(1 - w_i × eff_i)          -- for non-best detectors
+      5. score = baseline + remaining confidence mass × corroboration
 
     ASTRiDE is special-cased as corroboration-only.  An ASTRiDE-only source list
     returns score 0.0 because those candidates should be dropped upstream.  When
-    ASTRiDE overlaps another detector, it is excluded from weighted Noisy-OR,
-    false-negative adjustment, and divergence so it cannot drag a score down.
+    ASTRiDE overlaps another detector, it is excluded from non-ASTRiDE
+    corroboration and divergence so it cannot drag a score down.
     Instead, its raw confidence adds at most a small boost to the best
     non-ASTRiDE raw confidence.  For example, YOLO OBB 0.86 plus ASTRiDE 0.99
     yields roughly 0.90.
 
-    A detector's maximum single-detector contribution equals w_i × ceiling_i
-    (or w_i if no ceiling is set).  Multiple agreeing detectors push the score
-    toward 1.  Detectors that are absent or below 0.5 temper the score
-    proportional to their recall.
+    A single non-ASTRiDE detector keeps its own effective confidence. Multiple
+    agreeing detectors push the score toward 1, with empirical precision/recall
+    controlling how much corroborating detectors can boost the baseline.
 
     Args:
         sources: List of ``{"method": str, "confidence": float}`` dicts from one
@@ -243,7 +251,7 @@ def compute_unified_confidence(sources: list[dict]) -> dict:
                              [{"method", "raw_conf", "eff_conf", "weight",
                                "contribution", "ceiling"}, ...]
             divergence  -- std dev of effective confidences (diagnostic)
-            fn_penalty  -- false-negative adjustment applied (fractional reduction)
+            fn_penalty  -- retained diagnostic field; always 0.0 in current scoring
     """
     detector_sources = [s for s in sources if s.get("method") != "unified"]
 
@@ -262,7 +270,7 @@ def compute_unified_confidence(sources: list[dict]) -> dict:
     if not non_astride_sources:
         return {"score": 0.0, "components": [], "divergence": 0.0, "fn_penalty": 0.0}
 
-    result = _weighted_noisy_or(non_astride_sources)
+    result = _confidence_floor_with_corroboration(non_astride_sources)
     if not astride_sources:
         return result
 

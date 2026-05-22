@@ -862,11 +862,13 @@ generally well-calibrated and should leave this as `None`.
 ASTRiDE is the exception to the normal detector-profile flow: ASTRiDE-only groups
 are lowered to conservative display confidence in `inference/pipeline.py`, and
 corroborated ASTRiDE detections only apply the bounded boost implemented in
-`inference/confidence.py`.
+`inference/confidence.py`. Non-ASTRiDE single-detector groups keep the detector's
+own confidence; profile precision/recall values control corroboration boosts
+when additional models agree.
 
 Verify:
 ```bash
-python -m inference.confidence          # scores should reflect new weights
+python -m inference.confidence          # corroboration boosts should reflect new weights
 python -m pytest tests/test_confidence.py -v   # all tests must pass
 ```
 
@@ -1305,11 +1307,13 @@ After evaluation, open `inference/confidence.py` and update the `"large"` entry 
 Only set `confidence_ceiling` if the detector emits unreliably high scores on false
 positives.  ML detectors are generally well-calibrated and should leave this as `None`.
 Do not tune ASTRiDE as a standalone weighted detector; it is intentionally
-corroboration-only.
+corroboration-only. Non-ASTRiDE single-detector groups keep the detector's own
+confidence; profile precision/recall values control corroboration boosts when
+additional models agree.
 
 Verify:
 ```bash
-python -m inference.confidence          # scores should reflect new weights
+python -m inference.confidence          # corroboration boosts should reflect new weights
 python -m pytest tests/test_confidence.py -v   # all tests must pass
 ```
 

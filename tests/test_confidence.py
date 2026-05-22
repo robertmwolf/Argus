@@ -100,13 +100,10 @@ class TestComputeUnifiedConfidence:
         assert r_with["score"] == pytest.approx(r_without["score"])
 
     def test_single_detector_score(self):
-        # Score for one detector = w_i × conf_i (before fn/divergence adjustments)
-        # DINO Swin-T: w≈0.679, conf=0.90
+        # Score for one detector preserves the detector's own confidence.
         result = compute_unified_confidence([{"method": "tiny", "confidence": 0.90}])
-        w = DETECTOR_PROFILES["tiny"].f_beta_weight
-        # conf > 0.5, so fn_penalty = 0; single detector, divergence = 0
-        expected = min(0.99, w * 0.90)
-        assert result["score"] == pytest.approx(expected, rel=1e-3)
+        assert result["score"] == pytest.approx(0.90)
+        assert result["fn_penalty"] == 0.0
 
     def test_two_agreeing_detectors_higher_than_one(self):
         single = compute_unified_confidence([{"method": "dinov3_vitb", "confidence": 0.90}])
@@ -127,6 +124,14 @@ class TestComputeUnifiedConfidence:
         ])
         assert disagree["score"] < agree["score"]
 
+    def test_low_confidence_second_detector_does_not_penalize_best_detector(self):
+        single = compute_unified_confidence([{"method": "dinov3_vitb", "confidence": 0.85}])
+        with_low_confidence = compute_unified_confidence([
+            {"method": "dinov3_vitb", "confidence": 0.85},
+            {"method": "yolo", "confidence": 0.05},
+        ])
+        assert with_low_confidence["score"] >= single["score"]
+
     def test_all_zero_confidence(self):
         result = compute_unified_confidence([
             {"method": "tiny", "confidence": 0.0},
@@ -135,16 +140,16 @@ class TestComputeUnifiedConfidence:
         assert result["score"] == pytest.approx(0.0, abs=1e-6)
 
     def test_low_confidence_non_astride_detector_lowers_score(self):
-        # Low-confidence ML detectors still participate in divergence/FN logic.
-        silent_yolo = compute_unified_confidence([
+        # Low-confidence ML detectors still provide small reliability-weighted boosts.
+        low_yolo = compute_unified_confidence([
             {"method": "dinov3_vitb", "confidence": 0.85},
             {"method": "yolo", "confidence": 0.05},
         ])
-        silent_unknown = compute_unified_confidence([
+        low_unknown = compute_unified_confidence([
             {"method": "dinov3_vitb", "confidence": 0.85},
             {"method": "mystery_detector", "confidence": 0.05},
         ])
-        assert silent_unknown["score"] < silent_yolo["score"]
+        assert low_unknown["score"] < low_yolo["score"]
 
     def test_score_capped_at_0_99(self):
         # Stacking many high-confidence detectors should never exceed 0.99
