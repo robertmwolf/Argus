@@ -420,10 +420,19 @@ def query_tles_for_window(
     epoch_end = obs_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     sql = (
-        "SELECT norad_id, epoch, object_name, object_type, mean_motion, "
-        "       tle_line1, tle_line2, source "
-        "FROM tle_catalog "
-        "WHERE epoch >= :start AND epoch <= :end "
+        "SELECT c.norad_id, c.epoch, "
+        "       COALESCE(("
+        "         SELECT n.object_name FROM tle_catalog n "
+        "         WHERE n.norad_id = c.norad_id AND n.object_name NOT LIKE 'NORAD-%' "
+        "         ORDER BY n.epoch DESC LIMIT 1"
+        "       ), c.object_name) AS object_name, "
+        "       c.object_type, c.mean_motion, "
+        "       c.tle_line1, c.tle_line2, c.source "
+        "FROM tle_catalog c "
+        "JOIN ("
+        "  SELECT norad_id, MAX(epoch) AS max_epoch "
+        "  FROM tle_catalog "
+        "  WHERE epoch >= :start AND epoch <= :end "
     )
     params: dict[str, Any] = {"start": epoch_start, "end": epoch_end}
 
@@ -431,14 +440,18 @@ def query_tles_for_window(
         sql += "AND (mean_motion IS NULL OR mean_motion >= :mm) "
         params["mm"] = min_mean_motion
 
-    sql += "ORDER BY epoch DESC"
+    sql += (
+        "  GROUP BY norad_id"
+        ") latest ON c.norad_id = latest.norad_id AND c.epoch = latest.max_epoch "
+        "ORDER BY c.epoch DESC"
+    )
 
     with eng.connect() as conn:
         rows = conn.execute(text(sql), params).fetchall()
 
     result = [dict(r._mapping) for r in rows]
     logger.debug(
-        "query_tles_for_window: %d records for window %s → %s",
+        "query_tles_for_window: %d latest-per-object records for window %s → %s",
         len(result), epoch_start, epoch_end,
     )
     return result
@@ -458,7 +471,7 @@ def _parse_iso_utc(value: Any) -> datetime | None:
 
 
 def _with_epoch_drift(rows: list[dict[str, Any]], obs_time: datetime) -> list[dict[str, Any]]:
-    """Attach absolute epoch drift and sort rows nearest to the observation."""
+    """Attach absolute epoch drift and keep the nearest row per object."""
     enriched: list[dict[str, Any]] = []
     for row in rows:
         epoch_dt = _parse_iso_utc(row.get("epoch"))
@@ -468,7 +481,12 @@ def _with_epoch_drift(rows: list[dict[str, Any]], obs_time: datetime) -> list[di
         )
         enriched.append({**row, "epoch_drift_hours": drift_hours})
     enriched.sort(key=lambda r: r["epoch_drift_hours"])
-    return enriched
+    nearest_by_norad: dict[int, dict[str, Any]] = {}
+    for row in enriched:
+        norad_id = row["norad_id"]
+        if norad_id not in nearest_by_norad:
+            nearest_by_norad[norad_id] = row
+    return list(nearest_by_norad.values())
 
 
 def query_tles_for_epoch_drift(
@@ -502,10 +520,16 @@ def query_tles_for_epoch_drift(
     epoch_end = (obs_time + timedelta(days=epoch_window_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     sql = (
-        "SELECT norad_id, epoch, object_name, object_type, mean_motion, "
-        "       tle_line1, tle_line2, source "
-        "FROM tle_catalog "
-        "WHERE epoch >= :start AND epoch <= :end "
+        "SELECT c.norad_id, c.epoch, "
+        "       COALESCE(("
+        "         SELECT n.object_name FROM tle_catalog n "
+        "         WHERE n.norad_id = c.norad_id AND n.object_name NOT LIKE 'NORAD-%' "
+        "         ORDER BY n.epoch DESC LIMIT 1"
+        "       ), c.object_name) AS object_name, "
+        "       c.object_type, c.mean_motion, "
+        "       c.tle_line1, c.tle_line2, c.source "
+        "FROM tle_catalog c "
+        "WHERE c.epoch >= :start AND c.epoch <= :end "
     )
     params: dict[str, Any] = {"start": epoch_start, "end": epoch_end}
     if min_mean_motion > 0:
@@ -544,7 +568,13 @@ def query_latest_tles(
     init_tle_tables(eng)
 
     sql = (
-        "SELECT c.norad_id, c.epoch, c.object_name, c.object_type, c.mean_motion, "
+        "SELECT c.norad_id, c.epoch, "
+        "       COALESCE(("
+        "         SELECT n.object_name FROM tle_catalog n "
+        "         WHERE n.norad_id = c.norad_id AND n.object_name NOT LIKE 'NORAD-%' "
+        "         ORDER BY n.epoch DESC LIMIT 1"
+        "       ), c.object_name) AS object_name, "
+        "       c.object_type, c.mean_motion, "
         "       c.tle_line1, c.tle_line2, c.source "
         "FROM tle_catalog c "
         "JOIN (SELECT norad_id, MAX(epoch) AS max_epoch FROM tle_catalog GROUP BY norad_id) latest "

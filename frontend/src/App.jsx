@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import DetectionTable from './components/DetectionTable'
+import DetectorsPanel from './components/DetectorsPanel'
 import FilterPanel from './components/FilterPanel'
 import FitsHeaderPanel from './components/FitsHeaderPanel'
 import IdentificationPanel from './components/IdentificationPanel'
@@ -21,6 +22,7 @@ export default function App() {
   const [headerObsEpoch, setHeaderObsEpoch] = useState(null)
   const [disabledStreaks, setDisabledStreaks] = useState(new Set())   // Set of displayDetections indices
   const [methodThresholds, setMethodThresholds] = useState({})        // { method: 0-1 }
+  const [enabledDetectors, setEnabledDetectors] = useState(null)      // null until DetectorsPanel loads
 
   useEffect(() => {
     fetch('/health')
@@ -218,7 +220,8 @@ export default function App() {
                 Upload a FITS, PNG, or JPEG telescope image to detect and identify satellite streaks.
               </p>
             </div>
-            <UploadZone onQueued={handleQueued} onError={setError} />
+            <DetectorsPanel onSelectionChange={setEnabledDetectors} />
+            <UploadZone onQueued={handleQueued} onError={setError} enabledDetectors={enabledDetectors} />
           </>
         )}
 
