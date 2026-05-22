@@ -26,7 +26,7 @@ Status labels:
 | `celestrak_client.py` | Active | CelesTrak fallback/live TLE edge for `src.matching.tle_manager`. | Imported by tests and runtime code. |
 | `download_weights.py` | Active | Downloads Swin-T/Swin-L DINO pretrain weights based on `MODEL_SIZE`. | Does not handle DINOv3 portal weights. |
 | `prepare_cloud_training.py` | Active | Pre-flight checklist before GPU training. | Main go/no-go gate before paid or remote GPU runs. |
-| `cloud_setup.sh` | Active | WSL2/Linux cloud setup for GPU training. | Documented in training handoff. |
+| `cloud_setup.sh` | Active | WSL2/Linux cloud setup for GPU training. | Bootstrap only; run `prepare_cloud_training.py` afterward as the true go/no-go gate. |
 | `fetch_weights.sh` | Active | Fetch trained weights/logs back from remote machine. | Companion to cloud/workstation training runs. |
 
 ## Dataset Build And Merge Scripts

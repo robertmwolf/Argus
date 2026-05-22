@@ -9,7 +9,7 @@
 ARGUS detects satellite streak artifacts in astronomical FITS images using five
 independent detectors fused into a Unified Confidence Score (UCS). On a 308-image
 test set (SatStreaks JPEG exports), the ensemble achieves F1 = 42.3% (P = 29.9%,
-R = 72.1%), while the primary ML detector (DINOv2 ViT-B / DINO-DETR) achieves
+R = 72.1%), while the primary ML detector (DINOv3 ViT-B / DINO-DETR) achieves
 mAP@0.5 = 75.5% and recall = 89.3%. On long streaks (≥ 1,000 px), ensemble F1
 reaches 49.0%.
 
@@ -122,9 +122,9 @@ ASTRiDE without the following caveats:
 | Mean streak length | ≫ 1,000 px (92% are long) | 203.5 px | No |
 | Multi-frame association | No | Yes | Design difference |
 
-YOLO metrics within ARGUS are also not directly comparable to DINOv2 metrics:
+YOLO metrics within ARGUS are also not directly comparable to DINOv3 metrics:
 YOLO is evaluated on its native tiled validation split (604 source images → ~2,881
-tiles), whereas DINOv2 is evaluated on the full-image COCO test set. Tiled IoU
+tiles), whereas DINOv3 is evaluated on the full-image COCO test set. Tiled IoU
 matching inflates mAP relative to full-image evaluation.
 
 ASTRiDE cannot be meaningfully evaluated on JPEG exports because JPEG compression
@@ -161,9 +161,10 @@ into a single pool before post-processing.
 shape_factor filtering pipeline as the reference implementation. The primary
 difference is ensemble integration: in ARGUS, ASTRiDE's output is one of five
 detector streams, but it is treated as corroboration-only. ASTRiDE-only streak
-groups are dropped after cross-detector grouping and before WCS/cross-ID. When
-ASTRiDE overlaps a non-ASTRiDE detector, it can add only a small bounded boost to
-the Unified Confidence Score rather than acting as a full weighted vote.
+groups are lowered to a conservative display confidence after cross-detector
+grouping. When ASTRiDE overlaps a non-ASTRiDE detector, it can add only a small
+bounded boost to the Unified Confidence Score rather than acting as a full
+weighted vote.
 
 **JPEG limitation:** This detector requires raw integer-valued FITS pixel data.
 On JPEG-compressed SatStreaks exports the sigma threshold and shape_factor criteria
@@ -223,7 +224,7 @@ threshold correctly isolates only the brightest structures.
 > **Protocol note:** These metrics are from YOLO's native tiled validation split
 > (604 source images → ~2,881 tiles at 640 px) using the same tiling scheme as
 > training. Tiled IoU matching inflates mAP relative to full-image evaluation. The
-> YOLO numbers are **not directly comparable** to the DINOv2 or UCS results in §7,
+> YOLO numbers are **not directly comparable** to the DINOv3 or UCS results in §7,
 > which use the full-image COCO protocol.
 
 **Relationship to StreakMind:** StreakMind (arXiv 2605.03429) also uses YOLO11 OBB
@@ -237,50 +238,51 @@ as its detection backbone. The architectures are similar; the key differences ar
 
 Direct comparison of P/R numbers is not valid (see §2.4).
 
-### 3.4 DINOv2 ViT-B/16 + DINO-DETR (Primary ML Detector)
+### 3.4 DINOv3 ViT-B/16 + DINO-DETR (Primary ML Detector)
 
 **Config:** `models/dino/streak_dinov3_vitb.py`  
 **Checkpoint:** `weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth` (~330 MB)  
 **When active:** Always (primary detector)
 
-#### 3.4.1 Backbone: DINOv2 ViT-B/16
+#### 3.4.1 Backbone: DINOv3 ViT-B/16
 
-**Naming clarification:** ARGUS refers to this model internally as "DINOv3"
-(codebase naming convention). The underlying backbone is **DINOv2** (Oquab et al.
-2024, arXiv 2304.07193) — this is not a distinct public Meta AI release.
+**Naming clarification:** ARGUS refers to this model internally as "DINOv3".
+The active checkpoint is Meta's DINOv3 ViT-B/16 LVD-1689M backbone loaded
+through `models/dino/dinov3_adapter.py`. The exact paper/model-card citation
+should be confirmed before publication.
 
 | Property | Value |
 |----------|-------|
 | Architecture | Vision Transformer, ViT-B/16 |
 | Pre-training | Self-supervised (DINO + iBOT objectives) |
-| Training data | LVD-142M (curated from 1.2B web images) |
+| Training data | LVD-1689M |
 | Parameters | 86 M |
 | Embed dimension | 768 |
 | Patch size | 16 px |
 | Checkpoint file | `dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth` |
 | Training state | **Entirely frozen** (`requires_grad=False`, `lr_mult=0.0`) |
 
-**Why LVD-142M over SAT-493M:** Night-sky FITS images have near-black backgrounds,
+**Why LVD-1689M over SAT-493M:** Night-sky FITS images have near-black backgrounds,
 PSF-shaped point sources, and thin high-aspect-ratio bright lines. The SAT-493M
 checkpoint uses pixel normalization tuned for colorful terrestrial Earth-observation
 imagery (mean = (0.430, 0.411, 0.296)) — a systematic domain mismatch for
-dark-field astronomical data. LVD-142M is domain-neutral and uses standard ImageNet
+dark-field astronomical data. LVD-1689M is domain-neutral and uses standard ImageNet
 normalization (mean = (0.485, 0.456, 0.406), std = (0.229, 0.224, 0.225)).
 
-**Feasibility probe (Phase A):** Cosine dissimilarity between DINOv2 ViT-B features
+**Feasibility probe (Phase A):** Cosine dissimilarity between DINOv3 ViT-B features
 of streak patches vs. background patches = **0.095** (gate: > 0.05 → PASS). This
 confirms that the frozen backbone separates streak and background semantics before
 any task-specific fine-tuning.
 
 #### 3.4.2 PatchToPyramid Adapter
 
-DINOv2 ViT is isotropic — it produces flat feature maps at a single stride (H/16,
+DINOv3 ViT is isotropic — it produces flat feature maps at a single stride (H/16,
 W/16), not a feature pyramid. The Deformable DETR neck requires multi-scale
 features. The `PatchToPyramid` adapter in `models/dino/dinov3_adapter.py` bridges
 this gap:
 
 ```
-DINOv2 ViT-B/16
+DINOv3 ViT-B/16
   ↓  get_intermediate_layers(x, n=4, reshape=True)
   →  4 × (B, 768, H/16, W/16) feature maps at 4 depths
   ↓  PatchToPyramid adapter
@@ -337,7 +339,7 @@ These are from different evaluation points in the same training progression.
 Co-DINO (Zong et al. 2022, arXiv 2211.12860) collaborative hybrid training
 (auxiliary ATSS + Faster R-CNN heads with one-to-many label assignments) was used
 to initialise the now-archived Swin-T backbone path
-(`models/dino/streak_codino_swin_t.py`). The active DINOv2 path uses DINO-DETR
+(`models/dino/streak_codino_swin_t.py`). The active DINOv3 path uses DINO-DETR
 directly without Co-DINO auxiliary heads. The Swin-T/Co-DINO path is retained in
 the repository for ablation reference; its benchmark result (mAP@0.5 = 0.19) is
 included in §8.
@@ -347,7 +349,7 @@ included in §8.
 When `TTA_ENABLED=true`, inference also runs on horizontal and vertical flips;
 bounding boxes are mapped back to original coordinates before postprocessing.
 TTA is enabled by default and contributes to the 2,969 raw predictions reported
-for DINOv2 ViT-B in §7.
+for DINOv3 ViT-B in §7.
 
 ---
 
@@ -363,7 +365,7 @@ Raw FITS pixel data (any bit depth) is normalised before passing to ML detectors
 2. Rescale to uint8 [0, 255], clipping at ±3σ. Pixels brighter than 3σ above the
    mean are clipped to 255; pixels dimmer than 3σ below the mean are clipped to 0.
 3. Convert single-channel science image to 3-channel uint8 `(H, W, 3)` (RGB-like)
-   so DINOv2 receives the expected tensor shape.
+   so DINOv3 receives the expected tensor shape.
 
 **Why Z-score over histogram equalization:** Z-score normalisation is linear —
 it preserves relative brightness differences between stars, streaks, and background.
@@ -376,13 +378,13 @@ classical detectors and changes the apparent signal-to-noise ratio of faint stre
 **Implementation:** `inference/postprocess.py::refine_angle()`  
 **Source attribution:** Radon refinement approach follows StreakMind (arXiv 2605.03429).
 
-DINOv2 produces axis-aligned bounding boxes — streak orientation is not directly
+DINOv3/DINO-DETR produces axis-aligned bounding boxes — streak orientation is not directly
 predicted. The initial angle estimate `atan2(height, width)` can carry up to ±45°
 error. Radon refinement achieves a mean angle error of **0.018°** on the test set.
 
 **Step-by-step algorithm:**
 
-1. Crop the image region inside the DINOv2 bounding box.
+1. Crop the image region inside the DINOv3 bounding box.
 
 2. Convert to float32 greyscale (average over RGB channels if 3-channel).
 
@@ -404,11 +406,18 @@ error. Radon refinement achieves a mean angle error of **0.018°** on the test s
    minutes on CPU; downsampling to 512 px reduces this to under 1 second while
    preserving sub-degree angular precision.
 
-5. **Compute the Radon sinogram** over a ±15° window around the initial angle
-   estimate (`angle_search_range = 15.0°`, step = 1°):
+5. **Compute the Radon sinogram** over a configurable window around the initial
+   angle estimate. The interactive/API default is ±60° (`angle_search_range =
+   60.0°`, step = 1°), wide enough to recover loose/tall axis-aligned DINO boxes
+   whose diagonal seed is tens of degrees from the true streak. Narrower windows
+   can still be supplied by callers for controlled offline experiments:
    ```python
    radon_center = 90.0 - initial_angle
-   radon_angles = np.arange(radon_center - 15.0, radon_center + 15.0 + 1.0, 1.0)
+   radon_angles = np.arange(
+       radon_center - angle_search_range,
+       radon_center + angle_search_range + 1.0,
+       1.0,
+   )
    sinogram = radon(crop, theta=radon_angles, circle=False)
    ```
 
@@ -442,7 +451,7 @@ Radon computation to MPS or CUDA.
 
 **Implementation:** `inference/postprocess.py::bbox_to_obb()`
 
-Given the axis-aligned DINOv2 bounding box `[x1, y1, x2, y2]` and the
+Given the axis-aligned DINOv3/DINO-DETR bounding box `[x1, y1, x2, y2]` and the
 Radon-refined angle `θ`, the OBB is constructed as:
 
 ```
@@ -461,7 +470,7 @@ the given angle: the OBB just encloses the axis-aligned box when rotated by θ.
 
 **Implementation:** `inference/postprocess.py::extend_obb_to_streak_extent()`
 
-DINOv2 bounding boxes frequently cover only a portion of a long streak — the
+DINOv3/DINO-DETR bounding boxes frequently cover only a portion of a long streak — the
 detector captures the highest-confidence region, not the full extent. This
 function traces the streak axis across the entire image to recover the true
 endpoints.
@@ -487,8 +496,8 @@ endpoints.
 
 4. **Group contiguous bright positions** into runs with gap tolerance = 5 px.
 
-5. **Select the run containing t = 0** (the OBB centre is on the streak — DINOv2
-   is guaranteed to have detected this region):
+5. **Select the run containing t = 0** (the OBB centre is on the streak — the
+   detector is expected to have fired on this region):
    ```python
    centre_runs = [(s, e) for s, e in runs if s <= 0.0 <= e]
    ```
@@ -515,14 +524,16 @@ whose rotated-IoU with a higher-confidence kept detection exceeds 0.5. This
 collapses TTA's three passes and each classical detector's duplicate firings to at
 most one box per streak per method.
 
-### 4.6 Cross-Detector Grouping (IoU + IoMin)
+### 4.6 Cross-Detector Grouping (IoU + IoMin + Collinearity)
 
 After per-detector NMS, detections from **different** methods are grouped into
 shared `streak_id` groups rather than suppressed.
 
 **Overlap criteria (OR logic):**
 - Rotated-IoU ≥ 0.5, **or**
-- IoMin ≥ 0.3
+- IoMin ≥ 0.3, **or**
+- Collinear-fragment match: angle difference ≤ 15°, perpendicular distance
+  ≤ 40 px, and along-streak gap ≤ `min(900 px, max(120 px, 2 × longer fragment))`.
 
 where IoMin (Intersection-over-Minimum) is defined as:
 ```
@@ -535,6 +546,34 @@ drop to ~0.25 (below the 0.5 threshold), while the two boxes still cover the sam
 streak almost completely. IoMin in this case ≈ 1.0 because the intersection covers
 nearly all of the smaller box. Using IoU alone would assign different `streak_id`
 values to the same physical object.
+
+**Why collinearity is necessary:** Long streaks are sometimes reported by the
+model as several short, non-overlapping boxes along the same visible line. Those
+fragments have IoU = 0 and IoMin = 0 even though they represent the same physical
+streak. The collinearity criterion merges fragments only when their angles agree,
+their centers lie close to the same infinite line, and the projected endpoint gap
+is bounded relative to the fragment length.
+
+### 4.7 Group Geometry Fusion
+
+**Implementation:** `inference/postprocess.py::fuse_group_geometries()`
+
+After `group_detections()` assigns `streak_id`, each multi-member group receives
+one shared OBB geometry before WCS conversion and API serialization:
+
+1. Choose the longest member OBB as the reference axis. This prevents a short
+   high-confidence detector fragment from overriding a longer, better-oriented
+   DINO geometry.
+2. Project every member OBB's two endpoints onto that reference axis.
+3. Set fused `w = max(projected_endpoint) - min(projected_endpoint)`.
+4. Set fused centre to the midpoint of the projected endpoint interval, with the
+   median perpendicular offset of the group.
+5. Write the fused OBB and `streak_length_px` back to every member in the group.
+
+This is the step that makes a fragmented long streak draw as a single line from
+outer endpoint to outer endpoint in the frontend. It also ensures WCS/cross-ID
+sees the streak-level geometry rather than the geometry of whichever detector row
+happened to be highest confidence.
 
 **Nothing is discarded:** All per-method detections are preserved within each
 group. The frontend exposes per-method agreement as a quality signal
@@ -552,12 +591,12 @@ after cross-detector grouping.
 
 ### 5.1 Motivation
 
-DINOv2 ViT-B in isolation (confidence threshold 0.05) produces:
+DINOv3 ViT-B in isolation (confidence threshold 0.05) produces:
 - Recall: 89.3% (finds nearly all streaks)
 - Precision: 9.3% (2,694 false positives across 308 images, ~8.7 FP/image)
 
 The false positives are primarily elongated cloud structures and diffuse nebulae
-that DINOv2's features generalise to. The UCS fuses all five detector outputs to
+that DINOv3's features generalise to. The UCS fuses all five detector outputs to
 raise precision without catastrophic recall loss.
 
 ### 5.2 Formula
@@ -683,7 +722,8 @@ area ground-truth polygons.
 |-----------|-------|
 | Confidence threshold | 0.05 |
 | Per-detector NMS IoU | 0.5 |
-| Cross-detector grouping | IoU ≥ 0.5 or IoMin ≥ 0.3 |
+| Cross-detector grouping | IoU ≥ 0.5, IoMin ≥ 0.3, or bounded collinear-fragment match |
+| Group geometry fusion | Longest-axis reference; fused OBB spans outer projected endpoints |
 | Test set | 308 images, 308 GT streaks (SatStreaks, JPEG) |
 | Benchmark date | 2026-05-16 |
 | Results file | `results/multi_method_benchmark.json` |
@@ -712,7 +752,7 @@ Benchmark: 308 images, 308 GT streaks, SatStreaks JPEG test set, 2026-05-16.
 | Detector | Protocol | Precision | Recall | F1 | mAP@0.5 | mAP@0.75 | n preds |
 |----------|----------|----------:|-------:|---:|---------:|---------:|--------:|
 | **Unified Confidence Score** | COCO full-image | **29.9%** | 72.1% | **42.3%** | 40.6% | 31.8% | 742 |
-| DINOv2 ViT-B (epoch 10) | COCO full-image | 9.3% | **89.3%** | 16.8% | **75.5%** | **59.4%** | 2,969 |
+| DINOv3 ViT-B (epoch 10) | COCO full-image | 9.3% | **89.3%** | 16.8% | **75.5%** | **59.4%** | 2,969 |
 | YOLO11n-OBB full | YOLO tiled val† | 57.2% | 84.6% | 68.2% | 67.3% | 57.4% | — |
 | OpenCV connected-comp | COCO full-image | 1.4% | 1.0% | 1.1% | 0.01% | 0.01% | 223 |
 | ASTRiDE | JPEG (not applicable) | — | — | — | — | — | — |
@@ -731,15 +771,15 @@ evaluation above.
 | **Actual +** | TP ≈ 222 | FN ≈ 86 |
 | **Actual −** | FP ≈ 520 | TN = n/a |
 
-*Analysis:* The 520 FPs are primarily DINOv2 false positives on elongated cloud and
+*Analysis:* The 520 FPs are primarily DINOv3 false positives on elongated cloud and
 galaxy features that survive grouping because no second detector fired on them (no
 IoU/IoMin partner to form a multi-detector group). Without a corroborating
-detection, the UCS assigns a non-trivial score based on DINOv2's evidence alone.
-The 86 FNs are streaks where DINOv2 also missed (33 raw DINOv2 FNs) plus
+detection, the UCS assigns a non-trivial score based on DINOv3's evidence alone.
+The 86 FNs are streaks where DINOv3 also missed (33 raw DINOv3 FNs) plus
 additional cases where grouping shifted the consensus detection below the IoU = 0.5
 threshold at the grouped centre.
 
-**DINOv2 ViT-B:**
+**DINOv3 ViT-B:**
 
 | | Predicted + | Predicted − |
 |---|---:|---:|
@@ -747,7 +787,7 @@ threshold at the grouped centre.
 | **Actual −** | FP ≈ 2,694 | TN = n/a |
 
 *Analysis:* The 33 FNs are short or faint streaks below the 0.05 confidence floor
-at 1,280 px input resolution. The 2,694 FPs are DINOv2's generalisation to any
+at 1,280 px input resolution. The 2,694 FPs are DINOv3's generalisation to any
 elongated bright structure — the frozen backbone's features, pre-trained on natural
 images, do not discriminate streaks from cloud filaments or galaxy arms.
 
@@ -768,7 +808,7 @@ noise structures that exceed the 0.5% brightness threshold.
 | Detector | Short < 400 px | Medium 400–999 px | Long ≥ 1,000 px |
 |----------|---------------:|------------------:|----------------:|
 | Unified Confidence Score | 0.0% | 3.6% | **49.0%** |
-| DINOv2 ViT-B | 0.0% | 3.1% | 16.9% |
+| DINOv3 ViT-B | 0.0% | 3.1% | 16.9% |
 | OpenCV | 0.0% | 0.0% | 1.8% |
 | ASTRiDE | — | — | — |
 
@@ -808,11 +848,11 @@ length, this corresponds to 0.03 px displacement.
 | **StreakMind** (arXiv 2605.03429) | YOLO11 OBB | 2,335 FITS (765 streaks + 1,523 bg + 280 synthetic) | 110 real FITS streaks | 94% | 97% | 95.4% | 0.8 | Mean streak length 203.5 px; raw FITS domain |
 | **DINO-DETR** (Zhang et al. 2022) | ResNet-50 / Swin-L | COCO 2017 | COCO 2017 | AP-based | AP-based | — | COCO AP | 49.4 AP (R50), 63.3 AP test-dev (SwinL); used as ARGUS detection head |
 | **Co-DINO** (Zong et al. 2022) | ResNet-50 / ViT-L | COCO 2017 | COCO 2017 | AP-based | AP-based | — | COCO AP | 51.2 AP (R50), 66.0 AP (ViT-L); initialised ARGUS archived Swin-T path |
-| **DINOv2** (Oquab et al. 2024) | ViT-g | LVD-142M | ImageNet | — | — | — | — | 86.5% ImageNet linear (ViT-g); 84.5% (ViT-B); used as ARGUS frozen backbone |
-| **ARGUS DINOv2 ViT-B** | DINOv2 ViT-B/16 (frozen) | SatStreaks + GTImages (~2,460 images) | SatStreaks test (308 JPEG) | 9.3% | 89.3% | 16.8% | 0.5 | mAP@0.5 = 75.5%; high FP rate |
+| **DINOv3** (Meta AI model distribution) | ViT-B/16 | LVD-1689M | — | — | — | — | — | Used as ARGUS frozen backbone; exact publication/model-card citation pending |
+| **ARGUS DINOv3 ViT-B** | DINOv3 ViT-B/16 (frozen) | SatStreaks + GTImages (~2,460 images) | SatStreaks test (308 JPEG) | 9.3% | 89.3% | 16.8% | 0.5 | mAP@0.5 = 75.5%; high FP rate |
 | **ARGUS YOLO11n-OBB full** | YOLO11 nano OBB | SatStreaks (3,023 tiled 640 px) | YOLO tiled val† | 57.2% | 84.6% | 68.2% | 0.5 | †Tiled protocol; not comparable to full-image eval |
 | **ARGUS Ensemble (UCS)** | 5-detector ensemble | — | SatStreaks test (308 JPEG) | 29.9% | 72.1% | 42.3% | 0.5 | F1 = 49% on long streaks; 742 grouped predictions |
-| **Co-DINO Swin-T** (archived) | Swin-T | Full merged | SatStreaks test | — | — | — | 0.5 | mAP@0.5 = 0.19; baseline before DINOv2 integration |
+| **Co-DINO Swin-T** (archived) | Swin-T | Full merged | SatStreaks test | — | — | — | 0.5 | mAP@0.5 = 0.19; baseline before DINOv3 integration |
 
 ### 8.2 Methodology Comparisons
 
@@ -822,8 +862,8 @@ ARGUS integrates ASTRiDE as its Phase 0 classical detector, adopting the same
 boundary-tracing + shape_factor filtering algorithm from the reference
 implementation (`github.com/dwkim78/ASTRiDE`). The ARGUS integration adds: SEP
 background subtraction upstream of ASTRiDE's contour detection; ensemble weighting
-via F-0.5 score for non-ASTRiDE detectors; ASTRiDE-only group rejection before
-WCS/cross-ID; and a bounded corroboration boost when ASTRiDE overlaps another
+via F-0.5 score for non-ASTRiDE detectors; conservative confidence lowering for
+ASTRiDE-only groups; and a bounded corroboration boost when ASTRiDE overlaps another
 detector. Kim et al. do not publish a
 precision/recall benchmark on a standardised dataset, so numerical comparison is
 not possible. ASTRiDE's primary value in ARGUS is on raw FITS images where its
@@ -854,16 +894,16 @@ in the same image domain.
 > "DINO-DETR-based." This is incorrect. StreakMind (arXiv 2605.03429) uses
 > YOLO11 OBB as its detection backbone, not DINO-DETR.
 
-**ARGUS vs. DINO-DETR / Co-DINO / DINOv2**
+**ARGUS vs. DINO-DETR / Co-DINO / DINOv3**
 
-ARGUS uses DINO-DETR (Zhang et al. 2022) as its detection head and DINOv2 (Oquab
-et al. 2024) as its frozen feature backbone. Co-DINO (Zong et al. 2022) pretrained
-weights initialised the now-archived Swin-T path; the active DINOv2 path uses
+ARGUS uses DINO-DETR (Zhang et al. 2022) as its detection head and DINOv3 as its
+frozen feature backbone. Co-DINO (Zong et al. 2022) pretrained
+weights initialised the now-archived Swin-T path; the active DINOv3 path uses
 DINO-DETR directly without Co-DINO's auxiliary heads.
 
-The DINOv2 backbone's self-supervised features transfer to streak detection despite
+The DINOv3 backbone's self-supervised features transfer to streak detection despite
 pretraining exclusively on natural images. The Phase A feasibility probe (cosine
-dissimilarity between streak and background DINOv2 features = 0.095 > 0.05 gate)
+dissimilarity between streak and background DINOv3 features = 0.095 > 0.05 gate)
 confirmed semantic separability before any task-specific training. With the backbone
 entirely frozen, only the ~44 M parameters in the PatchToPyramid adapter and
 DINO-DETR head learn from streak data, yielding mAP@0.5 = 0.74 at Phase C² (4
@@ -890,7 +930,7 @@ should not be made without domain-matched evaluation on a shared test set.
 
 ### 9.1 Current Limitations
 
-**Precision:** The ensemble precision of 29.9% (UCS) reflects DINOv2's high false-
+**Precision:** The ensemble precision of 29.9% (UCS) reflects DINOv3's high false-
 positive rate on elongated non-streak structures (clouds, galaxy filaments). The
 grouping and UCS reduce but do not eliminate single-detector false positives that
 have no multi-detector corroboration.
@@ -912,10 +952,10 @@ by the current JPEG benchmark. Evaluation on GTImages raw FITS would give a more
 representative picture.
 
 **YOLO evaluation protocol:** The YOLO tiled validation split is not comparable to
-the COCO full-image protocol. No fair head-to-head between YOLO and DINOv2 exists
+the COCO full-image protocol. No fair head-to-head between YOLO and DINOv3 exists
 in the current benchmark.
 
-**DINOv2 ViT-L pending (Phase D):** All results in this document use the ViT-B
+**DINOv3 ViT-L pending (Phase D):** All results in this document use the ViT-B
 backbone. The larger ViT-L (300 M parameters, RTX 5070 Ti) may yield substantially
 different precision/recall behaviour.
 
@@ -928,7 +968,7 @@ local catalog lacks TLE coverage for the observation time window.
 
 ### 9.2 Future Work
 
-- **Phase D:** DINOv2 ViT-L/16 (300 M parameters, RTX 5070 Ti), 50 epochs frozen,
+- **Phase D:** DINOv3 ViT-L/16 (300 M parameters, RTX 5070 Ti), 50 epochs frozen,
   target mAP@0.5 ≥ 0.74. Update `DETECTOR_PROFILES` with measured P/R after
   evaluation.
 - **Multi-frame association:** Implement inter-frame linking to reject single-frame
@@ -936,7 +976,7 @@ local catalog lacks TLE coverage for the observation time window.
 - **Raw FITS evaluation:** Run the full 5-detector ensemble on GTImages raw FITS
   to measure ASTRiDE and OpenCV contributions in their correct domain.
 - **YOLO full-image re-evaluation:** Re-evaluate YOLO11n-OBB on the shared COCO
-  full-image test set to enable fair head-to-head comparison with DINOv2.
+  full-image test set to enable fair head-to-head comparison with DINOv3.
 - **UCS calibration:** Apply Platt scaling or isotonic regression to the UCS score
   distribution on a held-out calibration split.
 - **Short-streak benchmark:** Evaluate on a balanced test set with short-streak
@@ -964,7 +1004,7 @@ The following steps reproduce the headline benchmark results recorded in
    python scripts/merge_annotations.py --seed 42 --val-fraction 0.2
    ```
 
-4. Obtain the DINOv2 ViT-B checkpoint:
+4. Obtain the DINOv3 ViT-B checkpoint:
    `weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth` (~330 MB).
    This checkpoint is not distributed with the repository; it must be trained
    locally or obtained from the ARGUS authors.
@@ -990,7 +1030,7 @@ The following steps reproduce the headline benchmark results recorded in
 7. Verify results match `results/multi_method_benchmark.json`.
 
 **What is and is not reproducible without re-training:**
-- DINOv2 ViT-B, OpenCV, and UCS results: reproducible by running step 6 with the
+- DINOv3 ViT-B, OpenCV, and UCS results: reproducible by running step 6 with the
   provided checkpoint.
 - YOLO tiled val metrics: require re-running `yolo val` on the YOLO tiled split
   (not the COCO eval above); reproducible by re-training with `scripts/train_yolo_full.sh`.
@@ -1014,12 +1054,8 @@ Zong, Z., Song, G., & Liu, Y. (2022). DETRs with Collaborative Hybrid Assignment
 Training. arXiv:2211.12860.
 https://arxiv.org/abs/2211.12860
 
-Oquab, M., Darcet, T., Moutakanni, T., Vo, H., Szafraniec, M., Khalidov, V.,
-Fernandez, P., Haziza, F., Massa, F., El-Nouby, A., Assran, M., Ballas, N.,
-Galuba, W., Howes, R., Huang, P.-Y., Li, S.-W., Misra, I., Rabbat, M., Sharma, V.,
-... Bojanowski, P. (2024). DINOv2: Learning Robust Visual Features without
-Supervision. arXiv:2304.07193. *Transactions on Machine Learning Research*.
-https://arxiv.org/abs/2304.07193
+Meta AI. DINOv3 ViT-B/16 LVD-1689M model distribution / model card.
+Exact publication citation pending confirmation before manuscript submission.
 
 StreakMind Collaboration (2026). [Title from arXiv:2605.03429]. *Astronomy &
 Astrophysics*. arXiv:2605.03429.

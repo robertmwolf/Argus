@@ -113,7 +113,7 @@ external data and weight files listed in this document. Install in this order:
 | Python | conda env `satid`, Python 3.11 | Python 3.12 is not validated with mmcv/numpy compiled packages |
 | PyTorch | PyTorch `cu128` wheel index | Must match RTX 50-series / Blackwell CUDA support |
 | MMDetection | `mmengine==0.10.4`, `mmcv==2.1.0`, `mmdet==3.3.0` | `mmcv` must come from a CUDA-specific Linux wheel with compiled ops |
-| ARGUS packages | `requirements.txt` | Project dependencies only; intentionally excludes torch/mmcv/mmdet |
+| ARGUS packages | `requirements-training.txt` | Training/evaluation dependencies only; intentionally excludes torch/mmcv/mmdet |
 | DINOv3 code | `git+https://github.com/facebookresearch/dinov3.git` | Required by `models/dino/dinov3_adapter.py` |
 | Model weights | Shared handoff folder or Meta portal | Large `.pth` files are gitignored and not installed by pip |
 
@@ -121,6 +121,11 @@ external data and weight files listed in this document. Install in this order:
 `scripts/prepare_cloud_training.py` verifies the high-risk pieces before a full
 run: CUDA visibility, PyTorch version, mmcv compiled ops, DINOv3 import,
 annotation files, model weights, and a training smoke test.
+
+Before renting paid cloud time, complete the reproducibility checklist in
+`docs/cloud_training_preparation.md`. That checklist records the code state,
+dataset counts, SHA-256 checksums, planned transfer path, checkpoint sync
+destination, and run manifest before the instance starts.
 
 ## Parallel Native PyTorch Spike
 
@@ -855,8 +860,9 @@ true-positive probability).  ML detectors trained with cross-entropy loss are
 generally well-calibrated and should leave this as `None`.
 
 ASTRiDE is the exception to the normal detector-profile flow: ASTRiDE-only groups
-are dropped in `inference/pipeline.py`, and corroborated ASTRiDE detections only
-apply the bounded boost implemented in `inference/confidence.py`.
+are lowered to conservative display confidence in `inference/pipeline.py`, and
+corroborated ASTRiDE detections only apply the bounded boost implemented in
+`inference/confidence.py`.
 
 Verify:
 ```bash
@@ -967,6 +973,22 @@ routes can coexist if run simultaneously.
 **Advantage over Route 1**: Tries 800 px image size (more patch coverage for thin
 streaks); early stopping keeps cost low if convergence is fast.
 
+### Step 0 — Local preparation before renting
+
+Complete `docs/cloud_training_preparation.md` before provisioning the instance.
+At minimum, the run should have:
+
+- a committed branch or explicit source archive for the exact code state;
+- checksums for `train.json`, `val.json`, `test.json`, and
+  `weights/dinov3_vitl16_lvd1689m.pth`;
+- recorded SatStreaks image/mask counts;
+- a filled copy of `docs/templates/cloud_training_manifest.md` at
+  `results/4090_dinov3_vitl/training_summary.md`;
+- a tested `rsync`, provider storage, or handoff-folder transfer path for data,
+  backbone weights, and checkpoints.
+
+Do not spend paid GPU time discovering that a large input file is missing.
+
 ### Step 1 — Pre-flight on Mac (free)
 
 ```bash
@@ -974,13 +996,16 @@ MODEL_SIZE=dinov3_vitl USE_DEV_SUBSET=false \
 python scripts/prepare_cloud_training.py
 ```
 
-Resolve all failures before provisioning an instance.
+Resolve all data, config, and weight failures before provisioning an instance.
+CUDA-specific checks may fail on a Mac; those must pass later on the cloud GPU.
 
 ### Step 2 — Provision the instance
 
 1. On Vast.ai or RunPod, filter for **RTX 4090** nodes with ≥24 GB VRAM and
-   PyTorch ≥ 2.2 pre-installed (no Blackwell requirement — 4090 is Ada Lovelace).
-2. Prefer on-demand for a first run; spot is fine with `--resume` recovery.
+   a Linux CUDA/PyTorch image (no Blackwell requirement — 4090 is Ada Lovelace).
+   Use 32 GB RAM minimum, 64 GB preferred, and at least 200 GB disk.
+2. Prefer on-demand for a first run. Spot is fine only after checkpoint sync and
+   `--resume` recovery have been tested.
 3. SSH in, then clone the repo and run setup:
 
 ```bash
@@ -988,11 +1013,19 @@ git clone https://github.com/robertmwolf/Argus.git && cd Argus
 chmod +x scripts/cloud_setup.sh && ./scripts/cloud_setup.sh
 ```
 
-4. Copy DINOv3 ViT-L weights from Mac (~1.1 GB):
+4. Restore the prepared data, manifest, and DINOv3 ViT-L weights. Example from
+   the Mac/development machine:
 
 ```bash
-scp mac:~/Argus/weights/dinov3_vitl16_lvd1689m.pth weights/
+rsync -avh --progress data/annotations/ <user@instance-ip>:~/Argus/data/annotations/
+rsync -avh --progress data/satstreaks/Data/ <user@instance-ip>:~/Argus/data/satstreaks/Data/
+rsync -avh --progress weights/dinov3_vitl16_lvd1689m.pth <user@instance-ip>:~/Argus/weights/
+rsync -avh --progress results/cloud_training_prep/ <user@instance-ip>:~/Argus/results/cloud_training_prep/
+rsync -avh --progress results/4090_dinov3_vitl/training_summary.md <user@instance-ip>:~/Argus/results/4090_dinov3_vitl/
 ```
+
+5. Verify checksums on the cloud instance against
+   `results/cloud_training_prep/input_sha256.txt`.
 
 ### Step 3 — Update the cost guardrail rate
 
@@ -1020,10 +1053,19 @@ export ARGUS_NORM=autostretch
 export DATABASE_URL=sqlite+aiosqlite:///./argus.db
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
+python scripts/prepare_cloud_training.py
+
+python -m training.train_dino \
+    --backbone dinov3_vitl \
+    --smoke-test
+
 python -m training.train_dino \
     --backbone dinov3_vitl \
     --work-dir weights/run_4090_dinov3_vitl
 ```
+
+The explicit preflight and smoke test are the go/no-go gate. `cloud_setup.sh`
+prints helpful warnings, but the setup script is not the final readiness check.
 
 To resume after a spot preemption:
 
@@ -1036,6 +1078,10 @@ python -m training.train_dino \
 
 **Stop early** if val mAP@0.5 has not improved for 5 consecutive epochs and is
 already ≥ 0.74. Terminate, save the best checkpoint, and proceed to evaluation.
+
+During long runs, periodically sync `weights/run_4090_dinov3_vitl/` to durable
+storage. Spot instances, provider maintenance, and accidental termination should
+cost at most the work since the last checkpoint sync.
 
 ### Step 6 — Evaluate
 

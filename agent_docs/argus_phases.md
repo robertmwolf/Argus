@@ -1,4 +1,4 @@
-# StreakMind Phases 2–8
+# ARGUS Phases 2–8
 
 Detailed specifications for each phase after the data pipeline.
 Each phase has a gate condition — do not start the next phase until
@@ -71,7 +71,7 @@ def run(
 
     Args:
         fits_path: Path to the input FITS file.
-        fast: If True, skip Radon refinement, crossid, and DB write.
+        fast: If True, keep Radon refinement but skip crossid and DB write.
               Uses image_size=256. Target: <60 s on Mac.
 
     Returns:
@@ -92,7 +92,8 @@ Env vars controlling behaviour:
 
 #### `inference/postprocess.py`
 
-Radon-based angle refinement and NMS.
+Radon-based angle refinement, endpoint tracing, detector-level NMS, and
+streak-level grouping/fusion.
 
 ```python
 def refine_angle(
@@ -103,7 +104,7 @@ def refine_angle(
     """Refine OBB angle using the Radon transform on the streak crop.
 
     Source: StreakMind — Radon angle refinement
-    Ref: agent_docs/streakmind_phases.md
+    Ref: agent_docs/argus_phases.md
 
     Args:
         image_crop: Greyscale uint8 crop centred on the streak.
@@ -119,6 +120,16 @@ def nms_detections(
     iou_threshold: float = 0.5,
 ) -> list[dict]:
     """Non-maximum suppression on OBB detections using Shapely polygon IoU."""
+
+def group_detections(
+    detections: list[dict],
+    iou_threshold: float = 0.5,
+    iom_threshold: float = 0.3,
+) -> list[dict]:
+    """Assign streak_id using rotated-IoU, IoMin, or collinear-fragment matching."""
+
+def fuse_group_geometries(detections: list[dict]) -> list[dict]:
+    """Fuse grouped fragments into one endpoint-spanning OBB per streak_id."""
 ```
 
 #### `inference/crossid.py`
@@ -160,7 +171,7 @@ fallbacks.
 `tests/test_pipeline.py`:
 - `run()` on a synthetic FITS completes without error in fast mode
 - Returns list of dicts with required keys
-- `FAST_MODE=true` skips Radon refinement (mock postprocess)
+- `FAST_MODE=true` keeps Radon refinement but skips cross-ID / DB writes
 
 `tests/test_postprocess.py`:
 - `refine_angle` on a synthetic streak returns angle within ±5° of ground truth
@@ -326,7 +337,7 @@ Upload FITS in browser, see annotated image with OBBs and table.
 ### Dockerfiles: `docker/`
 
 `Dockerfile.api` — python:3.11-slim, requirements-api.txt, uvicorn
-`Dockerfile.worker` — pytorch/pytorch:2.2.0-cuda12.1, full requirements.txt
+`Dockerfile.worker` — pytorch/pytorch:2.2.0-cuda12.1, requirements-inference.txt
 `Dockerfile.frontend` — node:20-alpine build → nginx:alpine serve
 
 ### `docker-compose.yml` (repo root)
@@ -386,7 +397,7 @@ Recorded 2026-05-05. Swin-T, 50 epochs, 50-image synthetic dev subset, 256×256p
 | F1 | 69.8% | 49.0% | — |
 | Angle error | 29.6°* | 0.66° | — |
 
-*DINO angle is estimated from bbox aspect ratio in fast mode (Radon skipped).
+*DINO angle is Radon-refined in fast mode; cross-ID and DB writes are skipped.
 YOLO angle is real (OBB corner-point output).
 
 ### Phase E results: `results/phase_e/phase_e_comparison_test.json`
@@ -409,7 +420,9 @@ Phase D (ViT-L, 50 epochs) is the definitive production run targeting ≥94% pre
 
 ### Multi-method benchmark: `results/multi_method_benchmark.json`
 Recorded 2026-05-16. 308-image SatStreaks test set, confidence threshold 0.05,
-per-detector NMS IoU 0.5, cross-detector grouping IoU ≥ 0.5 **or** IoMin ≥ 0.3.
+per-detector NMS IoU 0.5, cross-detector grouping IoU ≥ 0.5, IoMin ≥ 0.3,
+or collinear-fragment match. Grouped fragments are fused to a single OBB
+spanning their outer projected endpoints before WCS/cross-ID.
 Confusion matrix PNGs in `results/confusion_matrices/`.
 
 | Method | Precision | Recall | F1 | mAP@0.5 | mAP@0.75 | n preds |
@@ -424,9 +437,9 @@ On long streaks (≥ 1 000 px, 92 % of test set) Unified F1 = 49 % vs 16.9 % for
 DINOv3 alone.
 
 The Unified Confidence Score is computed by `inference/confidence.py`.  ASTRiDE is
-corroboration-only: groups where ASTRiDE is the only detector are dropped in
-`inference/pipeline.py` before WCS/cross-ID, and corroborated ASTRiDE detections
-can only add a small bounded score boost. The non-ASTRiDE fusion formula:
+corroboration-only: groups where ASTRiDE is the only detector are lowered to a
+conservative confidence in `inference/pipeline.py`, and corroborated ASTRiDE
+detections can only add a small bounded score boost. The non-ASTRiDE fusion formula:
 
 1. Cap each non-ASTRiDE detector's raw confidence at its optional
    `confidence_ceiling` before any weighting.

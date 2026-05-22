@@ -5,11 +5,12 @@ ARGUS is a pipeline for automated satellite streak detection
 and identification in FITS telescope images.  It runs five independent detectors
 in parallel — three ML-based (DINO-DETR with DINOv3 ViT-B backbone, YOLO11n-OBB dev-subset,
 YOLO11n-OBB full-dataset) and two classical (ASTRiDE-derived, OpenCV connected-components) —
-then merges their results by grouping overlapping detections and fusing them into a
+then merges their results by grouping overlapping or collinear detections and
+fusing them into a single streak-level geometry plus a
 **Unified Confidence Score** weighted by each detector's empirical precision and recall.
-ASTRiDE is treated as corroboration-only: ASTRiDE-only streak groups are dropped
-before WCS/cross-identification, and corroborated ASTRiDE detections can only add
-a small confidence boost.
+ASTRiDE is treated as corroboration-only: ASTRiDE-only streak groups are kept at
+a conservative display confidence, and corroborated ASTRiDE detections can only
+add a small confidence boost.
 Streak orientation is refined via the Radon transform, each streak is traced to its
 true endpoints across the full image, and detected objects are cross-identified
 against a local TLE catalog using SGP4 propagation and multi-factor confidence
@@ -47,9 +48,11 @@ including exact parameters, design rationale, and reproducible algorithm descrip
 
 **Summary:** FITS → Z-score normalisation → 5 parallel detectors (DINOv3 ViT-B /
 DINO-DETR, YOLO11n-OBB × 2, ASTRiDE, OpenCV connected-components) → Radon angle
-refinement → streak extent tracing → per-detector NMS → cross-detector grouping
-(rotated-IoU ≥ 0.5 or IoMin ≥ 0.3) → drop ASTRiDE-only groups → Unified
-Confidence Score → SGP4 cross-identification → FastAPI + React canvas.
+refinement (default ±60° search) → streak extent tracing → per-detector NMS →
+cross-detector grouping (rotated-IoU ≥ 0.5, IoMin ≥ 0.3, or collinear-fragment
+match) → grouped-geometry fusion to outer endpoints → ASTRiDE-only confidence
+lowering → Unified Confidence Score → SGP4 cross-identification → FastAPI +
+React canvas.
 
 ---
 
@@ -63,7 +66,7 @@ Argus/
 ├── agent_docs/                ← shared assistant guide + reference docs
 │   ├── assistant_guide.md     ← canonical assistant instructions
 │   ├── architecture.md
-│   ├── streakmind_phases.md   ← Phases 2–8 spec
+│   ├── argus_phases.md        ← Phases 2–8 spec
 │   ├── phase1_goals.md        ← Phase 1 (complete, reference only)
 │   ├── datasets.md
 │   ├── dependencies.md
@@ -79,7 +82,7 @@ Argus/
 │   ├── device.py              ← get_device() / get_device_config()
 │   ├── fits_loader.py         ← FITS → tensor, normalisation + FITS/sidecar WCS
 │   ├── pipeline.py            ← inference orchestrator
-│   ├── postprocess.py         ← Radon angle refinement + streak extent + NMS
+│   ├── postprocess.py         ← Radon angle refinement + extent, NMS, grouping/fusion
 │   ├── crossid.py             ← satellite cross-matching
 │   └── confidence.py          ← Unified Confidence Score (F-beta fusion + ASTRiDE corroboration)
 ├── training/
@@ -123,16 +126,27 @@ Argus/
 ## Setup
 
 For GPU training handoff, use [agent_docs/Training_Handoff.md](agent_docs/Training_Handoff.md)
-first. On Windows hardware, that means WSL2 Ubuntu 22.04, not native Windows.
-The short local setup below is for development and API/inference work; the ML
-training stack has platform-specific PyTorch/MMDetection install steps in
-[agent_docs/dependencies.md](agent_docs/dependencies.md).
+first, and complete the cloud readiness checklist in
+[docs/cloud_training_preparation.md](docs/cloud_training_preparation.md) before
+renting paid GPU time. On Windows hardware, that means WSL2 Ubuntu 22.04, not
+native Windows. The short local setup below is for development and API/inference
+work; the ML training stack has platform-specific PyTorch/MMDetection install
+steps in [agent_docs/dependencies.md](agent_docs/dependencies.md).
 
 ```bash
 # Create and activate the conda environment
 conda create -n satid python=3.11
 conda activate satid
-pip install -r requirements.txt
+
+# API-only environment, no ML stack:
+pip install -r requirements-api.txt
+
+# Local dev/inference/training environments:
+# first install platform-specific torch/mmcv/mmdet from agent_docs/dependencies.md,
+# then choose the narrowest lane that matches the work:
+pip install -r requirements-inference.txt   # model-serving worker
+pip install -r requirements-training.txt    # training/evaluation
+pip install -r requirements-dev.txt         # tests on top of training
 
 # Required env vars for local dev
 export MODEL_SIZE=dinov3_vitb                   # dinov3_vitb (default), dinov3_vitl, tiny=Swin-T, large=Swin-L
@@ -414,11 +428,11 @@ Check `api/main.py` or the benchmark output for exact key names.
 high scores on false positives (its confidence magnitude is miscalibrated), set
 `confidence_ceiling` to cap its effective contribution. Leave
 `confidence_ceiling=None` for ML detectors with well-calibrated outputs. ASTRiDE
-keeps its profile entry for diagnostics, but the pipeline drops ASTRiDE-only
-groups and the scorer excludes ASTRiDE from weighted fusion, false-negative
-adjustment, and divergence. When ASTRiDE corroborates another detector, it can
-only add a small bounded boost; for example, YOLO OBB 0.86 plus ASTRiDE 0.99
-scores about 0.90.
+keeps its profile entry for diagnostics, but the pipeline lowers ASTRiDE-only
+groups to conservative display confidence and the scorer excludes ASTRiDE from
+weighted fusion, false-negative adjustment, and divergence. When ASTRiDE
+corroborates another detector, it can only add a small bounded boost; for
+example, YOLO OBB 0.86 plus ASTRiDE 0.99 scores about 0.90.
 
 ### Step 3 — Verify
 

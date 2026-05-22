@@ -64,6 +64,12 @@ local upload workflow must keep the sidecar in upload storage or one of the
 known data locations so `api/main.py` can copy it beside the temporary FITS
 before inference.
 
+**Known scale issue:** cross-identification is currently the slowest part of a
+complete run when enabled. The API should keep `CROSSID_MAX_DETECTIONS` low for
+interactive use until the inference path adds a spatial prescreen or propagated
+ephemeris cache. See `agent_docs/architecture.md` → Cross-ID Performance
+Backlog for the optimization plan.
+
 ---
 
 ## Phase S3 — Frontend (React + Vite)

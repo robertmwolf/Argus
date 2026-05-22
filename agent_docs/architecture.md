@@ -214,6 +214,33 @@ Never run full SGP4 on the entire TLE window. Always:
 2. Spatial cone (local SGP4 prescreen in `spatial_filter.py`) — reduces 5–15k → 5–50
 3. Only then run full SGP4 propagation for the small surviving set
 
+### Cross-ID Performance Backlog
+Current status: `inference/crossid.py` still scores each selected detection
+against the local TLE window by propagating one TLE per catalogued object. After
+deduplicating TLE epochs this is usually tens of thousands of SGP4 calls per
+detection, so full cross-identification can take tens of seconds on a large
+catalog. Keep `CROSSID_MAX_DETECTIONS` small for interactive API use until this
+is improved.
+
+Suggested future improvements:
+- Add the spatial cone prescreen from the architecture path to the inference
+  cross-ID flow before full scoring. Use the FITS WCS-derived field center,
+  field radius, observer position, and obs_time to reduce candidates before
+  midpoint/length scoring.
+- Cache propagated topocentric positions for `(obs_time, observer, catalog
+  epoch window)` once per uploaded image, then score every detection against the
+  cached RA/Dec positions. This avoids repeating the same SGP4 propagation for
+  multiple detections in the same frame.
+- Add coarse DB-side orbit filtering where safe: mean motion/orbit class,
+  declination/RA bins from a precomputed ephemeris cache, or known NORAD/object
+  hints from GTImages-style filenames and FITS `OBJECT` headers.
+- Consider a nightly ephemeris index for bootstrapped catalog days: precompute
+  coarse sky positions on a time grid per observing site and query nearby bins
+  during inference, then run exact SGP4 only for the survivors.
+- Add performance tests that assert candidate-count reductions and wall-clock
+  budgets for representative GEO and LEO images, including `AMAZONAS 5`
+  (`Streak_42934_222307.fits`) as a regression case.
+
 ## Scoring Formulas
 
 ### Per-factor scoring (Gaussian falloff)
@@ -274,10 +301,13 @@ weighted_score = (
    models/dino/streak_codino_swin_l.py  — MMDetection config
    → axis-aligned bboxes + confidence scores
         ↓
-[inference/postprocess.py — AngleRefinement + StreakNMS]
-   Radon transform on each crop → refined angle
+[inference/postprocess.py — AngleRefinement + StreakGrouping]
+   Radon transform on each crop → refined angle (default ±60° search)
    Reconstruct OBB (cx, cy, w, h, angle_deg)
-   Rotated IoU NMS via Shapely
+   Trace streak extent along the refined axis
+   Per-detector rotated-IoU NMS via Shapely
+   Cross-detector grouping by rotated-IoU, IoMin, or collinear fragment match
+   Fuse grouped fragment geometry to one OBB spanning the outer endpoints
         ↓
 [inference/crossid.py — SatelliteCrossIdentifier]
    WCS → RA/Dec for streak midpoints

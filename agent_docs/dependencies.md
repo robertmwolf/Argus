@@ -60,13 +60,13 @@ training runtime.
 The local `satid` environment is useful for development but has accumulated
 organically.  Treat it as an environment snapshot, not as the canonical install
 contract.  On 2026-05-21 the active environment differed from
-`requirements.txt` in several ways:
+the documented requirements lanes in several ways:
 
 - `torch==2.11.0` and `torchvision==0.26.0` are installed locally, while the
   documented Mac/Docker baseline still uses PyTorch 2.2 where appropriate.
 - `albumentations==2.0.8`, `spacetrack==1.4.0`, `ultralytics==8.4.46`, and
-  `pydantic==2.13.3` are installed locally, while `requirements.txt` pins older
-  versions.
+  `pydantic==2.13.3` are installed locally, while the requirements files pin
+  older versions.
 - Both `opencv-python` and `opencv-python-headless` are installed locally, and
   `cv2` imports from the headless package.  Production/API installs should keep
   only the headless package unless a GUI dependency is deliberately needed.
@@ -174,10 +174,21 @@ avoids the Windows wheel problem entirely.
 
 ## Install Order — Critical Rule
 
-**PyTorch and the MMDetection stack must be installed before `requirements.txt`.**
-The wheel index URL differs by target platform.  Installing in the wrong order
-or from the wrong index silently installs the wrong mmcv variant, which breaks
-Co-DINO training.
+**PyTorch and the MMDetection stack must be installed before the inference or
+training requirements lane.** The wheel index URL differs by target platform.
+Installing in the wrong order or from the wrong index silently installs the
+wrong mmcv variant, which breaks Co-DINO training and DINO inference.
+
+The requirements files are split by environment:
+
+| File | Use for | Excludes |
+|------|---------|----------|
+| `requirements-base.txt` | Shared astronomy, orbital mechanics, image processing, and utility packages | API, ML, training, and test extras |
+| `requirements-api.txt` | Lightweight FastAPI/database service | torch, MMDetection, Ultralytics, Albumentations, benchmarks, tests |
+| `requirements-inference.txt` | Model-serving worker after platform-specific torch/mmcv/mmdet install | Training/evaluation/test-only tooling |
+| `requirements-training.txt` | Training and evaluation after platform-specific torch/mmcv/mmdet install | Test-only tooling |
+| `requirements-dev.txt` | Local developer environment with tests | Platform-specific torch/mmcv/mmdet |
+| `requirements.txt` | Compatibility aggregate for full local dev | Platform-specific torch/mmcv/mmdet |
 
 ---
 
@@ -195,8 +206,8 @@ pip install mmengine==0.10.4
 pip install mmcv==2.1.0           # CPU wheel from PyPI — no custom index needed
 pip install mmdet==3.3.0
 
-# All remaining dependencies
-pip install -r requirements.txt
+# Full local dev/test dependencies
+pip install -r requirements-dev.txt
 ```
 
 Set before running any training or inference on Mac:
@@ -225,8 +236,8 @@ pip install mmcv==2.1.0 \
     -f https://download.openmmlab.com/mmcv/dist/cu121/torch2.2/index.html
 pip install mmdet==3.3.0
 
-# All remaining dependencies
-pip install -r requirements.txt \
+# Inference worker dependencies
+pip install -r requirements-inference.txt \
     --extra-index-url https://download.pytorch.org/whl/cu121
 ```
 
@@ -262,8 +273,8 @@ pip install mmdet==3.3.0
 # Verify CUDA ops loaded
 python -c "import mmcv.ops; print('mmcv CUDA ops OK')"
 
-# All remaining dependencies
-pip install -r requirements.txt \
+# Training/evaluation dependencies
+pip install -r requirements-training.txt \
     --extra-index-url https://download.pytorch.org/whl/cu128
 
 # DINOv3 package used by models/dino/dinov3_adapter.py
@@ -291,46 +302,23 @@ PY
 
 ## Quick Install (after cloning — non-GPU environments only)
 
-For Mac dev or API-only containers that do not need the ML training stack:
+For the lightweight API service only:
 
 ```bash
 conda create -n satid python=3.11 -y
 conda activate satid
-pip install -r requirements.txt   # does NOT install torch/mmdet
+pip install -r requirements-api.txt
 ```
 
-For GPU environments use the platform-specific steps above.
+For Mac local development with tests, first install the Mac PyTorch/MMDetection
+stack from Platform A, then run:
 
----
-
-## Full Package List
-
-## Separate requirements files
-
-Keep two files:
-- `requirements.txt` — project dependencies excluding torch/mmengine/mmcv/mmdet,
-  which must be installed first from the platform-specific wheel index
-- `requirements-api.txt` — API-only, no torch or mmdet (for api container, faster build)
-
-`requirements-api.txt`:
+```bash
+pip install -r requirements-dev.txt
 ```
-astropy>=6.0.0
-sgp4>=2.22
-skyfield>=1.49
-spacetrack>=0.14.0
-opencv-python-headless>=4.9.0
-numpy>=1.26.0
-fastapi>=0.110.0
-uvicorn[standard]>=0.29.0
-sqlalchemy[asyncio]>=2.0.0
-asyncpg>=0.29.0
-aiosqlite>=0.20.0
-pydantic>=2.6.0
-python-multipart>=0.0.9
-boto3>=1.34.0
-python-dotenv>=1.0.0
-requests>=2.31.0
-```
+
+For GPU training or inference environments, use the platform-specific steps
+above so torch/mmcv/mmdet come from the correct wheel indexes.
 
 ---
 
