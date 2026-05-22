@@ -147,6 +147,18 @@ class TestRefineAngle:
         err = min(abs(refined - 140.0), abs(refined - (140.0 - 180.0)))
         assert err <= 5.0
 
+    def test_wide_search_recovers_loose_tall_bbox_seed(self):
+        """Loose DINO boxes can seed near 67° for a descending ~112° streak."""
+        from inference.postprocess import refine_angle
+
+        img = _make_streak_image(height=410, width=170, angle_deg=112.0)
+        obb = _make_obb(cx=85.0, cy=205.0, w=444.0, h=308.0, angle_deg=67.5)
+
+        refined = refine_angle(img, obb, angle_search_range=60.0)
+
+        err = min(abs(refined - 112.0), abs(refined - (112.0 - 180.0)))
+        assert err <= 5.0, f"refined={refined:.1f}°  err={err:.1f}°"
+
 
 # ---------------------------------------------------------------------------
 # extend_obb_to_streak_extent
@@ -267,6 +279,8 @@ class TestClassifyDetectionQuality:
         # angle=0 → tip1_x = cx - w/2 = 5 (inside 20 px margin)
         det = _make_quality_det(cx=105.0, cy=256.0, w=200.0, angle_deg=0.0)
         assert classify_detection_quality(det, self.IMAGE_SHAPE, edge_margin_px=20) == QUALITY_EDGE
+        assert det["edge_clipped"] is True
+        assert det["edge_contacts"] == ["left"]
 
     def test_tip_on_right_edge_returns_edge_flag(self):
         from inference.postprocess import classify_detection_quality, QUALITY_EDGE
@@ -296,6 +310,8 @@ class TestClassifyDetectionQuality:
         from inference.postprocess import classify_detection_quality, QUALITY_GOOD
         det = _make_quality_det(confidence=0.30)
         assert classify_detection_quality(det, self.IMAGE_SHAPE, min_confidence=0.30) == QUALITY_GOOD
+        assert det["edge_clipped"] is False
+        assert det["edge_contacts"] == []
 
     def test_short_streak_returns_flag_three(self):
         from inference.postprocess import classify_detection_quality, QUALITY_TOO_SHORT
@@ -349,6 +365,19 @@ class TestGroupDetections:
         ids = {d["streak_id"] for d in result}
         assert len(ids) == 2
 
+    def test_collinear_fragments_share_streak_id(self):
+        """Separated boxes on the same line should be one physical streak."""
+        from inference.postprocess import group_detections
+
+        det1 = {"confidence": 0.9, "method": "dinov3",
+                "obb": {"cx": 150.0, "cy": 100.0, "w": 160.0, "h": 6.0, "angle_deg": 0.0}}
+        det2 = {"confidence": 0.8, "method": "dinov3",
+                "obb": {"cx": 360.0, "cy": 104.0, "w": 150.0, "h": 7.0, "angle_deg": 2.0}}
+
+        result = group_detections([det1, det2])
+
+        assert len({d["streak_id"] for d in result}) == 1
+
     def test_heavily_overlapping_same_streak_id(self):
         """Nearly identical detections from two methods → same streak_id."""
         from inference.postprocess import group_detections
@@ -397,3 +426,39 @@ class TestGroupDetections:
         assert ids[0] == ids[1], (
             "Partial detection must group with the full detection of the same streak"
         )
+
+
+class TestFuseGroupGeometries:
+    def test_fuses_group_fragments_to_outer_endpoints(self):
+        from inference.postprocess import fuse_group_geometries
+
+        dets = [
+            {"streak_id": 1, "confidence": 0.9,
+             "obb": {"cx": 150.0, "cy": 100.0, "w": 160.0, "h": 6.0, "angle_deg": 0.0},
+             "streak_length_px": 160.0},
+            {"streak_id": 1, "confidence": 0.8,
+             "obb": {"cx": 360.0, "cy": 104.0, "w": 150.0, "h": 8.0, "angle_deg": 2.0},
+             "streak_length_px": 150.0},
+        ]
+
+        fused = fuse_group_geometries(dets)
+
+        assert fused[0]["obb"]["w"] == pytest.approx(365.0)
+        assert fused[1]["obb"]["w"] == pytest.approx(365.0)
+        assert fused[0]["obb"]["cx"] == pytest.approx(252.5)
+        assert fused[1]["streak_length_px"] == pytest.approx(365.0)
+
+    def test_fuse_uses_longest_member_axis_over_highest_confidence(self):
+        from inference.postprocess import fuse_group_geometries
+
+        dets = [
+            {"streak_id": 1, "confidence": 0.99,
+             "obb": {"cx": 100.0, "cy": 100.0, "w": 100.0, "h": 5.0, "angle_deg": 90.0}},
+            {"streak_id": 1, "confidence": 0.50,
+             "obb": {"cx": 150.0, "cy": 100.0, "w": 300.0, "h": 8.0, "angle_deg": 112.0}},
+        ]
+
+        fused = fuse_group_geometries(dets)
+
+        assert fused[0]["obb"]["angle_deg"] == pytest.approx(112.0)
+        assert fused[1]["obb"]["angle_deg"] == pytest.approx(112.0)

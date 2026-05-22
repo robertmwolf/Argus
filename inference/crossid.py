@@ -7,6 +7,9 @@ Enhancements adapted from SkyTrack (colleague's pipeline):
   - Scores against streak midpoint RA/Dec propagated at mid-exposure time,
     which is physically correct (the satellite is at the midpoint at the
     middle of the exposure, not at either tip).
+  - For border-clipped streaks, scores the propagated midpoint against the
+    visible RA/Dec segment and skips endpoint-dependent length/direction
+    refinements because the measured tips are image-boundary intersections.
   - Computes along-track (Atrk) and cross-track (Xtrk) residuals per
     candidate, decomposing positional error into timing vs. orbital-plane
     components.
@@ -52,6 +55,10 @@ _LENGTH_SIGMA_RELATIVE = 0.4
 # A broad epoch hit still counts as "no match" if no propagated candidate lands
 # within roughly a degree of the detection midpoint.
 _MIN_VIABLE_POSITION_SCORE = 0.01
+
+# Mirrors inference.postprocess.QUALITY_EDGE without importing the postprocess
+# module into the cross-ID path.
+_QUALITY_EDGE = 1
 
 
 # ---------------------------------------------------------------------------
@@ -292,6 +299,73 @@ def _angular_separation_arcsec(
          + math.cos(dec1_r) * math.cos(dec2_r) * math.sin(dra / 2) ** 2)
     sep_rad = 2 * math.asin(math.sqrt(max(0.0, min(1.0, a))))
     return math.degrees(sep_rad) * 3600.0
+
+
+def _is_edge_clipped(det: dict) -> bool:
+    """Return True when detection endpoints are likely image-border clips.
+
+    Border-clipped streak tips are not physical exposure start/end points.
+    Treating them as full-track endpoints biases midpoint, direction, and
+    length-based catalogue scores.
+
+    Args:
+        det: Detection dict, optionally including quality metadata from
+            :func:`inference.postprocess.classify_detection_quality`.
+
+    Returns:
+        True when the detection touches/crosses an image border.
+    """
+    return bool(
+        det.get("edge_clipped")
+        or det.get("edge_contacts")
+        or det.get("quality_flag") == _QUALITY_EDGE
+    )
+
+
+def _segment_separation_arcsec(
+    point_ra: float,
+    point_dec: float,
+    start_ra: float,
+    start_dec: float,
+    end_ra: float,
+    end_dec: float,
+) -> float:
+    """Shortest angular distance from a sky point to a small RA/Dec segment.
+
+    The local tangent-plane approximation is appropriate for the short streak
+    segments used here and handles RA wrap before projecting.
+
+    Args:
+        point_ra, point_dec: Sky point in degrees.
+        start_ra, start_dec: First visible streak tip in degrees.
+        end_ra, end_dec: Second visible streak tip in degrees.
+
+    Returns:
+        Closest distance to the finite visible segment in arcseconds.
+    """
+    cos_dec = math.cos(math.radians(point_dec))
+
+    def project(ra: float, dec: float) -> tuple[float, float]:
+        dra = ra - point_ra
+        dra -= 360.0 * math.floor((dra + 180.0) / 360.0)
+        return (dra * cos_dec * 3600.0, (dec - point_dec) * 3600.0)
+
+    sx, sy = project(start_ra, start_dec)
+    ex, ey = project(end_ra, end_dec)
+    vx = ex - sx
+    vy = ey - sy
+    mag2 = vx * vx + vy * vy
+    if mag2 < 1.0:
+        return min(
+            _angular_separation_arcsec(point_ra, point_dec, start_ra, start_dec),
+            _angular_separation_arcsec(point_ra, point_dec, end_ra, end_dec),
+        )
+
+    # Point is the tangent-plane origin, so closest parameter is -S dot V / |V|².
+    u = max(0.0, min(1.0, -(sx * vx + sy * vy) / mag2))
+    cx = sx + u * vx
+    cy = sy + u * vy
+    return math.sqrt(cx * cx + cy * cy)
 
 
 def _gaussian_score(delta: float, sigma: float) -> float:
@@ -550,9 +624,10 @@ def cross_identify(
         mid_ra, mid_dec = mid
 
         has_both_tips = all(
-            det.get(k) is not None
+            det.get(k) is not None and math.isfinite(det[k])
             for k in ("ra_tip1_deg", "dec_tip1_deg", "ra_tip2_deg", "dec_tip2_deg")
         )
+        edge_clipped = _is_edge_clipped(det)
 
         plate_scale = _plate_scale_from_det(det)
 
@@ -570,10 +645,23 @@ def cross_identify(
             if result is None:
                 continue
 
-            sep_arcsec = _angular_separation_arcsec(
+            midpoint_sep_arcsec = _angular_separation_arcsec(
                 mid_ra, mid_dec,
                 result["predicted_ra"], result["predicted_dec"],
             )
+            sep_arcsec = midpoint_sep_arcsec
+            position_score_mode = "midpoint"
+            if edge_clipped and has_both_tips:
+                sep_arcsec = _segment_separation_arcsec(
+                    result["predicted_ra"],
+                    result["predicted_dec"],
+                    det["ra_tip1_deg"],
+                    det["dec_tip1_deg"],
+                    det["ra_tip2_deg"],
+                    det["dec_tip2_deg"],
+                )
+                position_score_mode = "edge_visible_segment"
+
             pos_score = _gaussian_score(sep_arcsec, sigma=_POSITION_SIGMA_ARCSEC)
             confidence, epoch_penalty = _confidence_with_epoch_penalty(
                 pos_score,
@@ -585,8 +673,10 @@ def cross_identify(
                 "norad_id":          result["norad_id"],
                 "confidence":        confidence,
                 "position_score":    round(pos_score, 4),
+                "position_score_mode": position_score_mode,
                 "epoch_penalty":     round(epoch_penalty, 4),
                 "separation_arcsec": sep_arcsec,
+                "midpoint_separation_arcsec": round(midpoint_sep_arcsec, 2),
                 "tle_age_hours":     result["tle_age_hours"],
                 "tle_epoch":         entry.get("tle_epoch") or _format_utc(result.get("tle_epoch")),
                 "photo_taken_at":    _format_utc(obs_time),
@@ -609,7 +699,7 @@ def cross_identify(
 
         # --- Atrk / Xtrk for all top-3 (no extra propagations needed) -------
         # Source: SkyTrack (colleague) — ComputeOneResidual
-        if has_both_tips:
+        if has_both_tips and not edge_clipped:
             for cand in top3:
                 atrk, xtrk = _atrk_xtrk(
                     mid_ra, mid_dec,
@@ -625,6 +715,7 @@ def cross_identify(
         if (
             top3
             and has_both_tips
+            and not edge_clipped
             and exposure_time is not None
             and top3[0].get("position_score", 0.0) >= _MIN_VIABLE_POSITION_SCORE
         ):
@@ -679,6 +770,11 @@ def cross_identify(
                                 "rel_err=%.2f  length_score=%.3f",
                                 exp_length_px, obs_length_px, rel_err, length_score,
                             )
+        elif top3 and edge_clipped:
+            for cand in top3:
+                cand["edge_clipped"] = True
+                cand["length_score_skipped"] = True
+                cand["direction_disambiguation_skipped"] = True
 
         # --- Clean up temp fields and assign ranks ---------------------------
         for rank, cand in enumerate(top3, start=1):

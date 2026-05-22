@@ -66,6 +66,30 @@ def test_copy_matching_wcs_sidecar_from_upload_storage(tmp_path, monkeypatch):
     assert copied.read_text() == "WCS SIDE"
 
 
+def test_configure_api_logging_adds_file_handler_once(tmp_path, monkeypatch):
+    """API file logging should be enabled without duplicate handlers."""
+    import logging
+    from api.main import _configure_api_logging
+
+    log_path = tmp_path / "api.log"
+    monkeypatch.setenv("ARGUS_API_LOG", str(log_path))
+
+    before = len(logging.getLogger().handlers)
+    _configure_api_logging()
+    _configure_api_logging()
+
+    matching = [
+        handler for handler in logging.getLogger().handlers
+        if isinstance(handler, logging.FileHandler)
+        and Path(handler.baseFilename) == log_path
+    ]
+    assert len(matching) == 1
+    assert len(logging.getLogger().handlers) == before + 1
+
+    logging.getLogger().removeHandler(matching[0])
+    matching[0].close()
+
+
 @pytest_asyncio.fixture
 async def client(tmp_path):
     """Async HTTP client with a fully isolated app instance."""
@@ -97,6 +121,48 @@ async def client(tmp_path):
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_recover_startup_jobs_requeues_queued_and_processing(tmp_path):
+    """Startup recovery should revive stranded in-memory queue jobs."""
+    from api.main import _recover_startup_jobs, app as _app
+    from db.models import Observation, get_engine, get_session_factory, init_db
+
+    engine = get_engine("sqlite+aiosqlite:///:memory:")
+    await init_db(engine)
+    session_factory = get_session_factory(engine)
+    queue = InMemoryQueue()
+
+    _app.state.session_factory = session_factory
+    _app.state.queue = queue
+
+    async with session_factory() as session:
+        session.add_all([
+            Observation(id="job-queued", filename="queued.fits", status="queued"),
+            Observation(id="job-processing", filename="processing.fits", status="processing"),
+            Observation(id="job-complete", filename="complete.fits", status="complete"),
+            Observation(id="job-failed", filename="failed.fits", status="failed"),
+        ])
+        await session.commit()
+
+    recovered = await _recover_startup_jobs(_app)
+
+    assert recovered == 2
+    recovered_ids = {await queue.dequeue(), await queue.dequeue()}
+    assert recovered_ids == {"job-queued", "job-processing"}
+
+    async with session_factory() as session:
+        queued = await session.get(Observation, "job-queued")
+        processing = await session.get(Observation, "job-processing")
+        complete = await session.get(Observation, "job-complete")
+        failed = await session.get(Observation, "job-failed")
+
+    assert queued.status == "queued"
+    assert processing.status == "queued"
+    assert complete.status == "complete"
+    assert failed.status == "failed"
+    await engine.dispose()
 
 
 @pytest.mark.asyncio

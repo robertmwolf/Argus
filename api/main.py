@@ -35,7 +35,7 @@ from typing import Any
 from fastapi import FastAPI, Form, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 
 from db.models import Detection, Identification, Observation, get_engine, get_session_factory, init_db
 from inference.confidence import compute_unified_confidence
@@ -45,6 +45,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logging.getLogger("inference.pipeline").setLevel(logging.INFO)
 logging.getLogger("inference.fits_loader").setLevel(logging.INFO)
+logging.getLogger("inference.crossid").setLevel(logging.INFO)
 
 _MAX_UPLOAD_BYTES = 300 * 1024 * 1024  # 100 MB
 _FITS_EXTENSIONS = {".fits", ".fit", ".fts"}
@@ -52,6 +53,30 @@ _IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
 _ALLOWED_EXTENSIONS = _FITS_EXTENSIONS | _IMAGE_EXTENSIONS
 # FITS magic: first 8 bytes are "SIMPLE  " (with trailing spaces)
 _FITS_MAGIC = b"SIMPLE  "
+
+
+def _configure_api_logging() -> None:
+    """Attach an idempotent file handler for API and worker diagnostics."""
+    log_path = Path(os.environ.get("ARGUS_API_LOG", "logs/api.log"))
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    resolved = log_path.resolve()
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    for handler in root_logger.handlers:
+        if isinstance(handler, logging.FileHandler):
+            try:
+                if Path(handler.baseFilename).resolve() == resolved:
+                    return
+            except OSError:
+                continue
+
+    handler = logging.FileHandler(resolved)
+    handler.setLevel(logging.INFO)
+    handler.setFormatter(logging.Formatter(
+        "%(asctime)s %(levelname)s %(name)s — %(message)s"
+    ))
+    root_logger.addHandler(handler)
 
 
 def _parse_enabled_detectors(raw: str | None) -> set[str] | None:
@@ -127,11 +152,52 @@ def _copy_matching_wcs_sidecar(filename: str, fits_path: Path, job_id: str | Non
 # ---------------------------------------------------------------------------
 
 
+async def _recover_startup_jobs(app: FastAPI) -> int:
+    """Return stranded local jobs to the queue during API startup.
+
+    The local queue backend is in-memory, so queued work disappears when the
+    process exits.  Re-enqueue queued rows and reset any interrupted processing
+    rows to queued before the worker starts.
+
+    Args:
+        app: FastAPI application carrying session factory and queue state.
+
+    Returns:
+        Number of job IDs enqueued for processing.
+    """
+    session_factory = app.state.session_factory
+    async with session_factory() as session:
+        await session.execute(
+            update(Observation)
+            .where(Observation.status == "processing")
+            .values(status="queued")
+        )
+        result = await session.execute(
+            select(Observation.id)
+            .where(Observation.status == "queued")
+            .order_by(Observation.uploaded_at, Observation.id)
+        )
+        job_ids = list(result.scalars())
+        await session.commit()
+
+    for job_id in job_ids:
+        await app.state.queue.enqueue(job_id)
+
+    if job_ids:
+        logger.info(
+            "Recovered %d queued startup job(s): %s",
+            len(job_ids),
+            ", ".join(job_ids),
+        )
+    return len(job_ids)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from api.queue import get_queue
     from api.storage import get_storage
 
+    _configure_api_logging()
     engine = get_engine()
     await init_db(engine)
     session_factory = get_session_factory(engine)
@@ -147,6 +213,7 @@ async def lifespan(app: FastAPI):
     app.state.pipeline_device = None
     app.state.pipeline_model_key = None
 
+    await _recover_startup_jobs(app)
     worker_task = asyncio.create_task(_worker_loop(app))
 
     yield
@@ -386,6 +453,7 @@ def _extract_fits_header(data: bytes) -> list[dict] | None:
         from astropy.io import fits as afits
 
         with afits.open(io.BytesIO(data)) as hdul:
+            hdul.verify("silentfix")
             header = hdul[0].header
             cards = []
             for card in header.cards:
@@ -932,6 +1000,25 @@ async def fits_header(job_id: str, request: Request) -> dict[str, Any]:
     if raw is None:
         return {"cards": []}
     return {"cards": json.loads(raw)}
+
+
+@app.get("/api/detectors")
+async def detectors() -> dict[str, Any]:
+    """Return availability metadata for all detectors.
+
+    Checks weights file existence and required imports; never loads a model.
+
+    Returns:
+        dict with a ``detectors`` list; each item has id, name, type,
+        dataset, and status ('active' | 'no_weights' | 'unavailable').
+    """
+    try:
+        from inference.pipeline import get_detector_statuses
+        items = await asyncio.to_thread(get_detector_statuses)
+    except Exception:
+        logger.exception("Failed to enumerate detector statuses")
+        items = []
+    return {"detectors": items}
 
 
 @app.get("/health")

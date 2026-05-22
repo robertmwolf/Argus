@@ -1,8 +1,6 @@
 """Pytest configuration and shared fixtures for the ARGUS test suite."""
 
 from __future__ import annotations
-
-import os
 from pathlib import Path
 
 import pytest
@@ -25,13 +23,6 @@ DATA_TEST_DIR = Path(__file__).parent / "data" / "test"
 def pytest_configure(config):
     config.addinivalue_line(
         "markers",
-        "integration: tests that make live network calls to external APIs "
-        "(Space-Track, etc.). Require SPACETRACK_USER and SPACETRACK_PASS "
-        "in the environment or in a .env file at the project root. "
-        "Skipped by default — run with: pytest -m integration",
-    )
-    config.addinivalue_line(
-        "markers",
         "real_data: tests that run against real FITS images in data/test/. "
         "Skipped automatically when the directory is empty. "
         "Run explicitly with: pytest -m real_data",
@@ -39,24 +30,18 @@ def pytest_configure(config):
 
 
 def pytest_collection_modifyitems(config, items):
-    """Auto-skip integration and real_data tests unless explicitly selected.
+    """Auto-skip real_data tests unless explicitly selected.
 
-    Running ``pytest`` (no -m flag) never touches the live Space-Track API
-    or real FITS files.  Pass ``-m integration`` or ``-m real_data`` to opt
-    in.
+    Running ``pytest`` (no -m flag) does not require real FITS files. Pass
+    ``-m real_data`` to opt in.
     """
     marker_expr = config.option.markexpr if hasattr(config.option, "markexpr") else ""
 
-    skip_integration = pytest.mark.skip(
-        reason="live API test — run with: pytest -m integration"
-    )
     skip_real_data = pytest.mark.skip(
         reason="requires real FITS files — run with: pytest -m real_data"
     )
 
     for item in items:
-        if "integration" in item.keywords and "integration" not in marker_expr:
-            item.add_marker(skip_integration)
         if "real_data" in item.keywords and "real_data" not in marker_expr:
             item.add_marker(skip_real_data)
 
@@ -74,22 +59,3 @@ def real_fits_files() -> list[Path]:
     )
     return files
 
-
-@pytest.fixture
-def spacetrack_creds():
-    """Provide Space-Track credentials from the environment.
-
-    Credentials are loaded from SPACETRACK_USER / SPACETRACK_PASS env vars,
-    which are automatically populated from a .env file in the project root
-    if one exists.  The test fails (not skips) when credentials are absent
-    so missing configuration is immediately visible.
-    """
-    user = os.environ.get("SPACETRACK_USER", "")
-    pw   = os.environ.get("SPACETRACK_PASS", "")
-    if not user or not pw:
-        pytest.fail(
-            "Space-Track credentials not found. "
-            "Set SPACETRACK_USER and SPACETRACK_PASS in your environment "
-            "or in a .env file at the project root."
-        )
-    return {"user": user, "password": pw}
