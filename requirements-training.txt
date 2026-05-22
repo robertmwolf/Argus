@@ -1,0 +1,16 @@
+# ARGUS training and evaluation requirements.
+#
+# Install after the platform-specific PyTorch + MMDetection stack documented in
+# agent_docs/dependencies.md. This file adds dataset conversion, augmentation,
+# YOLO baseline training, benchmarking, and experiment utilities.
+
+-r requirements-inference.txt
+
+# Training data augmentation
+albumentations==1.4.3
+
+# Evaluation / visualization
+matplotlib==3.9.0
+
+# Data download
+zenodo_get==1.6.1
