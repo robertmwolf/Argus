@@ -256,6 +256,9 @@ def _propagate_to_radec(
         ra_angle, dec_angle, _ = topocentric.radec()
         predicted_ra  = float(ra_angle._degrees) % 360.0
         predicted_dec = float(dec_angle._degrees)
+        if not (math.isfinite(predicted_ra) and math.isfinite(predicted_dec)):
+            logger.debug("Propagation returned NaN RA/Dec for %s — skipping", name)
+            return None
     except Exception as exc:
         logger.debug("Propagation failed for %s: %s", name, exc)
         return None
@@ -425,14 +428,17 @@ def _streak_mid_radec(det: dict) -> tuple[float, float] | None:
     ra2  = det.get("ra_tip2_deg")
     dec2 = det.get("dec_tip2_deg")
 
-    if ra1 is not None and dec1 is not None and ra2 is not None and dec2 is not None:
-        dra = ra2 - ra1
+    def _valid(v: float | None) -> bool:
+        return v is not None and math.isfinite(v)
+
+    if _valid(ra1) and _valid(dec1) and _valid(ra2) and _valid(dec2):
+        dra = ra2 - ra1  # type: ignore[operator]
         dra -= 360.0 * math.floor((dra + 180.0) / 360.0)
-        return ((ra1 + dra / 2.0) % 360.0, (dec1 + dec2) / 2.0)
-    if ra1 is not None and dec1 is not None:
-        return (ra1, dec1)
-    if ra2 is not None and dec2 is not None:
-        return (ra2, dec2)
+        return ((ra1 + dra / 2.0) % 360.0, (dec1 + dec2) / 2.0)  # type: ignore[operator]
+    if _valid(ra1) and _valid(dec1):
+        return (ra1, dec1)  # type: ignore[return-value]
+    if _valid(ra2) and _valid(dec2):
+        return (ra2, dec2)  # type: ignore[return-value]
     return None
 
 
