@@ -23,7 +23,7 @@ Streak length bands (pixels):
   long   : > 400
 
 # Source: StreakMind — mAP and angle-error evaluation methodology
-# Ref: agent_docs/streakmind_phases.md
+# Ref: agent_docs/argus_phases.md
 """
 
 from __future__ import annotations
@@ -529,7 +529,7 @@ def confusion_matrix(
         2×2 numpy array [[TP, FP], [FN, TN]] as int32.
 
     # Source: StreakMind — evaluation methodology
-    # Ref: agent_docs/streakmind_phases.md
+    # Ref: agent_docs/argus_phases.md
     """
     is_tp, n_gt, _ = _match_all(predictions, ground_truth, iou_threshold)
     tp = int(sum(is_tp))

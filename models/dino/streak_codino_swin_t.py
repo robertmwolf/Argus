@@ -1,5 +1,5 @@
 # Source: StreakMind — DINO Swin-T config for satellite streak detection
-# Ref: agent_docs/streakmind_phases.md
+# Ref: agent_docs/argus_phases.md
 #
 # Swin-T (Tiny) variant for local Mac development and CI.
 # Uses MODEL_SIZE=tiny.  Image size 400px, batch_size=1, num_workers=0.

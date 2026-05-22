@@ -267,10 +267,16 @@ def check_smoke_test_train() -> bool:
 
 
 def check_requirements_pinned() -> bool:
-    """requirements.txt must exist."""
-    path = Path("requirements.txt")
-    ok = path.exists() and path.stat().st_size > 100
-    return check(ok, "requirements.txt present", "Missing requirements.txt")
+    """Training requirements lane must exist."""
+    required = [
+        Path("requirements-base.txt"),
+        Path("requirements-api.txt"),
+        Path("requirements-inference.txt"),
+        Path("requirements-training.txt"),
+    ]
+    missing = [str(path) for path in required if not path.exists() or path.stat().st_size <= 100]
+    ok = not missing
+    return check(ok, "training requirements files present", f"Missing or tiny files: {missing}")
 
 
 def check_env_vars() -> bool:
