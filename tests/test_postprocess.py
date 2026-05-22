@@ -176,6 +176,66 @@ class TestExtendObbToStreakExtent:
 
         assert extended["w"] == pytest.approx(obb["w"])
 
+    def test_does_not_jump_to_distant_bright_feature(self):
+        """OBB centre must not teleport to a far-away star when t=0 is dim.
+
+        Regression for the bug where extend_obb picked the globally longest
+        bright run (a star 300 px away) instead of staying near the streak,
+        causing the drawn box to appear hundreds of pixels from the actual
+        streak in the preview.
+        """
+        from inference.postprocess import extend_obb_to_streak_extent
+
+        h, w = 512, 512
+        bg = np.full((h, w), 80, dtype=np.uint8)
+
+        # Horizontal streak at y=256, x=220..300 (centre at x=260, length=80)
+        streak_cx, streak_cy = 260.0, 256.0
+        bg[256, 220:301] = 220
+
+        # Distant bright star at (x=20, y=256) — along the same horizontal axis
+        # but 240 px to the left of the streak centre.
+        bg[256, 18:23] = 240
+
+        # OBB centre is at the streak (t=0 is bright)
+        obb = _make_obb(cx=streak_cx, cy=streak_cy, w=80.0, h=4.0, angle_deg=0.0)
+        result = extend_obb_to_streak_extent(bg, obb)
+
+        # Centre must stay near the streak — not jump to the star at x≈20
+        assert abs(result["cx"] - streak_cx) < 80.0, (
+            f"cx jumped from {streak_cx} to {result['cx']}: "
+            "extend_obb latched onto a distant star"
+        )
+
+    def test_does_not_jump_when_obb_centre_is_dim(self):
+        """When the OBB centre itself is dim but a far star is bright,
+        the function should return the OBB unchanged rather than jumping.
+
+        Regression: previously the 'longest run' fallback would pick the
+        star, moving cx/cy hundreds of pixels from the actual streak location.
+        """
+        from inference.postprocess import extend_obb_to_streak_extent
+
+        h, w = 512, 512
+        bg = np.full((h, w), 80, dtype=np.uint8)
+
+        # A short streak at y=256, x=220..240 (length=20)
+        bg[256, 220:241] = 220
+
+        # Distant bright star at x=450, y=256 — same horizontal row, 210 px away
+        bg[256, 448:453] = 240
+
+        # OBB centred between the streak and the star at x=330 — t=0 is dim
+        obb = _make_obb(cx=330.0, cy=256.0, w=50.0, h=4.0, angle_deg=0.0)
+        result = extend_obb_to_streak_extent(bg, obb)
+
+        # The star is ~120 px from the OBB centre, which is more than
+        # 2× the OBB half-width (25 px).  The function should not jump there.
+        assert abs(result["cx"] - 330.0) < 100.0, (
+            f"cx jumped to {result['cx']}: extend_obb should not latch onto "
+            "a distant star when the OBB centre is dim"
+        )
+
 
 # ---------------------------------------------------------------------------
 # nms_detections

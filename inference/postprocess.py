@@ -283,12 +283,27 @@ def extend_obb_to_streak_extent(
             for s, e in zip(_rs, _re)
         ]
 
-    # Prefer the run that straddles t=0 (OBB centre on the streak)
+    # Prefer the run that straddles t=0 (OBB centre on the streak).
+    # Fallback: pick the longest run globally (original behaviour), but
+    # guard against jumping to a distant unrelated feature (star, cosmic
+    # ray) by rejecting the result when the implied centre shift exceeds
+    # max(obb_w, 150) px.  Shifts within that window allow the function
+    # to extend a partially-detected streak whose OBB centre is slightly
+    # off-axis, while blocking jumps of hundreds of pixels to a star.
     centre_runs = [(s, e) for s, e in runs if s <= 0.0 <= e]
     if centre_runs:
         t_start, t_end = centre_runs[0]
     else:
         t_start, t_end = max(runs, key=lambda r: r[1] - r[0])
+        centre_shift = abs((t_start + t_end) / 2.0)
+        max_shift = max(float(obb.get("w", 0.0)), 150.0)
+        if centre_shift > max_shift:
+            logger.debug(
+                "extend_obb: fallback centre shift %.0f px exceeds limit %.0f px "
+                "(likely a distant star/artefact) — OBB unchanged",
+                centre_shift, max_shift,
+            )
+            return dict(obb)
 
     new_w   = t_end - t_start
     if new_w < float(obb["w"]):
