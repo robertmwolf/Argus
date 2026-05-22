@@ -22,6 +22,7 @@ Timing logged at DEBUG level:
 
 from __future__ import annotations
 
+import copy
 import logging
 import math
 import os
@@ -82,6 +83,33 @@ _FAST_IMAGE_SIZE = 256
 # to ~30 px — too small for reliable detection.  We clamp the inference size
 # to at least this value so a 500 px streak stays above ~80 px after scaling.
 _MIN_INFERENCE_IMAGE_SIZE = 1280
+
+# ASTRiDE's contour finder can take minutes on full-frame 20+ MP FITS images,
+# which blocks the API worker because detector results are joined before
+# post-processing. Run it at full resolution below this cap and downsample above
+# it by default. If downsampling is disabled, ASTRiDE still runs at full
+# resolution because selecting the detector should always execute it.
+_DEFAULT_ASTRIDE_MAX_PIXELS = 8_000_000
+_DEFAULT_ASTRIDE_DOWNSAMPLE_MAX_PIXELS = 4_000_000
+_DEFAULT_ASTRIDE_DOWNSAMPLE_MIN_SCALE = 0.25
+_DEFAULT_ASTRIDE_MAX_DETECTIONS = 50
+
+# Radon refinement is intentionally CPU-bound. With a low detector threshold a
+# noisy large frame can yield 100+ DINO boxes, turning postprocess into minutes
+# of work. Keep only the strongest DINO candidates before the expensive OBB
+# refinement; set DINO_MAX_POSTPROCESS_DETECTIONS=0 to disable this cap.
+_DEFAULT_DINO_MAX_POSTPROCESS_DETECTIONS = 10
+
+# Axis-aligned boxes do not encode slope sign, and very loose DINO boxes can
+# seed the Radon search tens of degrees away from the actual streak. 60 degrees
+# keeps the API CPU budget bounded after the 512 px Radon crop cap while covering
+# the common mirrored/loose-box failure mode seen on long diagonal streaks.
+_DEFAULT_RADON_ANGLE_SEARCH_RANGE = 60.0
+
+# SGP4 cross-identification can be expensive because each detection is scored
+# against a catalog window. For interactive API use, identify the strongest
+# detections first and leave lower-confidence candidates as un-identified.
+_DEFAULT_CROSSID_MAX_DETECTIONS = 3
 
 
 # ---------------------------------------------------------------------------
@@ -589,6 +617,83 @@ def _run_streakmind_yolo_detector(
     return detections
 
 
+def _downsample_fits_image_for_astride(fits_image: Any, max_pixels: int) -> tuple[Any, float]:
+    """Return a downsampled FITSImage-like object and its linear scale.
+
+    Args:
+        fits_image: Parsed FITSImage or compatible object.
+        max_pixels: Target maximum pixel count for ASTRiDE input.
+
+    Returns:
+        ``(downsampled_image, scale)`` where ``scale`` maps original pixels to
+        downsampled pixels. If downsampling is not needed, returns the original
+        image and scale 1.0.
+    """
+    import cv2
+    import numpy as np
+
+    image_pixels = int(fits_image.width_px) * int(fits_image.height_px)
+    if max_pixels <= 0 or image_pixels <= max_pixels:
+        return fits_image, 1.0
+
+    min_scale = float(os.environ.get(
+        "ASTRIDE_DOWNSAMPLE_MIN_SCALE",
+        str(_DEFAULT_ASTRIDE_DOWNSAMPLE_MIN_SCALE),
+    ))
+    scale = math.sqrt(max_pixels / image_pixels)
+    scale = max(min_scale, min(1.0, scale))
+
+    new_width = max(1, int(round(int(fits_image.width_px) * scale)))
+    new_height = max(1, int(round(int(fits_image.height_px) * scale)))
+    data = np.asarray(fits_image.data, dtype=np.float32)
+    resized = cv2.resize(
+        data,
+        (new_width, new_height),
+        interpolation=cv2.INTER_AREA,
+    ).astype(np.float32, copy=False)
+
+    downsampled = copy.copy(fits_image)
+    downsampled.data = resized
+    downsampled.width_px = new_width
+    downsampled.height_px = new_height
+    if hasattr(downsampled, "header") and downsampled.header is not None:
+        downsampled.header = downsampled.header.copy()
+        downsampled.header["NAXIS1"] = new_width
+        downsampled.header["NAXIS2"] = new_height
+
+    logger.info(
+        "Downsampled ASTRiDE input %dx%d -> %dx%d (scale=%.3f)",
+        fits_image.width_px,
+        fits_image.height_px,
+        new_width,
+        new_height,
+        scale,
+    )
+    return downsampled, scale
+
+
+def _scale_astride_detection(det: Any, scale: float) -> Any:
+    """Scale an ASTRiDE StreakDetection from downsampled to original pixels.
+
+    Args:
+        det: StreakDetection or compatible object.
+        scale: Linear scale used to downsample the input image.
+
+    Returns:
+        A detection object in original image pixel coordinates.
+    """
+    if scale == 1.0:
+        return det
+
+    scaled = copy.copy(det)
+    for attr in ("x_start", "y_start", "x_end", "y_end", "x_center", "y_center"):
+        setattr(scaled, attr, float(getattr(det, attr)) / scale)
+    scaled.length_px = float(det.length_px) / scale
+    scaled.width_px = float(det.width_px) / scale
+    scaled.area_px = float(det.area_px) / (scale * scale)
+    return scaled
+
+
 def _run_astride_detector(
     fits_path: Path,
     min_length_px: float = 20.0,
@@ -618,11 +723,39 @@ def _run_astride_detector(
 
     try:
         fits_image = parse_fits(fits_path)
+        max_pixels = int(os.environ.get("ASTRIDE_MAX_PIXELS", str(_DEFAULT_ASTRIDE_MAX_PIXELS)))
+        image_pixels = int(fits_image.width_px) * int(fits_image.height_px)
+        if max_pixels > 0 and image_pixels > max_pixels:
+            downsample_max_pixels = int(os.environ.get(
+                "ASTRIDE_DOWNSAMPLE_MAX_PIXELS",
+                str(_DEFAULT_ASTRIDE_DOWNSAMPLE_MAX_PIXELS),
+            ))
+            if downsample_max_pixels <= 0:
+                logger.warning(
+                    "Running ASTRiDE at full resolution for %s: image has %d "
+                    "pixels, above ASTRIDE_MAX_PIXELS=%d, and downsampling is "
+                    "disabled",
+                    fits_path.name,
+                    image_pixels,
+                    max_pixels,
+                )
+                astride_scale = 1.0
+            else:
+                fits_image, astride_scale = _downsample_fits_image_for_astride(
+                    fits_image,
+                    downsample_max_pixels,
+                )
+        else:
+            astride_scale = 1.0
         streak_dets = detect_streaks(
             fits_image,
             contour_threshold=contour_threshold,
-            min_length_px=min_length_px,
+            min_length_px=max(1.0, min_length_px * astride_scale),
         )
+        streak_dets = [
+            _scale_astride_detection(d, astride_scale)
+            for d in streak_dets
+        ]
     except Exception:
         logger.exception("ASTRiDE detector failed on %s", fits_path)
         return []
@@ -650,24 +783,42 @@ def _run_astride_detector(
             "streak_length_px": float(d.length_px),
         })
 
+    max_detections = int(os.environ.get(
+        "ASTRIDE_MAX_DETECTIONS",
+        str(_DEFAULT_ASTRIDE_MAX_DETECTIONS),
+    ))
+    if max_detections > 0 and len(detections) > max_detections:
+        before_count = len(detections)
+        detections = sorted(
+            detections,
+            key=lambda d: d.get("confidence", 0.0),
+            reverse=True,
+        )[:max_detections]
+        logger.warning(
+            "Capped ASTRiDE detections from %d to %d; set "
+            "ASTRIDE_MAX_DETECTIONS=0 to process all",
+            before_count,
+            max_detections,
+        )
+
     logger.debug("ASTRiDE detector: %d candidate streak(s)", len(detections))
     return detections
 
 
-def _drop_astride_only_groups(detections: list[dict]) -> list[dict]:
-    """Drop grouped streaks that were detected only by ASTRiDE.
+def _lower_astride_only_confidence(detections: list[dict]) -> list[dict]:
+    """Set ASTRiDE-only grouped streaks to a conservative confidence.
 
-    ASTRiDE is treated as corroboration-only in ARGUS.  Once detections have
-    been grouped across methods, this is the earliest point where the pipeline
-    can know whether an ASTRiDE candidate has independent support.  Dropping
-    here prevents ASTRiDE-only candidates from receiving WCS coordinates,
-    quality flags, cross-identifications, or database rows.
+    ASTRiDE-only detections are useful enough to show, but they should not carry
+    the high aspect-ratio confidence used internally for ranking candidates.
+    Once detections have been grouped across methods, this helper can tell
+    whether an ASTRiDE candidate has independent support and lower only the
+    ASTRiDE-only groups.
 
     Args:
         detections: Grouped detections with ``streak_id`` and ``method`` keys.
 
     Returns:
-        Detections whose streak group contains at least one non-ASTRiDE method.
+        Detections with ASTRiDE-only group confidence set to 0.30.
     """
     methods_by_group: dict[Any, set[str]] = {}
     for det in detections:
@@ -675,14 +826,14 @@ def _drop_astride_only_groups(detections: list[dict]) -> list[dict]:
         method = str(det.get("method", "")).lower()
         methods_by_group.setdefault(group_key, set()).add(method)
 
-    filtered = [
-        det for det in detections
-        if methods_by_group.get(det.get("streak_id"), set()) != {"astride"}
-    ]
-    dropped = len(detections) - len(filtered)
-    if dropped:
-        logger.debug("Dropped %d ASTRiDE-only detection(s) before WCS/cross-ID", dropped)
-    return filtered
+    lowered = 0
+    for det in detections:
+        if methods_by_group.get(det.get("streak_id"), set()) == {"astride"}:
+            det["confidence"] = 0.30
+            lowered += 1
+    if lowered:
+        logger.debug("Set %d ASTRiDE-only detection(s) to 0.30 confidence", lowered)
+    return detections
 
 
 # ---------------------------------------------------------------------------
@@ -1120,6 +1271,9 @@ def run_with_array(
           dec_tip2_deg      — float or None, sky Dec of OBB tip 2
           quality_flag      — int 0–4 (0=good, 1=edge, 2=low_conf,
                                3=too_short, 4=no_wcs)
+          edge_clipped      — bool, True when a tip touches/crosses an image
+                               border and catalogue scoring should treat the
+                               streak as a partial visible segment
           streak_direction_swapped — bool, True if tip1/tip2 were swapped
                                to assign start→end direction (set only when
                                exposure_time is in the FITS header)
@@ -1220,6 +1374,23 @@ def run_with_array(
     raw_dets: list[dict] = []
     for _, _, _s in _models_with_specs:
         raw_dets.extend(all_det_results.get(_s["id"], []))
+    max_dino_post = int(os.environ.get(
+        "DINO_MAX_POSTPROCESS_DETECTIONS",
+        str(_DEFAULT_DINO_MAX_POSTPROCESS_DETECTIONS),
+    ))
+    if max_dino_post > 0 and len(raw_dets) > max_dino_post:
+        before_count = len(raw_dets)
+        raw_dets = sorted(
+            raw_dets,
+            key=lambda d: d.get("confidence", 0.0),
+            reverse=True,
+        )[:max_dino_post]
+        logger.warning(
+            "Capped DINO postprocess candidates from %d to %d; set "
+            "DINO_MAX_POSTPROCESS_DETECTIONS=0 to process all",
+            before_count,
+            max_dino_post,
+        )
 
     classical_dets = all_det_results.get("classical", [])
     astride_dets   = all_det_results.get("astride", [])
@@ -1238,6 +1409,7 @@ def run_with_array(
     from inference.postprocess import (
         bbox_to_obb, refine_angle, group_detections, nms_detections,
         extend_obb_to_streak_extent, classify_detection_quality,
+        fuse_group_geometries,
     )
 
     # Precompute greyscale array and background threshold once so that every
@@ -1264,9 +1436,14 @@ def run_with_array(
         crop = array[py1:py2, px1:px2]
         seed_angle = _angle_from_bbox(det["bbox"])
         initial_obb = bbox_to_obb(det["bbox"], seed_angle)
-        # Axis-aligned bboxes encode slope magnitude but not slope sign.  Search
-        # ±90° so Radon can recover the mirrored streak orientation.
-        angle = refine_angle(crop, initial_obb, angle_search_range=90.0)
+        # Axis-aligned bboxes encode slope magnitude but not slope sign.  The
+        # search window is configurable so offline runs can use a wider search
+        # while the API keeps a bounded CPU budget.
+        angle_range = float(os.environ.get(
+            "RADON_ANGLE_SEARCH_RANGE",
+            str(_DEFAULT_RADON_ANGLE_SEARCH_RANGE),
+        ))
+        angle = refine_angle(crop, initial_obb, angle_search_range=angle_range)
 
         obb = bbox_to_obb(det["bbox"], angle)
         # Extend OBB endpoints along the streak axis to the true streak tips —
@@ -1303,7 +1480,8 @@ def run_with_array(
         + yolo_dets + yolo_full_dets + streakmind_yolo_dets
     )
     detections = group_detections(combined, iou_threshold=0.5)
-    detections = _drop_astride_only_groups(detections)
+    detections = fuse_group_geometries(detections)
+    detections = _lower_astride_only_confidence(detections)
     postprocess_ms = (time.perf_counter() - t2) * 1000
     logger.debug("postprocess_ms=%.1f  after_nms=%d", postprocess_ms, len(detections))
     logger.info("postprocess_ms=%.1f after_nms=%d", postprocess_ms, len(detections))
@@ -1345,19 +1523,52 @@ def run_with_array(
         crossid_ms = 0.0
         logger.info("Skipping cross-ID: no detections have sky coordinates")
     else:
-        from inference.crossid import cross_identify
-        # Extract observer location from FITS header (may be None)
-        observer_lat = fits_data.get("observer_lat") or 0.0
-        observer_lon = fits_data.get("observer_lon") or 0.0
-        observer_alt = fits_data.get("observer_alt_m") or 0.0
-        if obs_time is None:
-            obs_time = datetime.now(tz=timezone.utc)
-        cross_identify(
-            detections, obs_time,
-            observer_lat, observer_lon, observer_alt,
-            exposure_time=fits_data.get("exposure_time"),
-        )
-        crossid_ms = (time.perf_counter() - t3) * 1000
+        max_crossid = int(os.environ.get(
+            "CROSSID_MAX_DETECTIONS",
+            str(_DEFAULT_CROSSID_MAX_DETECTIONS),
+        ))
+        if max_crossid <= 0:
+            for det in detections:
+                det["identifications"] = []
+            crossid_ms = 0.0
+            logger.info(
+                "Skipping cross-ID: CROSSID_MAX_DETECTIONS=%d. Set a positive "
+                "value to identify top detections.",
+                max_crossid,
+            )
+        else:
+            from inference.crossid import cross_identify
+            # Extract observer location from FITS header (may be None)
+            observer_lat = fits_data.get("observer_lat") or 0.0
+            observer_lon = fits_data.get("observer_lon") or 0.0
+            observer_alt = fits_data.get("observer_alt_m") or 0.0
+            if obs_time is None:
+                obs_time = datetime.now(tz=timezone.utc)
+            crossid_candidates = [
+                det for det in detections
+                if det.get("ra_tip1_deg") is not None or det.get("ra_tip2_deg") is not None
+            ]
+            if len(crossid_candidates) > max_crossid:
+                crossid_candidates = sorted(
+                    crossid_candidates,
+                    key=lambda d: d.get("confidence", 0.0),
+                    reverse=True,
+                )[:max_crossid]
+                logger.warning(
+                    "Capped cross-ID to top %d/%d detection(s)",
+                    max_crossid,
+                    len(detections),
+                )
+            crossid_ids = {id(det) for det in crossid_candidates}
+            for det in detections:
+                if id(det) not in crossid_ids:
+                    det["identifications"] = []
+            cross_identify(
+                crossid_candidates, obs_time,
+                observer_lat, observer_lon, observer_alt,
+                exposure_time=fits_data.get("exposure_time"),
+            )
+            crossid_ms = (time.perf_counter() - t3) * 1000
 
     logger.debug("crossid_ms=%.1f", crossid_ms)
     logger.info("crossid_ms=%.1f", crossid_ms)

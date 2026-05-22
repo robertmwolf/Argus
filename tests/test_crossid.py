@@ -271,6 +271,65 @@ class TestCrossIdentifyKnownTle:
         assert best["satellite_name"] == "CURRENT-GOOD"
         assert best["tle_search_mode"] == "current_fallback"
 
+    def test_edge_clipped_detection_scores_against_visible_segment(self):
+        """Border-clipped streaks should not force the TLE onto clipped midpoint."""
+        from inference.crossid import cross_identify
+
+        catalog = [
+            {"name": "SEGMENT-HIT", "line1": _TEST_TLE_LINE1, "line2": _TEST_TLE_LINE2},
+            {"name": "MIDPOINT-HIT", "line1": _ISS_LINE1, "line2": _ISS_LINE2},
+        ]
+
+        def fake_propagate(name, *_args, **_kwargs):
+            if name == "SEGMENT-HIT":
+                return {
+                    "object_name": name,
+                    "norad_id": 44713,
+                    "predicted_ra": 1.0,
+                    "predicted_dec": 0.0,
+                    "tle_age_hours": 0.0,
+                    "tle_epoch": _OBS_TIME,
+                }
+            return {
+                "object_name": name,
+                "norad_id": 25544,
+                "predicted_ra": 0.5,
+                "predicted_dec": 0.25,
+                "tle_age_hours": 0.0,
+                "tle_epoch": _OBS_TIME,
+            }
+
+        dets = [{
+            "ra_tip1_deg": 0.0,
+            "dec_tip1_deg": 0.0,
+            "ra_tip2_deg": 1.0,
+            "dec_tip2_deg": 0.0,
+            "quality_flag": 1,
+            "edge_clipped": True,
+            "obb": {"w": 3600.0},
+            "streak_length_px": 3600.0,
+        }]
+
+        with patch("inference.crossid._propagate_to_radec", side_effect=fake_propagate):
+            result = cross_identify(
+                dets,
+                _OBS_TIME,
+                _OBS_LAT,
+                _OBS_LON,
+                _OBS_ALT,
+                exposure_time=10.0,
+                _catalog_override=catalog,
+            )
+
+        best = result[0]["identifications"][0]
+        assert best["satellite_name"] == "SEGMENT-HIT"
+        assert best["position_score_mode"] == "edge_visible_segment"
+        assert best["edge_clipped"] is True
+        assert best["length_score_skipped"] is True
+        assert best["direction_disambiguation_skipped"] is True
+        assert "length_score" not in best
+        assert "atrk_arcsec" not in best
+
 
 # ---------------------------------------------------------------------------
 # _angular_separation_arcsec

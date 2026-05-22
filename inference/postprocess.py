@@ -75,7 +75,7 @@ def refine_angle(
     CPU-only — skimage.transform.radon is numpy-backed.
 
     # Source: StreakMind — Radon angle refinement for OBB streaks
-    # Ref: agent_docs/streakmind_phases.md
+    # Ref: agent_docs/argus_phases.md
 
     Args:
         image_crop: Greyscale or 3-channel uint8/float32 crop centred on the
@@ -401,6 +401,51 @@ def _rotated_iom(obb_a: dict, obb_b: dict) -> float:
         return 0.0
 
 
+def _angle_delta_deg(a: float, b: float) -> float:
+    """Return the smallest angle difference for 180°-symmetric streaks."""
+    diff = abs(float(a) - float(b)) % 180.0
+    return min(diff, 180.0 - diff)
+
+
+def _interval_gap(a0: float, a1: float, b0: float, b1: float) -> float:
+    """Return the gap between two 1-D intervals, or 0 when they overlap."""
+    return max(0.0, max(min(a0, a1), min(b0, b1)) - min(max(a0, a1), max(b0, b1)))
+
+
+def _collinear_streak_match(
+    obb_a: dict,
+    obb_b: dict,
+    angle_threshold_deg: float = 15.0,
+    perpendicular_threshold_px: float = 40.0,
+    max_gap_px: float = 900.0,
+) -> bool:
+    """Return True when two non-overlapping OBBs look like same-line fragments."""
+    if _angle_delta_deg(obb_a.get("angle_deg", 0.0), obb_b.get("angle_deg", 0.0)) > angle_threshold_deg:
+        return False
+
+    theta = math.radians(float(obb_a.get("angle_deg", 0.0)))
+    cos_a = math.cos(theta)
+    sin_a = math.sin(theta)
+    perp_x = -sin_a
+    perp_y = cos_a
+
+    dx = float(obb_b["cx"]) - float(obb_a["cx"])
+    dy = float(obb_b["cy"]) - float(obb_a["cy"])
+    perpendicular_distance = abs(dx * perp_x + dy * perp_y)
+    if perpendicular_distance > perpendicular_threshold_px:
+        return False
+
+    t_b = dx * cos_a + dy * sin_a
+    half_a = float(obb_a.get("w", 0.0)) / 2.0
+    half_b = float(obb_b.get("w", 0.0)) / 2.0
+    gap = _interval_gap(-half_a, half_a, t_b - half_b, t_b + half_b)
+    dynamic_gap = min(
+        max_gap_px,
+        max(120.0, 2.0 * max(float(obb_a.get("w", 0.0)), float(obb_b.get("w", 0.0)))),
+    )
+    return gap <= dynamic_gap
+
+
 def nms_detections(
     detections: list[dict],
     iou_threshold: float = 0.5,
@@ -513,6 +558,7 @@ def group_detections(
             if (
                 _rotated_iou(obb_i, obb_j) > iou_threshold
                 or _rotated_iom(obb_i, obb_j) > iom_threshold
+                or _collinear_streak_match(obb_i, obb_j)
             ):
                 group_id[j] = group_id[i]
 
@@ -527,6 +573,78 @@ def group_detections(
         n, next_id,
     )
     return sorted_dets
+
+
+def fuse_group_geometries(detections: list[dict]) -> list[dict]:
+    """Fuse each grouped streak's fragment OBBs into one endpoint-spanning OBB.
+
+    ``group_detections`` assigns a shared ``streak_id`` to detections that
+    likely belong to the same physical streak. This helper makes the group draw
+    as one streak by projecting every member's endpoints onto the longest
+    member's axis, then writing the fused OBB back to every member in the group.
+    Single-member groups are left unchanged.
+
+    Args:
+        detections: Detection dicts with ``streak_id``, ``obb``, and confidence.
+
+    Returns:
+        The same list with grouped OBB geometry updated in place.
+    """
+    groups: dict[object, list[dict]] = {}
+    for det in detections:
+        if det.get("obb") is None:
+            continue
+        groups.setdefault(det.get("streak_id"), []).append(det)
+
+    for group in groups.values():
+        if len(group) < 2:
+            continue
+
+        primary = max(
+            group,
+            key=lambda d: (float((d.get("obb") or {}).get("w", 0.0)), d.get("confidence", 0.0)),
+        )
+        base = primary["obb"]
+        theta = math.radians(float(base["angle_deg"]))
+        cos_a = math.cos(theta)
+        sin_a = math.sin(theta)
+        perp_x = -sin_a
+        perp_y = cos_a
+        origin_x = float(base["cx"])
+        origin_y = float(base["cy"])
+
+        t_values: list[float] = []
+        perp_offsets: list[float] = []
+        widths: list[float] = []
+        for det in group:
+            obb = det["obb"]
+            cx = float(obb["cx"])
+            cy = float(obb["cy"])
+            half = float(obb["w"]) / 2.0
+            dx = cx - origin_x
+            dy = cy - origin_y
+            centre_t = dx * cos_a + dy * sin_a
+            perp_offsets.append(dx * perp_x + dy * perp_y)
+            t_values.extend([centre_t - half, centre_t + half])
+            widths.append(float(obb.get("h", 0.0)))
+
+        t_start = min(t_values)
+        t_end = max(t_values)
+        centre_t = (t_start + t_end) / 2.0
+        centre_perp = float(np.median(perp_offsets)) if perp_offsets else 0.0
+        fused = {
+            **base,
+            "cx": origin_x + centre_t * cos_a + centre_perp * perp_x,
+            "cy": origin_y + centre_t * sin_a + centre_perp * perp_y,
+            "w": max(float(base["w"]), t_end - t_start),
+            "h": max(float(np.median(widths)) if widths else float(base["h"]), 3.0),
+        }
+
+        for det in group:
+            det["obb"] = dict(fused)
+            det["streak_length_px"] = float(fused["w"])
+
+    return detections
 
 
 # ---------------------------------------------------------------------------
@@ -584,9 +702,24 @@ def classify_detection_quality(
     tip2_y = cy + half * sin_a
 
     m = edge_margin_px
+    edge_contacts: list[str] = []
     for px, py in ((tip1_x, tip1_y), (tip2_x, tip2_y)):
-        if px < m or py < m or px > w_img - m or py > h_img - m:
-            return QUALITY_EDGE
+        if px < m:
+            edge_contacts.append("left")
+        if px > w_img - m:
+            edge_contacts.append("right")
+        if py < m:
+            edge_contacts.append("top")
+        if py > h_img - m:
+            edge_contacts.append("bottom")
+
+    if edge_contacts:
+        det["edge_clipped"] = True
+        det["edge_contacts"] = sorted(set(edge_contacts))
+        return QUALITY_EDGE
+
+    det["edge_clipped"] = False
+    det["edge_contacts"] = []
 
     # --- Low confidence (flag 2) ---------------------------------------------
     if float(det.get("confidence", 1.0)) < min_confidence:
