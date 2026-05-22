@@ -59,7 +59,7 @@ Always read the relevant agent_docs file before writing code:
 
 - `agent_docs/architecture.md`       — full system design, component map, data flow
 - `agent_docs/phase1_goals.md`       — Phase 1 data pipeline (complete — reference only)
-- `agent_docs/streakmind_phases.md`  — ARGUS Phases 2–8: model through eval
+- `agent_docs/argus_phases.md`       — ARGUS Phases 2–8: model through eval
 - `agent_docs/dinov3_plan.md`        — DINOv3 backbone integration plan and phase status
 - `agent_docs/datasets.md`           — where to get test data, download links
 - `agent_docs/dependencies.md`       — exact packages, versions, install commands
@@ -67,6 +67,7 @@ Always read the relevant agent_docs file before writing code:
 - `agent_docs/test_strategy.md`      — how to measure and record baseline accuracy
 - `agent_docs/spacetrack.md`         — Space-Track API policy, TLE catalog setup, rate limits
 - `agent_docs/Training_Handoff.md`   — Phase D training: Route 1 (RTX 5070 Ti workstation) and Route 2 (RTX 4090 cloud rental)
+- `docs/cloud_training_preparation.md` — cloud rental readiness, reproducibility checklist, run manifest, transfer/sync plan
 
 ## Stack
 - Python 3.11, conda environment named `satid`
@@ -95,7 +96,7 @@ Argus/
 │   ├── fits_loader.py       ← FITS→tensor, normalisation + FITS/sidecar WCS (Phase 1 ✅)
 │   ├── device.py            ← get_device() helper — CPU/MPS/CUDA (Phase 2, next)
 │   ├── pipeline.py          ← main inference orchestrator (Phase 2)
-│   ├── postprocess.py       ← Radon angle refinement + NMS (Phase 3)
+│   ├── postprocess.py       ← Radon angle refinement + extent tracing, NMS, grouping/fusion (Phase 3)
 │   └── crossid.py           ← satellite ephemeris cross-matching (Phase 3)
 ├── training/                ← training data and model training
 │   ├── convert_labels.py    ← OBB YOLO labels → COCO JSON (Phase 1 ✅)
@@ -286,7 +287,7 @@ Two MMDetection configs must always exist:
 ## Fast Iteration Mode
 
 `FAST_MODE=true` or `pipeline.run(image, fast=True)`:
-- Skips Radon angle refinement, cross-ID, DB write
+- Keeps Radon angle refinement; skips cross-ID and DB write
 - Forces `image_size=256`
 - Target: <60 seconds wall time per image on Mac
 
@@ -328,7 +329,7 @@ or see `scripts/download_dinov3_weights.py`.
 
 ## Cloud Training Scripts
 
-`scripts/prepare_cloud_training.py` — validates all checklist items (annotations, dataset, configs, augmentations, pipeline fast-mode, API, docker, requirements.txt pinned) before GPU rental; exits 1 on any failure.
+`scripts/prepare_cloud_training.py` — validates all checklist items (annotations, dataset, configs, augmentations, pipeline fast-mode, API, docker, split requirements files) before GPU rental; exits 1 on any failure.
 
 `scripts/cloud_setup.sh` — run once on Lambda instance: installs deps, downloads Swin-L weights, verifies CUDA, flips `.env` to `MODEL_SIZE=large` and `USE_DEV_SUBSET=false`.
 

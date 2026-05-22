@@ -302,6 +302,14 @@ def safe_nms(boxes, scores, iou_threshold):
 
 **6. Shapely rotated IoU** — CPU only, expected
 
+**7. Postprocess grouping/fusion** — after Radon angle refinement and streak
+extent tracing, per-detector duplicate boxes are removed with rotated-IoU NMS.
+Cross-detector detections are assigned a shared `streak_id` when they overlap by
+rotated-IoU ≥ 0.5, overlap by IoMin ≥ 0.3, or are collinear fragments of the
+same physical streak. Each grouped streak then receives a fused OBB spanning the
+outer projected endpoints of its member fragments before WCS/cross-ID and API
+serialization.
+
 ---
 
 ## Training — Two-Stage Fine-Tuning
@@ -358,10 +366,12 @@ FAST_MODE=true python -m inference.pipeline --image data/raw/sample.fits
 ```
 
 When `FAST_MODE=true`:
-- Skips Radon angle refinement (uses raw DINO box angle)
 - Skips satellite cross-identification
 - Skips database write (prints to stdout)
 - Uses `image_size=256` regardless of config
+
+Radon angle refinement still runs in fast mode; it is required for usable OBB
+geometry and remains bounded by the 512 px crop cap.
 
 ---
 
@@ -426,7 +436,8 @@ Checklist (script must confirm all):
 - `inference/pipeline.py` runs end-to-end in `FAST_MODE=true`
 - `api/main.py` starts without error
 - `docker-compose up --build` completes (CPU/MPS, `MODEL_SIZE=tiny`)
-- `requirements.txt` is fully pinned (all `==` versions)
+- Split requirements files are present and pinned; torch/mmcv/mmdet remain
+  platform-specific installs documented in `agent_docs/dependencies.md`
 
 ### Phase 7 — Cloud Training (Lambda Labs A100)
 ```bash

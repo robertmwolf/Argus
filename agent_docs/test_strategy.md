@@ -27,7 +27,7 @@ tests/
 ├── test_model_configs.py        ← Phase 2: MMDet config validation
 ├── test_train_dino.py           ← Phase 2: training script
 ├── test_pipeline.py             ← Phase 3: inference pipeline
-├── test_postprocess.py          ← Phase 3: Radon refinement + NMS
+├── test_postprocess.py          ← Phase 3: Radon refinement, NMS, grouping/fusion
 ├── test_crossid.py              ← Phase 3: TLE cross-identification
 ├── test_db.py                   ← Phase 4: async ORM models
 ├── test_api.py                  ← Phase 5: FastAPI endpoints
