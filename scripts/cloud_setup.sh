@@ -156,9 +156,9 @@ except Exception as e:
     raise SystemExit(1)
 EOF
 
-# Install remaining project dependencies (torch/torchvision already installed above)
-echo "  Installing project dependencies from requirements.txt..."
-pip install -r requirements.txt \
+# Install remaining training dependencies (torch/torchvision already installed above)
+echo "  Installing training dependencies from requirements-training.txt..."
+pip install -r requirements-training.txt \
     --extra-index-url https://download.pytorch.org/whl/cu128 \
     --quiet
 

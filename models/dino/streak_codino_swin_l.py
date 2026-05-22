@@ -1,5 +1,5 @@
 # Source: StreakMind — Co-DINO Swin-L config for satellite streak detection
-# Ref: agent_docs/streakmind_phases.md
+# Ref: agent_docs/argus_phases.md
 #
 # Adapted from MMDetection DINO Swin-L config:
 #   mmdet/.mim/configs/dino/dino-5scale_swin-l_8xb2-12e_coco.py

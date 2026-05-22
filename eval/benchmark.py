@@ -23,7 +23,7 @@ Prediction JSON format (list of detections):
     ]
 
 # Source: StreakMind — evaluation and benchmark methodology
-# Ref: agent_docs/streakmind_phases.md
+# Ref: agent_docs/argus_phases.md
 """
 
 from __future__ import annotations
