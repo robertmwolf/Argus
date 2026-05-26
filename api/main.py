@@ -212,6 +212,8 @@ async def lifespan(app: FastAPI):
     app.state.pipeline_model = None
     app.state.pipeline_device = None
     app.state.pipeline_model_key = None
+    app.state.pipeline_models = None       # multi-model cache (load_models() path)
+    app.state.pipeline_models_key = None   # ARGUS_MODEL_CONFIGS hash for cache invalidation
 
     await _recover_startup_jobs(app)
     worker_task = asyncio.create_task(_worker_loop(app))
@@ -275,6 +277,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
         obs_epoch = obs.obs_epoch
         exposure_time = obs.exposure_time
         enabled_detectors = _parse_enabled_detectors(obs.enabled_detectors_json)
+        raw_mode = bool(obs.raw_mode)
         obs.status = "processing"
         await session.commit()
 
@@ -335,22 +338,39 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
         pipeline_kwargs: dict[str, Any] = {
             "fits_path": tmp_path,
             "enabled_detectors": enabled_detectors,
+            "raw_mode": raw_mode,
         }
         if should_run_dino:
-            model_size = os.environ.get("MODEL_SIZE", "tiny")
-            weights_key = os.environ.get("MODEL_WEIGHTS", "")
-            model_key = f"{model_size}:{weights_key}"
-            if (
-                app.state.pipeline_model is None
-                or getattr(app.state, "pipeline_model_key", None) != model_key
-            ):
-                model, inference_device = await asyncio.to_thread(pipeline_load_model)
-                app.state.pipeline_model = model
-                app.state.pipeline_device = inference_device
-                app.state.pipeline_model_key = model_key
-                app.state.model_loaded = True
-            pipeline_kwargs["model"] = app.state.pipeline_model
-            pipeline_kwargs["inference_device"] = app.state.pipeline_device
+            multi_config_raw = os.environ.get("ARGUS_MODEL_CONFIGS", "")
+            if multi_config_raw:
+                # Multi-model path: load all models defined in ARGUS_MODEL_CONFIGS.
+                models_key = multi_config_raw
+                if (
+                    getattr(app.state, "pipeline_models", None) is None
+                    or getattr(app.state, "pipeline_models_key", None) != models_key
+                ):
+                    from inference.pipeline import load_models as pipeline_load_models
+                    loaded = await asyncio.to_thread(pipeline_load_models)
+                    app.state.pipeline_models = loaded
+                    app.state.pipeline_models_key = models_key
+                    app.state.model_loaded = True
+                pipeline_kwargs["models"] = app.state.pipeline_models
+            else:
+                # Single-model path: use MODEL_SIZE / MODEL_WEIGHTS env vars.
+                model_size = os.environ.get("MODEL_SIZE", "tiny")
+                weights_key = os.environ.get("MODEL_WEIGHTS", "")
+                model_key = f"{model_size}:{weights_key}"
+                if (
+                    app.state.pipeline_model is None
+                    or getattr(app.state, "pipeline_model_key", None) != model_key
+                ):
+                    model, inference_device = await asyncio.to_thread(pipeline_load_model)
+                    app.state.pipeline_model = model
+                    app.state.pipeline_device = inference_device
+                    app.state.pipeline_model_key = model_key
+                    app.state.model_loaded = True
+                pipeline_kwargs["model"] = app.state.pipeline_model
+                pipeline_kwargs["inference_device"] = app.state.pipeline_device
         else:
             pipeline_kwargs["models"] = []
 
@@ -709,6 +729,7 @@ async def upload(
     request: Request,
     file: UploadFile,
     enabled_detectors: str | None = Form(None),
+    raw_mode: bool = Form(False),
 ) -> dict[str, str]:
     """Accept a FITS, PNG, or JPEG upload and enqueue it for processing.
 
@@ -785,6 +806,7 @@ async def upload(
                 obs_epoch=obs_epoch,
                 exposure_time=exposure_time,
                 enabled_detectors_json=_enabled_detectors_json(enabled_detector_set),
+                raw_mode=raw_mode,
                 status="queued",
             )
         )
@@ -913,6 +935,7 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
             "status": obs.status,
             "filename": filename,
             "obs_epoch": obs.obs_epoch,
+            "raw_mode": bool(obs.raw_mode),
             "image_width": image_shape[0] if image_shape else None,
             "image_height": image_shape[1] if image_shape else None,
             "detections": detections,
