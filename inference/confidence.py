@@ -10,6 +10,8 @@ Replaces the plain Noisy-OR formula with an F-beta weighted corroboration score 
   4. Tempers the corroboration boost when detectors strongly disagree
   5. Treats ASTRiDE as corroboration-only: it cannot create a standalone
      streak confidence and can only add a small boost to non-ASTRiDE detections.
+  6. Applies per-band reliability weights when streak_band is provided so that
+     detectors dominant in specific length ranges contribute proportionally more.
 
 The score represents how confident we can be that a detection is a real streak,
 accounting for each detector's known reliability profile.
@@ -18,7 +20,7 @@ from __future__ import annotations
 
 import math
 import statistics
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
@@ -34,6 +36,11 @@ class DetectorProfile:
             magnitude is unreliable — e.g. it routinely reports 0.95+ on false
             positives — so that only the *presence* of a detection is trusted,
             not its stated certainty.  None means no capping.
+        band_weights: Optional per-band multipliers on the F-0.5 reliability
+            weight.  Keys are "short", "medium", "long" (same thresholds as
+            eval/metrics.py: short<150px, 150≤medium<400px, long≥400px).
+            A multiplier of 2.0 doubles the detector's weight in that band;
+            0.1 nearly silences it.  Missing keys default to 1.0.
         notes: Data source / confidence level for these estimates.
     """
 
@@ -41,12 +48,28 @@ class DetectorProfile:
     precision: float
     recall: float
     confidence_ceiling: float | None = None
+    band_weights: dict[str, float] = field(default_factory=dict)
     notes: str = ""
 
     @property
     def f_beta_weight(self) -> float:
         """F-0.5 score used as this detector's reliability weight."""
         return fbeta_weight(self.precision, self.recall, beta=0.5)
+
+    def band_adjusted_weight(self, streak_band: str | None) -> float:
+        """Return the F-0.5 weight scaled by the per-band multiplier.
+
+        Args:
+            streak_band: "short", "medium", or "long".  None → no adjustment.
+
+        Returns:
+            F-0.5 weight × band multiplier, clamped to [0, 1].
+        """
+        base = self.f_beta_weight
+        if streak_band is None or not self.band_weights:
+            return base
+        multiplier = self.band_weights.get(streak_band, 1.0)
+        return min(1.0, base * multiplier)
 
 
 def fbeta_weight(precision: float, recall: float, beta: float = 0.5) -> float:
@@ -68,50 +91,83 @@ def fbeta_weight(precision: float, recall: float, beta: float = 0.5) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Detector profiles — sourced from phase 8 benchmark and DINOv3 evaluation.
-# Measured values come from results/phase8_benchmark.json.
-# Estimated values are marked "est." and should be updated once per-method
-# precision/recall are available from eval/benchmark.py.
+# Detector profiles — sourced from benchmark measurements.
+#
+# Measured values are from the named results files.
+# Estimated values are marked "est." and should be updated when new eval data
+# is available.
+#
+# Per-band weights use eval/metrics.py thresholds: short<150px, 150≤medium<400px,
+# long≥400px.  Weights were derived from per-band P/R in the same benchmarks.
 # ---------------------------------------------------------------------------
 
 DETECTOR_PROFILES: dict[str, DetectorProfile] = {
-    # Source: phase8_benchmark.json — measured
+    # Source: phase8_benchmark.json — measured on 50-image synthetic dev subset
     "tiny": DetectorProfile(
         name="DINO Swin-T",
         precision=0.6667,
         recall=0.7333,
-        notes="Phase 8 measured",
+        notes="Phase 8 measured — synthetic dev subset only",
     ),
+    # Source: full_yolo_obb/yolo_benchmark.json — measured on full tiled val split
+    "yolo_full": DetectorProfile(
+        name="YOLO11n-OBB Full Dataset",
+        precision=0.5718,
+        recall=0.8458,
+        band_weights={"short": 0.5, "medium": 1.3, "long": 0.8},
+        notes="results/full_yolo_obb/yolo_benchmark.json; no per-band breakdown available",
+    ),
+    # Source: phase8_benchmark.json — dev subset baseline
     "yolo": DetectorProfile(
-        name="YOLO11-OBB",
+        name="YOLO11n-OBB",
         precision=0.6316,
         recall=0.4000,
-        notes="Phase 8 measured",
+        notes="Phase 8 measured — dev subset",
     ),
+    # Source: streakmind_yolo/gtimages_plus_frigate/metrics_iou50.json (best track)
+    # Per-band: medium P=6.5% R=80%; long P=37.5% R=12%
     "streakmind_yolo": DetectorProfile(
-        name="StreakMindYOLO",
-        precision=0.0748,
-        recall=0.1404,
-        notes="GTImages local smoke benchmark, real-only checkpoint",
+        name="YOLO-OBB GTImages",
+        precision=0.1532,
+        recall=0.2982,
+        band_weights={"short": 0.05, "medium": 2.5, "long": 0.2},
+        notes="results/streakmind_yolo/gtimages_plus_frigate/metrics_iou50.json; "
+              "medium recall=80%, long recall=12%",
     ),
-    # DINOv3 ViT-B: mAP@0.5=0.74 (Phase C²); P/R to be refined after Phase D eval
-    "dinov3_vitb": DetectorProfile(
-        name="DINOv3 ViT-B",
-        precision=0.80,
-        recall=0.78,
-        notes="est. from mAP@0.5=0.74; update post Phase D",
+    # Source: comprehensive_eval_20260526/report.md — standard test set, conf≥0.30, IoU≥0.50
+    # Per-band recall (269/800px thresholds): short=50%, medium=72.7%, long=72.5%
+    "dinov3_vitb_multisource": DetectorProfile(
+        name="DINOv3 Base - Multi-source",
+        precision=0.712,
+        recall=0.724,
+        band_weights={"short": 0.2, "medium": 0.9, "long": 1.3},
+        notes="comprehensive_eval_20260526; P=71.2% R=72.4% at conf≥0.30; "
+              "long dominant (295 GT annotations vs 11 medium)",
     ),
+    # Source: comprehensive_eval_20260526/report.md — same checkpoint
     "dinov3_gt_dm_satstreaks": DetectorProfile(
         name="DINOv3 GT+DM+SatStreaks",
-        precision=0.80,
-        recall=0.78,
-        notes="mAP@0.5=0.740 on test.json; same precision/recall est. as dinov3_vitb baseline",
+        precision=0.712,
+        recall=0.724,
+        band_weights={"short": 0.2, "medium": 0.9, "long": 1.3},
+        notes="Same checkpoint as dinov3_vitb_multisource (run_best_400px_nodm); "
+              "measured P/R from comprehensive_eval_20260526",
+    ),
+    # Source: multi_method_benchmark.json dinov3_vitb entry (older model, low-threshold run)
+    # Re-estimated from mAP@0.5=0.74; per-band similar to multisource.
+    "dinov3_vitb": DetectorProfile(
+        name="DINOv3 ViT-B",
+        precision=0.712,
+        recall=0.724,
+        band_weights={"short": 0.2, "medium": 0.9, "long": 1.3},
+        notes="est. from comprehensive_eval; update with direct per-model P/R after Phase D",
     ),
     # DINOv3 ViT-L: Phase D target (RTX 5070 Ti workstation); conservative estimate
     "dinov3_vitl": DetectorProfile(
         name="DINOv3 ViT-L",
         precision=0.85,
         recall=0.82,
+        band_weights={"short": 0.2, "medium": 0.9, "long": 1.3},
         notes="est. Phase D target; update post Phase D",
     ),
     # DINO Swin-L: estimated pre-Phase D
@@ -121,16 +177,18 @@ DETECTOR_PROFILES: dict[str, DetectorProfile] = {
         recall=0.75,
         notes="est. pre-Phase D",
     ),
-    # ASTRiDE classical: frequently reports very high confidence on false positives,
-    # so confidence magnitude is unreliable.  The ceiling caps its effective
-    # contribution regardless of the raw score it emits — we trust that it fired,
-    # not how confidently it says so.
+    # ASTRiDE classical: near-zero recall in practice (classical contour detector).
+    # Precision ~1-5% measured via OpenCV proxy in multi_method_benchmark.
+    # Confidence magnitude is unreliable (aspect-ratio derived, not ML); ceiling
+    # caps its effective contribution regardless of raw score.
+    # Treated as corroboration-only in compute_unified_confidence.
     "astride": DetectorProfile(
         name="ASTRiDE",
-        precision=0.50,
-        recall=0.70,
-        confidence_ceiling=0.6,
-        notes="est. no direct benchmark yet; ceiling set for miscalibrated FP confidence",
+        precision=0.03,
+        recall=0.03,
+        confidence_ceiling=0.45,
+        notes="near-zero measured recall; ceiling retained because raw confidence "
+              "is aspect-ratio derived and uncalibrated",
     ),
 }
 
@@ -150,13 +208,21 @@ def _get_profile(method: str) -> DetectorProfile:
     return DETECTOR_PROFILES.get(method, _DEFAULT_PROFILE)
 
 
-def _confidence_floor_with_corroboration(sources: list[dict]) -> dict:
+def _confidence_floor_with_corroboration(
+    sources: list[dict],
+    streak_band: str | None = None,
+) -> dict:
     """Compute confidence for non-ASTRiDE detector outputs.
 
     The strongest detector keeps its own effective confidence. Additional
     detectors contribute reliability-weighted corroboration into the remaining
     probability mass, so agreement can raise confidence but a lone detector is
     not discounted merely because other models did not fire.
+
+    Args:
+        sources: List of {"method": str, "confidence": float} dicts.
+        streak_band: Optional length band ("short", "medium", "long") used to
+            look up per-band reliability weights from each detector's profile.
     """
     if not sources:
         return {"score": 0.0, "components": [], "divergence": 0.0, "fn_penalty": 0.0}
@@ -170,7 +236,7 @@ def _confidence_floor_with_corroboration(sources: list[dict]) -> dict:
         profile = _get_profile(method)
         ceiling = profile.confidence_ceiling
         eff_conf = min(raw_conf, ceiling) if ceiling is not None else raw_conf
-        w = profile.f_beta_weight
+        w = profile.band_adjusted_weight(streak_band)
         contribution = w * eff_conf
         components.append({
             "method": method,
@@ -179,6 +245,7 @@ def _confidence_floor_with_corroboration(sources: list[dict]) -> dict:
             "weight": round(w, 4),
             "contribution": round(contribution, 4),
             "ceiling": ceiling,
+            "streak_band": streak_band,
         })
         eff_confs.append(eff_conf)
 
@@ -216,15 +283,18 @@ def _confidence_floor_with_corroboration(sources: list[dict]) -> dict:
     }
 
 
-def compute_unified_confidence(sources: list[dict]) -> dict:
+def compute_unified_confidence(
+    sources: list[dict],
+    streak_band: str | None = None,
+) -> dict:
     """Compute a calibrated Unified Confidence Score from multiple detector outputs.
 
     Five-step calibrated corroboration formula:
 
-      1. w_i = F-0.5(precision_i, recall_i)             -- precision-heavy reliability weight
-      2. eff_i = min(conf_i, ceiling_i)                  -- optional confidence ceiling
-      3. baseline = max(eff_i)                           -- no single-detector penalty
-      4. corroboration = 1 - Π(1 - w_i × eff_i)          -- for non-best detectors
+      1. w_i = F-0.5(precision_i, recall_i) × band_weight_i   -- band-adjusted weight
+      2. eff_i = min(conf_i, ceiling_i)                         -- optional confidence ceiling
+      3. baseline = max(eff_i)                                  -- no single-detector penalty
+      4. corroboration = 1 - Π(1 - w_i × eff_i)               -- for non-best detectors
       5. score = baseline + remaining confidence mass × corroboration
 
     ASTRiDE is special-cased as corroboration-only.  An ASTRiDE-only source list
@@ -237,19 +307,23 @@ def compute_unified_confidence(sources: list[dict]) -> dict:
 
     A single non-ASTRiDE detector keeps its own effective confidence. Multiple
     agreeing detectors push the score toward 1, with empirical precision/recall
-    controlling how much corroborating detectors can boost the baseline.
+    (and optional per-band weights) controlling how much corroborating detectors
+    can boost the baseline.
 
     Args:
         sources: List of ``{"method": str, "confidence": float}`` dicts from one
             detection. Any entry with ``method == "unified"`` is filtered out to
             avoid circular reference.
+        streak_band: Optional length band ("short", "medium", "long").  When
+            provided, each detector's F-0.5 reliability weight is scaled by its
+            per-band multiplier from ``DetectorProfile.band_weights``.
 
     Returns:
         Dict with keys:
             score       -- final unified confidence in [0.0, 0.99]
             components  -- per-detector breakdown list:
                              [{"method", "raw_conf", "eff_conf", "weight",
-                               "contribution", "ceiling"}, ...]
+                               "contribution", "ceiling", "streak_band"}, ...]
             divergence  -- std dev of effective confidences (diagnostic)
             fn_penalty  -- retained diagnostic field; always 0.0 in current scoring
     """
@@ -270,7 +344,7 @@ def compute_unified_confidence(sources: list[dict]) -> dict:
     if not non_astride_sources:
         return {"score": 0.0, "components": [], "divergence": 0.0, "fn_penalty": 0.0}
 
-    result = _confidence_floor_with_corroboration(non_astride_sources)
+    result = _confidence_floor_with_corroboration(non_astride_sources, streak_band)
     if not astride_sources:
         return result
 
@@ -291,6 +365,7 @@ def compute_unified_confidence(sources: list[dict]) -> dict:
             "weight": 0.0,
             "contribution": round(_ASTRIDE_MAX_CORROBORATION_BOOST * raw_conf, 4),
             "ceiling": DETECTOR_PROFILES["astride"].confidence_ceiling,
+            "streak_band": streak_band,
             "role": "corroboration_only",
         })
 
@@ -300,22 +375,26 @@ def compute_unified_confidence(sources: list[dict]) -> dict:
 if __name__ == "__main__":
     # Quick sanity check — run with: python -m inference.confidence
     examples = [
-        ("Single DINOv3 ViT-B (conf=0.91)", [{"method": "dinov3_vitb", "confidence": 0.91}]),
-        ("DINOv3 ViT-B + YOLO agree (both 0.9)", [
-            {"method": "dinov3_vitb", "confidence": 0.90},
-            {"method": "yolo", "confidence": 0.90},
+        ("Single DINOv3 multisource (conf=0.91)", [
+            {"method": "dinov3_vitb_multisource", "confidence": 0.91}]),
+        ("DINOv3 multisource + YOLO-GTImages agree (both 0.9) — long band", [
+            {"method": "dinov3_vitb_multisource", "confidence": 0.90},
+            {"method": "streakmind_yolo", "confidence": 0.90},
         ]),
-        ("DINOv3 ViT-B + YOLO disagree (0.9 vs 0.15)", [
-            {"method": "dinov3_vitb", "confidence": 0.90},
-            {"method": "yolo", "confidence": 0.15},
+        ("DINOv3 multisource + YOLO-GTImages agree (both 0.9) — medium band", [
+            {"method": "dinov3_vitb_multisource", "confidence": 0.90},
+            {"method": "streakmind_yolo", "confidence": 0.90},
+        ]),
+        ("YOLO-GTImages alone (medium band) — should be well-weighted", [
+            {"method": "streakmind_yolo", "confidence": 0.80},
         ]),
         ("ASTRiDE-only high-conf FP is disregarded", [{"method": "astride", "confidence": 0.99}]),
-        ("YOLO OBB + ASTRiDE corroboration (0.86 + 0.99 ≈ 0.90)", [
-            {"method": "yolo", "confidence": 0.86},
+        ("YOLO OBB + ASTRiDE corroboration (0.86 + 0.99)", [
+            {"method": "streakmind_yolo", "confidence": 0.86},
             {"method": "astride", "confidence": 0.99},
         ]),
-        ("DINOv3 ViT-B + ASTRiDE corroboration", [
-            {"method": "dinov3_vitb", "confidence": 0.90},
+        ("DINOv3 multisource + ASTRiDE corroboration", [
+            {"method": "dinov3_vitb_multisource", "confidence": 0.90},
             {"method": "astride", "confidence": 0.99},
         ]),
         ("Passes through old unified entry", [
@@ -323,13 +402,15 @@ if __name__ == "__main__":
             {"method": "tiny", "confidence": 0.75},
         ]),
     ]
-    for label, srcs in examples:
-        result = compute_unified_confidence(srcs)
-        print(f"{label}")
+    bands = [None, None, "medium", "medium", None, "medium", None, None]
+    for (label, srcs), band in zip(examples, bands):
+        result = compute_unified_confidence(srcs, streak_band=band)
+        band_note = f" [{band}]" if band else ""
+        print(f"{label}{band_note}")
         print(f"  score={result['score']:.4f}  divergence={result['divergence']:.4f}"
               f"  fn_penalty={result['fn_penalty']:.4f}")
         for c in result["components"]:
             ceiling_note = f"  [ceiling={c['ceiling']}→eff={c['eff_conf']:.2f}]" if c["ceiling"] is not None else ""
-            print(f"    {c['method']:15s}  raw={c['raw_conf']:.2f}  w={c['weight']:.3f}"
+            print(f"    {c['method']:28s}  raw={c['raw_conf']:.2f}  w={c['weight']:.3f}"
                   f"  contrib={c['contribution']:.3f}{ceiling_note}")
         print()
