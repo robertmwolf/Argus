@@ -15,8 +15,9 @@ function ext(filename) {
  *   onQueued(jobId, filename)  — called once the file is uploaded and queued
  *   onError(message)           — called on network or validation errors
  *   enabledDetectors           — Set<string> of detector IDs to run (null = all)
+ *   rawMode                    — bool, skip Radon/NMS/grouping when true
  */
-export default function UploadZone({ onQueued, onError, enabledDetectors }) {
+export default function UploadZone({ onQueued, onError, enabledDetectors, rawMode = false }) {
   const [dragging, setDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
 
@@ -32,6 +33,7 @@ export default function UploadZone({ onQueued, onError, enabledDetectors }) {
     if (enabledDetectors !== null && enabledDetectors !== undefined) {
       form.append('enabled_detectors', JSON.stringify([...enabledDetectors]))
     }
+    form.append('raw_mode', rawMode ? 'true' : 'false')
 
     try {
       const res = await fetch('/api/upload', { method: 'POST', body: form })
@@ -46,7 +48,7 @@ export default function UploadZone({ onQueued, onError, enabledDetectors }) {
       onError?.(err.message)
       setUploading(false)
     }
-  }, [onQueued, onError, enabledDetectors])
+  }, [onQueued, onError, enabledDetectors, rawMode])
 
   const onDrop = useCallback((e) => {
     e.preventDefault()
