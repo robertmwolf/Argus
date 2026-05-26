@@ -17,7 +17,7 @@ skyfield==1.49
 spacetrack==0.14.0
 
 # Image processing
-# Headless variant: safe in Docker, WSL2, and server environments.
+# Headless variant: safe in WSL2 and server environments.
 opencv-python-headless==4.10.0.84
 scikit-image==0.24.0
 Pillow==10.4.0
