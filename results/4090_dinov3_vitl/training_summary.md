@@ -20,7 +20,7 @@
 - Worktree dirty: yes
 - Source archive used: TBD
 - Notes on uncommitted changes: local worktree contains modified docs, setup,
-  dependency, API, frontend, Docker, annotation, and training files. Commit or
+  dependency, API, frontend, annotation, and training files. Commit or
   archive the exact working tree before renting cloud time.
 
 ## Dataset Decision

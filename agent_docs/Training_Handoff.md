@@ -1529,15 +1529,6 @@ chmod +x scripts/cloud_setup.sh
 
 All Linux mmcv/cu128 wheels install without compilation inside WSL2.
 
-**Alternative — Docker:**
-
-```bash
-docker compose -f docker-compose.cloud.yml up --build worker
-```
-
-The CUDA base image handles Linux dependency installation, including mmcv CUDA
-ops, inside the container.
-
 **Do not attempt native Windows:** `mmcv-lite` (without `_ext`) will not train
 Co-DINO.  Spending time on VS 2022 + CUDA source builds for this stack is not
 productive — the WSL2 path is the correct one.

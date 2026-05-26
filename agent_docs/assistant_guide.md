@@ -26,7 +26,6 @@ Progress:
 - ✅ Phase 4 (Database): `db/schema.sql`, `db/models.py` — SQLAlchemy async ORM (SQLite + PostgreSQL)
 - ✅ Phase 5 (API): `api/main.py`, `api/storage.py`, `api/queue.py`, `api/worker.py` — FastAPI + background worker
 - ✅ Phase 6 (Frontend): `frontend/` — React 18 + Vite + Tailwind, canvas OBB rendering, detection table
-- ✅ Phase 7 (Docker): `docker/`, `docker-compose.yml`, `docker-compose.cloud.yml` — full stack verified
 - ✅ Phase 8 (Evaluation): `eval/metrics.py`, `eval/benchmark.py` — mAP, angle error, per-band, DINO vs YOLO
 - ✅ Local training: Swin-T DINO (50 epochs, CPU) + YOLO11-OBB baseline — results in `results/phase8_benchmark.json`
 - ✅ DINOv3 Phase A (feasibility probe): cosine dissimilarity = 0.095 — PASS
@@ -64,7 +63,6 @@ Always read the relevant agent_docs file before writing code:
 - `agent_docs/dinov3_plan.md`        — DINOv3 backbone integration plan and phase status
 - `agent_docs/datasets.md`           — where to get test data, download links
 - `agent_docs/dependencies.md`       — exact packages, versions, install commands
-- `agent_docs/service_roadmap.md`    — Docker, deployment, cloud scale path
 - `agent_docs/test_strategy.md`      — how to measure and record baseline accuracy
 - `agent_docs/spacetrack.md`         — Space-Track API policy, TLE catalog setup, rate limits
 - `agent_docs/Training_Handoff.md`   — Phase D training: Route 1 (RTX 5070 Ti workstation) and Route 2 (RTX 4090 cloud rental)
@@ -118,7 +116,6 @@ Argus/
 ├── frontend/                ← React + Vite (Phase 6)
 ├── eval/                    ← metrics, benchmark, visualise (Phase 8)
 ├── db/                      ← schema.sql, migrations (Phase 4)
-├── docker/                  ← Dockerfiles + docker-compose (Phase 7)
 ├── data/
 │   ├── raw/                 ← original FITS files (gitignored)
 │   ├── processed/           ← converted PNGs (gitignored)
@@ -300,7 +297,7 @@ Two MMDetection configs must always exist:
 | 2 — Model config | Mac (no GPU) | Both configs pass mmdet check; Swin-T weights downloaded |
 | 3 — Augmentation | Mac CPU | `augmentations.py --visualize` runs clean |
 | 4 — Integration | Mac MPS, tiny | `pipeline.py --fast` <60s |
-| 5 — API + Frontend | Mac CPU | docker-compose up, upload curl works |
+| 5 — API + Frontend | Mac CPU | API starts, frontend starts, upload curl works |
 | 6 — Cloud handoff | Mac | `prepare_cloud_training.py` all checks pass |
 | 7 — Cloud training | Lambda A100 | val mAP >90%, fetch weights |
 | 8 — Evaluation | Mac MPS | ≥94% precision, ≥97% recall |
@@ -330,7 +327,7 @@ or see `scripts/download_dinov3_weights.py`.
 
 ## Cloud Training Scripts
 
-`scripts/prepare_cloud_training.py` — validates all checklist items (annotations, dataset, configs, augmentations, pipeline fast-mode, API, docker, split requirements files) before GPU rental; exits 1 on any failure.
+`scripts/prepare_cloud_training.py` — validates all checklist items (annotations, dataset, configs, augmentations, pipeline fast-mode, API, split requirements files) before GPU rental; exits 1 on any failure.
 
 `scripts/cloud_setup.sh` — run once on Lambda instance: installs deps, downloads Swin-L weights, verifies CUDA, flips `.env` to `MODEL_SIZE=large` and `USE_DEV_SUBSET=false`.
 

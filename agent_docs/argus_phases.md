@@ -327,26 +327,8 @@ React 18 + Vite + Tailwind CSS.
 - Columns: `#`, Confidence, Length (px), RA, Dec, Best ID, ID Confidence
 - Row click highlights that OBB in canvas (`#FF6B35`, 4px stroke)
 
-### Gate condition for Phase 7
-Upload FITS in browser, see annotated image with OBBs and table.
-
----
-
-## Phase 7 — Docker  ✅ COMPLETE
-
-### Dockerfiles: `docker/`
-
-`Dockerfile.api` — python:3.11-slim, requirements-api.txt, uvicorn
-`Dockerfile.worker` — pytorch/pytorch:2.2.0-cuda12.1, requirements-inference.txt
-`Dockerfile.frontend` — node:20-alpine build → nginx:alpine serve
-
-### `docker-compose.yml` (repo root)
-
-Services: `db` (postgres:16), `api` (port 8000), `worker` (GPU), `frontend` (port 80)
-Override `docker-compose.cloud.yml` for S3 + SQS deployment.
-
 ### Gate condition for Phase 8
-`docker compose up` → working service at `http://localhost`.
+Upload FITS in browser, see annotated image with OBBs and table.
 
 ---
 

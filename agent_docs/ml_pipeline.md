@@ -417,7 +417,7 @@ python -m inference.pipeline --fast --image data/raw/sample.fits
 Expected: < 60 seconds wall time. MPS fallback warnings are normal.
 
 ### Phase 5 — API + Frontend (Mac, CPU)
-Goal: `docker-compose up` works, browser can upload image and see results with Swin-T model.
+Goal: API and frontend dev servers run, browser can upload image and see results with Swin-T model.
 ```bash
 curl -F "file=@data/raw/sample.fits" localhost:8000/api/upload
 ```
@@ -435,7 +435,6 @@ Checklist (script must confirm all):
 - `training/augmentations.py` runs on sample image without error
 - `inference/pipeline.py` runs end-to-end in `FAST_MODE=true`
 - `api/main.py` starts without error
-- `docker-compose up --build` completes (CPU/MPS, `MODEL_SIZE=tiny`)
 - Split requirements files are present and pinned; torch/mmcv/mmdet remain
   platform-specific installs documented in `agent_docs/dependencies.md`
 

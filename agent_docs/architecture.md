@@ -283,7 +283,6 @@ weighted_score = (
 | 4 — Database | PostgreSQL/SQLite schema | SQLAlchemy async, normalized schema |
 | 5 — API | FastAPI | Upload / result / image endpoints |
 | 6 — Frontend | React + Vite + Tailwind | Canvas OBB renderer |
-| 7 — Docker | docker-compose | Separate API, worker (GPU), frontend containers |
 | 8 — Evaluation | mAP, angle error | DINO vs YOLO head-to-head benchmark |
 
 ## ARGUS ML Pipeline (Phases 1–8)
@@ -325,10 +324,8 @@ weighted_score = (
 
 ## Service Deployment Roadmap
 
-See `agent_docs/service_roadmap.md` for the full plan. Summary:
-
 | Phase | What |
 |-------|------|
 | S1 | Standalone CLI pipeline (complete Phases 1–3 first) |
-| S2–S5 | FastAPI + React frontend + Docker + Cloudflare Tunnel |
-| S6 | Cloud scale: Redis/SQS, S3, separate GPU worker containers |
+| S2–S5 | FastAPI + React frontend + Cloudflare Tunnel |
+| S6 | Cloud scale: Redis/SQS, S3, separate GPU workers |

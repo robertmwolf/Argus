@@ -16,7 +16,6 @@ api/
 agent_docs/
 data/
 db/
-docker/
 eval/
 frontend/
 inference/
@@ -354,4 +353,3 @@ A future maintainer arriving after this refactor is complete can:
 - The `db/` schema — no structural issues
 - The `frontend/` layout — standard Vite project structure
 - The `eval/` module — clean interface
-- The `docker/` layout — correct separation of dev and cloud compose files
