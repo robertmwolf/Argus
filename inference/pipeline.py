@@ -136,6 +136,7 @@ def _select_config(model_size: str) -> Path:
         "dinov3_vitb":             root / "models" / "dino" / "streak_dinov3_vitb.py",
         "dinov3_vitl":             root / "models" / "dino" / "streak_dinov3_vitl.py",
         "dinov3_gt_dm_satstreaks": root / "models" / "dino" / "streak_dinov3_vitb.py",
+        "dinov3_vitb_multisource": root / "models" / "dino" / "streak_dinov3_vitb_400px.py",
     }
     if model_size not in configs:
         raise ValueError(
@@ -992,6 +993,7 @@ def resolve_model_specs() -> list[dict]:
         "dinov3_vitb":             root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
         "dinov3_vitl":             root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
         "dinov3_gt_dm_satstreaks": root / "weights" / "run_gt_dm_satstreaks_dinov3_vitb" / "best_coco_bbox_mAP_epoch_4.pth",
+        "dinov3_vitb_multisource": root / "weights" / "run_best_400px_nodm" / "best_coco_bbox_mAP_epoch_15.pth",
     }
     _meta: dict[str, tuple[str, str]] = {
         "tiny":                    ("DINO Swin-Tiny",                  "SatStreaks"),
@@ -999,6 +1001,7 @@ def resolve_model_specs() -> list[dict]:
         "dinov3_vitb":             ("DINOv3 ViT-B",                    "SatStreaks+GTImages"),
         "dinov3_vitl":             ("DINOv3 ViT-L",                    "SatStreaks+GTImages"),
         "dinov3_gt_dm_satstreaks": ("DINOv3 ViT-B — GT+DM+SatStreaks", "GTImages+DM+SatStreaks"),
+        "dinov3_vitb_multisource": ("DINOv3 Base - Multi-source",      "SatStreaks+BrentImages+Frigate"),
     }
     label, dataset = _meta.get(model_size, (model_size, ""))
     if weights_env:
