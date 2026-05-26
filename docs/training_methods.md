@@ -55,14 +55,19 @@ MMDetection 3.3.0:
 
 | Dataset | Images | Annotations | Location | Provenance | DM-free? |
 |---------|--------|-------------|----------|------------|----------|
-| SatStreaks | 3,023 (train) | ~3,100 streaks | `data/satstreaks/` local | Public dataset `[TODO: cite]` | Yes |
-| BrentImages Night 1 (GTImages) | included above via `dm_merged_train.json` | — | `data/BrentImages/Img_20260412_Atwood/` | Proprietary, Atwood Observatory captures | Yes |
-| BrentImages Night 2 | 204 annotated + 27 negatives | 204 streaks | `/Volumes/External/…/Img_20260515_Atwood/` | Proprietary, Atwood Observatory captures | Yes |
-| DarkMatters (DM) | 149 training | ~150 streaks | `/Volumes/External/DarkMatters/` | **Third-party — consent unresolved** | No |
+| SatStreaks | 3,023 (train) / 308 (test) | ~3,100 streaks | `data/satstreaks/` local | Public dataset `[TODO: cite]` | Yes |
+| BrentImages Night 1 (Apr 12 2026) | 277 | ~300 streaks | `data/BrentImages/Img_20260412_Atwood/` | First-party, Atwood Observatory | Yes |
+| BrentImages Night 2 (May 15 2026) | 204 annotated + 27 negatives | 204 streaks | `/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/` | First-party, Atwood Observatory | Yes |
+| DarkMatters (DM) | 149 training + 66 val holdout | ~216 streaks | `/Volumes/External/DarkMatters/` (val locally mirrored) | **Third-party — consent unresolved** | No |
 | Frigate (tiled) | 558 positive tiles + 159 neg | 655 streaks | `/Volumes/External/frigate/` | **Third-party — attribution needed** | Yes |
 
-**Validation set (`dm_merged_val.json`):** 411 images (345 SatStreaks/BrentImages N1,
-66 DarkMatters holdout — DM holdout images now mirrored locally to
+BrentImages is an **ongoing capture series** from Atwood Observatory (Brent's
+telescope). Additional nights are expected; the `Img_YYYYMMDD_Atwood/` naming
+convention accommodates new captures. Each night yields ~200–280 annotated
+frames at 6248×4176 px (native resolution; downsampled for training).
+
+**Validation set (`dm_merged_val.json`):** 411 images (~279 SatStreaks, ~66 BrentImages N1,
+66 DarkMatters holdout — DM holdout images mirrored locally to
 `data/darkmatters/val_previews/`).
 
 ### 2.2 Data Provenance Issues (must resolve before publication)
@@ -77,9 +82,10 @@ MMDetection 3.3.0:
 
 - **SatStreaks:** `[TODO]` Identify the canonical citation and license.
 
-- **BrentImages (Night 1 & 2):** First-party captures from Atwood Observatory.
-  Suitable for publication. Should be hosted with a DOI (HuggingFace Datasets or
-  Zenodo recommended).
+- **BrentImages (all nights):** First-party captures from Atwood Observatory
+  (ongoing series). Suitable for publication. Should be hosted with a DOI
+  (HuggingFace Datasets or Zenodo recommended) as a versioned dataset that
+  can grow as new nights are added.
 
 ### 2.3 Annotation Format
 
@@ -108,7 +114,7 @@ The following runs informed but do **not** constitute the publishable final mode
 
 **Run 0 — Cold start (May 18, 2026):**
 - Config: `models/dino/streak_dinov3_vitb.py`
-- Data: `dm_merged_train.json` (SatStreaks + GTImages/BrentImages N1 + DarkMatters)
+- Data: `dm_merged_train.json` (SatStreaks + BrentImages N1 + DarkMatters)
 - Schedule: 4 epochs, MultiStepLR milestones=[3,4], γ=0.1, peak lr=1e-4, 256px
 - Hardware: Mac M3 MPS (CPU fallback), ~8h 20m
 - Result: mAP@50 on dm_merged_val: 0.257 → 0.341 → 0.392 → **0.436** (best epoch 4)
@@ -157,6 +163,23 @@ The following runs informed but do **not** constitute the publishable final mode
 
 This model is deployed as **DINOv3 Base - Multi-source** (`dinov3_vitb_multisource`) in
 the production API.
+
+### 3.3 BrentImages Night 2 Evaluation Caveat
+
+The zero-shot mAP@50 of 0.296 on BrentImages Night 2 is **misleading low** due to a
+resolution mismatch. Night 2 frames are 6248×4176 px; when resized to 400px model input
+the downscale factor is 15.6×. Median GT streak length in native pixels is ~687px, which
+shrinks to ~44px (2.75 ViT patches) at model input — well below the training distribution
+(SatStreaks median ~400px at model input).
+
+Tiled inference at `native_tile_size=400` (1:1 native crops) resolves this. A tiled eval
+(`scripts/eval_brentimages_tiled.py`) is in progress; expected to yield mAP@50 in the
+0.60–0.75 range, matching DarkMatters zero-shot performance. Results to be added here
+when complete.
+
+This applies to **all future high-resolution capture nights** from Atwood Observatory.
+Full-image resize is only appropriate when the target image scale matches the training
+distribution; tiled inference is the correct path for native-resolution FITS frames.
 
 ### 3.2 LR Schedule (current pilot)
 
@@ -227,16 +250,20 @@ evaluation output.
       on Mac MPS; consider whether the compute cost is justified vs mAP gain from Run 1)
 - [ ] Val set composition confirmed and frozen; report which images are in it
 
-### Paper Run Config Parameters (to be filled after Run 1 results)
+### Paper Run Config Parameters (informed by Run 1 and Run 2)
 
 ```python
-# Fill these in after reviewing Run 1 A/B results:
-_img_scale    = (???, ???)   # 256 or 400
-TRAIN_ANN_FILE = '???'       # nodm or withdm (pending consent)
-max_epochs    = ???           # informed by Run 1 convergence curve
-randomness    = dict(seed=42, deterministic=True)
-load_from     = None          # or Run 0 checkpoint if Option B above
+# Decisions made after Run 1 A/B + Run 2 results:
+_img_scale     = (400, 400)                        # 400px: +0.066 mAP@50 vs 256px
+TRAIN_ANN_FILE = 'annotations/all_train_nodm.json' # no-DM: avoids consent issue, ~identical perf
+max_epochs     = 15                                # cosine schedule converges well by ep15
+randomness     = dict(seed=42, deterministic=True) # [TODO: add to final config]
+load_from      = None   # TBD: Option A (cold start) vs Option B (Run 0 warm-start); see §4 Methodology
 ```
+
+Note: `all_train_nodm.json` does not yet include tiled BrentImages crops (Night 1 FITS are
+on external storage only). A future revision should add locally-stored tiled Night 1 and
+Night 2 crops; see `docs/adaptive_tiling_plan.md`.
 
 ---
 
@@ -253,10 +280,10 @@ load_from     = None          # or Run 0 checkpoint if Option B above
 
 | Set | Images | Notes |
 |-----|--------|-------|
-| Standard (SatStreaks test split) | ~600 | Primary benchmark |
-| BrentImages Night 2 (zero-shot) | 231 | Out-of-distribution generalisation |
-| Frigate (zero-shot, tiled inference) | 350 | Short-streak regime |
-| DarkMatters holdout (zero-shot) | ~83 | Only if DM consent resolved |
+| Standard (SatStreaks test split) | 308 | Primary benchmark |
+| BrentImages Night 2 (zero-shot) | 231 | Out-of-distribution; use tiled inference (§3.3) |
+| Frigate (zero-shot, tiled inference) | 350 | Short-streak regime; requires adaptive tiling |
+| DarkMatters holdout (zero-shot) | 66 (local) / ~332 (full) | Only if DM consent resolved |
 
 Zero-shot sets are never seen during training; they measure generalisation.
 
@@ -285,7 +312,7 @@ Zero-shot sets are never seen during training; they measure generalisation.
 
 Approximate training throughput on this hardware:
 - 256px, batch=1, frozen backbone: ~0.73 s/step (3,971 images/epoch → ~48 min/epoch)
-- 400px: not yet measured (Run 1 Phase 2 pending)
+- 400px, batch=1, frozen backbone: ~1.4–2.5 s/step (thermal throttling; Run 2 took ~72h for 15 epochs)
 
 ---
 
@@ -296,5 +323,12 @@ Approximate training throughput on this hardware:
 3. **DINOv3 citation** — need the exact paper reference (not DINOv2)
 4. **Data hosting** — HuggingFace Datasets vs Zenodo; need DOI before paper submission
 5. **Warm-start strategy** — Option A vs B (see §4 Methodology above)
-6. **400px compute** — is the mAP gain (unknown until Run 1 Phase 2) worth the
-   training time on Mac MPS? If significant, may justify cloud GPU for paper run.
+6. **400px vs 256px** — ✅ Resolved: 400px yields mAP@50=0.468 vs 0.402 at 256px (+0.066).
+   The gain justifies the compute cost; paper run will use 400px. For a Mac M3 (~72h),
+   cloud GPU is strongly recommended for the final paper run.
+7. **BrentImages Night 1 FITS local storage** — Night 1 FITS files are only on external
+   drive (`/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/`). They
+   should be copied to local or cloud storage so training runs don't depend on the drive.
+8. **Adaptive tiling for training** — Tiled BrentImages crops are not yet in the training
+   set. See `docs/adaptive_tiling_plan.md` for the plan to add zoom-correct tiles for
+   both Night 1/2 and Frigate before the paper training run.
