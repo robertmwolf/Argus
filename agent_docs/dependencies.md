@@ -39,8 +39,8 @@ training runtime.
 - **Python stays on 3.11 for now.**  Python 3.11 is still supported until
   October 2027, and the OpenMMLab stack is much easier to install on Python
   3.11 than on newer interpreters.  Do not move to Python 3.12+ until the full
-  PyTorch + mmcv + mmdet + CUDA wheel matrix has been verified on Mac, Docker,
-  and WSL2/cloud GPU environments.
+  PyTorch + mmcv + mmdet + CUDA wheel matrix has been verified on Mac and
+  WSL2/cloud GPU environments.
 - **NumPy stays on 1.26.4 for now.**  `sep` and `astride` are native-extension
   packages used by the classical astronomy pipeline.  NumPy 2.x changed the C
   ABI for compiled extension modules, so upgrading NumPy requires explicitly
@@ -63,7 +63,7 @@ contract.  On 2026-05-21 the active environment differed from
 the documented requirements lanes in several ways:
 
 - `torch==2.11.0` and `torchvision==0.26.0` are installed locally, while the
-  documented Mac/Docker baseline still uses PyTorch 2.2 where appropriate.
+  documented Mac/Linux baseline still uses PyTorch 2.2 where appropriate.
 - `albumentations==2.0.8`, `spacetrack==1.4.0`, `ultralytics==8.4.46`, and
   `pydantic==2.13.3` are installed locally, while the requirements files pin
   older versions.
@@ -166,12 +166,6 @@ The training environment should live on the WSL filesystem (for example
 and checkpoints inside Ubuntu avoids Windows filesystem latency and path edge
 cases during long training runs.
 
-**Docker alternative:** The ARGUS `docker-compose.yml` uses a CUDA base image
-and installs all Linux dependencies at build time — another clean path that
-avoids the Windows wheel problem entirely.
-
----
-
 ## Install Order — Critical Rule
 
 **PyTorch and the MMDetection stack must be installed before the inference or
@@ -217,10 +211,9 @@ export PYTORCH_ENABLE_MPS_FALLBACK=1
 
 ---
 
-## Platform B — Linux / Docker (Lambda A100, CUDA 12.1)
+## Platform B — Linux CUDA (Lambda A100, CUDA 12.1)
 
-This is the path used by `docker/Dockerfile.worker` and the Lambda Labs A100
-cloud instance.
+This is the path used by the Lambda Labs A100 cloud instance.
 
 ```bash
 conda create -n satid python=3.11 -y

@@ -215,6 +215,50 @@ https://ln5.sync.com/dl/afd354190/c5cd2q72-a5qjzp4q-nbjdiqkr-cenajuqu
 `inference/crossid.py → _fetch_tle_catalog()` delegates to
 `src/matching/tle_manager.py → TLECatalogManager.get_tles()`.
 
+ARGUS also has an experimental direct candidate-provider hook:
+
+```bash
+# Default: local tle_catalog only
+export ARGUS_CANDIDATE_PROVIDER=local
+
+# Prototype: query IAU CPS SatChecker FOV API first, then fall back locally
+export ARGUS_CANDIDATE_PROVIDER=satchecker
+
+# Prototype: query local catalog first, then SatChecker only on local miss
+export ARGUS_CANDIDATE_PROVIDER=satchecker_fallback
+```
+
+The SatChecker provider lives in `src/matching/satchecker_provider.py`. It
+derives a circular FOV from detection RA/Dec tips, calls SatChecker's FOV API
+with `include_tles=true`, then returns TLE-shaped candidates to the existing
+ARGUS SGP4/scoring path. It is deliberately fail-closed: network failures,
+timeouts, or empty SatChecker responses do not replace the local-catalog path
+unless `ARGUS_SATCHECKER_FALLBACK_LOCAL=0` is set.
+
+Useful prototype controls:
+
+```bash
+export ARGUS_SATCHECKER_TIMEOUT_S=8
+export ARGUS_SATCHECKER_MIN_RADIUS_DEG=0.5
+export ARGUS_SATCHECKER_MARGIN_DEG=0.25
+export ARGUS_SATCHECKER_MAX_RADIUS_DEG=8
+export ARGUS_SATCHECKER_DATA_SOURCE=any
+```
+
+To compare providers across a FITS set:
+
+```bash
+python scripts/evaluate_candidate_provider.py \
+  --manifest data/eval_fits.txt \
+  --providers local satchecker \
+  --baseline-provider local \
+  --out results/candidate_provider_eval.json
+```
+
+The evaluator writes a JSON artifact plus a Markdown summary with candidate
+counts, latency, empty/error rates, top-1 agreement, top-3 overlap, and
+confidence deltas.
+
 ### Live track (obs_time within last 72 hours)
 
 | Local TLE coverage | Behavior | Network call |

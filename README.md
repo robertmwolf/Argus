@@ -71,7 +71,6 @@ Argus/
 │   ├── phase1_goals.md        ← Phase 1 (complete, reference only)
 │   ├── datasets.md
 │   ├── dependencies.md
-│   ├── service_roadmap.md
 │   ├── spacetrack.md
 │   └── test_strategy.md
 ├── src/                       ← Phase 0: classical baseline (complete)
@@ -111,7 +110,6 @@ Argus/
 ├── frontend/                  ← React 18 + Vite + Tailwind
 ├── eval/                      ← metrics, benchmark, results
 ├── db/                        ← schema.sql, async ORM models
-├── docker/                    ← docker-compose (deploy only)
 ├── tests/                     ← pytest — all offline, no credentials required
 ├── data/
 │   ├── sample/                ← synthetic FITS for smoke-testing
@@ -227,8 +225,8 @@ object unidentified (`unknown`) rather than querying Space-Track at runtime.
 
 ## Running Locally (Dev)
 
-Run the API directly with the satid conda environment — Docker is reserved for
-deployment.  The satid env has torch, mmdet, ultralytics, and all ML packages installed.
+Run the API directly with the satid conda environment. The satid env has torch,
+mmdet, ultralytics, and all ML packages installed.
 
 ### Prerequisites — model weights
 
@@ -296,24 +294,6 @@ print(Counter(s['method'] for d in dets for s in (d.get('sources') or [{'method'
 "
 # Expected output includes 'dinov3_vitb' and 'yolo_full' keys
 # 'yolo_full' absent → check weights/run_full_yolo_obb/run/weights/best.pt exists
-```
-
-## Running with Docker (Deploy)
-
-Docker images should only be built for deployment — they do not include
-torch/mmdet (GPU-intensive packages belong in the dedicated worker image).
-
-```bash
-# 1. Copy and edit credentials
-cp .env.example .env
-
-# 2. Start the full stack (db + api + frontend)
-docker compose up --build
-
-# 3. Open http://localhost in your browser
-
-# Cloud deployment (S3 + SQS + GPU worker):
-docker compose -f docker-compose.yml -f docker-compose.cloud.yml up
 ```
 
 ## Running Tests
