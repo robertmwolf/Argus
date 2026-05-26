@@ -3,10 +3,10 @@
 # Use this for environments that run detector inference, such as the GPU worker.
 # Install the platform-specific PyTorch + MMDetection stack first; see
 # agent_docs/dependencies.md. Those packages are not listed here because their
-# wheel indexes differ across Mac, CUDA 12.1 Docker, and CUDA 12.8 WSL2/cloud.
+# wheel indexes differ across Mac, CUDA 12.1, and CUDA 12.8 WSL2/cloud.
 
 -r requirements-api.txt
 
 # YOLO ensemble inference. This is kept out of requirements-api.txt so the
-# lightweight API container does not pull in an ML stack.
+# lightweight API service does not pull in an ML stack.
 ultralytics==8.2.0

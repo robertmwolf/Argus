@@ -320,8 +320,8 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
         except ImportError as exc:
             raise RuntimeError(
                 "ML packages (torch/mmdet) are not installed in this environment. "
-                "Run the API directly with the satid conda env for local inference, "
-                "or use the GPU worker container for Docker deployments."
+                "Run the API directly with the satid conda env for inference, "
+                "or run the standalone GPU worker on a machine with the ML stack installed."
             ) from exc
 
         dino_ids = {spec["id"] for spec in resolve_model_specs()}

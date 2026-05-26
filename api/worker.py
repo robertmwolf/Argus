@@ -1,8 +1,8 @@
-"""Standalone worker entry point for GPU inference containers.
+"""Standalone worker entry point for GPU inference.
 
 Consumes job IDs from the queue (SQS in production), runs the inference
-pipeline, and writes results to the shared database.  The HTTP API is
-handled by a separate container; this process only processes jobs.
+pipeline, and writes results to the shared database. The HTTP API runs
+separately; this process only processes jobs.
 
 Run with:
     python -m api.worker

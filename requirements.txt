@@ -4,7 +4,7 @@
 # requirements.txt` path working for local development. For cleaner, smaller
 # environments prefer the explicit lanes:
 #
-#   requirements-api.txt        API container, no ML stack
+#   requirements-api.txt        API service, no ML stack
 #   requirements-inference.txt  model-serving worker extras, no training extras
 #   requirements-training.txt   training/evaluation extras
 #   requirements-dev.txt        tests on top of training
