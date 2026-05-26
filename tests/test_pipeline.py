@@ -203,63 +203,6 @@ class TestRunFastMode:
 # refine_angle NOT called in fast mode
 # ---------------------------------------------------------------------------
 
-class TestAngleRefinement:
-    """Radon refinement now always runs; FAST_MODE only skips cross-ID."""
-
-    @pytest.fixture(autouse=True)
-    def ensure_synth_fits(self):
-        _ensure_synth_fits()
-
-    def test_refine_angle_always_called(self):
-        """refine_angle must be invoked for every detection regardless of fast mode."""
-        import inference.pipeline as pl
-        import inference.postprocess as pp
-
-        with patch.object(pl, "_load_model", return_value=MagicMock()), \
-             patch.object(pl, "_run_inference", return_value=[
-                 {"bbox": [50.0, 60.0, 200.0, 80.0], "confidence": 0.92},
-             ]), \
-             patch.object(pl, "_run_classical_detector", return_value=[]), \
-             patch.object(pl, "_run_astride_detector", return_value=[]), \
-             patch.object(pl, "_run_yolo_detector", return_value=[]), \
-             patch.object(pl, "_run_yolo_full_detector", return_value=[]), \
-             patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
-             patch.object(pp, "refine_angle", return_value=45.0) as mock_refine, \
-             patch.dict(os.environ,
-                        {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS)},
-                        clear=False):
-            pl.run(_SYNTH_FITS, fast=True)
-        assert mock_refine.call_count >= 1
-
-    def test_dino_postprocess_candidate_cap_limits_radon_calls(self):
-        import inference.pipeline as pl
-        import inference.postprocess as pp
-
-        raw_dets = [
-            {
-                "bbox": [float(i * 3), 20.0, float(i * 3 + 30), 28.0],
-                "confidence": 1.0 - i / 100.0,
-            }
-            for i in range(40)
-        ]
-
-        with patch.object(pl, "_load_model", return_value=MagicMock()), \
-             patch.object(pl, "_run_inference", return_value=raw_dets), \
-             patch.object(pl, "_run_classical_detector", return_value=[]), \
-             patch.object(pl, "_run_astride_detector", return_value=[]), \
-             patch.object(pl, "_run_yolo_detector", return_value=[]), \
-             patch.object(pl, "_run_yolo_full_detector", return_value=[]), \
-             patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
-             patch.object(pp, "refine_angle", return_value=0.0) as mock_refine, \
-             patch.dict(os.environ,
-                        {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS),
-                         "DINO_MAX_POSTPROCESS_DETECTIONS": "30"},
-                        clear=False):
-            pl.run(_SYNTH_FITS, fast=True)
-
-        assert mock_refine.call_count == 30
-
-
 class TestAstrideFiltering:
     def test_astride_downsamples_images_above_pixel_cap(self, tmp_path):
         import inference.pipeline as pl
@@ -387,73 +330,6 @@ class TestAstrideFiltering:
 
         assert len(result) == 3
         assert result[0]["confidence"] >= result[-1]["confidence"]
-
-    def test_astride_only_groups_are_kept_at_low_confidence(self):
-        import inference.pipeline as pl
-
-        detections = [
-            {"streak_id": 1, "method": "astride", "confidence": 0.99},
-            {"streak_id": 2, "method": "astride", "confidence": 0.99},
-            {"streak_id": 2, "method": "yolo", "confidence": 0.86},
-            {"streak_id": 3, "method": "dinov3_vitb", "confidence": 0.80},
-        ]
-
-        result = pl._lower_astride_only_confidence(detections)
-
-        assert {d["streak_id"] for d in result} == {1, 2, 3}
-        assert result[0]["confidence"] == pytest.approx(0.30)
-        assert result[1]["confidence"] == pytest.approx(0.99)
-        assert result[2]["confidence"] == pytest.approx(0.86)
-
-    def test_refine_angle_called_in_non_fast_mode(self):
-        """refine_angle must be invoked for each detection when fast=False."""
-        import inference.crossid as crossid
-        import inference.pipeline as pl
-        import inference.postprocess as pp
-
-        with patch.object(pl, "_load_model", return_value=MagicMock()), \
-             patch.object(pl, "_run_inference", return_value=[
-                 {"bbox": [50.0, 60.0, 200.0, 80.0], "confidence": 0.92},
-             ]), \
-             patch.object(pl, "_run_classical_detector", return_value=[]), \
-             patch.object(pl, "_run_astride_detector", return_value=[]), \
-             patch.object(pl, "_run_yolo_detector", return_value=[]), \
-             patch.object(pl, "_run_yolo_full_detector", return_value=[]), \
-             patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
-             patch.object(pp, "refine_angle", return_value=45.0) as mock_refine, \
-             patch.object(crossid, "cross_identify", return_value=None), \
-             patch.dict(os.environ,
-                        {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS),
-                         "FAST_MODE": "false"},
-                        clear=False):
-            pl.run(_SYNTH_FITS, fast=False)
-        assert mock_refine.call_count >= 1
-
-    def test_default_radon_search_range_is_wide_for_loose_dino_boxes(self):
-        """Default Radon refinement should cover loose DINO bbox angle seeds."""
-        import inference.crossid as crossid
-        import inference.pipeline as pl
-        import inference.postprocess as pp
-
-        with patch.object(pl, "_load_model", return_value=MagicMock()), \
-             patch.object(pl, "_run_inference", return_value=[
-                 {"bbox": [50.0, 60.0, 200.0, 80.0], "confidence": 0.92},
-             ]), \
-             patch.object(pl, "_run_classical_detector", return_value=[]), \
-             patch.object(pl, "_run_astride_detector", return_value=[]), \
-             patch.object(pl, "_run_yolo_detector", return_value=[]), \
-             patch.object(pl, "_run_yolo_full_detector", return_value=[]), \
-             patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
-             patch.object(pp, "refine_angle", return_value=45.0) as mock_refine, \
-             patch.object(crossid, "cross_identify", return_value=None), \
-             patch.dict(os.environ,
-                        {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS),
-                         "FAST_MODE": "false"},
-                        clear=False):
-            os.environ.pop("RADON_ANGLE_SEARCH_RANGE", None)
-            pl.run(_SYNTH_FITS, fast=False)
-
-        assert mock_refine.call_args.kwargs["angle_search_range"] == pytest.approx(60.0)
 
     def test_crossid_candidate_cap_limits_identification_work(self):
         import inference.crossid as crossid

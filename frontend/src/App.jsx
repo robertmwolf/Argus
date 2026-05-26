@@ -23,6 +23,7 @@ export default function App() {
   const [disabledStreaks, setDisabledStreaks] = useState(new Set())   // Set of displayDetections indices
   const [methodThresholds, setMethodThresholds] = useState({})        // { method: 0-1 }
   const [enabledDetectors, setEnabledDetectors] = useState(null)      // null until DetectorsPanel loads
+  const [rawMode, setRawMode] = useState(false)
 
   useEffect(() => {
     fetch('/health')
@@ -185,12 +186,6 @@ export default function App() {
         </svg>
         <h1 className="text-lg font-semibold tracking-tight text-white">ARGUS</h1>
         <span className="text-slate-500 text-sm">Satellite Streak Detector</span>
-        {modelLabel && (
-          <span className="ml-1 inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border border-cyan-700/50 bg-cyan-950/30 text-cyan-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-            {modelLabel}
-          </span>
-        )}
         <div className="ml-auto flex items-center gap-3">
           <div className="hidden sm:flex flex-col items-end leading-tight">
             <span className="text-[10px] uppercase tracking-wide text-slate-500">
@@ -220,8 +215,17 @@ export default function App() {
                 Upload a FITS, PNG, or JPEG telescope image to detect and identify satellite streaks.
               </p>
             </div>
-            <DetectorsPanel onSelectionChange={setEnabledDetectors} />
-            <UploadZone onQueued={handleQueued} onError={setError} enabledDetectors={enabledDetectors} />
+            <DetectorsPanel
+              onSelectionChange={setEnabledDetectors}
+              rawMode={rawMode}
+              onRawModeChange={setRawMode}
+            />
+            <UploadZone
+              onQueued={handleQueued}
+              onError={setError}
+              enabledDetectors={enabledDetectors}
+              rawMode={rawMode}
+            />
           </>
         )}
 
