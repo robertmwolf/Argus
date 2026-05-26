@@ -87,26 +87,43 @@ document contains **308 images with 308 ground-truth streaks**.
 streaks dominate). Short-streak (<400 px) and medium-streak (400–999 px)
 performance cannot be reliably assessed from this test set alone.
 
-### 2.2 GTImages (Cross-ID Benchmark — Not Used for Detection Evaluation)
+### 2.2 BrentImages (Atwood Observatory — Detection Training + Cross-ID Benchmark)
 
-**Origin:** 759 FITS images from a single-site ground station (Ontario, Canada,
-43.67°N 81.02°W) captured with SkyTrack 1.9.8. Raw 16-bit, 6248×4176 px, 0.5 s
-exposures with ASTAP-solved WCS sidecars.
+**Origin:** Ongoing FITS capture series from Atwood Observatory (Ontario, Canada,
+43.67°N 81.02°W), captured with SkyTrack 1.9.8. Raw 16-bit, 6248×4176 px, 0.5 s
+exposures with ASTAP-solved WCS sidecars. Captures are organised by night using the
+convention `Img_YYYYMMDD_Atwood/`; additional nights are expected as the series
+continues.
 
-**Composition:** 593 usable labelled streak images; 93 no-streak images; 68 unique
-NORAD IDs (79% Starlink). Median streak length: 624 px (p10 = 373, p90 = 1003).
+**Current nights:**
+- **Night 1 (Apr 12 2026):** ~277 images; included in training via `dm_merged_train.json`
+  and `all_train_nodm.json`. FITS files on external drive at
+  `/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/`.
+- **Night 2 (May 15 2026):** 204 annotated + 27 negative images; 204 streak annotations;
+  median streak 687 px native (p10 = 373, p90 = 1003). Added to training in `all_train_nodm.json`.
+  FITS files on external drive at `/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/`.
 
-**Why excluded from detection benchmarking:** Single-night, single-site, minimal
-background diversity. GTImages is used for cross-identification accuracy only (SGP4
-residual scoring) and as a negative-example source during training. Its raw FITS
-format does however make it the correct domain for evaluating ASTRiDE and the
-OpenCV classical detectors.
+**Composition (combined):** ~481 labelled images across two nights; ~68 unique NORAD
+IDs identified (79% Starlink); 27 confirmed no-streak frames.
+
+**Resolution note:** At 6248×4176 px, full-image resize to 400px model input
+downscales by 15.6×. Median streak length at model input ≈ 44 px. **Tiled inference
+is required for reliable detection** (see §3.3 of `docs/training_methods.md`).
+
+**Use in ARGUS:** First-party data suitable for publication. Used for both detection
+training and cross-identification accuracy (SGP4 residual scoring). Its raw FITS
+format also makes it the correct domain for evaluating ASTRiDE and the OpenCV
+classical detectors.
 
 ### 2.3 Training Data
 
-The merged training corpus consists of the SatStreaks train split (~2,460 images,
-PNG/JPEG) and GTImages labelled and negative examples (shuffled, seed 42). YOLO
-is trained exclusively on tiled 640 px crops derived from SatStreaks (3,023 source
+The current training corpus (`all_train_nodm.json`) consists of: the SatStreaks train
+split (~2,460 JPEG/PNG images), BrentImages Night 1 (~277 images), BrentImages Night 2
+(204 annotated + 27 negative images), and tiled Frigate crops (558 positive tiles +
+159 negative tiles). Total: **3,971 images, 3,816 streak annotations**. An
+`all_train_withdm.json` variant adds 149 DarkMatters images (consent pending; see §2.4).
+
+YOLO is trained exclusively on tiled 640 px crops derived from SatStreaks (3,023 source
 images producing ~14,385 tiles).
 
 ### 2.4 Dataset Comparability Note
@@ -170,7 +187,7 @@ weighted vote.
 On JPEG-compressed SatStreaks exports the sigma threshold and shape_factor criteria
 behave differently because JPEG compression redistributes the pixel-value
 distribution. ASTRiDE is therefore not evaluated on the primary benchmark (§7)
-and should be assessed on GTImages raw FITS only.
+and should be assessed on BrentImages raw FITS only.
 
 ### 3.2 OpenCV Connected-Components Detector
 
@@ -240,8 +257,9 @@ Direct comparison of P/R numbers is not valid (see §2.4).
 
 ### 3.4 DINOv3 ViT-B/16 + DINO-DETR (Primary ML Detector)
 
-**Config:** `models/dino/streak_dinov3_vitb.py`  
-**Checkpoint:** `weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth` (~330 MB)  
+**Config:** `models/dino/streak_dinov3_vitb_400px.py`  
+**Checkpoint:** `weights/run_best_400px_nodm/best_coco_bbox_mAP_epoch_15.pth` (~330 MB)  
+**API model ID:** `dinov3_vitb_multisource` ("DINOv3 Base - Multi-source")  
 **When active:** Always (primary detector)
 
 #### 3.4.1 Backbone: DINOv3 ViT-B/16
@@ -259,7 +277,7 @@ should be confirmed before publication.
 | Parameters | 86 M |
 | Embed dimension | 768 |
 | Patch size | 16 px |
-| Checkpoint file | `dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth` |
+| Checkpoint file | `dinov3_vitb16_lvd1689m.pth` |
 | Training state | **Entirely frozen** (`requires_grad=False`, `lr_mult=0.0`) |
 
 **Why LVD-1689M over SAT-493M:** Night-sky FITS images have near-black backgrounds,
@@ -311,28 +329,36 @@ DINO-DETR extends DETR with three key innovations:
 | Property | Value |
 |----------|-------|
 | Detection class | Single class (streak vs. background) |
-| Input resolution | 1,280 px longest edge (256 px in fast mode) |
+| Input resolution | 400×400 px (full-image resize; use tiled inference for native-res FITS) |
 | Confidence threshold | 0.05 (default; configurable via `CONFIDENCE_THRESHOLD`) |
 | Trainable parameters | ~40 M (adapter + head; backbone contributes 0) |
 
 #### 3.4.4 Training Protocol
 
-| Stage | Config | Epochs | Hardware | Best mAP@0.5 |
-|-------|--------|--------|----------|--------------|
-| Phase C | Frozen ViT-B, dev subset (50 images) | 50 | Mac M3 MPS | 0.274 (dev subset) |
-| Phase C² | Frozen ViT-B, full merged dataset | 4 (augmented from ep 4) | Mac M3 MPS | **0.74** (test.json) |
-| Phase D | Frozen ViT-L, full dataset | 50 (PENDING) | RTX 5070 Ti | TBD |
+| Run | Config | Data | Epochs | Hardware | Best val mAP@0.5 |
+|-----|--------|------|--------|----------|-----------------|
+| Run 0 (May 18) | `streak_dinov3_vitb.py` (256px) | SatStreaks + BrentImages N1 + DarkMatters | 4 | Mac M3 CPU | **0.436** (`dm_merged_val`) |
+| Run 1A (May 20–22) | `streak_dinov3_vitb_longrun.py` (256px) | `all_train_nodm.json` (3,971 img) | 15 | Mac M3 CPU | **0.402** |
+| Run 1B (May 20–22) | `streak_dinov3_vitb_longrun.py` (256px) | `all_train_withdm.json` (4,120 img) | 15 | Mac M3 CPU | **0.403** |
+| **Run 2 (May 22–25)** ✅ | `streak_dinov3_vitb_400px.py` (400px) | `all_train_nodm.json` (3,971 img) | 15 | Mac M3 CPU ~72h | **0.468** (mAP=0.423) |
+| Phase D (pending) | ViT-L config | full dataset | 50 | RTX 5070 Ti | TBD |
 
-Augmentation pipeline: Albumentations transforms + synthetic streak injection
-(`training/augmentations.py`). Best checkpoint: epoch 10 of augmented run.
+Run 1 A/B outcome: DarkMatters contribution is negligible (~0.001 mAP@0.5 difference).
+No-DM variant (1A) selected as winner — avoids consent issue at no performance cost.
+**Note:** Run 1 warm-started from Run 0, which itself trained on DarkMatters data;
+this is not a clean DM ablation (see `docs/training_methods.md §3.1` for details).
 
-**Validation metrics (test.json):**
-- mAP@0.5:0.95 = 35.5%
-- mAP@0.5 = 53.2%
+**Current deployed model (Run 2) — comprehensive eval on 4 test sets:**
 
-Note: the mAP@0.5 = 0.74 result above is from Phase C² evaluation on `test.json`;
-the 53.2% figure is the validation split result from the augmented Phase C² run.
-These are from different evaluation points in the same training progression.
+| Test set | mAP | mAP@50 | P | R | F1 |
+|----------|-----|--------|---|---|----|
+| Standard (SatStreaks, 308) | 0.600 | **0.755** | 71.2% | 72.4% | 71.8% |
+| Frigate zero-shot (350) | 0.000 | 0.000 | — | — | — |
+| BrentImages Night 2 zero-shot (231) | 0.085 | 0.296 | 47.8% | 31.9% | 38.2% |
+| DarkMatters holdout zero-shot (332) | 0.564 | **0.720** | 71.2% | 69.1% | 70.1% |
+
+BrentImages Night 2 low recall is a resolution artefact (15.6× downscale); tiled
+inference is expected to bring it in line with DarkMatters zero-shot performance.
 
 #### 3.4.5 Co-DINO Context
 
@@ -401,8 +427,8 @@ error. Radon refinement achieves a mean angle error of **0.018°** on the test s
    variance maximisation.
 
 4. **Downsample large crops to ≤ 512 px** (longest side, bilinear interpolation).
-   DINO bboxes scaled from a 1,280 px inference pass on a 6,000 px sensor can
-   produce crops of 2,000–3,000 px. Radon on these with ~30 angles takes many
+   DINO bboxes on a 6,000 px sensor (using tiled inference on native-resolution FITS)
+   can produce crops of 2,000–3,000 px. Radon on these with ~30 angles takes many
    minutes on CPU; downsampling to 512 px reduces this to under 1 second while
    preserving sub-degree angular precision.
 
@@ -788,7 +814,7 @@ threshold at the grouped centre.
 | **Actual −** | FP ≈ 2,694 | TN = n/a |
 
 *Analysis:* The 33 FNs are short or faint streaks below the 0.05 confidence floor
-at 1,280 px input resolution. The 2,694 FPs are DINOv3's generalisation to any
+at 400 px input resolution. The 2,694 FPs are DINOv3's generalisation to any
 elongated bright structure — the frozen backbone's features, pre-trained on natural
 images, do not discriminate streaks from cloud filaments or galaxy arms.
 
@@ -850,7 +876,7 @@ length, this corresponds to 0.03 px displacement.
 | **DINO-DETR** (Zhang et al. 2022) | ResNet-50 / Swin-L | COCO 2017 | COCO 2017 | AP-based | AP-based | — | COCO AP | 49.4 AP (R50), 63.3 AP test-dev (SwinL); used as ARGUS detection head |
 | **Co-DINO** (Zong et al. 2022) | ResNet-50 / ViT-L | COCO 2017 | COCO 2017 | AP-based | AP-based | — | COCO AP | 51.2 AP (R50), 66.0 AP (ViT-L); initialised ARGUS archived Swin-T path |
 | **DINOv3** (Meta AI model distribution) | ViT-B/16 | LVD-1689M | — | — | — | — | — | Used as ARGUS frozen backbone; exact publication/model-card citation pending |
-| **ARGUS DINOv3 ViT-B** | DINOv3 ViT-B/16 (frozen) | SatStreaks + GTImages (~2,460 images) | SatStreaks test (308 JPEG) | 9.3% | 89.3% | 16.8% | 0.5 | mAP@0.5 = 75.5%; high FP rate |
+| **ARGUS DINOv3 ViT-B (Run 2)** | DINOv3 ViT-B/16 (frozen) | SatStreaks + BrentImages N1+2 + Frigate (3,971 images) | SatStreaks test (308 JPEG) | 71.2% | 72.4% | 71.8% | 0.5 | mAP@0.5 = 75.5%; `dinov3_vitb_multisource` |
 | **ARGUS YOLO11n-OBB full** | YOLO11 nano OBB | SatStreaks (3,023 tiled 640 px) | YOLO tiled val† | 57.2% | 84.6% | 68.2% | 0.5 | †Tiled protocol; not comparable to full-image eval |
 | **ARGUS Ensemble (UCS)** | 5-detector ensemble | — | SatStreaks test (308 JPEG) | 29.9% | 72.1% | 42.3% | 0.5 | F1 = 49% on long streaks; 742 grouped predictions |
 | **Co-DINO Swin-T** (archived) | Swin-T | Full merged | SatStreaks test | — | — | — | 0.5 | mAP@0.5 = 0.19; baseline before DINOv3 integration |
@@ -949,7 +975,7 @@ is required.
 
 **Classical detectors on JPEG:** OpenCV (1% recall) and ASTRiDE (not evaluated)
 are designed for raw FITS pixel distributions. Their contributions are understated
-by the current JPEG benchmark. Evaluation on GTImages raw FITS would give a more
+by the current JPEG benchmark. Evaluation on BrentImages raw FITS would give a more
 representative picture.
 
 **YOLO evaluation protocol:** The YOLO tiled validation split is not comparable to
@@ -974,7 +1000,7 @@ local catalog lacks TLE coverage for the observation time window.
   evaluation.
 - **Multi-frame association:** Implement inter-frame linking to reject single-frame
   detections without cross-frame confirmation (StreakMind Phase 8 equivalent).
-- **Raw FITS evaluation:** Run the full 5-detector ensemble on GTImages raw FITS
+- **Raw FITS evaluation:** Run the full 5-detector ensemble on BrentImages raw FITS
   to measure ASTRiDE and OpenCV contributions in their correct domain.
 - **YOLO full-image re-evaluation:** Re-evaluate YOLO11n-OBB on the shared COCO
   full-image test set to enable fair head-to-head comparison with DINOv3.
@@ -1006,9 +1032,9 @@ The following steps reproduce the headline benchmark results recorded in
    ```
 
 4. Obtain the DINOv3 ViT-B checkpoint:
-   `weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth` (~330 MB).
+   `weights/run_best_400px_nodm/best_coco_bbox_mAP_epoch_15.pth` (~330 MB).
    This checkpoint is not distributed with the repository; it must be trained
-   locally or obtained from the ARGUS authors.
+   locally (see `docs/training_methods.md`) or obtained from the ARGUS authors.
 
 5. Obtain the YOLO11n-OBB full-dataset checkpoint:
    `weights/run_full_yolo_obb/run/weights/best.pt` (~5.4 MB).
@@ -1020,8 +1046,8 @@ The following steps reproduce the headline benchmark results recorded in
 
 6. Run the benchmark evaluation:
    ```bash
-   MODEL_WEIGHTS=weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth \
-   MODEL_SIZE=dinov3_vitb USE_DEV_SUBSET=false \
+   MODEL_WEIGHTS=weights/run_best_400px_nodm/best_coco_bbox_mAP_epoch_15.pth \
+   MODEL_SIZE=dinov3_vitb_multisource USE_DEV_SUBSET=false \
    python -m eval.benchmark \
        --run-pipeline \
        --annotations data/annotations/test.json \
@@ -1074,8 +1100,8 @@ https://github.com/jijup/SatStreaks
 
 Section 8 established that direct comparison of ARGUS and StreakMind P/R figures
 is invalid across five incomparable factors. This section describes a methodology-
-matched comparison: training YOLO11n-OBB on raw GTImages FITS (same image domain
-as StreakMind) and evaluating at both IoU=0.5 and IoU=0.8 on a held-out GTImages
+matched comparison: training YOLO11n-OBB on raw BrentImages FITS (same image domain
+as StreakMind) and evaluating at both IoU=0.5 and IoU=0.8 on a held-out BrentImages
 test split.
 
 ### 12.2 Experiment Design
@@ -1084,12 +1110,12 @@ test split.
 
 | Track | Training data | Purpose |
 |---|---|---|
-| `real_only` | GTImages real annotations | Baseline |
-| `paper_long` | GTImages real + synthetic long streaks | Match StreakMind's long-streak distribution |
-| `adapted` | GTImages real + synthetic medium streaks | Match GTImages' own length distribution |
-| `gtimages_plus_frigate` | GTImages real + Frigate background frames | Background diversity |
+| `real_only` | BrentImages real annotations | Baseline |
+| `paper_long` | BrentImages real + synthetic long streaks | Match StreakMind's long-streak distribution |
+| `adapted` | BrentImages real + synthetic medium streaks | Match BrentImages' own length distribution |
+| `gtimages_plus_frigate` | BrentImages real + Frigate background frames | Background diversity |
 
-**Evaluation:** held-out GTImages test split (66 images, 57 streak annotations;
+**Evaluation:** held-out BrentImages test split (66 images, 57 streak annotations;
 median length 636px, 89% long >400px).
 
 **IoU thresholds:** 0.5 (ARGUS standard) and 0.8 (StreakMind's threshold).
@@ -1156,7 +1182,7 @@ StreakMind's F1=95.5% at IoU=0.8 is explained by:
    ephemeris, giving sub-pixel endpoint accuracy and thus correct angles.
 2. **No tile-boundary clipping:** La Sagra frames are processed at a scale where
    streaks fit within single inference windows.
-3. **2,335 training frames** vs our 469 GTImages frames — 5× more data.
+3. **2,335 training frames** vs our 469 BrentImages frames — 5× more data.
 4. **In-domain test set:** StreakMind tests on its own observatory's data (La
    Sagra), eliminating site/instrument generalisation as a factor.
 
