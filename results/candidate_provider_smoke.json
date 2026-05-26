@@ -1,0 +1,222 @@
+{
+  "generated_at": "2026-05-26T23:24:52.511035Z",
+  "config": {
+    "providers": [
+      "local",
+      "satchecker"
+    ],
+    "baseline_provider": "local",
+    "detection_mode": "fast",
+    "raw_mode": false,
+    "max_detections": 3,
+    "epoch_window_days": 3,
+    "min_mean_motion": 0.0
+  },
+  "summary": {
+    "baseline_provider": "local",
+    "provider_summary": {
+      "local": {
+        "images": 1,
+        "empty_catalog_rate": 0.0,
+        "error_rate": 0.0,
+        "mean_candidate_count": 87.0,
+        "mean_fetch_ms": 1079.0,
+        "mean_total_ms": 2337.8,
+        "identified_rate": 1.0
+      },
+      "satchecker": {
+        "images": 1,
+        "empty_catalog_rate": 1.0,
+        "error_rate": 0.0,
+        "mean_candidate_count": 0.0,
+        "mean_fetch_ms": 13200.5,
+        "mean_total_ms": 13200.5,
+        "identified_rate": 0.0
+      }
+    },
+    "comparison_summary": {
+      "satchecker": {
+        "images": 1,
+        "top1_agreement_rate": 0.0,
+        "top3_contains_baseline_top1_rate": 0.0,
+        "mean_confidence_delta": null
+      }
+    }
+  },
+  "images": [
+    {
+      "filename": "data/test/synth_streak_000.fits",
+      "obs_time": "2024-04-02T02:00:00Z",
+      "observer_lat": 49.61,
+      "observer_lon": 6.13,
+      "observer_alt_m": 280.0,
+      "exposure_time": 10.0,
+      "wcs_source": "fixture",
+      "detection_count": 1,
+      "provider_results": [
+        {
+          "provider": "local",
+          "candidate_count": 87,
+          "catalog_sources": [
+            "broad_epoch"
+          ],
+          "fetch_ms": 1079.0,
+          "score_ms": 1258.8,
+          "total_ms": 2337.8,
+          "error": null,
+          "top1_norad": 40685,
+          "top1_name": "FENGYUN 1C DEB",
+          "top1_confidence": 0.0,
+          "top3_norads": [
+            40685,
+            0,
+            44713
+          ],
+          "identification_count": 3,
+          "detections": [
+            {
+              "method": "fixture",
+              "confidence": 0.95,
+              "bbox": [
+                180.0,
+                248.0,
+                332.0,
+                264.0
+              ],
+              "obb": {
+                "cx": 256.0,
+                "cy": 256.0,
+                "w": 160.0,
+                "h": 4.0,
+                "angle_deg": 0.0
+              },
+              "streak_length_px": 160.0,
+              "ra_tip1_deg": 83.86,
+              "dec_tip1_deg": -5.39,
+              "ra_tip2_deg": 83.78,
+              "dec_tip2_deg": -5.39,
+              "quality_flag": 0,
+              "edge_clipped": false,
+              "identifications": [
+                {
+                  "satellite_name": "FENGYUN 1C DEB",
+                  "norad_id": 40685,
+                  "confidence": 0.0,
+                  "position_score": 0.0,
+                  "position_score_mode": "midpoint",
+                  "epoch_penalty": 0.9994,
+                  "separation_arcsec": 257790.52094469374,
+                  "midpoint_separation_arcsec": 257790.52,
+                  "tle_age_hours": 0.8652694488888889,
+                  "tle_epoch": "2024-04-02T01:08:10Z",
+                  "photo_taken_at": "2024-04-02T02:00:00Z",
+                  "tle_data_fresh_at": "2026-05-26T03:01:16Z",
+                  "tle_source": "gp_active_snapshot",
+                  "tle_search_mode": "broad_epoch",
+                  "epoch_search_window_days": 30,
+                  "epoch_drift_hours": 0.8638888888888889,
+                  "rank": 1,
+                  "atrk_arcsec": -238154.96,
+                  "xtrk_arcsec": -65998.81
+                },
+                {
+                  "satellite_name": "TBA - TO BE ASSIGNED",
+                  "norad_id": 0,
+                  "confidence": 0.0,
+                  "position_score": 0.0,
+                  "position_score_mode": "midpoint",
+                  "epoch_penalty": 0.9992,
+                  "separation_arcsec": 264325.5779501103,
+                  "midpoint_separation_arcsec": 264325.58,
+                  "tle_age_hours": 0.9386412888888889,
+                  "tle_epoch": "2024-04-02T01:03:45Z",
+                  "photo_taken_at": "2024-04-02T02:00:00Z",
+                  "tle_data_fresh_at": "2026-05-26T03:01:16Z",
+                  "tle_source": "gp_active_snapshot",
+                  "tle_search_mode": "broad_epoch",
+                  "epoch_search_window_days": 30,
+                  "epoch_drift_hours": 0.9375,
+                  "rank": 2,
+                  "atrk_arcsec": 104005.23,
+                  "xtrk_arcsec": -207248.1
+                },
+                {
+                  "satellite_name": "STARLINK-1007",
+                  "norad_id": 44713,
+                  "confidence": 0.0,
+                  "position_score": 0.0,
+                  "position_score_mode": "midpoint",
+                  "epoch_penalty": 0.9169,
+                  "separation_arcsec": 252359.78003829738,
+                  "midpoint_separation_arcsec": 252359.78,
+                  "tle_age_hours": -9.998611111111112,
+                  "tle_epoch": "2024-04-02T12:00:00Z",
+                  "photo_taken_at": "2024-04-02T02:00:00Z",
+                  "tle_data_fresh_at": "2026-05-26T03:01:16Z",
+                  "tle_source": null,
+                  "tle_search_mode": "broad_epoch",
+                  "epoch_search_window_days": 30,
+                  "epoch_drift_hours": 10.0,
+                  "rank": 3,
+                  "atrk_arcsec": -134895.62,
+                  "xtrk_arcsec": -173954.32
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "provider": "satchecker",
+          "candidate_count": 0,
+          "catalog_sources": [],
+          "fetch_ms": 13200.5,
+          "score_ms": 0.0,
+          "total_ms": 13200.5,
+          "error": null,
+          "top1_norad": null,
+          "top1_name": null,
+          "top1_confidence": null,
+          "top3_norads": [],
+          "identification_count": 0,
+          "detections": [
+            {
+              "method": "fixture",
+              "confidence": 0.95,
+              "bbox": [
+                180.0,
+                248.0,
+                332.0,
+                264.0
+              ],
+              "obb": {
+                "cx": 256.0,
+                "cy": 256.0,
+                "w": 160.0,
+                "h": 4.0,
+                "angle_deg": 0.0
+              },
+              "streak_length_px": 160.0,
+              "ra_tip1_deg": 83.86,
+              "dec_tip1_deg": -5.39,
+              "ra_tip2_deg": 83.78,
+              "dec_tip2_deg": -5.39,
+              "quality_flag": 0,
+              "edge_clipped": false,
+              "identifications": []
+            }
+          ]
+        }
+      ],
+      "comparisons": {
+        "satchecker": {
+          "top1_match_same": false,
+          "top3_contains_baseline_top1": false,
+          "top3_overlap": [],
+          "confidence_delta": null,
+          "empty_catalog": true,
+          "error": null
+        }
+      }
+    }
+  ]
+}

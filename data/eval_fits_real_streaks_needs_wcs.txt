@@ -1,0 +1,17 @@
+# Real uploaded satellite-streak FITS manifest for candidate-provider evaluation.
+#
+# Source: data/uploads/Streak_*.fits, deduplicated by NORAD/object. These files
+# have DATE-OBS, exposure, site location, approximate RA/DEC, and known target
+# hints in the filename/header. Most do not currently contain celestial WCS
+# keywords, so use this manifest after adding .wcs sidecars or enabling a
+# verified plate-solve path. Without WCS, ARGUS detections cannot produce
+# RA/Dec tips for SatChecker FOV queries.
+data/uploads/014f92cf-5993-4f49-af5a-1daefcba2f51/Streak_39012_211010.fits
+data/uploads/04b44f5a-12f6-4967-b7b7-461adbdb25bc/Streak_42934_222423.fits
+data/uploads/081a4a51-619a-42aa-bbb0-c2d91cd55035/Streak_54870_224114.fits
+data/uploads/0c1bb7b3-e55b-484f-8ba2-04be818e7095/Streak_40358_213123.fits
+data/uploads/0ca9209d-6f23-4fb1-ad61-6d1306fa513a/Streak_56097_223358.fits
+data/uploads/0cc059e6-3482-4756-a06a-bc78bba3a251/Streak_40339_211545.fits
+data/uploads/335ee364-967a-4b35-8019-ac4f897a4856/Streak_52284_234004.fits
+data/uploads/9e81cd8d-7c88-473d-bc7d-8c3c32d5ee5d/Streak_38012_234233.fits
+data/uploads/b1cb0415-9424-43fa-b119-d2618b2f3c19/Streak_55628_230123.fits

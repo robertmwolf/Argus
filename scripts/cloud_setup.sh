@@ -123,7 +123,7 @@ echo "  PyTorch version detected: ${TORCH_VER}"
 # explicit wheel index URL.
 #
 # Windows users: mim will fail on native Windows (no pre-built wheel).
-# Use WSL2 or Docker instead — see agent_docs/dependencies.md.
+# Use WSL2 instead — see agent_docs/dependencies.md.
 # ---------------------------------------------------------------------------
 echo ""
 echo "── Step 3b: MMDetection stack (mmengine → mmcv → mmdet) ─"

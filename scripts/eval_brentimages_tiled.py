@@ -183,17 +183,37 @@ def main():
     from inference.pipeline import _load_model, _select_config
     from inference.device import get_device
     import torch
+    import warnings
+    warnings.filterwarnings("ignore", category=UserWarning)  # suppress astropy FITS verify noise
 
     device = get_device()
     inf_device = torch.device("cpu") if device.type == "mps" else device
     config_path = _select_config("dinov3_vitb_multisource")
     model = _load_model(config_path, args.checkpoint, inf_device)
 
-    from inference.fits_loader import FITSLoader
     from inference.tiled_pipeline import tile_image, remap_predictions, nms_predictions, _clip_predictions_to_image, _pipeline_det_to_prediction
     from inference.pipeline import _run_inference
+    import astropy.io.fits as astrofits
+    import numpy as np
 
-    loader = FITSLoader()
+    def _load_fits_array(path: Path) -> np.ndarray:
+        """Load pixel data only — no WCS, no plate solve, no sidecar lookup."""
+        with astrofits.open(path, memmap=False) as hdul:
+            # Find the first HDU with 2-D image data
+            for hdu in hdul:
+                if hdu.data is not None and hdu.data.ndim == 2:
+                    data = hdu.data.astype(np.float32)
+                    break
+            else:
+                raise ValueError(f"No 2-D image HDU found in {path}")
+        # Z-score normalise to uint8, same as FITSLoader
+        mean, std = data.mean(), data.std()
+        if std > 0:
+            data = (data - mean) / std
+        data = np.clip(data, -3.0, 3.0)
+        data = ((data + 3.0) / 6.0 * 255).astype(np.uint8)
+        return np.stack([data, data, data], axis=2)  # H×W×3
+
     all_preds = []
     t_start = time.perf_counter()
 
@@ -201,8 +221,7 @@ def main():
         img_path = Path(img_info["file_name"])
         iid = img_info["id"]
         try:
-            loaded = loader.load(img_path)
-            arr = loaded["array"]
+            arr = _load_fits_array(img_path)
         except Exception as e:
             logger.warning("Failed to load %s: %s — skipping", img_path.name, e)
             continue
