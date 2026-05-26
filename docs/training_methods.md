@@ -114,14 +114,49 @@ The following runs informed but do **not** constitute the publishable final mode
 - Result: mAP@50 on dm_merged_val: 0.257 → 0.341 → 0.392 → **0.436** (best epoch 4)
 - Checkpoint: `weights/run_gt_dm_satstreaks_dinov3_vitb/best_coco_bbox_mAP_epoch_4.pth`
 
-**Run 1 — A/B warm-start (in progress, May 20–21, 2026):**
+**Run 1 — A/B warm-start (May 20–22, 2026):**
 - Config: `models/dino/streak_dinov3_vitb_longrun.py` (15 epochs, cosine LR, 256px)
 - Phase 1A: `all_train_nodm.json` → `weights/run_15ep_nodm/`
 - Phase 1B: `all_train_withdm.json` → `weights/run_15ep_withdm/`
 - Warm start: Run 0 checkpoint (detection head only, backbone still frozen)
-- Purpose: Measure DM contribution; inform dataset choice for paper run
+- Hardware: Mac M3 CPU, ~12h per phase
+- Results on `dm_merged_val.json`:
+
+| Phase | Ep 5 mAP@50 | Ep 10 mAP@50 | Ep 15 mAP@50 | Ep 15 mAP |
+|-------|------------|-------------|-------------|----------|
+| 1A (no-DM) | 0.360 | 0.392 | **0.402** | 0.336 |
+| 1B (with-DM) | 0.378 | 0.397 | **0.403** | 0.336 |
+
+- **Outcome:** DM contribution is negligible (~0.001 mAP@50). No-DM variant selected
+  as winner for Phase 2 (avoids consent issue; essentially identical performance).
 - **Note:** This is not a clean DM ablation — the warm-start checkpoint was itself
   trained on DM data. Both A/B branches begin from a model that has seen DarkMatters.
+
+**Run 2 — Phase 2 quality run (May 22–25, 2026):**
+- Config: `models/dino/streak_dinov3_vitb_400px.py` (15 epochs, cosine LR, 400px)
+- Data: `all_train_nodm.json` (3,971 images, 3,816 annotations — winner from Run 1)
+- Warm start: Run 0 checkpoint
+- Hardware: Mac M3 CPU, ~72h (thermal throttling; ~1.4–2.5 s/step)
+- Checkpoint: `weights/run_best_400px_nodm/best_coco_bbox_mAP_epoch_15.pth`
+- Val results on `dm_merged_val.json`:
+
+| Epoch | mAP | mAP@50 |
+|-------|-----|--------|
+| 5     | 0.316 | 0.390 |
+| 10    | 0.408 | 0.463 |
+| 15    | **0.423** | **0.468** |
+
+- **Comprehensive eval** (`results/comprehensive_eval_20260526/report.md`):
+
+| Test set | mAP | mAP@50 | P | R | F1 | Notes |
+|----------|-----|--------|---|---|----|-------|
+| Standard (SatStreaks, 308) | 0.600 | **0.755** | 71.2% | 72.4% | 71.8% | Primary benchmark |
+| Frigate zero-shot (350) | 0.000 | 0.000 | — | — | — | Sub-patch streaks; known arch limit |
+| BrentImages Night 2 zero-shot (231) | 0.085 | 0.296 | 47.8% | 31.9% | 38.2% | **See §3.3** |
+| DarkMatters holdout zero-shot (332) | 0.564 | **0.720** | 71.2% | 69.1% | 70.1% | Strong zero-shot |
+
+This model is deployed as **DINOv3 Base - Multi-source** (`dinov3_vitb_multisource`) in
+the production API.
 
 ### 3.2 LR Schedule (current pilot)
 

@@ -29,7 +29,7 @@ solution sidecars.
 | Directory | Date | Frames | NORAD IDs | Annotation status |
 |---|---|---|---|---|
 | `Img_20260412_Atwood/` | 2026-04-12 | 759 | 68 | ✅ Fully annotated (.strk + .ini/.wcs sidecars, GAIN=300) |
-| `Img_20260515_Atwood/` | 2026-05-15 | 300 | 39 | ⏳ .strk stubs generated, pixel coords pending manual annotation |
+| `Img_20260515_Atwood/` | 2026-05-15 | 300 | 39 | ✅ Annotated — 204 streak images + 27 negatives (`brentimages_20260515.json`, `brentimages_20260515_negatives.json`) |
 
 The `Img_20260412_Atwood/` night is the original GTImages dataset — it has
 ASTAP plate solutions and fully pixel-annotated `.strk` files from SkyTrack.
@@ -42,6 +42,13 @@ pixel coordinates are filled in via the manual annotation workflow.
 - 93 real no-streak images (reject=−1) — valuable negative training examples
 - 68 unique NORAD IDs (79% Starlink; also Meteor-M2, Yaogan, Cosmos, Iridium)
 - Streak lengths: median 624 px, p10=373 px, p90=1003 px (mostly long streaks)
+
+**Key statistics (Img_20260515_Atwood — fully annotated):**
+- 204 streak images, 204 annotations (`brentimages_20260515.json`)
+- 27 confirmed no-streak images (`brentimages_20260515_negatives.json`)
+- 39 unique NORAD IDs
+- Streak lengths: mean 725 px, median 687 px, min 215 px, max 1404 px (long + medium)
+- **Not yet merged into any training split** — available as a clean holdout for out-of-distribution evaluation or future training expansion
 
 **Role in ARGUS:**
 - **Negative examples:** no-streak images fill the negative-example gap in SatStreaks
@@ -100,7 +107,7 @@ both released. This is purpose-built for exactly this pipeline.
 **Location:** `/Volumes/External/TrainingData/raw/frigate/` (raw FITS + processed PNGs at 2325×1555)
 
 **Annotation status — ✅ ready for training inclusion:**
-- 350 frames manually reviewed via the Frigate mode in `scripts/annotate.py`
+- 350 frames manually reviewed via `scripts/annotate_frigate_streaks.py`
 - 191 frames contain satellite streaks (377 OBBs total) — all **very short streaks**
   (~20–80 px), filling a morphology gap absent from GTImages and SatStreaks
 - 159 frames confirmed streak-free (explicit negatives)
@@ -121,7 +128,54 @@ python scripts/merge_annotations.py --seed 42 --val-fraction 0.2 --include-friga
 
 ---
 
-## 3. Space-Track TLE Catalog (Required — Register Now)
+## 3. DarkMatters Dataset (Partially Integrated)
+
+**What it is:** JPEG preview exports from deep-sky astrophotography sessions at a
+private observatory, released by the DarkMatters community. Images are JPEG
+renderings of XISF source files (3000×2001 px, grayscale). Captured through
+narrowband and broadband filters (OIII, SII, Hα, LRGB) on a single mount.
+Satellites appear as long, full-frame-crossing streaks in the preview exports.
+
+**Location:** `/Volumes/External/DarkMatters/exports/` (JPEG previews organized by set)
+
+**Label distribution (full dataset, 1,144 images):**
+| Label | Count |
+|---|---|
+| positive | 283 |
+| hard_positive | 6 (3 unique + 2 duplicates) |
+| good_negative | 588 |
+| hard_negative | 267 |
+
+- **Streak positives:** ~285 images
+- **Negatives:** ~855 images
+
+**Annotation status:**
+- 149 positive images manually annotated with OBBs — available as `results/darkmatters_eval/negatives.json`-style COCO records; merged into `dm_merged_train.json`
+- ~136 remaining positive images: unannotated (manual annotation would take ~1–2 hr in LabelImg)
+- 855 negatives: COCO JSON built (`results/darkmatters_eval/negatives.json`) but **not yet added to any training split**
+
+**YOLO detectability:** < 1% of positive images detected at conf ≥ 0.25 — instrument/PSF mismatch makes pseudo-annotation infeasible. Positives must be manually annotated.
+
+**Streak characteristics:**
+- Long, often full-frame-crossing streaks
+- Different PSF and background texture from GTImages and SatStreaks (astrophotography site, narrowband filters)
+- FWHM ≈ 2.24 arcsec/px, eccentricity ≈ 0.40
+- Filter mix: OIII (most common), SII, Hα, LRGB
+
+**Current training use:**
+- 149 manually annotated positives are included in `dm_merged_train.json` (the current best-model training set)
+- 855 negatives and remaining positives are not in any split — see Combined Training Splits below
+
+**To add DarkMatters negatives to a training run:**
+```bash
+# Merge negatives JSON into a new combined annotation (manual merge step):
+# results/darkmatters_eval/negatives.json → append to dm_merged_train.json
+python scripts/merge_darkmatters_annotations.py --include-negatives
+```
+
+---
+
+## 4. Space-Track TLE Catalog (Required — Register Now)
 
 **What it is:** Authoritative US Space Force satellite catalog.
 Over 220 million historical TLE sets. Free public access.
@@ -185,7 +239,7 @@ print(result[0]['OBJECT_NAME'])  # Should print: ISS (ZARYA)
 
 ---
 
-## 4. SatStreaks Dataset (Annotated, for DINO/YOLO Training)
+## 5. SatStreaks Dataset (Annotated, for DINO/YOLO Training)
 
 **What it is:** 3,073 densely annotated real images of satellite streaks
 from Hubble Space Telescope (114,607 images scanned via citizen science)
@@ -215,10 +269,36 @@ merged into the train/validation pool unless `--satstreaks-only` is supplied.
 
 ## Combined Training Splits
 
-Current training split generation uses:
+### Active training set — `dm_merged_train.json` (current best model)
+
+The current production training set used to train the best DINOv3 ViT-B model
+(mAP@0.5 = 0.740):
+
+| Source | Images | Annotations | Notes |
+|---|---|---|---|
+| SatStreaks | 2,488 | 2,488 | JPEG/PNG, space + ground scopes |
+| BrentImages Img_20260412_Atwood | 535 | 469 | FITS, Atwood Night 1 (former GTImages) |
+| DarkMatters positives | 149 | 175 | JPEG previews, manually annotated |
+| **Total** | **3,172** | **3,132** | — |
+
+Val split: `dm_merged_val.json` (DM-distribution images; lower mAP because harder instrument)
+Test split: `test.json` (308 images — SatStreaks + BrentImages Night 1 only, for fair comparison)
+
+### Base split — `train.json` / `val.json` / `test.json`
+
+Original SatStreaks + BrentImages Night 1 split (no DarkMatters), used as the
+evaluation reference:
+
+```text
+train.json  — 3,023 images, 2,957 annotations
+val.json    —   411 images,   386 annotations
+test.json   —   308 images,   308 annotations
+```
+
+Rebuild with:
 
 ```bash
-# Convert the fully-annotated BrentImages night (former GTImages):
+# Convert the fully-annotated BrentImages Night 1:
 python scripts/convert_gtimages.py \
     --strk-dir /Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood \
     --output data/annotations/gtimages.json \
@@ -227,17 +307,24 @@ python scripts/convert_gtimages.py \
 python scripts/merge_annotations.py --seed 42 --val-fraction 0.2
 ```
 
-Outputs:
+### Available but not yet in any split
 
-```text
-data/annotations/train.json
-data/annotations/val.json
-data/annotations/test.json
+| Dataset | File(s) | Images | Annotations | Notes |
+|---|---|---|---|---|
+| BrentImages Night 2 | `brentimages_20260515.json` + `_negatives.json` | 231 | 204 streaks | Clean holdout; long + medium streaks |
+| Frigate (streaks) | `frigate_streaks.json` | 350 | 377 | Very short ~20–80 px streaks (only source) |
+| Frigate (negatives) | `frigate_negatives.json` | 300 | 0 | — |
+| DarkMatters negatives | `results/darkmatters_eval/negatives.json` | 855 | 0 | Hard negatives, different PSF |
+| DarkMatters unannotated positives | — | ~136 | — | Need manual annotation |
+
+To include Frigate in a training run:
+```bash
+python scripts/merge_annotations.py --seed 42 --val-fraction 0.2 --include-frigate
 ```
 
-SatStreaks keeps its provided train/val/test split. GTImages labeled and
-negative images are shuffled with the configured seed and split according to
-`--val-fraction`; GTImages does not enter the held-out SatStreaks test split.
+SatStreaks keeps its provided train/val/test split. GTImages/BrentImages labeled
+and negative images are shuffled with the configured seed and split according to
+`--val-fraction`; BrentImages does not enter the held-out SatStreaks test split.
 The optional handoff manifest at `data/Manifest.txt` records the staged dataset
 counts used for external workstation training.
 
