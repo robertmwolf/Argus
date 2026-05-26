@@ -41,6 +41,22 @@ _SHORT_MAX = 150.0
 _LONG_MIN = 400.0
 
 
+def _band_for(streak_length_px: float) -> str:
+    """Return the length band label for a streak.
+
+    Args:
+        streak_length_px: Streak length in pixels.
+
+    Returns:
+        "short", "medium", or "long".
+    """
+    if streak_length_px < _SHORT_MAX:
+        return "short"
+    if streak_length_px < _LONG_MIN:
+        return "medium"
+    return "long"
+
+
 # ---------------------------------------------------------------------------
 # OBB geometry helpers
 # ---------------------------------------------------------------------------
@@ -486,7 +502,8 @@ def extract_method_predictions(
             })
 
         if sources:
-            unified_conf = compute_unified_confidence(sources)["score"]
+            band = _band_for(float(length))
+            unified_conf = compute_unified_confidence(sources, streak_band=band)["score"]
             unified_preds.append({
                 "image_id": image_id,
                 "confidence": unified_conf,

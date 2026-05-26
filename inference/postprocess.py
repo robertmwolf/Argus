@@ -590,6 +590,20 @@ def group_detections(
     return sorted_dets
 
 
+def _obb_aspect_ratio(obb: dict) -> float:
+    """Return the long/short axis ratio of an OBB.
+
+    Args:
+        obb: Dict with keys w (long axis) and h (short axis).
+
+    Returns:
+        w / h, or 1.0 when h is zero.
+    """
+    w = float(obb.get("w", 0.0))
+    h = float(obb.get("h", 1.0))
+    return w / max(h, 1e-6)
+
+
 def fuse_group_geometries(detections: list[dict]) -> list[dict]:
     """Fuse each grouped streak's fragment OBBs into one endpoint-spanning OBB.
 
@@ -598,6 +612,12 @@ def fuse_group_geometries(detections: list[dict]) -> list[dict]:
     as one streak by projecting every member's endpoints onto the longest
     member's axis, then writing the fused OBB back to every member in the group.
     Single-member groups are left unchanged.
+
+    Geometry primary selection prefers tight oriented OBBs (aspect ratio ≥ 5)
+    over loose axis-aligned boxes.  When DINO and a YOLO-OBB detector both fire
+    on the same streak, DINO's axis-aligned bbox is very large (~half the image)
+    while YOLO's true OBB is narrow (aspect ~15:1).  Using the tight OBB as the
+    axis seed produces a more accurate fused geometry and better mAP@0.75.
 
     Args:
         detections: Detection dicts with ``streak_id``, ``obb``, and confidence.
@@ -615,9 +635,17 @@ def fuse_group_geometries(detections: list[dict]) -> list[dict]:
         if len(group) < 2:
             continue
 
+        # Prefer a tight OBB (aspect ≥ 5:1) as the axis seed; fall back to
+        # longest OBB as before.  This ensures YOLO's precise angle is used
+        # instead of DINO's loose axis-aligned bbox when both are present.
+        _OBB_AR_THRESHOLD = 5.0
         primary = max(
             group,
-            key=lambda d: (float((d.get("obb") or {}).get("w", 0.0)), d.get("confidence", 0.0)),
+            key=lambda d: (
+                1 if _obb_aspect_ratio((d.get("obb") or {})) >= _OBB_AR_THRESHOLD else 0,
+                float((d.get("obb") or {}).get("w", 0.0)),
+                d.get("confidence", 0.0),
+            ),
         )
         base = primary["obb"]
         theta = math.radians(float(base["angle_deg"]))
