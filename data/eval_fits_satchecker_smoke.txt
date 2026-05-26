@@ -1,0 +1,13 @@
+# Small SatChecker candidate-provider smoke manifest.
+#
+# Source: local synthetic FITS fixtures with DATE-OBS, celestial WCS,
+# exposure time, and observer site metadata. These are best for testing the
+# candidate-provider plumbing without needing ASTAP plate solving.
+#
+# For a science-quality provider comparison, use real Streak_* uploads only
+# after adding WCS sidecars or enabling a verified plate-solve path.
+data/test/synth_streak_000.fits
+data/test/synth_streak_001.fits
+data/test/synth_streak_002.fits
+data/dev_subset/dev_short_002.fits
+data/dev_subset/dev_long_002.fits
