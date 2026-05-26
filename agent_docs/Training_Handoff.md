@@ -195,7 +195,8 @@ for split in ["train", "val", "test"]:
 PY
 ```
 
-Expected minimums after merging: train ≥ 2,000 images, val ≥ 400, test ≥ 400.
+Expected minimums after merging: train ≥ 2,000 images, val ≥ 300, test ≥ 200.
+(Current reference splits: train=3,172, val=411, test=308 — test is intentionally smaller than val.)
 If `empty_images` exceeds 30% of any split, the negative-sample balance is off —
 check `merge_annotations.py --val-fraction` and the source dataset masks.
 
@@ -388,9 +389,11 @@ files that are inconvenient to regenerate, not the full image datasets:
 Argus-training-handoff/
 |-- data/
 |   |-- annotations/
-|   |   |-- train.json
+|   |   |-- dm_merged_train.json       ← current best training set (3,172 imgs: SatStreaks + BrentImages Night 1 + 149 DarkMatters)
+|   |   |-- dm_merged_val.json
+|   |   |-- train.json                 ← base split (SatStreaks + BrentImages Night 1 only)
 |   |   |-- val.json
-|   |   |-- test.json
+|   |   |-- test.json                  ← evaluation reference (308 imgs, SatStreaks + BrentImages Night 1)
 |   |   |-- dev_subset.json
 |   |   |-- gtimages.json
 |   |   `-- gtimages_negatives.json
@@ -415,7 +418,7 @@ Required training inputs:
 data/satstreaks/Data/Images/
 data/satstreaks/Data/Masks/
 data/satstreaks/Data/labels.json
-data/GTImages/
+data/BrentImages/Img_20260412_Atwood/
 ```
 
 Small optional handoff inputs:
@@ -459,16 +462,16 @@ When training is complete, open a pull request from your fork targeting
 `robertmwolf/Argus:main`. The PR should include **only** result files,
 manifests, and checksums — not dataset prep commits or training-run artifacts.
 
-Download GTImages from the direct OneDrive file link and extract it so the
-files land here:
+Download the BrentImages Night 1 archive (formerly distributed as "GTImages")
+from the direct OneDrive file link and extract it so the files land here:
 
 ```text
-Argus/data/GTImages/
+Argus/data/BrentImages/Img_20260412_Atwood/
 ```
 
-Expected GTImages contents include `.fits`, `.wcs`, `.ini`, and `.strk` files.
+Expected contents include `.fits`, `.wcs`, `.ini`, and `.strk` files.
 If the archive extracts with an extra top-level folder, move the contents so
-`data/GTImages/*.fits` exists.
+`data/BrentImages/Img_20260412_Atwood/*.fits` exists.
 
 Download SatStreaks from the upstream dataset source. Start from the upstream
 repo and README:
@@ -538,7 +541,7 @@ is missing, rebuild them:
 
 ```bash
 python scripts/convert_gtimages.py \
-    --strk-dir data/GTImages \
+    --strk-dir data/BrentImages/Img_20260412_Atwood \
     --output data/annotations/gtimages.json \
     --negatives-output data/annotations/gtimages_negatives.json
 ```
