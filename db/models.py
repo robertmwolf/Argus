@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 from typing import AsyncGenerator
 
-from sqlalchemy import Float, ForeignKey, Integer, Text, inspect
+from sqlalchemy import Boolean, Float, ForeignKey, Integer, Text, inspect
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -84,6 +84,7 @@ class Observation(Base):
     obs_epoch: Mapped[str | None] = mapped_column(Text)       # ISO8601
     fits_wcs_json: Mapped[str | None] = mapped_column(Text)   # JSON string
     enabled_detectors_json: Mapped[str | None] = mapped_column(Text)
+    raw_mode: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     status: Mapped[str] = mapped_column(Text, default="queued", nullable=False)
 
 
@@ -217,6 +218,10 @@ def _migrate_existing_tables(sync_conn) -> None:
     if "enabled_detectors_json" not in obs_columns:
         sync_conn.exec_driver_sql(
             "ALTER TABLE observations ADD COLUMN enabled_detectors_json TEXT"
+        )
+    if "raw_mode" not in obs_columns:
+        sync_conn.exec_driver_sql(
+            "ALTER TABLE observations ADD COLUMN raw_mode INTEGER DEFAULT 0 NOT NULL"
         )
 
     columns = {col["name"] for col in inspect(sync_conn).get_columns("detections")}

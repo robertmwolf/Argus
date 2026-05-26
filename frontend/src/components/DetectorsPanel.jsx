@@ -5,8 +5,10 @@ import { useEffect, useState } from 'react'
  *
  * Props:
  *   onSelectionChange(Set<string>) — called whenever the enabled set changes
+ *   rawMode(bool)                  — current raw mode state
+ *   onRawModeChange(bool)          — called when raw mode toggle changes
  */
-export default function DetectorsPanel({ onSelectionChange }) {
+export default function DetectorsPanel({ onSelectionChange, rawMode = false, onRawModeChange }) {
   const [detectors, setDetectors] = useState(null) // null = loading
   const [selected, setSelected] = useState(null)   // null until loaded
   const [fetchError, setFetchError] = useState(false)
@@ -78,6 +80,37 @@ export default function DetectorsPanel({ onSelectionChange }) {
             </button>
           </div>
         )}
+      </div>
+
+      {/* Processing mode toggle */}
+      <div
+        className="flex items-center justify-between px-4 py-3 border-b border-slate-800 cursor-pointer select-none hover:bg-slate-800/30 transition-colors"
+        onClick={() => onRawModeChange?.(!rawMode)}
+      >
+        <div>
+          <span className="text-sm font-medium text-slate-200">Raw output</span>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Skip Radon refinement, NMS, and grouping — show every detection as-is
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={rawMode}
+          onClick={e => { e.stopPropagation(); onRawModeChange?.(!rawMode) }}
+          className={[
+            'relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent',
+            'transition-colors duration-200 focus:outline-none',
+            rawMode ? 'bg-cyan-500' : 'bg-slate-700',
+          ].join(' ')}
+        >
+          <span
+            className={[
+              'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200',
+              rawMode ? 'translate-x-4' : 'translate-x-0',
+            ].join(' ')}
+          />
+        </button>
       </div>
 
       {/* Table */}

@@ -1240,6 +1240,7 @@ def run_with_array(
     inference_device: Any | None = None,
     models: list[tuple[Any, Any, dict]] | None = None,
     enabled_detectors: set[str] | None = None,
+    raw_mode: bool = False,
 ) -> tuple[list[dict], "np.ndarray"]:
     """Run the full ARGUS inference pipeline on a single FITS image.
 
@@ -1258,6 +1259,11 @@ def run_with_array(
             Enables running multiple DINO checkpoints in parallel.
         enabled_detectors: Set of detector IDs to run (e.g. {"yolo_full",
             "classical"}).  None (default) enables all detectors.
+        raw_mode: If True, skip Radon angle refinement, OBB extent tracing,
+            per-detector NMS, and cross-detector grouping.  Every detection
+            from every model is returned as a unique streak with the raw OBB
+            produced by that detector.  If False (default), the full
+            postprocessing pipeline runs.
 
     Returns:
         Tuple of (detections, array).  ``array`` is the uint8 (H, W, 3) image
@@ -1406,88 +1412,98 @@ def run_with_array(
         inference_ms, len(raw_dets), tta_enabled, confidence_threshold,
     )
 
-    # --- 3. Postprocess: angle refinement + OBB + NMS -----------------------
+    # --- 3. Postprocess: angle refinement + OBB (full or raw-mode) -----------
     t2 = time.perf_counter()
     import numpy as np
     from inference.postprocess import (
-        bbox_to_obb, refine_angle, group_detections, nms_detections,
-        extend_obb_to_streak_extent, classify_detection_quality,
-        fuse_group_geometries,
+        bbox_to_obb, classify_detection_quality,
+        refine_angle, extend_obb_to_streak_extent,
+        nms_detections, group_detections, fuse_group_geometries,
     )
-
-    # Precompute greyscale array and background threshold once so that every
-    # extend_obb_to_streak_extent call shares the same stats instead of each
-    # recomputing median/std over the full image independently.
-    _gray_f32 = np.asarray(array, dtype=np.float32)
-    if _gray_f32.ndim == 3:
-        _gray_f32 = _gray_f32.mean(axis=2)
-    _bg = float(np.median(_gray_f32))
-    _extent_threshold = _bg + 3.0 * float(_gray_f32.std())
 
     h_img = array.shape[0]
     w_img = array.shape[1]
 
-    for det in raw_dets:
-        x1, y1, x2, y2 = det["bbox"]
+    yolo_dets            = all_det_results.get("yolo", [])
+    yolo_full_dets       = all_det_results.get("yolo_full", [])
+    streakmind_yolo_dets = all_det_results.get("streakmind_yolo", [])
 
-        # Always run Radon refinement — it operates on a small crop and is fast.
-        # FAST_MODE only skips cross-ID, not angle refinement.
-        px1 = max(0, int(math.floor(x1)))
-        py1 = max(0, int(math.floor(y1)))
-        px2 = min(w_img, int(math.ceil(x2)))
-        py2 = min(h_img, int(math.ceil(y2)))
-        crop = array[py1:py2, px1:px2]
-        seed_angle = _angle_from_bbox(det["bbox"])
-        initial_obb = bbox_to_obb(det["bbox"], seed_angle)
-        # Axis-aligned bboxes encode slope magnitude but not slope sign.  The
-        # search window is configurable so offline runs can use a wider search
-        # while the API keeps a bounded CPU budget.
-        angle_range = float(os.environ.get(
-            "RADON_ANGLE_SEARCH_RANGE",
-            str(_DEFAULT_RADON_ANGLE_SEARCH_RANGE),
-        ))
-        angle = refine_angle(crop, initial_obb, angle_search_range=angle_range)
+    if raw_mode:
+        # Raw mode: no Radon, no extent tracing, no NMS, no grouping.
+        # Every detection from every model is an independent unique streak.
+        for det in raw_dets:
+            if det.get("obb") is None:
+                seed_angle = _angle_from_bbox(det["bbox"])
+                det["obb"] = bbox_to_obb(det["bbox"], seed_angle)
+            det["streak_length_px"] = float(det["obb"]["w"])
 
-        obb = bbox_to_obb(det["bbox"], angle)
-        # Extend OBB endpoints along the streak axis to the true streak tips —
-        # DINO bboxes often cover only a fraction of a long streak.
-        obb = extend_obb_to_streak_extent(array, obb, _gray=_gray_f32, _threshold=_extent_threshold)
-        det["obb"] = obb
-        det["streak_length_px"] = float(obb["w"])
+        for det in classical_dets + astride_dets:
+            if det.get("obb"):
+                det.setdefault("streak_length_px", float(det["obb"]["w"]))
+            elif det.get("bbox"):
+                seed_angle = _angle_from_bbox(det["bbox"])
+                det["obb"] = bbox_to_obb(det["bbox"], seed_angle)
+                det["streak_length_px"] = float(det["obb"]["w"])
 
-    # Apply the same streak-extent tracing to classical and ASTRiDE detections.
-    # Their angles are already set by their own algorithms; this gives them the
-    # same endpoint refinement that DINO receives above.
-    for det in classical_dets + astride_dets:
-        if det.get("obb"):
-            obb = extend_obb_to_streak_extent(array, det["obb"], _gray=_gray_f32, _threshold=_extent_threshold)
+        detections = (
+            raw_dets + classical_dets + astride_dets
+            + yolo_dets + yolo_full_dets + streakmind_yolo_dets
+        )
+        for idx, det in enumerate(detections):
+            det["streak_id"] = idx + 1
+
+    else:
+        # Full mode: Radon angle refinement, extent tracing, per-detector NMS,
+        # cross-detector grouping, and geometry fusion.
+        _gray_f32 = np.asarray(array, dtype=np.float32)
+        if _gray_f32.ndim == 3:
+            _gray_f32 = _gray_f32.mean(axis=2)
+        _bg = float(np.median(_gray_f32))
+        _extent_threshold = _bg + 3.0 * float(_gray_f32.std())
+
+        for det in raw_dets:
+            x1, y1, x2, y2 = det["bbox"]
+            px1 = max(0, int(math.floor(x1)))
+            py1 = max(0, int(math.floor(y1)))
+            px2 = min(w_img, int(math.ceil(x2)))
+            py2 = min(h_img, int(math.ceil(y2)))
+            crop = array[py1:py2, px1:px2]
+            seed_angle = _angle_from_bbox(det["bbox"])
+            initial_obb = bbox_to_obb(det["bbox"], seed_angle)
+            angle_range = float(os.environ.get(
+                "RADON_ANGLE_SEARCH_RANGE",
+                str(_DEFAULT_RADON_ANGLE_SEARCH_RANGE),
+            ))
+            angle = refine_angle(crop, initial_obb, angle_search_range=angle_range)
+            obb = bbox_to_obb(det["bbox"], angle)
+            obb = extend_obb_to_streak_extent(array, obb, _gray=_gray_f32, _threshold=_extent_threshold)
             det["obb"] = obb
             det["streak_length_px"] = float(obb["w"])
 
-    # Per-detector NMS: collapse duplicates within each detector before combining.
-    # TTA produces 3 DINOv3 passes on the same image — NMS reduces those to the
-    # single best box per streak.  Classical detectors can also fire multiple
-    # times on the same streak, so we NMS them individually too.
-    raw_dets             = nms_detections(raw_dets,                                       iou_threshold=0.5)
-    classical_dets       = nms_detections(classical_dets,                                 iou_threshold=0.5)
-    astride_dets         = nms_detections(astride_dets,                                   iou_threshold=0.5)
-    yolo_dets            = nms_detections(all_det_results.get("yolo", []),            iou_threshold=0.5)
-    yolo_full_dets       = nms_detections(all_det_results.get("yolo_full", []),       iou_threshold=0.5)
-    streakmind_yolo_dets = nms_detections(all_det_results.get("streakmind_yolo", []), iou_threshold=0.5)
+        for det in classical_dets + astride_dets:
+            if det.get("obb"):
+                obb = extend_obb_to_streak_extent(array, det["obb"], _gray=_gray_f32, _threshold=_extent_threshold)
+                det["obb"] = obb
+                det["streak_length_px"] = float(obb["w"])
 
-    # Group across detectors: overlapping detections from different methods share
-    # the same streak_id.  Nothing is suppressed — all per-method detections are
-    # kept so the UI can surface multi-method agreement.
-    combined = (
-        raw_dets + classical_dets + astride_dets
-        + yolo_dets + yolo_full_dets + streakmind_yolo_dets
-    )
-    detections = group_detections(combined, iou_threshold=0.5)
-    detections = fuse_group_geometries(detections)
-    detections = _lower_astride_only_confidence(detections)
+        raw_dets             = nms_detections(raw_dets,             iou_threshold=0.5)
+        classical_dets       = nms_detections(classical_dets,       iou_threshold=0.5)
+        astride_dets         = nms_detections(astride_dets,         iou_threshold=0.5)
+        yolo_dets            = nms_detections(yolo_dets,            iou_threshold=0.5)
+        yolo_full_dets       = nms_detections(yolo_full_dets,       iou_threshold=0.5)
+        streakmind_yolo_dets = nms_detections(streakmind_yolo_dets, iou_threshold=0.5)
+
+        combined = (
+            raw_dets + classical_dets + astride_dets
+            + yolo_dets + yolo_full_dets + streakmind_yolo_dets
+        )
+        detections = group_detections(combined, iou_threshold=0.5)
+        detections = fuse_group_geometries(detections)
+        detections = _lower_astride_only_confidence(detections)
+
     postprocess_ms = (time.perf_counter() - t2) * 1000
-    logger.debug("postprocess_ms=%.1f  after_nms=%d", postprocess_ms, len(detections))
-    logger.info("postprocess_ms=%.1f after_nms=%d", postprocess_ms, len(detections))
+    logger.debug("postprocess_ms=%.1f  dets=%d  raw_mode=%s", postprocess_ms, len(detections), raw_mode)
+    logger.info("postprocess_ms=%.1f dets=%d raw_mode=%s", postprocess_ms, len(detections), raw_mode)
 
     # --- 4. WCS: pixel → sky coordinates (both streak endpoints) ------------
     for det in detections:
@@ -1590,6 +1606,7 @@ def run(
     fast: bool = False,
     model: Any | None = None,
     inference_device: Any | None = None,
+    raw_mode: bool = False,
 ) -> list[dict]:
     """Run the full ARGUS inference pipeline on a single FITS image.
 
@@ -1597,7 +1614,8 @@ def run(
     detection list.  See ``run_with_array()`` for full parameter documentation.
     """
     detections, _ = run_with_array(
-        fits_path, fast=fast, model=model, inference_device=inference_device
+        fits_path, fast=fast, model=model, inference_device=inference_device,
+        raw_mode=raw_mode,
     )
     return detections
 
