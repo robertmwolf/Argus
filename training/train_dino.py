@@ -395,7 +395,7 @@ def train(
         logger.info("Initialising from checkpoint: %s", load_from)
     if os.environ.get("USE_DEV_SUBSET", "true").lower() in {"0", "false", "no"}:
         # TRAIN_ANN_FILE / VAL_ANN_FILE let callers substitute annotation files
-        # (e.g. dm_merged_train.json) without changing any other config.
+        # (e.g. all_train_nodm.json) without changing any other config.
         # Paths must be relative to cfg.train_dataloader.dataset.data_root ("data/").
         train_ann = os.environ.get("TRAIN_ANN_FILE", "annotations/train.json")
         val_ann = os.environ.get("VAL_ANN_FILE", "annotations/val.json")
