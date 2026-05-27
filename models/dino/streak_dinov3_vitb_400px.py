@@ -1,20 +1,21 @@
-# DINOv3 ViT-B/16 — 50-epoch final quality run at 400px
+# DINOv3 ViT-B/16 — 15-epoch quality run at 400px (canonical training config)
 #
 # Identical to streak_dinov3_vitb_longrun.py except _img_scale = (400, 400).
-# Use this config for the production model after the A/B comparison picks a winner.
 #
 # Memory: ~8 GB unified (frozen ViT-B, 400px, batch=1) — fits Mac 16 GB.
-# Time:   ~11 hours on Mac MPS (CPU fallback) for 3,400 images × 50 epochs.
+# Time:   ~72 hours on Mac M3 CPU for 3,971 images × 15 epochs.
+#
+# IMPORTANT: Do NOT use --load-from with any prior checkpoint. This config must
+# be cold-started from DINOv3 pretrain weights + COCO head init only.
 #
 # USAGE (via train_overnight.sh or manually):
 #   USE_DEV_SUBSET=false \
-#   TRAIN_ANN_FILE=annotations/<winner>.json \
-#   VAL_ANN_FILE=annotations/dm_merged_val.json \
+#   TRAIN_ANN_FILE=annotations/all_train_nodm.json \
+#   VAL_ANN_FILE=annotations/val.json \
 #   PYTORCH_ENABLE_MPS_FALLBACK=1 \
 #   python -m training.train_dino \
 #     --config models/dino/streak_dinov3_vitb_400px.py \
-#     --work-dir weights/run_best_400px \
-#     --load-from weights/run_gt_dm_satstreaks_dinov3_vitb/best_coco_bbox_mAP_epoch_4.pth
+#     --work-dir weights/run_clean_vitb_nodm
 
 custom_imports = dict(
     imports=['training.transforms', 'models.dino.dinov3_adapter'],

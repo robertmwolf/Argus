@@ -58,7 +58,7 @@ MMDetection 3.3.0:
 | SatStreaks | 3,023 (train) / 308 (test) | ~3,100 streaks | `data/satstreaks/` local | Public dataset `[TODO: cite]` | Yes |
 | BrentImages Night 1 (Apr 12 2026) | 277 | ~300 streaks | `data/BrentImages/Img_20260412_Atwood/` | First-party, Atwood Observatory | Yes |
 | BrentImages Night 2 (May 15 2026) | 204 annotated + 27 negatives | 204 streaks | `/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/` | First-party, Atwood Observatory | Yes |
-| DarkMatters (DM) | 149 training + 66 val holdout | ~216 streaks | `/Volumes/External/DarkMatters/` (val locally mirrored) | **Third-party — consent unresolved** | No |
+| ~~DarkMatters (DM)~~ | ~~149 training + 66 val holdout~~ | ~~216 streaks~~ | ~~`/Volumes/External/DarkMatters/`~~ | **Excluded — not used in this project** | N/A |
 | Frigate (tiled) | 558 positive tiles + 159 neg | 655 streaks | `/Volumes/External/frigate/` | **Third-party — attribution needed** | Yes |
 
 BrentImages is an **ongoing capture series** from Atwood Observatory (Brent's
@@ -66,16 +66,13 @@ telescope). Additional nights are expected; the `Img_YYYYMMDD_Atwood/` naming
 convention accommodates new captures. Each night yields ~200–280 annotated
 frames at 6248×4176 px (native resolution; downsampled for training).
 
-**Validation set (`dm_merged_val.json`):** 411 images (~279 SatStreaks, ~66 BrentImages N1,
-66 DarkMatters holdout — DM holdout images mirrored locally to
-`data/darkmatters/val_previews/`).
+**Validation set:** Derived from `val.json` (SatStreaks + BrentImages splits). DarkMatters holdout images are excluded from all evaluation sets.
 
 ### 2.2 Data Provenance Issues (must resolve before publication)
 
-- **DarkMatters:** Provided by a third party. Written consent for use in a published
-  dataset and model has not been confirmed. **If consent cannot be obtained, the
-  paper model must be the no-DM variant.** Results from the with-DM model may still
-  be reported as an ablation if the data source is disclosed.
+- **DarkMatters:** **Excluded from this project.** Data will not be used in any
+  training run, annotation file, or checkpoint. All prior runs that used DarkMatters
+  data (Runs 0–2) are archived and their weights must be deleted.
 
 - **Frigate:** Source and ownership `[TODO]`. Written permission to include this data
   in a published training set must be obtained. Attribution required in the paper.
@@ -113,7 +110,6 @@ The `magnification = model_input_size / native_tile_size` factor is applied by
 |-------|--------|-------------|-------|
 | `all_train_nodm.json` **v2 (2026-05-26)** | **8,422** | **8,213** | Tiled BrentImages + Frigate ts=110; use for Run 3 |
 | `all_train_nodm.json` v1 (Runs 1–2) | 3,971 | 3,816 | Full-frame BrentImages (streaks ~42px at model input); superseded |
-| `all_train_withdm.json` (Run 1B A/B only) | 4,120 | 3,991 | Contains DM — do not use for paper model |
 
 **v2 composition (`all_train_nodm.json`):**
 
@@ -150,57 +146,41 @@ python scripts/build_tiled_frigate_json.py \
 
 The following runs informed but do **not** constitute the publishable final model:
 
-**Run 0 — Cold start (May 18, 2026):**
+**⛔ Run 0 — ARCHIVED (May 18, 2026) — trained on DarkMatters data:**
 - Config: `models/dino/streak_dinov3_vitb.py`
-- Data: `dm_merged_train.json` (SatStreaks + BrentImages N1 + DarkMatters)
+- Data: `dm_merged_train.json` (SatStreaks + BrentImages N1 + **DarkMatters**)
 - Schedule: 4 epochs, MultiStepLR milestones=[3,4], γ=0.1, peak lr=1e-4, 256px
 - Hardware: Mac M3 MPS (CPU fallback), ~8h 20m
-- Result: mAP@50 on dm_merged_val: 0.257 → 0.341 → 0.392 → **0.436** (best epoch 4)
-- Checkpoint: `weights/run_gt_dm_satstreaks_dinov3_vitb/best_coco_bbox_mAP_epoch_4.pth`
+- Checkpoint: `weights/run_gt_dm_satstreaks_dinov3_vitb/` — **DELETE, do not use**
 
-**Run 1 — A/B warm-start (May 20–22, 2026):**
+**⛔ Run 1 — ARCHIVED (May 20–22, 2026) — warm-started from Run 0:**
 - Config: `models/dino/streak_dinov3_vitb_longrun.py` (15 epochs, cosine LR, 256px)
-- Phase 1A: `all_train_nodm.json` → `weights/run_15ep_nodm/`
-- Phase 1B: `all_train_withdm.json` → `weights/run_15ep_withdm/`
-- Warm start: Run 0 checkpoint (detection head only, backbone still frozen)
-- Hardware: Mac M3 CPU, ~12h per phase
-- Results on `dm_merged_val.json`:
+- Phase 1A: `all_train_nodm.json` → `weights/run_15ep_nodm/` — **DELETE, do not use**
+- Phase 1B: `all_train_withdm.json` → `weights/run_15ep_withdm/` — **DELETE, do not use**
+- Warm start: Run 0 checkpoint (DM-contaminated)
 
-| Phase | Ep 5 mAP@50 | Ep 10 mAP@50 | Ep 15 mAP@50 | Ep 15 mAP |
-|-------|------------|-------------|-------------|----------|
-| 1A (no-DM) | 0.360 | 0.392 | **0.402** | 0.336 |
-| 1B (with-DM) | 0.378 | 0.397 | **0.403** | 0.336 |
-
-- **Outcome:** DM contribution is negligible (~0.001 mAP@50). No-DM variant selected
-  as winner for Phase 2 (avoids consent issue; essentially identical performance).
-- **Note:** This is not a clean DM ablation — the warm-start checkpoint was itself
-  trained on DM data. Both A/B branches begin from a model that has seen DarkMatters.
-
-**Run 2 — Phase 2 quality run (May 22–25, 2026):**
+**⛔ Run 2 — ARCHIVED (May 22–25, 2026) — warm-started from Run 0:**
 - Config: `models/dino/streak_dinov3_vitb_400px.py` (15 epochs, cosine LR, 400px)
-- Data: `all_train_nodm.json` (3,971 images, 3,816 annotations — winner from Run 1)
-- Warm start: Run 0 checkpoint (**⚠️ DM-contaminated warm start — see note below**)
-- Hardware: Mac M3 CPU, ~72h (thermal throttling; ~1.4–2.5 s/step)
-- Checkpoint: `weights/run_best_400px_nodm/best_coco_bbox_mAP_epoch_15.pth`
-- Val results on `dm_merged_val.json`:
+- Data: `all_train_nodm.json` (3,971 images, 3,816 annotations)
+- Warm start: Run 0 checkpoint (DM-contaminated)
+- Checkpoint: `weights/run_best_400px_nodm/` — **DELETE, do not use**
+- Historical val results (for reference only):
 
 | Epoch | mAP | mAP@50 |
 |-------|-----|--------|
 | 5     | 0.316 | 0.390 |
 | 10    | 0.408 | 0.463 |
-| 15    | **0.423** | **0.468** |
+| 15    | 0.423 | 0.468 |
 
-- **Comprehensive eval** (`results/comprehensive_eval_20260526/report.md`):
+All four weight directories must be deleted from local disk and OneDrive. They must
+not be used as warm-start sources for any future training run.
 
-| Test set | mAP | mAP@50 | P | R | F1 | Notes |
-|----------|-----|--------|---|---|----|-------|
-| Standard (SatStreaks, 308) | 0.600 | **0.755** | 71.2% | 72.4% | 71.8% | Primary benchmark |
-| Frigate zero-shot (350) | 0.000 | 0.000 | — | — | — | Sub-patch streaks; known arch limit |
-| BrentImages Night 2 zero-shot (231) | 0.085 | 0.296 | 47.8% | 31.9% | 38.2% | **See §3.3** |
-| DarkMatters holdout zero-shot (332) | 0.564 | **0.720** | 71.2% | 69.1% | 70.1% | Strong zero-shot |
-
-This model is deployed as **DINOv3 Base - Multi-source** (`dinov3_vitb_multisource`) in
-the production API.
+**⏳ Run 3 — Clean cold-start (pending):**
+- Config: `models/dino/streak_dinov3_vitb_400px.py`
+- Data: `all_train_nodm.json` v2 (8,422 images)
+- Warm start: **None** — DINOv3 pretrain backbone + COCO head init only
+- Work dir: `weights/run3_cold_nodm/`
+- This is the first valid model in the project's history.
 
 > **⚠️ DM contamination note:** Every checkpoint in Runs 0–2 has been exposed to
 > DarkMatters data. Run 0 was trained on DM; Runs 1 and 2 warm-started from Run 0.
@@ -241,7 +221,7 @@ shrinks to ~44px (2.75 ViT patches) at model input — well below the training d
 
 Tiled inference at `native_tile_size=400` (1:1 native crops) resolves this. A tiled eval
 (`scripts/eval_brentimages_tiled.py`) is in progress; expected to yield mAP@50 in the
-0.60–0.75 range, matching DarkMatters zero-shot performance. Results to be added here
+0.60–0.75 range. Results to be added here
 when complete.
 
 This applies to **all future high-resolution capture nights** from Atwood Observatory.
@@ -273,14 +253,12 @@ evaluation output.
 
 ### Data
 
-- [ ] DarkMatters consent confirmed in writing, OR decision made to exclude DM
-      from the paper model
+- [x] DarkMatters data excluded from this project — decision final, no consent obtained
 - [ ] Frigate attribution confirmed; owner has granted permission for publication
 - [ ] SatStreaks citation identified
 - [ ] All training data uploaded to HuggingFace Datasets (or Zenodo) with a DOI
 - [ ] Annotation JSONs updated to use hosted paths; DOI recorded in this document
-- [ ] Validation set is 100% local (no external volume dependency) ✅ done for
-      DM holdout images
+- [ ] Validation set is 100% local (no external volume dependency)
 
 ### Model
 
@@ -350,13 +328,12 @@ the full breakdown. ✅ Resolved.
 | Standard (SatStreaks test split) | 308 | Primary benchmark |
 | BrentImages Night 2 (zero-shot) | 231 | Out-of-distribution; use tiled inference (§3.3) |
 | Frigate (zero-shot, tiled inference) | 350 | Short-streak regime; requires adaptive tiling |
-| DarkMatters holdout (zero-shot) | 66 (local) / ~332 (full) | Only if DM consent resolved |
 
 Zero-shot sets are never seen during training; they measure generalisation.
 
 ### 5.3 Inference Variants
 
-- **Standard:** Full-image resize to training resolution; use for SatStreaks and DM
+- **Standard:** Full-image resize to training resolution; use for SatStreaks
 - **Tiled (BrentImages / high-res FITS):** `inference/tiled_pipeline.py`,
   `native_tile_size=400`, `overlap=0.5`, cross-tile NMS at IoU=0.4; restores 1:1 native
   resolution for large FITS frames
@@ -394,7 +371,7 @@ Approximate training throughput on this hardware:
 
 ## 7. Open Questions
 
-1. **DM consent** — blocks the with-DM paper model and clean A/B interpretation
+1. ~~**DM consent**~~ — ✅ Resolved (2026-05-26): DarkMatters data excluded from this project entirely.
 2. **Frigate attribution** — blocks use of Frigate tiles in the published training set
 3. **DINOv3 citation** — need the exact paper reference (not DINOv2)
 4. **Data hosting** — HuggingFace Datasets vs Zenodo; need DOI before paper submission

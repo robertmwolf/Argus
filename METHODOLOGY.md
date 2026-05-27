@@ -96,8 +96,7 @@ convention `Img_YYYYMMDD_Atwood/`; additional nights are expected as the series
 continues.
 
 **Current nights:**
-- **Night 1 (Apr 12 2026):** ~277 images; included in training via `dm_merged_train.json`
-  and `all_train_nodm.json`. FITS files on external drive at
+- **Night 1 (Apr 12 2026):** ~277 images; included in training via `all_train_nodm.json`. FITS files on external drive at
   `/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/`.
 - **Night 2 (May 15 2026):** 204 annotated + 27 negative images; 204 streak annotations;
   median streak 687 px native (p10 = 373, p90 = 1003). Added to training in `all_train_nodm.json`.
@@ -120,8 +119,7 @@ classical detectors.
 The current training corpus (`all_train_nodm.json`) consists of: the SatStreaks train
 split (~2,460 JPEG/PNG images), BrentImages Night 1 (~277 images), BrentImages Night 2
 (204 annotated + 27 negative images), and tiled Frigate crops (558 positive tiles +
-159 negative tiles). Total: **3,971 images, 3,816 streak annotations**. An
-`all_train_withdm.json` variant adds 149 DarkMatters images (consent pending; see §2.4).
+159 negative tiles). Total: **3,971 images, 3,816 streak annotations**.
 
 YOLO is trained exclusively on tiled 640 px crops derived from SatStreaks (3,023 source
 images producing ~14,385 tiles).
@@ -258,7 +256,7 @@ Direct comparison of P/R numbers is not valid (see §2.4).
 ### 3.4 DINOv3 ViT-B/16 + DINO-DETR (Primary ML Detector)
 
 **Config:** `models/dino/streak_dinov3_vitb_400px.py`  
-**Checkpoint:** `weights/run_best_400px_nodm/best_coco_bbox_mAP_epoch_15.pth` (~330 MB)  
+**Checkpoint:** `weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth` (pending clean retrain)  
 **API model ID:** `dinov3_vitb_multisource` ("DINOv3 Base - Multi-source")  
 **When active:** Always (primary detector)
 
@@ -335,30 +333,29 @@ DINO-DETR extends DETR with three key innovations:
 
 #### 3.4.4 Training Protocol
 
-| Run | Config | Data | Epochs | Hardware | Best val mAP@0.5 |
-|-----|--------|------|--------|----------|-----------------|
-| Run 0 (May 18) | `streak_dinov3_vitb.py` (256px) | SatStreaks + BrentImages N1 + DarkMatters | 4 | Mac M3 CPU | **0.436** (`dm_merged_val`) |
-| Run 1A (May 20–22) | `streak_dinov3_vitb_longrun.py` (256px) | `all_train_nodm.json` (3,971 img) | 15 | Mac M3 CPU | **0.402** |
-| Run 1B (May 20–22) | `streak_dinov3_vitb_longrun.py` (256px) | `all_train_withdm.json` (4,120 img) | 15 | Mac M3 CPU | **0.403** |
-| **Run 2 (May 22–25)** ✅ | `streak_dinov3_vitb_400px.py` (400px) | `all_train_nodm.json` (3,971 img) | 15 | Mac M3 CPU ~72h | **0.468** (mAP=0.423) |
-| Phase D (pending) | ViT-L config | full dataset | 50 | RTX 5070 Ti | TBD |
+| Run | Config | Data | Epochs | Hardware | mAP@0.5 | Status |
+|-----|--------|------|--------|----------|---------|--------|
+| Run 0 (May 18) | `streak_dinov3_vitb.py` (256px) | SatStreaks + BrentImages N1 + **DarkMatters** | 4 | Mac M3 CPU | 0.436 | ⛔ ARCHIVED — trained on DarkMatters data |
+| Run 1A (May 20–22) | `streak_dinov3_vitb_longrun.py` (256px) | `all_train_nodm.json` | 15 | Mac M3 CPU | 0.402 | ⛔ ARCHIVED — warm-started from Run 0 |
+| Run 1B (May 20–22) | `streak_dinov3_vitb_longrun.py` (256px) | `all_train_withdm.json` | 15 | Mac M3 CPU | 0.403 | ⛔ ARCHIVED — warm-started from Run 0 + DM data |
+| Run 2 (May 22–25) | `streak_dinov3_vitb_400px.py` (400px) | `all_train_nodm.json` | 15 | Mac M3 CPU ~72h | 0.468 | ⛔ ARCHIVED — warm-started from Run 0 |
+| **Clean retrain (pending)** | `streak_dinov3_vitb_400px.py` (400px) | `all_train_nodm.json` | 15 | TBD | TBD | ⏳ Cold-start required |
+| Phase D (pending) | ViT-L config | `all_train_nodm.json` | 50 | RTX 5070 Ti | TBD | ⏳ After clean retrain |
 
-Run 1 A/B outcome: DarkMatters contribution is negligible (~0.001 mAP@0.5 difference).
-No-DM variant (1A) selected as winner — avoids consent issue at no performance cost.
-**Note:** Run 1 warm-started from Run 0, which itself trained on DarkMatters data;
-this is not a clean DM ablation (see `docs/training_methods.md §3.1` for details).
+All runs prior to the clean cold-start retrain are archived. Their weights descended
+from Run 0, which was trained on DarkMatters data. DarkMatters data is excluded from
+this project. See `docs/training_methods.md §3.1` for the full lineage record.
 
-**Current deployed model (Run 2) — comprehensive eval on 4 test sets:**
+**Archived Run 2 metrics (historical reference only — weights must not be used):**
 
 | Test set | mAP | mAP@50 | P | R | F1 |
 |----------|-----|--------|---|---|----|
-| Standard (SatStreaks, 308) | 0.600 | **0.755** | 71.2% | 72.4% | 71.8% |
+| Standard (SatStreaks, 308) | 0.600 | 0.755 | 71.2% | 72.4% | 71.8% |
 | Frigate zero-shot (350) | 0.000 | 0.000 | — | — | — |
 | BrentImages Night 2 zero-shot (231) | 0.085 | 0.296 | 47.8% | 31.9% | 38.2% |
-| DarkMatters holdout zero-shot (332) | 0.564 | **0.720** | 71.2% | 69.1% | 70.1% |
 
 BrentImages Night 2 low recall is a resolution artefact (15.6× downscale); tiled
-inference is expected to bring it in line with DarkMatters zero-shot performance.
+inference is expected to resolve this on the clean retrain.
 
 #### 3.4.5 Co-DINO Context
 
@@ -1032,7 +1029,7 @@ The following steps reproduce the headline benchmark results recorded in
    ```
 
 4. Obtain the DINOv3 ViT-B checkpoint:
-   `weights/run_best_400px_nodm/best_coco_bbox_mAP_epoch_15.pth` (~330 MB).
+   `weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth` (~330 MB).
    This checkpoint is not distributed with the repository; it must be trained
    locally (see `docs/training_methods.md`) or obtained from the ARGUS authors.
 
@@ -1046,7 +1043,7 @@ The following steps reproduce the headline benchmark results recorded in
 
 6. Run the benchmark evaluation:
    ```bash
-   MODEL_WEIGHTS=weights/run_best_400px_nodm/best_coco_bbox_mAP_epoch_15.pth \
+   MODEL_WEIGHTS=weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth \
    MODEL_SIZE=dinov3_vitb_multisource USE_DEV_SUBSET=false \
    python -m eval.benchmark \
        --run-pipeline \

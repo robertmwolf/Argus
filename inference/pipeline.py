@@ -945,7 +945,6 @@ def load_model(
             _dinov3_defaults = {
                 "dinov3_vitb":             root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
                 "dinov3_vitl":             root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
-                "dinov3_gt_dm_satstreaks": root / "weights" / "run_gt_dm_satstreaks_dinov3_vitb" / "best_coco_bbox_mAP_epoch_4.pth",
             }
             if model_size in _dinov3_defaults:
                 weights_path = _dinov3_defaults[model_size]
@@ -992,15 +991,13 @@ def resolve_model_specs() -> list[dict]:
     _dinov3_defaults: dict[str, Path] = {
         "dinov3_vitb":             root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
         "dinov3_vitl":             root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
-        "dinov3_gt_dm_satstreaks": root / "weights" / "run_gt_dm_satstreaks_dinov3_vitb" / "best_coco_bbox_mAP_epoch_4.pth",
-        "dinov3_vitb_multisource": root / "weights" / "run_best_400px_nodm" / "best_coco_bbox_mAP_epoch_15.pth",
+        "dinov3_vitb_multisource": root / "weights" / "run_clean_vitb_nodm" / "best_coco_bbox_mAP_epoch_15.pth",
     }
     _meta: dict[str, tuple[str, str]] = {
         "tiny":                    ("DINO Swin-Tiny",                  "SatStreaks"),
         "large":                   ("DINO Swin-Large",                 "SatStreaks"),
         "dinov3_vitb":             ("DINOv3 ViT-B",                    "SatStreaks+GTImages"),
         "dinov3_vitl":             ("DINOv3 ViT-L",                    "SatStreaks+GTImages"),
-        "dinov3_gt_dm_satstreaks": ("DINOv3 ViT-B — GT+DM+SatStreaks", "GTImages+DM+SatStreaks"),
         "dinov3_vitb_multisource": ("DINOv3 Base - Multi-source",      "SatStreaks+BrentImages+Frigate"),
     }
     label, dataset = _meta.get(model_size, (model_size, ""))
@@ -1354,7 +1351,6 @@ def run_with_array(
             _dinov3_inline: dict[str, Path] = {
                 "dinov3_vitb":             root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
                 "dinov3_vitl":             root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
-                "dinov3_gt_dm_satstreaks": root / "weights" / "run_gt_dm_satstreaks_dinov3_vitb" / "best_coco_bbox_mAP_epoch_4.pth",
             }
             if model_size in _dinov3_inline:
                 weights_path = _dinov3_inline[model_size]
