@@ -1,22 +1,30 @@
-"""Tiled inference evaluation on BrentImages Night 2.
+"""Tiled inference evaluation on Frigate images.
 
-Runs tiled inference on every image in brentimages_20260515_eval.json and
-reports COCO mAP + P/R/F1 + per-band recall — identical metrics to
-evaluate_comprehensive.py but using native-resolution tiles instead of
-full-frame downsampling.
+Runs tiled inference on every image in frigate_streaks_eval.json and reports
+COCO mAP + P/R/F1 + per-band recall using the adaptive tiling parameters
+appropriate for Frigate's short streaks (20–80 px native).
 
-Default parameters (native_tile_size=400, overlap=0.5) reproduce the original
-1:1 tiled evaluation.  Pass --native-tile-size to experiment with alternative
-magnifications.
+Default parameters:
+  * ``native_tile_size=110``  — 110×110 px source crop
+  * ``model_input_size=400``  — resize to 400×400 before inference
+  * ``magnification≈3.6×``    — brings 20–80 px streaks to ~70–290 px at model input
+  * ``overlap=0.5``           — high overlap to avoid missing short streaks
+
+The full-frame baseline for Frigate is 0.000 mAP@50 (streaks vanish after
+full-image downsampling to 400 px).  Any improvement from adaptive tiling
+passes the §6 verification criterion.
 
 Usage::
 
-    PYTORCH_ENABLE_MPS_FALLBACK=1 python scripts/eval_brentimages_tiled.py \\
+    PYTORCH_ENABLE_MPS_FALLBACK=1 python scripts/eval_frigate_tiled.py \\
         --checkpoint weights/run_best_400px_nodm/best_coco_bbox_mAP_epoch_15.pth
 
-    # Different native tile size (e.g. larger crops for long streaks):
-    PYTORCH_ENABLE_MPS_FALLBACK=1 python scripts/eval_brentimages_tiled.py \\
-        --checkpoint weights/... --native-tile-size 600
+    # Try a different native tile size:
+    PYTORCH_ENABLE_MPS_FALLBACK=1 python scripts/eval_frigate_tiled.py \\
+        --checkpoint weights/... --native-tile-size 80
+
+Source: adaptive_tiling_plan.md §5 & §6 — files to create / verification plan
+Ref: docs/adaptive_tiling_plan.md
 """
 
 from __future__ import annotations
@@ -37,12 +45,12 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 SHORT_MAX = 269.0
 LONG_MIN  = 800.0
 
-ANN_FILE   = _REPO_ROOT / "data/annotations/brentimages_20260515_eval.json"
+ANN_FILE   = _REPO_ROOT / "data/annotations/frigate_streaks_eval.json"
 CONFIG     = _REPO_ROOT / "models/dino/streak_dinov3_vitb_400px.py"
 
 
 # ---------------------------------------------------------------------------
-# Metric helpers (mirrored from evaluate_comprehensive.py)
+# Metric helpers (mirrored from eval_brentimages_tiled.py)
 # ---------------------------------------------------------------------------
 
 def _bbox_diag(bbox: list[float]) -> float:
@@ -70,6 +78,7 @@ def _bbox_iou(b1: list[float], b2: list[float]) -> float:
 
 
 def compute_pr(gt_coco, pred_list, conf_threshold=0.3, iou_threshold=0.5):
+    """Compute precision, recall, F1 and per-band recall."""
     gt_by_image: dict[int, list] = {}
     for ann in gt_coco.get("annotations", []):
         gt_by_image.setdefault(ann["image_id"], []).append(ann["bbox"])
@@ -104,8 +113,8 @@ def compute_pr(gt_coco, pred_list, conf_threshold=0.3, iou_threshold=0.5):
     f1        = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
 
     # Per-band recall
-    band_gt: dict[str, int]   = {"short": 0, "medium": 0, "long": 0}
-    band_tp: dict[str, int]   = {"short": 0, "medium": 0, "long": 0}
+    band_gt: dict[str, int] = {"short": 0, "medium": 0, "long": 0}
+    band_tp: dict[str, int] = {"short": 0, "medium": 0, "long": 0}
     for ann in gt_coco.get("annotations", []):
         band_gt[_band(ann["bbox"])] += 1
 
@@ -151,7 +160,7 @@ def compute_coco_map(gt_coco, pred_list):
             ev.evaluate()
             ev.accumulate()
             ev.summarize()
-        stats = ev.stats  # [mAP, mAP50, mAP75, mAP_s, mAP_m, mAP_l, ...]
+        stats = ev.stats
         return {
             "mAP":   float(stats[0]),
             "mAP50": float(stats[1]),
@@ -170,20 +179,22 @@ def compute_coco_map(gt_coco, pred_list):
 # ---------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--checkpoint", type=Path,
                         default=_REPO_ROOT / "weights/run_best_400px_nodm/best_coco_bbox_mAP_epoch_15.pth")
     parser.add_argument("--conf",  type=float, default=0.3)
     parser.add_argument(
         "--native-tile-size",
         type=int,
-        default=400,
+        default=110,
         help=(
-            "Native crop footprint in source-image pixels (default 400). "
-            "model_input_size is always 400; magnification = 400 / native_tile_size."
+            "Native crop footprint in source-image pixels.  Default 110 gives "
+            "~3.6× magnification, bringing 20–80 px Frigate streaks to "
+            "~70–290 px at model input."
         ),
     )
-    parser.add_argument("--overlap", type=float, default=0.5)
+    parser.add_argument("--overlap",  type=float, default=0.5)
     parser.add_argument(
         "--interp",
         choices=["bilinear", "lanczos", "cubic", "nearest"],
@@ -193,63 +204,77 @@ def main():
     parser.add_argument(
         "--stitch",
         action="store_true",
-        help="Run collinear-fragment stitcher after NMS (useful for long streaks).",
+        help="Run collinear-fragment stitcher after NMS.",
     )
     parser.add_argument(
         "--stitch-max-gap",
         type=float,
-        default=400.0,
-        help="Max gap in native pixels between collinear fragments to merge.",
+        default=110.0,
+        help="Max gap in native pixels for stitching (default 110 = one Frigate tile).",
     )
-    parser.add_argument("--ann-file",  type=Path, default=ANN_FILE)
+    parser.add_argument("--ann-file", type=Path, default=ANN_FILE)
     args = parser.parse_args()
-    # Back-compat: keep args.tile_size pointing to native_tile_size
-    args.tile_size = args.native_tile_size
 
     sys.path.insert(0, str(_REPO_ROOT))
-
-    from inference.tiled_pipeline import run_tiled_inference
-
-    gt_coco = json.loads(args.ann_file.read_text())
-    images  = gt_coco["images"]
-    logger.info("Evaluating %d images with tiled inference (tile=%d, overlap=%.2f)",
-                len(images), args.tile_size, args.overlap)
-
-    # Load model once and reuse across images
-    from inference.pipeline import _load_model, _select_config
-    from inference.device import get_device
-    import torch
-    import warnings
-    warnings.filterwarnings("ignore", category=UserWarning)  # suppress astropy FITS verify noise
-
-    device = get_device()
-    inf_device = torch.device("cpu") if device.type == "mps" else device
-    config_path = _select_config("dinov3_vitb_multisource")
-    model = _load_model(config_path, args.checkpoint, inf_device)
 
     from inference.tiled_pipeline import (
         tile_image, remap_predictions, nms_predictions,
         stitch_collinear_fragments,
         _clip_predictions_to_image, _pipeline_det_to_prediction,
     )
-    from inference.pipeline import _run_inference
-    import astropy.io.fits as astrofits
-    import numpy as np
+    from inference.pipeline import _load_model, _select_config, _run_inference
+    from inference.device import get_device
+    import torch
+    import warnings
+    warnings.filterwarnings("ignore", category=UserWarning)
 
     model_input_size = 400
     magnification = model_input_size / args.native_tile_size
 
-    def _load_fits_array(path: Path) -> np.ndarray:
-        """Load pixel data only — no WCS, no plate solve, no sidecar lookup."""
+    logger.info(
+        "Frigate tiled eval: native_tile_size=%d, model_input=%d, "
+        "magnification=%.2f×, overlap=%.2f",
+        args.native_tile_size, model_input_size, magnification, args.overlap,
+    )
+
+    if not args.ann_file.exists():
+        logger.error("Annotation file not found: %s", args.ann_file)
+        sys.exit(1)
+
+    gt_coco = json.loads(args.ann_file.read_text())
+    images  = gt_coco["images"]
+    logger.info("Evaluating %d images", len(images))
+
+    device = get_device()
+    inf_device = torch.device("cpu") if device.type == "mps" else device
+    config_path = _select_config("dinov3_vitb_multisource")
+    model = _load_model(config_path, args.checkpoint, inf_device)
+
+    import astropy.io.fits as astrofits
+    import numpy as np
+    import cv2 as _cv2
+
+    def _load_image_array(path: Path) -> np.ndarray:
+        """Load a FITS or PNG/JPEG image as an H×W×3 uint8 array.
+
+        PNG/JPEG: loaded directly with OpenCV (RGB).
+        FITS:     z-score normalised to uint8, duplicated to 3 channels.
+        """
+        suffix = path.suffix.lower()
+        if suffix in {".png", ".jpg", ".jpeg", ".tif", ".tiff"}:
+            bgr = _cv2.imread(str(path))
+            if bgr is None:
+                raise ValueError(f"cv2 could not read {path}")
+            return _cv2.cvtColor(bgr, _cv2.COLOR_BGR2RGB)
+
+        # FITS path
         with astrofits.open(path, memmap=False) as hdul:
-            # Find the first HDU with 2-D image data
             for hdu in hdul:
                 if hdu.data is not None and hdu.data.ndim == 2:
                     data = hdu.data.astype(np.float32)
                     break
             else:
                 raise ValueError(f"No 2-D image HDU found in {path}")
-        # Z-score normalise to uint8, same as FITSLoader
         mean, std = data.mean(), data.std()
         if std > 0:
             data = (data - mean) / std
@@ -259,17 +284,17 @@ def main():
 
     all_preds = []
     t_start = time.perf_counter()
+    resize_to = model_input_size if magnification != 1.0 else None
 
     for i, img_info in enumerate(images, 1):
         img_path = Path(img_info["file_name"])
         iid = img_info["id"]
         try:
-            arr = _load_fits_array(img_path)
+            arr = _load_image_array(img_path)
         except Exception as e:
             logger.warning("Failed to load %s: %s — skipping", img_path.name, e)
             continue
 
-        resize_to = model_input_size if magnification != 1.0 else None
         tiles = list(tile_image(arr, tile_size=args.native_tile_size,
                                 overlap=args.overlap, resize_to=resize_to,
                                 interp=args.interp))
@@ -277,7 +302,7 @@ def main():
         for tile, x0, y0 in tiles:
             dets = _run_inference(model, tile, image_size=model_input_size,
                                   confidence_threshold=0.05,
-                                  model_name="tiled_eval")
+                                  model_name="tiled_frigate_eval")
             tile_preds = [_pipeline_det_to_prediction(d) for d in dets]
             preds_this.extend(remap_predictions(tile_preds, x0, y0,
                                                 magnification=magnification))
@@ -292,7 +317,7 @@ def main():
         )
         for p in final:
             all_preds.append({
-                "image_id":   iid,
+                "image_id":    iid,
                 "category_id": 1,
                 "bbox":        p["bbox"],
                 "score":       p["score"],
@@ -307,13 +332,13 @@ def main():
                 len(all_preds), len(images))
 
     # Metrics
-    pr = compute_pr(gt_coco, all_preds, conf_threshold=args.conf)
+    pr   = compute_pr(gt_coco, all_preds, conf_threshold=args.conf)
     coco = compute_coco_map(gt_coco, all_preds)
 
-    mag_str = f"{magnification:.2f}×" if magnification != 1.0 else "1× (native)"
+    mag_str = f"{magnification:.2f}×"
     stitch_label = f", stitch(gap≤{args.stitch_max_gap:.0f}px)" if args.stitch else ""
     print(
-        f"\n=== BrentImages Night 2 — TILED INFERENCE "
+        f"\n=== Frigate — ADAPTIVE TILED INFERENCE "
         f"(native_tile={args.native_tile_size}, model_input=400, "
         f"mag={mag_str}, overlap={args.overlap}, interp={args.interp}{stitch_label}) ==="
     )
@@ -321,12 +346,11 @@ def main():
         print(f"COCO mAP:       {coco['mAP']:.3f}")
         print(f"COCO mAP@50:    {coco['mAP50']:.3f}")
         print(f"COCO mAP@75:    {coco['mAP75']:.3f}")
-        print(f"COCO mAP_m:     {coco['mAP_m']:.3f}")
-        print(f"COCO mAP_l:     {coco['mAP_l']:.3f}")
+        print(f"COCO mAP_s:     {coco['mAP_s']:.3f}  (short streaks)")
     print(f"\nP/R @ conf≥{args.conf}, IoU≥0.50:")
     print(f"  Precision: {pr['precision']:.1%}   Recall: {pr['recall']:.1%}   F1: {pr['f1']:.1%}")
     print(f"  TP={pr['tp']}  FP={pr['fp']}  FN={pr['fn']}  GT={pr['n_gt']}")
-    print(f"\nPer-band recall:")
+    print(f"\nPer-band recall (at model input after {mag_str} magnification):")
     for band in ("short", "medium", "long"):
         n = pr['band_gt'][band]
         t = pr['band_tp'][band]
@@ -334,18 +358,12 @@ def main():
         print(f"  {band:6s}: {r:.1%}  (TP={t}, n={n})")
     print()
 
-    # Compare with full-frame result
-    print("=== COMPARISON: full-frame (original eval) vs tiled ===")
-    print("  Full-frame:  mAP@50=0.296  P=47.8%  R=31.9%  medium=14.2%  long=60.8%")
+    # Verification criterion (§6.1 in adaptive_tiling_plan.md)
+    print("=== VERIFICATION (adaptive_tiling_plan.md §6.1) ===")
+    print("  Baseline (full-frame):   mAP@50 = 0.000  (streaks vanish at 400 px resize)")
     if coco:
-        med_n = pr['band_gt']['medium']
-        lng_n = pr['band_gt']['long']
-        med_r = pr['band_tp']['medium'] / med_n if med_n else float('nan')
-        lng_r = pr['band_tp']['long'] / lng_n if lng_n else float('nan')
-        print(
-            f"  Tiled:       mAP@50={coco['mAP50']:.3f}  P={pr['precision']:.1%}  "
-            f"R={pr['recall']:.1%}  medium={med_r:.1%}  long={lng_r:.1%}"
-        )
+        result = "✅ PASS" if coco['mAP50'] > 0.0 else "❌ FAIL — no improvement over baseline"
+        print(f"  Adaptive tiling result:  mAP@50 = {coco['mAP50']:.3f}  {result}")
 
 
 if __name__ == "__main__":

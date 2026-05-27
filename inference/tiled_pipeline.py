@@ -1,12 +1,29 @@
 """Tiled inference for ARGUS satellite streak detection.
 
-Large Frigate frames can contain very short streaks that disappear when the
-whole image is resized before inference.  This module runs the existing ARGUS
-DINO inference path on native-resolution square tiles, remaps tile detections
-back into full-image coordinates, and merges cross-tile duplicates with NMS.
+Large frames can contain streaks that are either too large (BrentImages, 440–1450 px
+native) or too small (Frigate, 20–80 px native) for the whole-image inference path.
+This module tiles each frame with a configurable native_tile_size, optionally
+upsamples each crop to ``model_input_size`` before inference, remaps tile
+detections back to full-image coordinates (accounting for the magnification), and
+merges cross-tile duplicates with NMS.
 
-The tile_size and overlap parameters are explicit because the same values
-should be used when Frigate images are later re-annotated into training tiles.
+Key parameters:
+
+* ``native_tile_size`` — crop footprint in **source-image pixels**.
+* ``model_input_size`` — resize target passed to the model (always 400 for current
+  checkpoints).  ``magnification = model_input_size / native_tile_size``.
+
+For Frigate (streaks ~40 px native, target ~150 px at model input)::
+
+    native_tile_size ≈ 400 × (40 / 150) ≈ 107 px  →  use 110 px
+    magnification    ≈ 400 / 110 ≈ 3.6×
+
+The ``tile_size`` and ``image_size`` parameters on ``run_tiled_inference`` are
+deprecated aliases for ``native_tile_size`` and ``model_input_size`` respectively.
+They are kept for backward-compatibility and will be removed in a future release.
+
+Source: adaptive_tiling_plan.md §2 — decoupled native/model tile sizes
+Ref: docs/adaptive_tiling_plan.md
 """
 
 from __future__ import annotations
@@ -26,24 +43,103 @@ logger = logging.getLogger(__name__)
 Prediction = dict[str, Any]
 
 
+def select_tile_params(
+    image_shape: tuple[int, int],
+    expected_streak_native_px: float,
+    target_streak_model_px: float = 150.0,
+    model_input_size: int = 400,
+    min_native_tile: int = 80,
+    max_downscale: float = 3.0,
+) -> dict[str, Any]:
+    """Choose ``native_tile_size`` and ``overlap`` for adaptive tiling.
+
+    The native tile size is computed so that a streak of
+    ``expected_streak_native_px`` pixels in the source image appears at
+    ``target_streak_model_px`` pixels at model input after resizing the crop.
+
+    Args:
+        image_shape: ``(H, W)`` of the source image in native pixels.
+        expected_streak_native_px: Estimated streak length in source pixels.
+        target_streak_model_px: Desired streak size at model input (px).
+            Default 150 px sits comfortably inside the model's training range.
+        model_input_size: Resize target for model input (always 400 for current
+            checkpoints).
+        min_native_tile: Floor on native tile size to prevent absurdly small
+            crops that degrade in quality when upsampled.
+        max_downscale: Ceiling expressed as a downscale factor relative to
+            ``model_input_size``.  A value of 3.0 means the largest allowed
+            native tile is ``3 × model_input_size`` pixels.
+
+    Returns:
+        Dict with keys ``"native_tile_size"`` (``int``) and
+        ``"overlap"`` (``float``).  The overlap is chosen so that the tile
+        stride never exceeds one estimated max-streak length, preventing a
+        streak from falling entirely between tile boundaries.
+
+    Example:
+        >>> select_tile_params((1555, 2325), 40.0)
+        {'native_tile_size': 107, 'overlap': 0.5}
+
+    Source: adaptive_tiling_plan.md §2.2 — automatic parameter selection
+    Ref: docs/adaptive_tiling_plan.md
+    """
+    native_tile_size = int(
+        model_input_size * expected_streak_native_px / target_streak_model_px
+    )
+    native_tile_size = max(native_tile_size, min_native_tile)
+    native_tile_size = min(native_tile_size, int(model_input_size * max_downscale))
+
+    # Overlap must cover at least one max-streak length so no streak is missed.
+    max_streak_native = expected_streak_native_px * 3.0  # conservative upper bound
+    min_overlap_frac = max_streak_native / native_tile_size
+    overlap = float(min(0.5, max(0.25, min_overlap_frac)))
+
+    return {"native_tile_size": native_tile_size, "overlap": overlap}
+
+
+_INTERP_CODES: dict[str, int] = {
+    # Maps user-facing names to OpenCV interpolation flag integers (stable constants).
+    "nearest":  0,   # cv2.INTER_NEAREST
+    "bilinear": 1,   # cv2.INTER_LINEAR  — default, good up to ~4× upscale
+    "cubic":    2,   # cv2.INTER_CUBIC
+    "lanczos":  4,   # cv2.INTER_LANCZOS4 — highest quality, ~2× slower than bilinear
+}
+
+
 def tile_image(
     img_array: "np.ndarray",
     tile_size: int,
     overlap: float,
+    resize_to: int | None = None,
+    interp: str = "bilinear",
 ) -> Iterator[tuple["np.ndarray", int, int]]:
     """Yield square, padded image tiles that cover the full image.
 
+    When ``resize_to`` is set and differs from ``tile_size``, each crop is
+    resized to ``resize_to × resize_to`` pixels before yielding.  The
+    ``(x0, y0)`` offsets are **always in native source-image pixels**,
+    regardless of resize; callers must scale bounding boxes by
+    ``1 / (resize_to / tile_size)`` when remapping back to native coordinates.
+
     Args:
         img_array: Image array with shape ``(H, W)`` or ``(H, W, C)``.
-        tile_size: Square tile edge length in pixels.
+        tile_size: Native crop edge length in source-image pixels.
         overlap: Fractional overlap between neighboring tiles in ``[0, 1)``.
+        resize_to: If set, resize each crop to this size before yielding.
+            Use ``model_input_size`` (e.g. 400) when tiling at a smaller
+            native scale for upsampling magnification.
+        interp: Interpolation method for resize, one of ``"bilinear"``
+            (default), ``"lanczos"``, ``"cubic"``, ``"nearest"``.
+            ``"lanczos"`` preserves more high-frequency edge detail for the
+            ViT backbone at the cost of ~2× slower resize; see
+            docs/adaptive_tiling_plan.md §4 Q3.
 
     Yields:
         Tuples of ``(tile_array, x0, y0)`` where ``x0``/``y0`` are the tile's
-        top-left coordinate in the original image coordinate system.
+        top-left coordinate in the **original** image coordinate system.
 
     Raises:
-        ValueError: If tile parameters are invalid.
+        ValueError: If tile parameters or interpolation name are invalid.
     """
     import numpy as np
 
@@ -53,6 +149,10 @@ def tile_image(
         raise ValueError("overlap must be in the range [0, 1)")
     if img_array.ndim not in {2, 3}:
         raise ValueError("img_array must have shape (H, W) or (H, W, C)")
+    if interp not in _INTERP_CODES:
+        raise ValueError(
+            f"interp must be one of {list(_INTERP_CODES)}; got {interp!r}"
+        )
 
     h_img, w_img = img_array.shape[:2]
     if h_img <= 0 or w_img <= 0:
@@ -71,25 +171,55 @@ def tile_image(
         pad_spec = (*pad_spec, (0, 0))
     padded = np.pad(img_array, pad_spec, mode="edge")
 
+    do_resize = resize_to is not None and resize_to != tile_size
+    interp_code = _INTERP_CODES[interp]
+
     for y0 in y_starts:
         for x0 in x_starts:
-            yield padded[y0:y0 + tile_size, x0:x0 + tile_size].copy(), x0, y0
+            crop = padded[y0:y0 + tile_size, x0:x0 + tile_size].copy()
+            if do_resize:
+                import cv2  # lazy import — only needed when magnification ≠ 1
+                crop = cv2.resize(crop, (resize_to, resize_to),
+                                  interpolation=interp_code)
+            yield crop, x0, y0
 
 
-def remap_predictions(preds: list[Prediction], x0: int, y0: int) -> list[Prediction]:
+def remap_predictions(
+    preds: list[Prediction],
+    x0: int,
+    y0: int,
+    magnification: float = 1.0,
+) -> list[Prediction]:
     """Add tile offsets to ``[x, y, w, h]`` prediction boxes.
 
+    When the tile was upsampled before inference (``magnification > 1``),
+    bounding boxes returned by the model are in *resized-tile* coordinates and
+    must be divided by the magnification before the tile offset is applied.
+
     Args:
-        preds: Predictions with COCO-style ``bbox`` values ``[x, y, w, h]``.
-        x0: Tile X offset in the full image.
-        y0: Tile Y offset in the full image.
+        preds: Predictions with COCO-style ``bbox`` values ``[x, y, w, h]``
+            in the tile's model-input coordinate system.
+        x0: Tile X offset in the full image (native source pixels).
+        y0: Tile Y offset in the full image (native source pixels).
+        magnification: ``model_input_size / native_tile_size``.  Pass a value
+            other than 1.0 when the tile was resized before inference.
 
     Returns:
-        New prediction dictionaries in full-image coordinates.
+        New prediction dictionaries in full-image native-pixel coordinates.
+
+    Source: adaptive_tiling_plan.md §2.4 — prediction coordinate remapping
+    Ref: docs/adaptive_tiling_plan.md
     """
     remapped: list[Prediction] = []
     for pred in preds:
         x, y, w, h = [float(v) for v in pred["bbox"]]
+        if magnification != 1.0:
+            # Step 1: tile model coords → native tile coords
+            x /= magnification
+            y /= magnification
+            w /= magnification
+            h /= magnification
+        # Step 2: native tile coords → full-image coords
         updated = dict(pred)
         updated["bbox"] = [x + float(x0), y + float(y0), w, h]
         remapped.append(updated)
@@ -125,31 +255,247 @@ def nms_predictions(
     return [preds[i] for i in keep_indices]
 
 
+def stitch_collinear_fragments(
+    preds: list[Prediction],
+    max_gap_px: float = 400.0,
+    max_perp_ratio: float = 0.8,
+    angle_tol_deg: float = 20.0,
+    min_aspect_ratio: float = 1.5,
+) -> list[Prediction]:
+    """Merge non-overlapping collinear streak fragments from multi-tile inference.
+
+    After NMS, long streaks that span multiple tiles appear as 2–3 separate
+    detections with no bounding-box overlap.  IoU NMS cannot merge them.
+    This function identifies such fragments by checking:
+
+    1. Both boxes have a similar aspect-ratio-derived streak angle
+       (within ``angle_tol_deg``).
+    2. The center-to-center vector is approximately aligned with that shared
+       angle (within ``angle_tol_deg``).
+    3. The gap between the projected extents along the streak direction is
+       ≤ ``max_gap_px``.
+    4. The perpendicular center offset is ≤ ``max_perp_ratio`` × the average
+       transverse box width.
+
+    Boxes with an axis-aligned aspect ratio below ``min_aspect_ratio`` are
+    excluded from stitching (near-square boxes have ambiguous angle).
+
+    Compatible fragments are merged into a single enclosing bounding box with
+    the maximum score of the merged group.
+
+    Args:
+        preds: Post-NMS predictions in full-image coordinates with
+            ``bbox`` in ``[x, y, w, h]`` format.
+        max_gap_px: Maximum gap (native source pixels) between two boxes along
+            the streak direction.  Set to ``native_tile_size`` for BrentImages-
+            style long streaks; smaller for dense-field images.
+        max_perp_ratio: Maximum perpendicular center offset expressed as a
+            fraction of the average transverse box width.  0.5 allows up to
+            half-a-box-width of lateral displacement.
+        angle_tol_deg: Angular tolerance in degrees for both the box-angle
+            agreement check and the center-direction alignment check.
+        min_aspect_ratio: Minimum axis-aligned aspect ratio (longer / shorter
+            side) to consider a box as a streak candidate.  Boxes below this
+            threshold are returned unchanged without stitching.
+
+    Returns:
+        Predictions after merging collinear fragments, sorted by descending
+        score.  Singletons (no compatible pair found) pass through unchanged.
+
+    Source: adaptive_tiling_plan.md §4 Q2 — long-streak fragmentation
+    Ref: docs/adaptive_tiling_plan.md
+    """
+    import math
+
+    if len(preds) < 2:
+        return list(preds)
+
+    angle_tol = math.radians(angle_tol_deg)
+
+    def _center(pred: Prediction) -> tuple[float, float]:
+        x, y, w, h = pred["bbox"]
+        return x + w / 2.0, y + h / 2.0
+
+    def _angle(pred: Prediction) -> float:
+        """Streak angle from bbox aspect ratio, in [0, π/2]."""
+        _, _, w, h = pred["bbox"]
+        return math.atan2(max(h, 1e-6), max(w, 1e-6))
+
+    def _aspect(pred: Prediction) -> float:
+        _, _, w, h = pred["bbox"]
+        lo = min(w, h)
+        hi = max(w, h)
+        return hi / max(lo, 1e-6)
+
+    def _merge(pA: Prediction, pB: Prediction) -> Prediction:
+        """Return the union bounding box with the max score."""
+        xA, yA, wA, hA = pA["bbox"]
+        xB, yB, wB, hB = pB["bbox"]
+        x1 = min(xA, xB)
+        y1 = min(yA, yB)
+        x2 = max(xA + wA, xB + wB)
+        y2 = max(yA + hA, yB + hB)
+        merged = dict(pA)
+        merged["bbox"] = [x1, y1, x2 - x1, y2 - y1]
+        merged["score"] = max(
+            float(pA.get("score", 0.0)),
+            float(pB.get("score", 0.0)),
+        )
+        return merged
+
+    angles = [_angle(p) for p in preds]
+    aspects = [_aspect(p) for p in preds]
+    centers = [_center(p) for p in preds]
+    n = len(preds)
+
+    edges: list[tuple[int, int]] = []
+    for i in range(n):
+        if aspects[i] < min_aspect_ratio:
+            continue
+        for j in range(i + 1, n):
+            if aspects[j] < min_aspect_ratio:
+                continue
+
+            theta_i = angles[i]
+            theta_j = angles[j]
+
+            # 1. Both boxes must have similar streak angle.
+            if abs(theta_i - theta_j) > angle_tol:
+                continue
+
+            theta_avg = (theta_i + theta_j) / 2.0
+            cos_t = math.cos(theta_avg)
+            sin_t = math.sin(theta_avg)
+
+            cx_i, cy_i = centers[i]
+            cx_j, cy_j = centers[j]
+            dx = cx_j - cx_i
+            dy = cy_j - cy_i
+            dist = math.hypot(dx, dy)
+            if dist < 1.0:
+                continue  # identical centres; NMS would already merge these
+
+            # 2. Center-to-center direction must be ≈ streak direction.
+            #    Map to [0, π/2] so both left→right and right→left are accepted.
+            phi = math.atan2(abs(dy), abs(dx))
+            if abs(phi - theta_avg) > angle_tol:
+                continue
+
+            # 3. Perpendicular offset of centres (projected onto v ⊥ streak).
+            #    v = (−sin θ, cos θ)
+            perp_offset = abs(-sin_t * dx + cos_t * dy)
+            _, _, wi, hi = preds[i]["bbox"]
+            _, _, wj, hj = preds[j]["bbox"]
+            # Transverse width of each box = projection of box dims onto v.
+            transverse_i = wi * sin_t + hi * cos_t
+            transverse_j = wj * sin_t + hj * cos_t
+            avg_transverse = (transverse_i + transverse_j) / 2.0
+            if perp_offset > max_perp_ratio * avg_transverse:
+                continue
+
+            # 4. Gap along streak direction must be ≤ max_gap_px.
+            #    Project each box's interval onto u = (cos θ, sin θ).
+            proj_i = cx_i * cos_t + cy_i * sin_t
+            proj_j = cx_j * cos_t + cy_j * sin_t
+            # Half-extents along streak direction.
+            half_i = (wi * cos_t + hi * sin_t) / 2.0
+            half_j = (wj * cos_t + hj * sin_t) / 2.0
+            # Ensure left box comes first for gap formula.
+            if proj_i > proj_j:
+                proj_i, proj_j = proj_j, proj_i
+                half_i, half_j = half_j, half_i
+            gap = (proj_j - half_j) - (proj_i + half_i)
+            if gap > max_gap_px:
+                continue
+
+            edges.append((i, j))
+
+    # Merge connected components.
+    groups = _union_find_components(n, edges)
+    result: list[Prediction] = []
+    for group in groups:
+        merged = preds[group[0]]
+        for k in group[1:]:
+            merged = _merge(merged, preds[k])
+        result.append(merged)
+
+    result.sort(key=lambda p: float(p.get("score", 0.0)), reverse=True)
+    return result
+
+
 def run_tiled_inference(
     image_path: str | Path,
     model_config: str | Path,
     checkpoint: str | Path,
-    tile_size: int = 400,
+    native_tile_size: int = 400,
+    model_input_size: int = 400,
     overlap: float = 0.5,
     conf_threshold: float = 0.3,
+    interp: str = "bilinear",
+    stitch: bool = False,
+    stitch_max_gap_px: float = 400.0,
+    # Deprecated aliases — kept for backward compatibility.
+    tile_size: int | None = None,
+    image_size: int | None = None,
 ) -> list[Prediction]:
     """Run DINO inference over native-resolution overlapping tiles.
+
+    The ``native_tile_size`` controls the crop footprint in source pixels.
+    Each crop is resized to ``model_input_size`` before inference when
+    ``native_tile_size != model_input_size``, yielding a magnification of
+    ``model_input_size / native_tile_size``.
+
+    For Frigate images (20–80 px streaks) use ``native_tile_size=110`` with
+    the default ``model_input_size=400`` to achieve ~3.6× magnification,
+    bringing streaks into the model's training sweet-spot of 70–290 px.
+
+    For BrentImages long streaks (440–1450 px) that span 3+ tiles, set
+    ``stitch=True`` to merge non-overlapping collinear fragments after NMS.
 
     Args:
         image_path: FITS, PNG, or JPEG image path.
         model_config: MMDetection config path, or an ARGUS model size alias
             accepted by ``inference.pipeline._select_config``.
         checkpoint: Model checkpoint path.
-        tile_size: Square tile edge length in pixels. Use the same value for
-            later tiled Frigate training annotations.
-        overlap: Fractional tile overlap in ``[0, 1)``. Use the same value for
-            later tiled Frigate training annotations.
+        native_tile_size: Crop footprint in source-image pixels.  Use the same
+            value for later tiled training annotations.
+        model_input_size: Resize target before model inference (always 400 for
+            current checkpoints).
+        overlap: Fractional tile overlap in ``[0, 1)``.  Use the same value for
+            later tiled training annotations.
         conf_threshold: Minimum model score to keep before cross-tile NMS.
+        interp: Interpolation method for tile resize — ``"bilinear"`` (default)
+            or ``"lanczos"`` (higher quality, ~2× slower).  See Q3 in
+            docs/adaptive_tiling_plan.md for the trade-off discussion.
+        stitch: If ``True``, run ``stitch_collinear_fragments()`` after NMS to
+            merge non-overlapping collinear long-streak fragments.  Primarily
+            useful for BrentImages-style 1450 px streaks.  Off by default.
+        stitch_max_gap_px: Passed to ``stitch_collinear_fragments`` when
+            ``stitch=True``.  Defaults to ``native_tile_size``.
+        tile_size: **Deprecated** alias for ``native_tile_size``.
+        image_size: **Deprecated** alias for ``model_input_size``.
 
     Returns:
         Final predictions as dictionaries with ``bbox`` in ``[x, y, w, h]``
-        full-image coordinates plus ``score`` and ``category_id``.
+        full-image native-pixel coordinates plus ``score`` and ``category_id``.
+
+    Source: adaptive_tiling_plan.md §2.3 — updated run_tiled_inference signature
+    Ref: docs/adaptive_tiling_plan.md
     """
+    # Handle deprecated aliases.
+    if tile_size is not None:
+        logger.warning(
+            "run_tiled_inference: 'tile_size' is deprecated; use 'native_tile_size'."
+        )
+        native_tile_size = tile_size
+    if image_size is not None:
+        logger.warning(
+            "run_tiled_inference: 'image_size' is deprecated; use 'model_input_size'."
+        )
+        model_input_size = image_size
+
+    magnification = model_input_size / native_tile_size
+
     t0 = time.perf_counter()
     image_path = Path(image_path)
     checkpoint = Path(checkpoint)
@@ -175,30 +521,49 @@ def run_tiled_inference(
 
     model = _load_model(config_path, checkpoint, inference_device)
 
-    predictions: list[Prediction] = []
-    tiles = list(tile_image(img_array, tile_size=tile_size, overlap=overlap))
+    resize_to = model_input_size if magnification != 1.0 else None
+    tiles = list(
+        tile_image(img_array, tile_size=native_tile_size, overlap=overlap,
+                   resize_to=resize_to, interp=interp)
+    )
     logger.info(
-        "Running tiled inference on %s: %d tiles, tile_size=%d, overlap=%.2f",
-        image_path.name, len(tiles), tile_size, overlap,
+        "Running tiled inference on %s: %d tiles, native_tile_size=%d, "
+        "model_input_size=%d, magnification=%.2f×, overlap=%.2f, interp=%s",
+        image_path.name,
+        len(tiles),
+        native_tile_size,
+        model_input_size,
+        magnification,
+        overlap,
+        interp,
     )
 
+    predictions: list[Prediction] = []
     for idx, (tile, x0, y0) in enumerate(tiles, 1):
         tile_dets = _run_inference(
             model,
             tile,
-            image_size=tile_size,
+            image_size=model_input_size,
             confidence_threshold=conf_threshold,
             model_name="tiled_dino",
         )
         tile_preds = [_pipeline_det_to_prediction(det) for det in tile_dets]
-        predictions.extend(remap_predictions(tile_preds, x0, y0))
+        predictions.extend(remap_predictions(tile_preds, x0, y0, magnification=magnification))
         logger.debug(
             "tile %d/%d at (%d,%d): %d detections",
             idx, len(tiles), x0, y0, len(tile_preds),
         )
 
+    after_nms = nms_predictions(predictions, iou_threshold=0.4)
+    if stitch:
+        n_before = len(after_nms)
+        after_nms = stitch_collinear_fragments(after_nms, max_gap_px=stitch_max_gap_px)
+        logger.info(
+            "Collinear stitching: %d detections → %d after merging fragments",
+            n_before, len(after_nms),
+        )
     final = _clip_predictions_to_image(
-        nms_predictions(predictions, iou_threshold=0.4),
+        after_nms,
         width=img_array.shape[1],
         height=img_array.shape[0],
     )
@@ -216,11 +581,15 @@ def save_visualization(
 ) -> Path:
     """Save a PNG visualization with tile grid and detections drawn.
 
+    The tile grid is drawn using the **native** tile size (source-image pixels),
+    which matches the actual crop footprint regardless of ``model_input_size``.
+
     Args:
         image_path: Source image path.
-        predictions: Full-image predictions with ``[x, y, w, h]`` boxes.
+        predictions: Full-image predictions with ``[x, y, w, h]`` boxes in
+            native-pixel coordinates.
         output_dir: Directory where the visualization should be written.
-        tile_size: Tile size used for inference.
+        tile_size: Native tile size (source-image pixels) used for inference.
         overlap: Tile overlap used for inference.
 
     Returns:
@@ -275,6 +644,45 @@ def save_visualization(
     out_path = output_dir / f"{image_path.stem}_tiled.png"
     cv2.imwrite(str(out_path), vis)
     return out_path
+
+
+def _union_find_components(n: int, edges: list[tuple[int, int]]) -> list[list[int]]:
+    """Return connected components as lists of node indices (union-find).
+
+    Args:
+        n: Number of nodes (indices 0..n-1).
+        edges: List of ``(i, j)`` pairs indicating that nodes ``i`` and ``j``
+            are in the same component.
+
+    Returns:
+        List of components, each component being a list of node indices.
+    """
+    parent = list(range(n))
+    rank = [0] * n
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]  # path compression
+            i = parent[i]
+        return i
+
+    def union(i: int, j: int) -> None:
+        ri, rj = find(i), find(j)
+        if ri == rj:
+            return
+        if rank[ri] < rank[rj]:
+            ri, rj = rj, ri
+        parent[rj] = ri
+        if rank[ri] == rank[rj]:
+            rank[ri] += 1
+
+    for i, j in edges:
+        union(i, j)
+
+    groups: dict[int, list[int]] = {}
+    for i in range(n):
+        groups.setdefault(find(i), []).append(i)
+    return list(groups.values())
 
 
 def _tile_starts(length: int, tile_size: int, stride: int) -> list[int]:
@@ -409,10 +817,47 @@ def _parse_args() -> argparse.Namespace:
         help="MMDetection config path or ARGUS model size alias",
     )
     parser.add_argument("--checkpoint", required=True, help="Path to model checkpoint")
-    parser.add_argument("--tile-size", type=int, default=400, help="Square tile size in pixels")
+    parser.add_argument(
+        "--native-tile-size",
+        type=int,
+        default=400,
+        help=(
+            "Native crop footprint in source-image pixels (default 400). "
+            "Set to ~110 for Frigate images to achieve ~3.6× upsampling magnification."
+        ),
+    )
+    parser.add_argument(
+        "--model-input-size",
+        type=int,
+        default=400,
+        help="Resize target before model inference (default 400; matches current checkpoints).",
+    )
     parser.add_argument("--overlap", type=float, default=0.5, help="Fractional tile overlap")
     parser.add_argument(
         "--conf-threshold", type=float, default=0.3, help="Minimum detection score"
+    )
+    parser.add_argument(
+        "--interp",
+        choices=list(_INTERP_CODES),
+        default="bilinear",
+        help=(
+            "Interpolation method for tile resize (default: bilinear). "
+            "Use 'lanczos' for higher quality at ~2× the resize cost."
+        ),
+    )
+    parser.add_argument(
+        "--stitch",
+        action="store_true",
+        help=(
+            "Run collinear-fragment stitcher after NMS to merge non-overlapping "
+            "long-streak fragments (useful for BrentImages 1450 px streaks)."
+        ),
+    )
+    parser.add_argument(
+        "--stitch-max-gap",
+        type=float,
+        default=400.0,
+        help="Max gap in native pixels between collinear fragments to merge (default 400).",
     )
     parser.add_argument(
         "--output", required=True, help="Directory for visualization and JSON output"
@@ -433,14 +878,19 @@ def main() -> None:
         image_path=args.image,
         model_config=args.model_config,
         checkpoint=args.checkpoint,
-        tile_size=args.tile_size,
+        native_tile_size=args.native_tile_size,
+        model_input_size=args.model_input_size,
         overlap=args.overlap,
         conf_threshold=args.conf_threshold,
+        interp=args.interp,
+        stitch=args.stitch,
+        stitch_max_gap_px=args.stitch_max_gap,
     )
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
     vis_path = save_visualization(
-        args.image, predictions, output_dir, args.tile_size, args.overlap
+        args.image, predictions, output_dir,
+        tile_size=args.native_tile_size, overlap=args.overlap,
     )
     json_path = output_dir / f"{Path(args.image).stem}_tiled_predictions.json"
     json_path.write_text(json.dumps(predictions, indent=2), encoding="utf-8")
