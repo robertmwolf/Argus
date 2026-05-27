@@ -144,6 +144,27 @@ DETECTOR_PROFILES: dict[str, DetectorProfile] = {
         notes="comprehensive_eval_20260526; P=71.2% R=72.4% at conf≥0.30; "
               "long dominant (295 GT annotations vs 11 medium)",
     ),
+    # Source: comprehensive_eval_20260526/report.md — same checkpoint
+    "dinov3_gt_dm_satstreaks": DetectorProfile(
+        name="DINOv3 GT+DM+SatStreaks",
+        precision=0.712,
+        recall=0.724,
+        band_weights={"short": 0.2, "medium": 0.9, "long": 1.3},
+        notes="Same checkpoint as dinov3_vitb_multisource (run_best_400px_nodm); "
+              "measured P/R from comprehensive_eval_20260526",
+    ),
+    # Run 3 — cold-start, DM-free, all_train_nodm v2 dataset.
+    # Epoch 3 checkpoint: mAP=0.418, mAP@50=0.550.  Full per-band P/R not yet
+    # measured; using multisource estimates as a conservative placeholder until
+    # epoch 15 eval is complete.  Update after final training completes.
+    "dinov3_vitb_run3": DetectorProfile(
+        name="DINOv3 ViT-B Run 3 (cold-start, nodm)",
+        precision=0.712,
+        recall=0.724,
+        band_weights={"short": 0.2, "medium": 0.9, "long": 1.3},
+        notes="est. from multisource baseline; epoch-3 mAP=0.418/mAP@50=0.550; "
+              "update with direct P/R after epoch 15 eval",
+    ),
     # Source: multi_method_benchmark.json dinov3_vitb entry (older model, low-threshold run)
     # Re-estimated from mAP@0.5=0.74; per-band similar to multisource.
     "dinov3_vitb": DetectorProfile(
