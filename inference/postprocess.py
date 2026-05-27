@@ -614,10 +614,9 @@ def fuse_group_geometries(detections: list[dict]) -> list[dict]:
     Single-member groups are left unchanged.
 
     Geometry primary selection prefers tight oriented OBBs (aspect ratio ≥ 5)
-    over loose axis-aligned boxes.  When DINO and a YOLO-OBB detector both fire
-    on the same streak, DINO's axis-aligned bbox is very large (~half the image)
-    while YOLO's true OBB is narrow (aspect ~15:1).  Using the tight OBB as the
-    axis seed produces a more accurate fused geometry and better mAP@0.75.
+    over loose axis-aligned boxes.  When a classical detector fires alongside DINO,
+    DINO's axis-aligned bbox may be very large while a classical OBB is narrow.
+    Using the tight OBB as the axis seed produces more accurate fused geometry.
 
     Args:
         detections: Detection dicts with ``streak_id``, ``obb``, and confidence.
@@ -636,8 +635,8 @@ def fuse_group_geometries(detections: list[dict]) -> list[dict]:
             continue
 
         # Prefer a tight OBB (aspect ≥ 5:1) as the axis seed; fall back to
-        # longest OBB as before.  This ensures YOLO's precise angle is used
-        # instead of DINO's loose axis-aligned bbox when both are present.
+        # longest OBB as before.  Tight OBBs (e.g. classical detectors) provide
+        # a more accurate angle than DINO's loose axis-aligned bbox.
         _OBB_AR_THRESHOLD = 5.0
         primary = max(
             group,

@@ -1,10 +1,9 @@
-"""Head-to-head benchmark: DINO vs YOLO11-OBB baseline on a test split.
+"""Head-to-head benchmark: DINO on a test split.
 
 Usage:
     # Run against a pre-computed predictions file (no GPU needed):
     python -m eval.benchmark \\
         --dino-predictions results/dino_predictions.json \\
-        --yolo-predictions results/yolo_predictions.json \\
         --annotations data/annotations/test.json \\
         --output results/phase8_benchmark.json
 
@@ -93,20 +92,17 @@ def load_ground_truth(annotations_path: str | Path) -> list[dict]:
 
 def run_pipeline_predictions(
     annotations_path: str | Path,
-    model: str = "dino",
 ) -> list[dict]:
     """Run the inference pipeline on every image in the annotation file.
 
     Args:
         annotations_path: Path to COCO JSON annotation file.
-        model: "dino" (uses inference/pipeline.py) or "yolo" (uses YOLO baseline).
 
     Returns:
         List of prediction dicts compatible with evaluate().
 
     Raises:
         FileNotFoundError: If model weights are not found.
-        NotImplementedError: If model is not "dino" or "yolo".
     """
     with open(annotations_path) as f:
         coco = json.load(f)
@@ -117,155 +113,30 @@ def run_pipeline_predictions(
 
     predictions = []
 
-    if model == "dino":
-        from inference.pipeline import load_model, run as pipeline_run
+    from inference.pipeline import load_model, run as pipeline_run
 
-        logger.info("Loading DINO model (once for all images)…")
-        dino_model, dino_device = load_model()
+    logger.info("Loading DINO model (once for all images)…")
+    dino_model, dino_device = load_model()
 
-        for img_info in coco["images"]:
-            fits_path = image_dir / img_info["file_name"]
-            if not fits_path.exists():
-                logger.warning("Image not found, skipping: %s", fits_path)
-                continue
-            logger.info("Running DINO on %s", fits_path.name)
-            dets = pipeline_run(
-                fits_path=fits_path,
-                fast=True,
-                model=dino_model,
-                inference_device=dino_device,
-            )
-            for det in dets:
-                predictions.append({
-                    "image_id": img_info["file_name"],
-                    "confidence": det.get("confidence", 0.0),
-                    "obb": det["obb"],
-                    "streak_length_px": det.get("streak_length_px", 0.0),
-                })
-
-    elif model == "yolo":
-        try:
-            from ultralytics import YOLO
-            import cv2
-            import numpy as np
-        except ImportError as exc:
-            raise ImportError("ultralytics and opencv are required for YOLO baseline") from exc
-
-        # Resolve weights: prefer full-dataset run, fall back to dev-subset baseline.
-        _weight_candidates = [
-            Path("weights/run_full_yolo_obb/run/weights/best.pt"),
-            Path("weights/yolo_baseline/run/weights/best.pt"),
-            Path("weights/yolo_baseline.pt"),
-        ]
-        weights: Path | None = next((p for p in _weight_candidates if p.exists()), None)
-        if weights is None:
-            raise FileNotFoundError(
-                "YOLO weights not found. Expected one of:\n"
-                + "\n".join(f"  {p}" for p in _weight_candidates)
-            )
-        logger.info("YOLO weights: %s", weights)
-        yolo = YOLO(str(weights))
-
-        # Determine tile size from the training config stored alongside weights.
-        # Fall back to 640 (full-dataset default) if unavailable.
-        _tile_size = 640
-        _yaml_candidates = [
-            weights.parent.parent.parent / "dataset" / "dataset.yaml",
-            Path("weights/yolo_baseline/dataset/dataset.yaml"),
-        ]
-        for _yp in _yaml_candidates:
-            if _yp.exists():
-                try:
-                    import yaml as _yaml
-                    _cfg = _yaml.safe_load(_yp.read_text())
-                    # Not stored in yaml, but imgsz is implicit from tile dirs
-                except Exception:
-                    pass
-                break
-
-        from inference.fits_loader import FITSLoader
-        fits_loader = FITSLoader()
-
-        for img_info in coco["images"]:
-            fname = img_info["file_name"]
-            src = Path(fname)
-            if not src.exists():
-                src = ann_path.parent.parent / fname
-            if not src.exists():
-                logger.warning("Image not found, skipping: %s", fname)
-                continue
-
-            # Load image to numpy array (works for FITS and PNG/JPEG).
-            try:
-                if src.suffix.lower() in {".jpg", ".jpeg", ".png"}:
-                    bgr = cv2.imread(str(src))
-                    if bgr is None:
-                        raise OSError(f"cv2.imread returned None for {src}")
-                    arr = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-                else:
-                    loaded = fits_loader.load(str(src))
-                    arr = loaded["array"]
-            except Exception as exc:
-                logger.warning("Failed to load %s: %s — skipping", src, exc)
-                continue
-
-            h_arr, w_arr = arr.shape[:2]
-            img_preds: list[dict] = []
-
-            if max(h_arr, w_arr) <= _tile_size:
-                # Small image — run YOLO directly.
-                tiles = [(0, 0, arr)]
-            else:
-                # Large image — slice into tiles and offset predictions.
-                tiles = []
-                for ty in range(0, h_arr - _tile_size + 1, _tile_size):
-                    for tx in range(0, w_arr - _tile_size + 1, _tile_size):
-                        tiles.append((tx, ty, arr[ty:ty + _tile_size, tx:tx + _tile_size]))
-
-            for tx, ty, patch in tiles:
-                results = yolo(patch, verbose=False)
-                for result in results:
-                    if result.obb is None:
-                        continue
-                    for box, conf in zip(result.obb.xywhr, result.obb.conf):
-                        # xywhr: cx, cy, w, h, angle_rad (all in tile-local pixels)
-                        cx_t, cy_t, bw, bh, angle_rad = box.tolist()
-                        # Map back to full-image coordinates.
-                        img_preds.append({
-                            "image_id": fname,
-                            "confidence": float(conf),
-                            "obb": {
-                                "cx": cx_t + tx,
-                                "cy": cy_t + ty,
-                                "w": bw,
-                                "h": bh,
-                                "angle_deg": float(angle_rad) * 180.0 / 3.14159265,
-                            },
-                            "streak_length_px": max(bw, bh),
-                        })
-
-            # Simple NMS across tiles: suppress predictions whose centres are
-            # within half a tile width of a higher-confidence prediction.
-            img_preds.sort(key=lambda p: p["confidence"], reverse=True)
-            kept: list[dict] = []
-            for pred in img_preds:
-                cx_p = pred["obb"]["cx"]
-                cy_p = pred["obb"]["cy"]
-                suppress = False
-                for k in kept:
-                    dx = cx_p - k["obb"]["cx"]
-                    dy = cy_p - k["obb"]["cy"]
-                    if (dx * dx + dy * dy) ** 0.5 < _tile_size / 2:
-                        suppress = True
-                        break
-                if not suppress:
-                    kept.append(pred)
-
-            logger.info("YOLO: %s → %d raw, %d after NMS", Path(fname).name,
-                        len(img_preds), len(kept))
-            predictions.extend(kept)
-    else:
-        raise NotImplementedError(f"Unknown model: {model!r}")
+    for img_info in coco["images"]:
+        fits_path = image_dir / img_info["file_name"]
+        if not fits_path.exists():
+            logger.warning("Image not found, skipping: %s", fits_path)
+            continue
+        logger.info("Running DINO on %s", fits_path.name)
+        dets = pipeline_run(
+            fits_path=fits_path,
+            fast=True,
+            model=dino_model,
+            inference_device=dino_device,
+        )
+        for det in dets:
+            predictions.append({
+                "image_id": img_info["file_name"],
+                "confidence": det.get("confidence", 0.0),
+                "obb": det["obb"],
+                "streak_length_px": det.get("streak_length_px", 0.0),
+            })
 
     return predictions
 
@@ -280,12 +151,11 @@ def _fmt(value: float, pct: bool = True) -> str:
     return f"{value:.3f}"
 
 
-def format_markdown_table(dino_metrics: dict, yolo_metrics: dict | None) -> str:
+def format_markdown_table(dino_metrics: dict) -> str:
     """Render benchmark results as a Markdown table.
 
     Args:
         dino_metrics: Output of evaluate() for DINO.
-        yolo_metrics: Output of evaluate() for YOLO, or None.
 
     Returns:
         Markdown-formatted string.
@@ -299,28 +169,23 @@ def format_markdown_table(dino_metrics: dict, yolo_metrics: dict | None) -> str:
         ("Angle error (°)",   "mean_angle_error_deg", False),
     ]
 
-    col_yolo = yolo_metrics is not None
-    header = "| Metric | DINO (Swin-L)" + (" | YOLO11-OBB" if col_yolo else "") + " | Target |"
-    sep    = "|--------|---------------" + ("-|------------" if col_yolo else "") + "-|--------|"
+    header = "| Metric | DINO (Swin-L) | Target |"
+    sep    = "|--------|---------------|--------|"
     lines = [header, sep]
 
     targets = {
-        "precision": "≥ 94%",
-        "recall":    "≥ 97%",
-        "f1":        "—",
-        "map_50":    "—",
-        "map_75":    "—",
-        "mean_angle_error_deg": "—",
+        "precision": ">= 94%",
+        "recall":    ">= 97%",
+        "f1":        "--",
+        "map_50":    "--",
+        "map_75":    "--",
+        "mean_angle_error_deg": "--",
     }
 
     for label, key, pct in rows:
         dino_val = _fmt(dino_metrics.get(key, 0.0), pct)
-        target = targets.get(key, "—")
-        if col_yolo:
-            yolo_val = _fmt(yolo_metrics.get(key, 0.0), pct)
-            lines.append(f"| {label} | {dino_val} | {yolo_val} | {target} |")
-        else:
-            lines.append(f"| {label} | {dino_val} | {target} |")
+        target = targets.get(key, "--")
+        lines.append(f"| {label} | {dino_val} | {target} |")
 
     # Per-band breakdown
     lines.append("")
@@ -330,7 +195,7 @@ def format_markdown_table(dino_metrics: dict, yolo_metrics: dict | None) -> str:
     for band in ("short", "medium", "long"):
         b = dino_metrics.get("per_band", {}).get(band, {})
         lines.append(
-            f"| {band.capitalize()} (<150 / 150–400 / >400 px)"
+            f"| {band.capitalize()} (<150 / 150-400 / >400 px)"
             f" | {_fmt(b.get('precision', 0))}"
             f" | {_fmt(b.get('recall', 0))}"
             f" | {_fmt(b.get('f1', 0))} |"
@@ -346,7 +211,6 @@ def format_markdown_table(dino_metrics: dict, yolo_metrics: dict | None) -> str:
 def run_benchmark(
     annotations_path: str | Path,
     dino_predictions: list[dict] | None = None,
-    yolo_predictions: list[dict] | None = None,
     output_path: str | Path = "results/phase8_benchmark.json",
     run_pipeline: bool = False,
 ) -> dict:
@@ -355,7 +219,6 @@ def run_benchmark(
     Args:
         annotations_path: Path to COCO JSON annotation file (test split).
         dino_predictions: Pre-computed DINO predictions (skips pipeline run).
-        yolo_predictions: Pre-computed YOLO predictions (skips pipeline run).
         output_path: Where to save the JSON results file.
         run_pipeline: If True, run pipeline live (requires weights).
 
@@ -367,18 +230,9 @@ def run_benchmark(
 
     if run_pipeline and dino_predictions is None:
         logger.info("Running DINO pipeline on test set…")
-        dino_predictions = run_pipeline_predictions(annotations_path, model="dino")
-
-    if run_pipeline and yolo_predictions is None:
-        try:
-            logger.info("Running YOLO baseline on test set…")
-            yolo_predictions = run_pipeline_predictions(annotations_path, model="yolo")
-        except (FileNotFoundError, NotImplementedError) as exc:
-            logger.warning("YOLO baseline skipped: %s", exc)
-            yolo_predictions = None
+        dino_predictions = run_pipeline_predictions(annotations_path)
 
     dino_metrics = evaluate(dino_predictions or [], ground_truth)
-    yolo_metrics = evaluate(yolo_predictions, ground_truth) if yolo_predictions else None
 
     # Confusion matrix — saved as PNG alongside the JSON output
     cm_path = Path(output_path).parent / "confusion_matrix.png"
@@ -408,11 +262,6 @@ def run_benchmark(
             "TN": int(cm[1, 1]),
             "confusion_matrix_png": str(cm_path),
         },
-        "yolo_baseline": {
-            "map_50": yolo_metrics["map_50"] if yolo_metrics else 0.0,
-            "recall": yolo_metrics["recall"] if yolo_metrics else 0.0,
-            "precision": yolo_metrics["precision"] if yolo_metrics else 0.0,
-        },
     }
 
     output_path = Path(output_path)
@@ -427,12 +276,9 @@ def run_benchmark(
     if dino_predictions:
         with open(eval_results_dir / "dino_predictions.json", "w") as f:
             json.dump(dino_predictions, f, indent=2)
-    if yolo_predictions:
-        with open(eval_results_dir / "yolo_predictions.json", "w") as f:
-            json.dump(yolo_predictions, f, indent=2)
 
     # Print markdown table to stdout
-    print("\n" + format_markdown_table(dino_metrics, yolo_metrics) + "\n")
+    print("\n" + format_markdown_table(dino_metrics) + "\n")
 
     return results
 
@@ -444,7 +290,7 @@ def run_benchmark(
 # Display order (unified always first, then ML methods, then classical).
 _METHOD_ORDER = [
     "unified", "dinov3_vitb", "dinov3_vitl", "dinov3_gt_dm_satstreaks", "tiny", "large",
-    "streakmind_yolo", "yolo_full", "yolo", "astride", "opencv", "classical", "ml",
+    "astride", "opencv", "classical", "ml",
 ]
 
 _METHOD_LABELS = {
@@ -454,9 +300,6 @@ _METHOD_LABELS = {
     "dinov3_gt_dm_satstreaks": "DINOv3 GT+DM+SatStreaks",
     "tiny":        "DINO Swin-T",
     "large":       "DINO Swin-L",
-    "streakmind_yolo": "StreakMindYOLO",
-    "yolo_full":   "YOLO11m-OBB (full)",
-    "yolo":        "YOLO11n-OBB (dev)",
     "astride":     "ASTRiDE",
     "opencv":      "OpenCV",
     "classical":   "Classical",
@@ -567,7 +410,7 @@ def run_pipeline_predictions_all_methods(
     """Run the multi-method pipeline on every image in a COCO annotation file.
 
     Loads the DINO model once, runs the full pipeline (DINO + classical +
-    ASTRiDE + YOLO) on each annotated image, then extracts per-method and
+    ASTRiDE) on each annotated image, then extracts per-method and
     unified prediction lists via ``extract_method_predictions()``.
 
     Args:
@@ -694,7 +537,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ARGUS Phase 8 benchmark")
     parser.add_argument("--annotations", required=True, help="COCO JSON annotation file")
     parser.add_argument("--dino-predictions", help="Pre-computed DINO predictions JSON")
-    parser.add_argument("--yolo-predictions", help="Pre-computed YOLO predictions JSON")
     parser.add_argument("--method-predictions", help="Pre-computed multi-method predictions JSON "
                         "(dict mapping method → prediction list)")
     parser.add_argument("--multi-method", action="store_true",
@@ -721,15 +563,9 @@ if __name__ == "__main__":
             with open(args.dino_predictions) as f:
                 dino_preds = json.load(f)
 
-        yolo_preds = None
-        if args.yolo_predictions:
-            with open(args.yolo_predictions) as f:
-                yolo_preds = json.load(f)
-
         run_benchmark(
             annotations_path=args.annotations,
             dino_predictions=dino_preds,
-            yolo_predictions=yolo_preds,
             output_path=args.output,
             run_pipeline=args.run_pipeline,
         )

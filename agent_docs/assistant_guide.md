@@ -26,14 +26,13 @@ Progress:
 - ✅ Phase 4 (Database): `db/schema.sql`, `db/models.py` — SQLAlchemy async ORM (SQLite + PostgreSQL)
 - ✅ Phase 5 (API): `api/main.py`, `api/storage.py`, `api/queue.py`, `api/worker.py` — FastAPI + background worker
 - ✅ Phase 6 (Frontend): `frontend/` — React 18 + Vite + Tailwind, canvas OBB rendering, detection table
-- ✅ Phase 8 (Evaluation): `eval/metrics.py`, `eval/benchmark.py` — mAP, angle error, per-band, DINO vs YOLO
-- ✅ Local training: Swin-T DINO (50 epochs, CPU) + YOLO11-OBB baseline — results in `results/phase8_benchmark.json`
+- ✅ Phase 8 (Evaluation): `eval/metrics.py`, `eval/benchmark.py` — mAP, angle error, per-band, DINO evaluation
+- ✅ Local training: Swin-T DINO (50 epochs, CPU) — results in `results/phase8_benchmark.json`
 - ✅ DINOv3 Phase A (feasibility probe): cosine dissimilarity = 0.095 — PASS
 - ✅ DINOv3 Phase B (adapter + configs): `models/dino/dinov3_adapter.py`, `streak_dinov3_vitb.py`, `streak_dinov3_vitl.py` — smoke test PASS
 - ✅ DINOv3 Phase C (frozen ViT-B dev subset): mAP@0.5=0.274 on dev_subset
 - ✅ DINOv3 Phase C² (frozen ViT-B full dataset, 4 epochs): mAP@0.5=**0.74** on test.json — beats Swin-T (0.19) by +0.55
 - ✅ DINOv3 Phase E (partial): Swin-T vs ViT-B comparison in `results/phase_e/` — ViT-B dominant
-- ✅ YOLO11n-OBB full dataset: 15 epochs, 3 023 images → 14 385 tiles, mAP@0.5=67.3% P=57% R=85% F1=68% (tiled val); integrated as `yolo_full` 5th detector in `inference/pipeline.py`
 - ⚠️  DINOv3 Base prior weights (`weights/run_best_400px_nodm/`) are **tainted** — they descended from a warm-start checkpoint (Run 0) that was trained on DarkMatters data. Those weights and all ancestor checkpoints must not be used. A clean cold-start retraining on `all_train_nodm.json` is required before this slot can be marked ✅. See `docs/training_methods.md §3.1`.
 - ✅ Adaptive tiling (`inference/tiled_pipeline.py`): `native_tile_size` + `magnification` decoupled from `model_input_size`; collinear stitcher; §6.1 verified mAP@50=0.008 vs 0.000 baseline on 20-image Frigate sample at 3.64× magnification
 - ⏳ Run 3 — Cold-start DM-free paper model: `load_from=None`, `all_train_nodm.json` at 400px, cloud GPU recommended; see `docs/training_methods.md §3.1`
@@ -86,7 +85,7 @@ Always read the relevant agent_docs file before writing code:
 ## Stack
 - Python 3.11, conda environment named `satid`
   (use `/Users/robert/miniconda3/envs/satid/bin/python`)
-- Core ML: PyTorch ≥ 2.2, MMDetection ≥ 3.3 (Co-DINO), Ultralytics (YOLO baseline)
+- Core ML: PyTorch ≥ 2.2, MMDetection ≥ 3.3 (Co-DINO)
 - Astronomy: astropy, astride, sgp4, skyfield, spacetrack
 - Image: opencv-python-headless<4.10, scikit-image (Radon), albumentations, Shapely
 - API: FastAPI, SQLAlchemy async, asyncpg/aiosqlite, Pydantic v2
@@ -113,16 +112,14 @@ Argus/
 │   ├── postprocess.py       ← Radon angle refinement + extent tracing, NMS, grouping/fusion (Phase 3)
 │   └── crossid.py           ← satellite ephemeris cross-matching (Phase 3)
 ├── training/                ← training data and model training
-│   ├── convert_labels.py    ← OBB YOLO labels → COCO JSON (Phase 1 ✅)
+│   ├── convert_labels.py    ← OBB label format → COCO JSON (Phase 1 ✅)
 │   ├── dataset.py           ← FITSStreakDataset (Phase 1 ✅)
 │   ├── augmentations.py     ← albumentations pipeline + SyntheticStreakInject (Phase 1 ✅)
-│   ├── train_dino.py        ← Co-DINO training script + checkpoint/timebox CLI overrides (Phase 2)
-│   └── train_baseline.py    ← YOLO11-OBB training script (Phase 2)
+│   └── train_dino.py        ← Co-DINO training script + checkpoint/timebox CLI overrides (Phase 2)
 ├── models/
-│   ├── dino/                ← MMDetection configs: streak_codino_swin_t.py, _swin_l.py,
-│   │                           streak_dinov3_vitb.py, streak_dinov3_vitl.py,
-│   │                           dinov3_adapter.py (PatchToPyramid + DINOv3Backbone)
-│   └── baselines/           ← YOLO11-OBB config
+│   └── dino/                ← MMDetection configs: streak_codino_swin_t.py, _swin_l.py,
+│                               streak_dinov3_vitb.py, streak_dinov3_vitl.py,
+│                               dinov3_adapter.py (PatchToPyramid + DINOv3Backbone)
 ├── api/                     ← FastAPI application (Phase 5)
 │   ├── main.py
 │   ├── models.py

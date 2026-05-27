@@ -109,18 +109,18 @@ class TestComputeUnifiedConfidence:
         single = compute_unified_confidence([{"method": "dinov3_vitb", "confidence": 0.90}])
         double = compute_unified_confidence([
             {"method": "dinov3_vitb", "confidence": 0.90},
-            {"method": "yolo", "confidence": 0.90},
+            {"method": "classical", "confidence": 0.90},
         ])
         assert double["score"] > single["score"]
 
     def test_two_strongly_disagreeing_detectors_lower_than_two_agreeing(self):
         agree = compute_unified_confidence([
             {"method": "dinov3_vitb", "confidence": 0.90},
-            {"method": "yolo", "confidence": 0.90},
+            {"method": "classical", "confidence": 0.90},
         ])
         disagree = compute_unified_confidence([
             {"method": "dinov3_vitb", "confidence": 0.90},
-            {"method": "yolo", "confidence": 0.10},
+            {"method": "classical", "confidence": 0.10},
         ])
         assert disagree["score"] < agree["score"]
 
@@ -128,28 +128,29 @@ class TestComputeUnifiedConfidence:
         single = compute_unified_confidence([{"method": "dinov3_vitb", "confidence": 0.85}])
         with_low_confidence = compute_unified_confidence([
             {"method": "dinov3_vitb", "confidence": 0.85},
-            {"method": "yolo", "confidence": 0.05},
+            {"method": "classical", "confidence": 0.05},
         ])
         assert with_low_confidence["score"] >= single["score"]
 
     def test_all_zero_confidence(self):
         result = compute_unified_confidence([
             {"method": "tiny", "confidence": 0.0},
-            {"method": "yolo", "confidence": 0.0},
+            {"method": "classical", "confidence": 0.0},
         ])
         assert result["score"] == pytest.approx(0.0, abs=1e-6)
 
     def test_low_confidence_non_astride_detector_lowers_score(self):
         # Low-confidence ML detectors still provide small reliability-weighted boosts.
-        low_yolo = compute_unified_confidence([
+        # "tiny" IS in DETECTOR_PROFILES (higher weight than default); "mystery_detector" is not.
+        low_known = compute_unified_confidence([
             {"method": "dinov3_vitb", "confidence": 0.85},
-            {"method": "yolo", "confidence": 0.05},
+            {"method": "tiny", "confidence": 0.05},
         ])
         low_unknown = compute_unified_confidence([
             {"method": "dinov3_vitb", "confidence": 0.85},
             {"method": "mystery_detector", "confidence": 0.05},
         ])
-        assert low_unknown["score"] < low_yolo["score"]
+        assert low_unknown["score"] < low_known["score"]
 
     def test_score_capped_at_0_99(self):
         # Stacking many high-confidence detectors should never exceed 0.99
@@ -172,11 +173,11 @@ class TestComputeUnifiedConfidence:
     def test_components_returned(self):
         result = compute_unified_confidence([
             {"method": "tiny", "confidence": 0.80},
-            {"method": "yolo", "confidence": 0.70},
+            {"method": "classical", "confidence": 0.70},
         ])
         assert len(result["components"]) == 2
         methods = {c["method"] for c in result["components"]}
-        assert methods == {"tiny", "yolo"}
+        assert methods == {"tiny", "classical"}
         for c in result["components"]:
             assert 0.0 <= c["weight"] <= 1.0
             assert 0.0 <= c["contribution"] <= 1.0
@@ -188,7 +189,7 @@ class TestComputeUnifiedConfidence:
     def test_divergence_nonzero_for_disagreeing_detectors(self):
         result = compute_unified_confidence([
             {"method": "dinov3_vitb", "confidence": 0.95},
-            {"method": "yolo", "confidence": 0.10},
+            {"method": "classical", "confidence": 0.10},
         ])
         assert result["divergence"] > 0.0
 
@@ -219,9 +220,9 @@ class TestConfidenceCeiling:
         assert with_astride["score"] > single["score"]
         assert with_astride["score"] >= 0.80
 
-    def test_yolo_plus_high_astride_lands_near_ninety_percent(self):
+    def test_ml_plus_high_astride_lands_near_ninety_percent(self):
         result = compute_unified_confidence([
-            {"method": "yolo", "confidence": 0.86},
+            {"method": "ml", "confidence": 0.86},
             {"method": "astride", "confidence": 0.99},
         ])
         assert result["score"] == pytest.approx(0.8996)

@@ -109,31 +109,6 @@ DETECTOR_PROFILES: dict[str, DetectorProfile] = {
         recall=0.7333,
         notes="Phase 8 measured — synthetic dev subset only",
     ),
-    # Source: full_yolo_obb/yolo_benchmark.json — measured on full tiled val split
-    "yolo_full": DetectorProfile(
-        name="YOLO11n-OBB Full Dataset",
-        precision=0.5718,
-        recall=0.8458,
-        band_weights={"short": 0.5, "medium": 1.3, "long": 0.8},
-        notes="results/full_yolo_obb/yolo_benchmark.json; no per-band breakdown available",
-    ),
-    # Source: phase8_benchmark.json — dev subset baseline
-    "yolo": DetectorProfile(
-        name="YOLO11n-OBB",
-        precision=0.6316,
-        recall=0.4000,
-        notes="Phase 8 measured — dev subset",
-    ),
-    # Source: streakmind_yolo/gtimages_plus_frigate/metrics_iou50.json (best track)
-    # Per-band: medium P=6.5% R=80%; long P=37.5% R=12%
-    "streakmind_yolo": DetectorProfile(
-        name="YOLO-OBB GTImages",
-        precision=0.1532,
-        recall=0.2982,
-        band_weights={"short": 0.05, "medium": 2.5, "long": 0.2},
-        notes="results/streakmind_yolo/gtimages_plus_frigate/metrics_iou50.json; "
-              "medium recall=80%, long recall=12%",
-    ),
     # Source: comprehensive_eval_20260526/report.md — standard test set, conf≥0.30, IoU≥0.50
     # Per-band recall (269/800px thresholds): short=50%, medium=72.7%, long=72.5%
     "dinov3_vitb_multisource": DetectorProfile(
@@ -314,7 +289,7 @@ def compute_unified_confidence(
     ASTRiDE overlaps another detector, it is excluded from non-ASTRiDE
     corroboration and divergence so it cannot drag a score down.
     Instead, its raw confidence adds at most a small boost to the best
-    non-ASTRiDE raw confidence.  For example, YOLO OBB 0.86 plus ASTRiDE 0.99
+    non-ASTRiDE raw confidence.  For example, ML 0.86 plus ASTRiDE 0.99
     yields roughly 0.90.
 
     A single non-ASTRiDE detector keeps its own effective confidence. Multiple
@@ -389,22 +364,7 @@ if __name__ == "__main__":
     examples = [
         ("Single DINOv3 multisource (conf=0.91)", [
             {"method": "dinov3_vitb_multisource", "confidence": 0.91}]),
-        ("DINOv3 multisource + YOLO-GTImages agree (both 0.9) — long band", [
-            {"method": "dinov3_vitb_multisource", "confidence": 0.90},
-            {"method": "streakmind_yolo", "confidence": 0.90},
-        ]),
-        ("DINOv3 multisource + YOLO-GTImages agree (both 0.9) — medium band", [
-            {"method": "dinov3_vitb_multisource", "confidence": 0.90},
-            {"method": "streakmind_yolo", "confidence": 0.90},
-        ]),
-        ("YOLO-GTImages alone (medium band) — should be well-weighted", [
-            {"method": "streakmind_yolo", "confidence": 0.80},
-        ]),
         ("ASTRiDE-only high-conf FP is disregarded", [{"method": "astride", "confidence": 0.99}]),
-        ("YOLO OBB + ASTRiDE corroboration (0.86 + 0.99)", [
-            {"method": "streakmind_yolo", "confidence": 0.86},
-            {"method": "astride", "confidence": 0.99},
-        ]),
         ("DINOv3 multisource + ASTRiDE corroboration", [
             {"method": "dinov3_vitb_multisource", "confidence": 0.90},
             {"method": "astride", "confidence": 0.99},
@@ -414,7 +374,7 @@ if __name__ == "__main__":
             {"method": "tiny", "confidence": 0.75},
         ]),
     ]
-    bands = [None, None, "medium", "medium", None, "medium", None, None]
+    bands = [None, None, None, None, None]
     for (label, srcs), band in zip(examples, bands):
         result = compute_unified_confidence(srcs, streak_band=band)
         band_note = f" [{band}]" if band else ""

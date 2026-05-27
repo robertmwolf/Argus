@@ -268,7 +268,7 @@ class TestBenchmarkHelpers:
         from eval.benchmark import format_markdown_table
 
         metrics = evaluate([_pred()], [_gt()])
-        table = format_markdown_table(metrics, None)
+        table = format_markdown_table(metrics)
         assert "Precision" in table
         assert "Recall" in table
         assert "mAP@0.5" in table
@@ -307,7 +307,6 @@ class TestBenchmarkHelpers:
         saved = json.loads(out_file.read_text())
         assert saved["precision"] == pytest.approx(1.0)
         assert saved["recall"] == pytest.approx(1.0)
-        assert "yolo_baseline" in saved
 
 
 # ---------------------------------------------------------------------------
@@ -487,11 +486,11 @@ class TestExtractMethodPredictions:
         from eval.metrics import extract_method_predictions
         groups = [
             _make_group("dinov3_vitb", 0.90, cx=100),
-            _make_group("yolo",        0.70, cx=500),
+            _make_group("opencv",      0.70, cx=500),
         ]
         result = extract_method_predictions(groups, "img1.fits")
         assert len(result["dinov3_vitb"]) == 1
-        assert len(result["yolo"]) == 1
+        assert len(result["opencv"]) == 1
         assert len(result["unified"]) == 2
 
     def test_synthetic_unified_source_in_input_is_ignored(self):
@@ -520,16 +519,16 @@ class TestExtractMethodPredictions:
 
     def test_group_without_obb_is_skipped(self):
         from eval.metrics import extract_method_predictions
-        group = {"streak_length_px": 100.0, "sources": [{"method": "yolo", "confidence": 0.8}]}
+        group = {"streak_length_px": 100.0, "sources": [{"method": "opencv", "confidence": 0.8}]}
         result = extract_method_predictions([group], "img1.fits")
         assert result["unified"] == []
-        assert "yolo" not in result
+        assert "opencv" not in result
 
     def test_image_id_is_stamped_on_all_predictions(self):
         from eval.metrics import extract_method_predictions
-        groups = [_make_group("yolo", 0.75)]
+        groups = [_make_group("opencv", 0.75)]
         result = extract_method_predictions(groups, "frame42.fits")
-        assert result["yolo"][0]["image_id"] == "frame42.fits"
+        assert result["opencv"][0]["image_id"] == "frame42.fits"
         assert result["unified"][0]["image_id"] == "frame42.fits"
 
     def test_unified_confidence_capped_at_0_99(self):
@@ -540,7 +539,7 @@ class TestExtractMethodPredictions:
             "streak_length_px": 200.0,
             "sources": [
                 {"method": "dinov3_vitb", "confidence": 0.99},
-                {"method": "yolo",        "confidence": 0.98},
+                {"method": "opencv",      "confidence": 0.98},
                 {"method": "astride",     "confidence": 0.97},
             ],
         }
@@ -568,13 +567,13 @@ class TestFormatComparisonTable:
     def test_unified_appears_first(self):
         from eval.benchmark import format_comparison_table
         method_metrics = {
-            "yolo":    self._make_metrics(),
+            "astride": self._make_metrics(),
             "unified": self._make_metrics(precision=0.95),
         }
         table = format_comparison_table(method_metrics)
         unified_pos = table.index("Unified")
-        yolo_pos    = table.index("YOLO")
-        assert unified_pos < yolo_pos
+        astride_pos = table.index("ASTRiDE")
+        assert unified_pos < astride_pos
 
     def test_table_contains_all_methods(self):
         from eval.benchmark import format_comparison_table

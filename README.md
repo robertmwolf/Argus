@@ -2,9 +2,9 @@
 ### Automated Recognition and Grading of Unidentified Streaks
 
 ARGUS is a pipeline for automated satellite streak detection
-and identification in FITS telescope images.  It runs five independent detectors
-in parallel — three ML-based (DINO-DETR with DINOv3 ViT-B backbone, YOLO11n-OBB dev-subset,
-YOLO11n-OBB full-dataset) and two classical (ASTRiDE-derived, OpenCV connected-components) —
+and identification in FITS telescope images.  It runs three parallel detectors —
+one ML-based (DINO-DETR with DINOv3 ViT-B backbone) and two classical
+(ASTRiDE-derived, OpenCV connected-components) —
 then merges their results by grouping overlapping or collinear detections and
 fusing them into a single streak-level geometry plus a
 **Unified Confidence Score** that preserves a lone detector's confidence and uses
@@ -47,8 +47,8 @@ Full design: [`agent_docs/architecture.md`](agent_docs/architecture.md)
 See [METHODOLOGY.md §§ 3–5](METHODOLOGY.md) for complete algorithmic documentation
 including exact parameters, design rationale, and reproducible algorithm descriptions.
 
-**Summary:** FITS → Z-score normalisation → 5 parallel detectors (DINOv3 ViT-B /
-DINO-DETR, YOLO11n-OBB × 2, ASTRiDE, OpenCV connected-components) → Radon angle
+**Summary:** FITS → Z-score normalisation → 3 parallel detectors (DINOv3 ViT-B /
+DINO-DETR, ASTRiDE, OpenCV connected-components) → Radon angle
 refinement (default ±60° search) → streak extent tracing → per-detector NMS →
 cross-detector grouping (rotated-IoU ≥ 0.5, IoMin ≥ 0.3, or collinear-fragment
 match) → grouped-geometry fusion to outer endpoints → ASTRiDE-only confidence
@@ -86,11 +86,10 @@ Argus/
 │   ├── crossid.py             ← satellite cross-matching
 │   └── confidence.py          ← Unified Confidence Score (single-detector floor + F-beta corroboration)
 ├── training/
-│   ├── convert_labels.py      ← YOLO OBB → COCO JSON
+│   ├── convert_labels.py      ← OBB label format → COCO JSON
 │   ├── dataset.py             ← FITSStreakDataset
 │   ├── augmentations.py       ← albumentations + SyntheticStreakInject
-│   ├── train_dino.py          ← DINO training script
-│   └── train_baseline.py      ← YOLO11-OBB baseline
+│   └── train_dino.py          ← DINO training script
 ├── models/
 │   └── dino/
 │       ├── streak_codino_swin_t.py   ← Swin-T dev config
@@ -161,7 +160,6 @@ SPACETRACK_PASS=yourpassword
 
 # Multi-model ensemble — each entry is one DINO checkpoint.
 # Paths are relative to the project root (or absolute).
-# YOLO / StreakMind YOLO are auto-detected from their default weight paths.
 ARGUS_MODEL_CONFIGS=[{"id":"dinov3_vitb","size":"dinov3_vitb","weights":"weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth","label":"DINOv3 Base","dataset":"SatStreaks+GTImages"},{"id":"dinov3_vitb_multisource","size":"dinov3_vitb_multisource","weights":"weights/run3_cold_nodm/best.pth","label":"DINOv3 Base - Multi-source (Run 3)","dataset":"SatStreaks+BrentImages+Frigate"}]
 
 PYTORCH_ENABLE_MPS_FALLBACK=1           # required on Apple Silicon
@@ -173,10 +171,6 @@ FAST_MODE=false
 
 # ASTRiDE classical detector — disabled by default (high FP rate on real FITS)
 # ARGUS_ENABLE_ASTRIDE=1
-
-# Override YOLO weight paths if yours are not at the default locations:
-# YOLO_WEIGHTS=weights/yolo_tiled/run/weights/best.pt
-# STREAKMIND_YOLO_WEIGHTS=weights/streakmind_yolo_real/run/weights/best.pt
 
 # ARGUS_ENV controls which Space-Track endpoint is used:
 #   development (default) → https://for-testing-only.space-track.org/
@@ -240,34 +234,14 @@ mmdet, ultralytics, and all ML packages installed.
 
 ### Detector inventory
 
-ARGUS runs up to seven detectors in parallel. Each is activated differently:
+ARGUS runs up to four detectors in parallel. Each is activated differently:
 
 | Detector | ID | How it activates | Weight path |
 |---|---|---|---|
 | DINOv3 ViT-B (SatStreaks+GTImages) | `dinov3_vitb` | `MODEL_SIZE` or `ARGUS_MODEL_CONFIGS` | `weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth` |
 | DINOv3 ViT-B (Multi-source, Run 3) | `dinov3_vitb_multisource` | `ARGUS_MODEL_CONFIGS` only | `weights/run3_cold_nodm/best.pth` (early ckpt — Run 3 still training) |
-| YOLO11n-OBB full dataset | `yolo_full` | auto-detected if weights exist | `weights/run_full_yolo_obb/run/weights/best.pt` |
-| YOLO11n-OBB tiled | `yolo` | auto-detected if weights exist | `weights/yolo_tiled/run/weights/best.pt` (or `YOLO_WEIGHTS`) |
-| StreakMind YOLO | `streakmind_yolo` | auto-detected if weights exist | `weights/streakmind_yolo_real/run/weights/best.pt` (or `STREAKMIND_YOLO_WEIGHTS`) |
 | OpenCV morphological | `opencv` | always runs | — |
 | ASTRiDE | `astride` | **opt-in**: `ARGUS_ENABLE_ASTRIDE=1` | — (high false-positive rate on real FITS) |
-
-YOLO and StreakMind YOLO weights are auto-detected — if the file exists the detector runs with no extra configuration.
-
-To produce the `yolo_full` weights locally (~9 hours on Mac M3 CPU, ~30 min on GPU):
-
-```bash
-# 1. Get annotated training data if not already present
-git clone https://github.com/jijup/SatStreaks data/satstreaks
-
-# 2. Build the split annotations (one-time)
-python scripts/merge_annotations.py --seed 42 --val-fraction 0.2
-
-# 3. Train YOLO11n-OBB on the full dataset and evaluate
-bash scripts/train_yolo_full.sh
-# Weights land at: weights/run_full_yolo_obb/run/weights/best.pt
-# Results land at: results/full_yolo_obb/yolo_benchmark.json
-```
 
 ### Starting the dev servers
 
@@ -288,7 +262,6 @@ Remove the variable entirely to fall back to the single model set by `MODEL_SIZE
 
 Open `http://localhost:5173`, upload a FITS file.  In the results canvas:
 - **Cyan** lines = DINOv3 ViT-B detections
-- **Purple** lines = YOLO11n-OBB detections
 - **Amber** lines = ASTRiDE / OpenCV classical detections
 
 Use the **Filters** panel to slide confidence thresholds per-method and isolate
@@ -351,10 +324,7 @@ python training/make_dev_subset.py
 PYTORCH_ENABLE_MPS_FALLBACK=1 MODEL_SIZE=tiny \
   python -m training.train_dino --smoke-test
 
-# 4. Train YOLO11-OBB baseline (~30 min)
-MODEL_SIZE=tiny python -m training.train_baseline
-
-# 5. Train Swin-T DINO on dev subset (~1–2 hrs on MPS)
+# 4. Train Swin-T DINO on dev subset (~1–2 hrs on MPS)
 PYTORCH_ENABLE_MPS_FALLBACK=1 MODEL_SIZE=tiny USE_DEV_SUBSET=true \
   python -m training.train_dino --work-dir weights/local_run
 
@@ -366,12 +336,12 @@ python -m training.train_dino \
   --val-interval 2 \
   --checkpoint-interval 2
 
-# 6. Run inference with trained weights
+# 5. Run inference with trained weights
 MODEL_WEIGHTS=weights/local_run/best_coco_bbox_mAP_epoch_50.pth \
   MODEL_SIZE=tiny PYTORCH_ENABLE_MPS_FALLBACK=1 \
   python -m inference.pipeline --image data/sample/synth_streak_000.fits
 
-# 7. Evaluate (loads model once for all images)
+# 6. Evaluate (loads model once for all images)
 python -m eval.benchmark \
   --run-pipeline \
   --annotations data/annotations/dev_subset.json \
@@ -402,7 +372,7 @@ The output JSON contains `"precision"` and `"recall"` fields for the evaluated m
 
 ### Step 2 — Edit `DETECTOR_PROFILES` in `inference/confidence.py`
 
-Find the entry for the detector key (e.g. `"dinov3_vitb"`, `"tiny"`, `"yolo"`) and
+Find the entry for the detector key (e.g. `"dinov3_vitb"`, `"tiny"`, `"astride"`) and
 update `precision`, `recall`, and `notes`:
 
 ```python
@@ -424,8 +394,8 @@ high scores on false positives (its confidence magnitude is miscalibrated), set
 keeps its profile entry for diagnostics, but the pipeline lowers ASTRiDE-only
 groups to conservative display confidence and the scorer excludes ASTRiDE from
 non-ASTRiDE corroboration and divergence. When ASTRiDE corroborates another
-detector, it can only add a small bounded boost; for example, YOLO OBB 0.86 plus
-ASTRiDE 0.99 scores about 0.90.
+detector, it can only add a small bounded boost; for example, an ML detector at
+0.86 plus ASTRiDE 0.99 scores about 0.90.
 
 ### Step 3 — Verify
 

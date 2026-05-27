@@ -479,7 +479,7 @@ class TestGroupDetections:
         full  = {"confidence": 0.9, "method": "ml",
                   "obb": {"cx": 250.0, "cy": 128.0, "w": 500.0, "h": 5.0, "angle_deg": 0.0}}
         # Partial: same centre x, aligned, but only 200 px long
-        partial = {"confidence": 0.6, "method": "yolo",
+        partial = {"confidence": 0.6, "method": "classical",
                     "obb": {"cx": 250.0, "cy": 128.0, "w": 200.0, "h": 5.0, "angle_deg": 0.0}}
         result = group_detections([full, partial])
         ids = [d["streak_id"] for d in result]
