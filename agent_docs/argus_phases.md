@@ -439,3 +439,77 @@ in `inference/confidence.py` with the measured precision and recall** — see th
 section "Updating Detector Profiles After Training".  If a newly added detector emits
 unreliable confidence magnitudes, also set its `confidence_ceiling`. Do not convert
 ASTRiDE back into a normal weighted detector.
+
+### Ensemble v2 benchmark: `results/ensemble_benchmark_20260526/`
+Recorded 2026-05-26. Full three-set benchmark after updating detector profiles,
+adding per-band reliability weights, and preferring YOLO's tight OBBs in geometry
+fusion. Script: `scripts/run_ensemble_benchmark.py`. IoU threshold 0.50.
+P/R/F1 reported at conf ≥ 0.30. mAP computed on unfiltered predictions.
+
+**SatStreaks test (308 images, in-distribution):**
+
+| Method | mAP@0.50 | P @0.30 | R @0.30 | F1 @0.30 |
+|--------|:--------:|:-------:|:-------:|:--------:|
+| DINOv3 ViT-B Multisource | **0.091** | **26.5 %** | **26.6 %** | **26.6 %** |
+| YOLO-OBB GTImages (single-pass) | 0.017 | 7.5 % | 10.4 % | 8.7 % |
+| ASTRiDE | — (JPEG, skipped) | — | — | — |
+| **Unified Ensemble v2** | 0.079 | 24.1 % | 26.6 % | 25.3 % |
+
+**DarkMatters holdout (332 images, zero-shot):**
+
+| Method | mAP@0.50 | P @0.30 | R @0.30 | F1 @0.30 |
+|--------|:--------:|:-------:|:-------:|:--------:|
+| DINOv3 ViT-B Multisource | **0.083** | **25.4 %** | **24.9 %** | **25.2 %** |
+| YOLO-OBB GTImages (single-pass) | 0.016 | 7.4 % | 9.6 % | 8.4 % |
+| ASTRiDE | — (JPEG, skipped) | — | — | — |
+| **Unified Ensemble v2** | 0.072 | 23.0 % | 24.9 % | 23.9 % |
+
+**BrentImages (50-image sample, real FITS — Atwood observatory):**
+
+| Method | mAP@0.50 | R @0.30 | Notes |
+|--------|:--------:|:-------:|-------|
+| DINOv3 ViT-B Multisource | 0.002 | 2.3 % | GT OBBs are tight (h≈16 px); IoU vs loose DINO boxes ≈ 0 |
+| YOLO-OBB GTImages | 0.000 | 0.0 % | Single-pass 8192 px loses tile-scale detail |
+| ASTRiDE | 0.001 | 2.3 % | 604 detections/image (capped at 50); essentially random recall |
+| **Unified Ensemble v2** | 0.002 | 2.3 % | Same as DINO; ASTRiDE noise absorbed |
+
+BrentImages metrics are not directly comparable with the other two sets.
+The GT annotations use tight oriented bounding boxes (h ≈ 16 px) while DINO
+outputs large axis-aligned boxes (~2 000 × 3 000 px). IoU between the two is
+structurally near-zero regardless of correct localisation. A meaningful
+evaluation on BrentImages requires IoM (intersection-over-minimum) or a
+purpose-built overlap metric for thin-streak GT.
+
+**Key findings:**
+
+1. **DINOv3 is the strongest individual model** — 5–6× higher mAP than YOLO
+   on both evaluatable sets; generalises well zero-shot to DarkMatters.
+2. **Unified Ensemble v2 is marginally worse than DINO alone** (mAP 0.079 vs
+   0.091 on SatStreaks). The corroboration weighting is slightly downgrading
+   valid DINO detections instead of boosting them.
+3. **YOLO-OBB is weak at single-pass 8 192 px** — the model was trained on
+   640 px tiles; running full-frame loses the scale at which it learned.
+   Re-enabling tiled inference (STREAKMIND_YOLO_TILE_SIZE=640) should recover
+   the ~80 % medium-streak recall seen in the per-detector analysis.
+4. **ASTRiDE contributes nothing** — cannot run on JPEG inputs (SatStreaks,
+   DarkMatters); on real FITS it produces 600+ FP detections per image and its
+   maximum confidence boost is capped at 4 %. **Disabled by default** as of
+   2026-05-26 (`_ASTRIDE_ENABLED_BY_DEFAULT = False` in `inference/pipeline.py`).
+   Re-enable with `ARGUS_ENABLE_ASTRIDE=1`.
+
+**Future improvement — ensemble weight tuning:**
+
+The per-band detector weights in `inference/confidence.py` (`DETECTOR_PROFILES`)
+were set from a single-run analysis and have not been validated against held-out
+data. The ensemble will not outperform the best individual model until the weights
+are calibrated. Recommended next steps:
+
+- Re-enable YOLO tiled inference and re-run the benchmark to get accurate
+  per-band recall numbers for YOLO (especially medium streaks 150–400 px).
+- Run a grid search or Bayesian optimisation over `band_weights` in
+  `DETECTOR_PROFILES` targeting F1 on the validation split.
+- Consider replacing the fixed F-beta weighting with a learned isotonic
+  calibration layer trained on the validation set confidence distributions.
+- Evaluate on BrentImages using IoM (add `iom_threshold` parameter to
+  `_greedy_match` in `eval/metrics.py`) to get meaningful results on
+  observatory-quality tight OBBs.

@@ -94,6 +94,14 @@ _DEFAULT_ASTRIDE_DOWNSAMPLE_MAX_PIXELS = 4_000_000
 _DEFAULT_ASTRIDE_DOWNSAMPLE_MIN_SCALE = 0.25
 _DEFAULT_ASTRIDE_MAX_DETECTIONS = 50
 
+# ASTRiDE is disabled by default: near-zero recall on JPEG inputs (most test
+# sets), 600+ FP detections per image on real FITS, and max corroboration boost
+# of 4 %.  Set ARGUS_ENABLE_ASTRIDE=1 or pass "astride" in enabled_detectors
+# to re-enable it for research/comparison runs.
+_ASTRIDE_ENABLED_BY_DEFAULT: bool = (
+    os.environ.get("ARGUS_ENABLE_ASTRIDE", "0").strip() not in ("", "0", "false", "False")
+)
+
 # Radon refinement is intentionally CPU-bound. With a low detector threshold a
 # noisy large frame can yield 100+ DINO boxes, turning postprocess into minutes
 # of work. Keep only the strongest DINO candidates before the expensive OBB
@@ -1151,7 +1159,12 @@ def _run_all_detectors(
         return detections, elapsed_ms
 
     def _enabled(det_id: str) -> bool:
-        return enabled_detectors is None or det_id in enabled_detectors
+        if enabled_detectors is not None:
+            return det_id in enabled_detectors
+        # Default (None = "all"): skip astride unless explicitly opted in.
+        if det_id == "astride":
+            return _ASTRIDE_ENABLED_BY_DEFAULT
+        return True
 
     tasks: dict[Any, str] = {}
     results: dict[str, list[dict]] = {}
