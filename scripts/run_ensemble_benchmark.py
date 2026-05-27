@@ -320,16 +320,29 @@ def run_benchmark_on_set(
                 "per_band": {"short": {}, "medium": {}, "long": {}},
             }
             continue
-        filtered_preds = [p for p in preds if p.get("confidence", 0.0) >= 0.30]
-        metrics = evaluate(filtered_preds, gt, iou_threshold=0.5)
-        method_metrics[method] = {**metrics, "n_predictions": len(filtered_preds)}
+        # mAP requires the full unfiltered P-R curve; pass all predictions.
+        # P/R/F1 at deployment threshold (conf≥0.30) are reported separately.
+        _CONF_THRESH = 0.30
+        metrics = evaluate(preds, gt, iou_threshold=0.5)
+        preds_thresh = [p for p in preds if p.get("confidence", 0.0) >= _CONF_THRESH]
+        metrics_thresh = evaluate(preds_thresh, gt, iou_threshold=0.5)
+        method_metrics[method] = {
+            **metrics,
+            "n_predictions": len(preds),
+            # Deployment-threshold P/R/F1 stored separately
+            "precision_30": metrics_thresh["precision"],
+            "recall_30": metrics_thresh["recall"],
+            "f1_30": metrics_thresh["f1"],
+            "n_predictions_30": len(preds_thresh),
+        }
         logger.info(
-            "  %-28s  mAP@50=%.3f  P=%.3f  R=%.3f  F1=%.3f  n=%d",
+            "  %-28s  mAP@50=%.3f  P@30=%.3f  R@30=%.3f  F1@30=%.3f  n=%d (raw=%d)",
             _METHOD_LABELS.get(method, method),
             metrics["map_50"],
-            metrics["precision"],
-            metrics["recall"],
-            metrics["f1"],
+            metrics_thresh["precision"],
+            metrics_thresh["recall"],
+            metrics_thresh["f1"],
+            len(preds_thresh),
             len(preds),
         )
 
@@ -369,12 +382,13 @@ def format_comparison_table(set_label: str, method_metrics: dict[str, dict]) -> 
     lines = [header, col_header, sep]
 
     rows = [
-        ("Precision",  "precision",  True),
-        ("Recall",     "recall",     True),
-        ("F1",         "f1",         True),
-        ("mAP@0.50",   "map_50",     False),
-        ("mAP@0.75",   "map_75",     False),
-        ("N preds",    "n_predictions", False),
+        ("mAP@0.50",        "map_50",           False),
+        ("mAP@0.75",        "map_75",           False),
+        ("P @conf≥0.30",    "precision_30",     True),
+        ("R @conf≥0.30",    "recall_30",        True),
+        ("F1 @conf≥0.30",   "f1_30",            True),
+        ("N preds (raw)",   "n_predictions",    False),
+        ("N preds @0.30",   "n_predictions_30", False),
     ]
     for row_label, key, pct in rows:
         vals = []
