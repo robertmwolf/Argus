@@ -1004,7 +1004,7 @@ def resolve_model_specs() -> list[dict]:
         "dinov3_vitb":             root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
         "dinov3_vitl":             root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
         "dinov3_gt_dm_satstreaks": root / "weights" / "run_gt_dm_satstreaks_dinov3_vitb" / "best_coco_bbox_mAP_epoch_4.pth",
-        "dinov3_vitb_multisource": root / "weights" / "run_clean_vitb_nodm" / "best_coco_bbox_mAP_epoch_15.pth",
+        "dinov3_vitb_multisource": root / "weights" / "run3_cold_nodm" / "best.pth",
         # Run 3: best.pth symlink is updated each night to the current best checkpoint.
         "dinov3_vitb_run3":        root / "weights" / "run3_cold_nodm" / "best.pth",
     }
