@@ -212,18 +212,82 @@ the production API.
 
 ---
 
-**Run 3 — Cold-start DM-free paper model (planned):**
+**Run 3 — Cold-start DM-free paper model (in progress, started 2026-05-26):**
 - **Decision (2026-05-26):** Start from scratch — no warm start from any DM-exposed
   checkpoint. This is **Option A** from the §4 Methodology checklist and closes
   Open Question 5.
-- Config: `models/dino/streak_dinov3_vitb_400px.py` (same as Run 2)
-- Data: `all_train_nodm.json` ± tiled BrentImages and Frigate crops (pending
-  attribution resolution — see §4 Data checklist and `docs/adaptive_tiling_plan.md`)
+- Config: `models/dino/streak_dinov3_vitb_400px_run3.py` (400px + `randomness=dict(seed=42)`)
+- Data: `all_train_nodm.json` v2 — 8,422 images (SatStreaks + BrentImages N1+N2 tiled
+  at 400px + Frigate tiled at 110px/3.64×). See §2.4 for full breakdown.
 - Warm start: **None** (`load_from = None`) — detection head initialised from scratch
-- Hardware: Cloud GPU recommended (RTX 4090); Run 2 took 72h on Mac M3 at 400px
-- Expected convergence: ~4–6h to reach Run 0 baseline quality, then continues
-  improving through 15 epochs as the head learns without any DM prior
-- Checkpoint destination: `weights/run3_cold_nodm/` (to be updated on completion)
+- Hardware: Mac M3 CPU (`PYTORCH_ENABLE_MPS_FALLBACK=1`); multi-night session approach
+- Schedule: ~3 epochs/night (~10–11h); resume with `--resume` each subsequent night
+  until epoch 15 (~5 nights total). Full 15-epoch run on Mac estimated ~70h.
+- Checkpoint destination: `weights/run3_cold_nodm/`
+
+**Night 1 command (time-boxed, 3 epochs ~10–11h):**
+
+```bash
+cd /path/to/Argus && conda activate satid
+PYTORCH_ENABLE_MPS_FALLBACK=1 \
+USE_DEV_SUBSET=false \
+TRAIN_ANN_FILE=annotations/all_train_nodm.json \
+VAL_ANN_FILE=annotations/val.json \
+ARGUS_NORM=autostretch \
+caffeinate -i \
+python -m training.train_dino \
+    --config models/dino/streak_dinov3_vitb_400px_run3.py \
+    --work-dir weights/run3_cold_nodm \
+    --max-epochs 3 \
+    --val-interval 1 \
+    --checkpoint-interval 1
+```
+
+**Subsequent nights (resume; Ctrl-C in the morning):**
+
+```bash
+PYTORCH_ENABLE_MPS_FALLBACK=1 \
+USE_DEV_SUBSET=false \
+TRAIN_ANN_FILE=annotations/all_train_nodm.json \
+VAL_ANN_FILE=annotations/val.json \
+ARGUS_NORM=autostretch \
+caffeinate -i \
+python -m training.train_dino \
+    --config models/dino/streak_dinov3_vitb_400px_run3.py \
+    --work-dir weights/run3_cold_nodm \
+    --resume \
+    --val-interval 1 \
+    --checkpoint-interval 1
+```
+
+**Pre-flight check (run before night 1 to verify dataset paths):**
+
+```bash
+USE_DEV_SUBSET=false ARGUS_NORM=autostretch python - <<'PY'
+import json, os, re, pathlib
+ann = pathlib.Path("data/annotations/all_train_nodm.json")
+d   = json.loads(ann.read_text())
+missing = 0
+for img in d["images"]:
+    fn = img["file_name"]
+    m  = re.match(r"^(.+?)__tx\d+_ty\d+_ts\d+(.+)$", fn)
+    real_fn = m.group(1) + m.group(2) if m else fn
+    p = pathlib.Path("data") / real_fn if not real_fn.startswith("/") else pathlib.Path(real_fn)
+    if not p.exists():
+        missing += 1
+        if missing <= 5:
+            print(f"MISSING: {real_fn}")
+print(f"Total images: {len(d['images'])}  Missing: {missing}")
+PY
+```
+
+Expected: Total images: 8422  Missing: 0
+
+> **Data symlink note (2026-05-26):** `data/BrentImages` symlink was missing, causing
+> 3,110 Night 1 tiles to silently load as zeros. Fixed: `data/BrentImages →
+> /Volumes/External/TrainingData/raw/BrentImages`. The external drive must be mounted
+> before training. All other data sources (satstreaks, annotations, dev_subset) are
+> already symlinked.
 
 > **Why cold-start matters for the paper:** A reviewer could reasonably object that
 > the "no-DM" model still has DM-derived weights as its starting point. A cold-start
@@ -404,9 +468,10 @@ Approximate training throughput on this hardware:
 6. **400px vs 256px** — ✅ Resolved: 400px yields mAP@50=0.468 vs 0.402 at 256px (+0.066).
    The gain justifies the compute cost; paper run will use 400px. For a Mac M3 (~72h),
    cloud GPU is strongly recommended for the final paper run.
-7. **BrentImages Night 1 FITS local storage** — Night 1 FITS files are only on external
-   drive (`/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/`). They
-   should be copied to local or cloud storage so training runs don't depend on the drive.
+7. ~~**BrentImages Night 1 FITS local storage**~~ — ✅ Resolved (2026-05-26). Created
+   `data/BrentImages → /Volumes/External/TrainingData/raw/BrentImages` symlink. External
+   drive must be mounted during training. For cloud runs, rsync the BrentImages directory
+   to the instance before training.
 8. ~~**Adaptive tiling for training**~~ — ✅ Resolved (2026-05-26). `all_train_nodm.json`
    v2 includes BrentImages N1+N2 tiled at `native_tile_size=400` and Frigate tiled at
    `native_tile_size=110`. See §2.4 for full breakdown.
