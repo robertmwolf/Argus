@@ -128,54 +128,7 @@ python scripts/merge_annotations.py --seed 42 --val-fraction 0.2 --include-friga
 
 ---
 
-## 3. DarkMatters Dataset (Partially Integrated)
-
-**What it is:** JPEG preview exports from deep-sky astrophotography sessions at a
-private observatory, released by the DarkMatters community. Images are JPEG
-renderings of XISF source files (3000×2001 px, grayscale). Captured through
-narrowband and broadband filters (OIII, SII, Hα, LRGB) on a single mount.
-Satellites appear as long, full-frame-crossing streaks in the preview exports.
-
-**Location:** `/Volumes/External/DarkMatters/exports/` (JPEG previews organized by set)
-
-**Label distribution (full dataset, 1,144 images):**
-| Label | Count |
-|---|---|
-| positive | 283 |
-| hard_positive | 6 (3 unique + 2 duplicates) |
-| good_negative | 588 |
-| hard_negative | 267 |
-
-- **Streak positives:** ~285 images
-- **Negatives:** ~855 images
-
-**Annotation status:**
-- 149 positive images manually annotated with OBBs — available as `results/darkmatters_eval/negatives.json`-style COCO records; merged into `dm_merged_train.json`
-- ~136 remaining positive images: unannotated (manual annotation would take ~1–2 hr in LabelImg)
-- 855 negatives: COCO JSON built (`results/darkmatters_eval/negatives.json`) but **not yet added to any training split**
-
-**YOLO detectability:** < 1% of positive images detected at conf ≥ 0.25 — instrument/PSF mismatch makes pseudo-annotation infeasible. Positives must be manually annotated.
-
-**Streak characteristics:**
-- Long, often full-frame-crossing streaks
-- Different PSF and background texture from GTImages and SatStreaks (astrophotography site, narrowband filters)
-- FWHM ≈ 2.24 arcsec/px, eccentricity ≈ 0.40
-- Filter mix: OIII (most common), SII, Hα, LRGB
-
-**Current training use:**
-- 149 manually annotated positives are included in `dm_merged_train.json` (the current best-model training set)
-- 855 negatives and remaining positives are not in any split — see Combined Training Splits below
-
-**To add DarkMatters negatives to a training run:**
-```bash
-# Merge negatives JSON into a new combined annotation (manual merge step):
-# results/darkmatters_eval/negatives.json → append to dm_merged_train.json
-python scripts/merge_darkmatters_annotations.py --include-negatives
-```
-
----
-
-## 4. Space-Track TLE Catalog (Required — Register Now)
+## 3. Space-Track TLE Catalog (Required — Register Now)
 
 **What it is:** Authoritative US Space Force satellite catalog.
 Over 220 million historical TLE sets. Free public access.
@@ -239,7 +192,7 @@ print(result[0]['OBJECT_NAME'])  # Should print: ISS (ZARYA)
 
 ---
 
-## 5. SatStreaks Dataset (Annotated, for DINO/YOLO Training)
+## 4. SatStreaks Dataset (Annotated, for DINO/YOLO Training)
 
 **What it is:** 3,073 densely annotated real images of satellite streaks
 from Hubble Space Telescope (114,607 images scanned via citizen science)
@@ -269,25 +222,25 @@ merged into the train/validation pool unless `--satstreaks-only` is supplied.
 
 ## Combined Training Splits
 
-### Active training set — `dm_merged_train.json` (current best model)
+### Canonical training set — `all_train_nodm.json`
 
-The current production training set used to train the best DINOv3 ViT-B model
-(mAP@0.5 = 0.740):
+Built by `scripts/build_all_train_json.py`. Contains no DarkMatters data.
 
 | Source | Images | Annotations | Notes |
 |---|---|---|---|
 | SatStreaks | 2,488 | 2,488 | JPEG/PNG, space + ground scopes |
-| BrentImages Img_20260412_Atwood | 535 | 469 | FITS, Atwood Night 1 (former GTImages) |
-| DarkMatters positives | 149 | 175 | JPEG previews, manually annotated |
-| **Total** | **3,172** | **3,132** | — |
+| BrentImages Night 1 (Img_20260412_Atwood) | ~535 | ~469 | FITS, Atwood Night 1 |
+| BrentImages Night 2 (Img_20260515_Atwood) | 231 | 204 | FITS, Atwood Night 2 |
+| Frigate tiled crops | ~717 | ~655 | Very short streaks |
+| **Total** | **~3,971** | **~3,816** | — |
 
-Val split: `dm_merged_val.json` (DM-distribution images; lower mAP because harder instrument)
-Test split: `test.json` (308 images — SatStreaks + BrentImages Night 1 only, for fair comparison)
+Val split: `val.json` (SatStreaks + BrentImages Night 1)
+Test split: `test.json` (308 images — SatStreaks + BrentImages Night 1 only, held-out)
 
 ### Base split — `train.json` / `val.json` / `test.json`
 
-Original SatStreaks + BrentImages Night 1 split (no DarkMatters), used as the
-evaluation reference:
+Original SatStreaks + BrentImages Night 1 split, used as the evaluation
+reference and as a component of `all_train_nodm.json`:
 
 ```text
 train.json  — 3,023 images, 2,957 annotations
@@ -314,8 +267,6 @@ python scripts/merge_annotations.py --seed 42 --val-fraction 0.2
 | BrentImages Night 2 | `brentimages_20260515.json` + `_negatives.json` | 231 | 204 streaks | Clean holdout; long + medium streaks |
 | Frigate (streaks) | `frigate_streaks.json` | 350 | 377 | Very short ~20–80 px streaks (only source) |
 | Frigate (negatives) | `frigate_negatives.json` | 300 | 0 | — |
-| DarkMatters negatives | `results/darkmatters_eval/negatives.json` | 855 | 0 | Hard negatives, different PSF |
-| DarkMatters unannotated positives | — | ~136 | — | Need manual annotation |
 
 To include Frigate in a training run:
 ```bash

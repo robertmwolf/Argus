@@ -1,10 +1,9 @@
 """Comprehensive evaluation of the best DINOv3 checkpoint across all held-out sets.
 
-Runs four evaluations:
-  1. test_standard   — standard COCO test split (308 satstreaks)
-  2. frigate         — zero-shot, Frigate frames (350 images, absolute paths)
+Runs three evaluations:
+  1. test_standard      — standard COCO test split (308 satstreaks)
+  2. frigate            — zero-shot, Frigate frames (350 images, absolute paths)
   3. brentimages_night2 — zero-shot, BrentImages Night 2 (231 images)
-  4. darkmatters     — zero-shot, DarkMatters holdout (332 images, mixed paths)
 
 For each set reports:
   - COCO mAP / mAP@50 / mAP@75 (via MMDetection CocoMetric)
@@ -36,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 
-CHECKPOINT = _REPO_ROOT / "weights/run_gt_dm_satstreaks_dinov3_vitb/best_coco_bbox_mAP_epoch_4.pth"
+CHECKPOINT = _REPO_ROOT / "weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth"
 CONFIG = _REPO_ROOT / "models/dino/streak_dinov3_vitb.py"
 
 SHORT_MAX = 269.0
@@ -59,11 +58,6 @@ EVAL_SETS = [
         "key": "brentimages_night2",
         "split": "brentimages_20260515_eval",
         "label": "BrentImages Night 2 (zero-shot)",
-    },
-    {
-        "key": "darkmatters",
-        "split": "dm_merged_test",
-        "label": "DarkMatters holdout (zero-shot)",
     },
 ]
 
@@ -386,8 +380,8 @@ def write_report(all_results: dict, out_dir: Path) -> None:
     lines = [
         "# Comprehensive Evaluation Report",
         f"",
-        f"**Model:** DINOv3 ViT-B GT+DM+SatStreaks (4 epochs frozen)  ",
-        f"**Checkpoint:** `weights/run_gt_dm_satstreaks_dinov3_vitb/best_coco_bbox_mAP_epoch_4.pth`  ",
+        f"**Model:** DINOv3 ViT-B Multi-source (clean cold-start)  ",
+        f"**Checkpoint:** `{CHECKPOINT}`  ",
         f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}  ",
         f"**Confidence threshold (P/R/band):** 0.30 | IoU threshold: 0.50  ",
         "",

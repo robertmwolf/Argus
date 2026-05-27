@@ -1,8 +1,7 @@
-"""Build expanded training annotation JSONs for the overnight A/B run.
+"""Build the canonical training annotation JSON.
 
-Produces two files:
-  data/annotations/all_train_nodm.json   — DM-free (SatStreaks + Night1 + Night2 + Frigate tiles)
-  data/annotations/all_train_withdm.json — DM-included (above + 149 DarkMatters)
+Produces:
+  data/annotations/all_train_nodm.json   — SatStreaks + Night1 + Night2 + Frigate tiles
 
 Night 2 (brentimages_20260515.json) has bare filenames that are resolved to
 absolute paths under /Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/.
@@ -10,6 +9,8 @@ absolute paths under /Volumes/External/TrainingData/raw/BrentImages/Img_20260515
 Frigate tiles come from frigate_tiled_train.json (built by build_tiled_frigate_json.py).
 The virtual paths encoded in that file (stem__tx<x>_ty<y>_ts400.png) are handled at
 load time by training/transforms.py LoadFITSFromFile.
+
+Note: DarkMatters data is excluded from this project and must not be added.
 """
 
 from __future__ import annotations
@@ -81,9 +82,8 @@ def merge(sources: list[dict]) -> dict:
 
 
 def main() -> None:
-    # Load base splits
-    base_nodm = _load(_ANN_DIR / "train.json")          # 3,023 images (no DM)
-    base_withdm = _load(_ANN_DIR / "dm_merged_train.json")  # 3,172 images (with DM)
+    # Load base split (SatStreaks + BrentImages Night 1)
+    base_nodm = _load(_ANN_DIR / "train.json")          # 3,023 images
 
     # Load Night 2 — fix bare filenames to absolute paths
     n2_streaks = _load(_ANN_DIR / "brentimages_20260515.json")
@@ -115,7 +115,7 @@ def main() -> None:
         len(frigate_tiled.get("annotations", [])),
     )
 
-    # Model A: no DM
+    # Canonical training set (no DarkMatters)
     merged_nodm = merge([base_nodm, n2_streaks, n2_neg, frigate_tiled])
     out_nodm = _ANN_DIR / "all_train_nodm.json"
     with open(out_nodm, "w") as f:
@@ -124,17 +124,6 @@ def main() -> None:
         "all_train_nodm.json: %d images, %d annotations",
         len(merged_nodm["images"]),
         len(merged_nodm["annotations"]),
-    )
-
-    # Model B: with DM
-    merged_withdm = merge([base_withdm, n2_streaks, n2_neg, frigate_tiled])
-    out_withdm = _ANN_DIR / "all_train_withdm.json"
-    with open(out_withdm, "w") as f:
-        json.dump(merged_withdm, f)
-    logger.info(
-        "all_train_withdm.json: %d images, %d annotations",
-        len(merged_withdm["images"]),
-        len(merged_withdm["annotations"]),
     )
 
 

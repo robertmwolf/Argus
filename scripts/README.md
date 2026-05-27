@@ -35,7 +35,7 @@ Status labels:
 |---|---:|---|---|
 | `convert_gtimages.py` | Active | Converts GTImages `.strk`/FITS metadata into COCO-style annotations. | Covered by tests. |
 | `merge_annotations.py` | Active | Builds current SatStreaks + GTImages train/val/test splits. | Main split builder in README. |
-| `merge_darkmatters_annotations.py` | Active | Merges DarkMatters labels into GT/DM/SatStreaks splits. | Used by current DINOv3 full-dataset track. |
+| `archive/merge_darkmatters_annotations.py` | Archived | Merged DarkMatters labels into training splits. | DarkMatters data excluded from this project — archived for reference only. |
 | `merge_fits_annotations.py` | Provenance | Merges FITS-native annotation sources such as GTImages + Frigate. | Supports StreakMindYOLO comparison artifacts. |
 | `augment_gtimages_synthetic.py` | Provenance | Builds real and synthetic GTImages tracks for StreakMind reproduction. | Keep with methodology/results provenance. |
 | `augment_short_medium.py` | Provenance | Generates short/medium synthetic augmentation data. | Experiment-specific; archive only after outputs and rationale are captured elsewhere. |
@@ -45,12 +45,12 @@ Status labels:
 | Script | Status | Purpose | Notes |
 |---|---:|---|---|
 | `train_yolo_full.sh` | Active | Trains/evaluates full-dataset YOLO11-OBB baseline. | Documented in README; integrated with inference when weights exist. |
-| `train_gt_dm_satstreaks.sh` | Active | Trains DINOv3 ViT-B on GT + DarkMatters + SatStreaks merged data. | Current full real-image training shortcut. |
+| `archive/train_gt_dm_satstreaks.sh` | Archived | Trained DINOv3 ViT-B on GT + DarkMatters + SatStreaks. | DarkMatters data excluded — archived. |
 | `train_compare_streakmind_yolo.py` | Provenance | Python driver for StreakMindYOLO methodology comparison tracks. | Produces results under `results/streakmind_yolo/`. |
 | `train_streakmind_comparison.sh` | Provenance | Shell orchestration for the StreakMindYOLO comparison workflow. | Keep while methodology/results are active. |
 | `evaluate_dino_checkpoint.py` | Active | Evaluates a DINO checkpoint with project metrics. | Useful for ad hoc checkpoint checks. |
 | `phase_e_compare.py` | Active | Head-to-head DINOv3 vs Swin-T comparison table/JSON. | Documented in training handoff. |
-| `evaluate_darkmatters_dataset.py` | Provenance | DarkMatters dataset probe/evaluation workflow. | Keep with DarkMatters annotation provenance. |
+| `archive/evaluate_darkmatters_dataset.py` | Archived | DarkMatters dataset probe/evaluation workflow. | DarkMatters data excluded — archived. |
 
 ## Plain DINOv3 Spike Scripts
 
@@ -72,7 +72,7 @@ handling that will likely be useful for future labeling passes.
 
 | Script | Status | Purpose | Notes |
 |---|---:|---|---|
-| `annotate.py` | Manual | Unified Tkinter OBB streak annotation tool for FITS, PNG, and JPEG inputs. | Handles DarkMatters CSV exports, Frigate priority lists, generic image directories, and BrentImages `.strk` write-back via `--night-dir`. |
+| `annotate.py` | Manual | Unified Tkinter OBB streak annotation tool for FITS, PNG, and JPEG inputs. | Handles Frigate priority lists, generic image directories, and BrentImages `.strk` write-back via `--night-dir`. |
 | `annotate_frigate.py` | Manual | Builds Frigate negative-example COCO corpus. | Also serves as provenance for Frigate-as-background decision. |
 | `screen_frigate.py` | Manual | Ranks Frigate frames by short-streak likelihood. | Produces priority JSON/contact sheet for annotation. |
 

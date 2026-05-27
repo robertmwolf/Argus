@@ -1,22 +1,23 @@
-# DINOv3 ViT-B/16 — 50-epoch long-run config for A/B comparison (256px)
+# DINOv3 ViT-B/16 — 50-epoch long-run config (256px, development/ablation use)
 #
 # Differences from streak_dinov3_vitb.py:
 #   - max_epochs = 50
 #   - param_scheduler: 2-epoch linear warmup then CosineAnnealingLR (1e-4 → 1e-6)
 #   - val_interval = 5, checkpoint interval = 5, max_keep_ckpts = 3
-#   - Image scale unchanged at 256px (keeps A/B runs fast: ~2.5h each)
+#   - Image scale unchanged at 256px (keeps runs fast: ~2.5h each)
 #
-# Use streak_dinov3_vitb_400px.py for the final quality run at 400px.
+# Use streak_dinov3_vitb_400px.py for the canonical quality run at 400px.
+#
+# IMPORTANT: Do NOT use --load-from with any prior checkpoint. Must be cold-started.
 #
 # USAGE (via train_overnight.sh or manually):
 #   USE_DEV_SUBSET=false \
 #   TRAIN_ANN_FILE=annotations/all_train_nodm.json \
-#   VAL_ANN_FILE=annotations/dm_merged_val.json \
+#   VAL_ANN_FILE=annotations/val.json \
 #   PYTORCH_ENABLE_MPS_FALLBACK=1 \
 #   python -m training.train_dino \
 #     --config models/dino/streak_dinov3_vitb_longrun.py \
-#     --work-dir weights/run_50ep_nodm \
-#     --load-from weights/run_gt_dm_satstreaks_dinov3_vitb/best_coco_bbox_mAP_epoch_4.pth
+#     --work-dir weights/run_clean_vitb_longrun
 
 custom_imports = dict(
     imports=['training.transforms', 'models.dino.dinov3_adapter'],

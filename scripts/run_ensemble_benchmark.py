@@ -79,10 +79,6 @@ TEST_SETS = {
         "annotations": _ANNOTATIONS_DIR / "test.json",
         "label": "SatStreaks test",
     },
-    "darkmatters": {
-        "annotations": _ANNOTATIONS_DIR / "dm_merged_test.json",
-        "label": "DarkMatters holdout (zero-shot)",
-    },
     "brentimages": {
         "annotations": _ANNOTATIONS_DIR / "brentimages_20260515_eval.json",
         "label": "BrentImages Night 2 (zero-shot)",
@@ -410,7 +406,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--all-sets", action="store_true",
-        help="Run on all three test sets (satstreaks, darkmatters, brentimages)",
+        help="Run on all test sets (satstreaks, brentimages)",
     )
     parser.add_argument(
         "--sets", nargs="+",
