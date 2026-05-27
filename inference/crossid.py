@@ -38,7 +38,6 @@ from __future__ import annotations
 
 import logging
 import math
-import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -67,10 +66,6 @@ _QUALITY_EDGE = 1
 # ---------------------------------------------------------------------------
 
 _tle_manager = TLECatalogManager()
-
-_LOCAL_PROVIDER = "local"
-_SATCHECKER_PROVIDER = "satchecker"
-_SATCHECKER_FALLBACK_PROVIDER = "satchecker_fallback"
 
 
 def _format_utc(dt: datetime | None) -> str | None:
@@ -162,100 +157,6 @@ def _fetch_current_tle_catalog(obs_time: datetime) -> list[dict[str, Any]]:
     if obs_time.tzinfo is None:
         obs_time = obs_time.replace(tzinfo=timezone.utc)
     return _catalog_from_rows(_tle_manager.get_current_fallback_tles(obs_time))
-
-
-def _candidate_provider_name() -> str:
-    """Return the configured cross-ID candidate provider name."""
-    return os.environ.get("ARGUS_CANDIDATE_PROVIDER", _LOCAL_PROVIDER).strip().lower()
-
-
-def _fetch_satchecker_catalog(
-    detections: list[dict],
-    obs_time: datetime,
-    observer_lat: float,
-    observer_lon: float,
-    observer_alt_m: float,
-    exposure_time: float | None,
-) -> list[dict[str, Any]]:
-    """Return optional SatChecker FOV API candidates for this observation."""
-    from src.matching.satchecker_provider import SatCheckerCandidateProvider
-
-    provider = SatCheckerCandidateProvider()
-    return provider.get_catalog(
-        detections,
-        obs_time,
-        observer_lat,
-        observer_lon,
-        observer_alt_m,
-        exposure_time=exposure_time,
-    )
-
-
-def _fetch_candidate_catalog(
-    detections: list[dict],
-    obs_time: datetime,
-    epoch_window_days: int,
-    min_mean_motion: float,
-    observer_lat: float,
-    observer_lon: float,
-    observer_alt_m: float,
-    exposure_time: float | None,
-) -> list[dict[str, Any]]:
-    """Fetch cross-ID candidates from the configured provider.
-
-    ``ARGUS_CANDIDATE_PROVIDER`` controls the behavior:
-
-    - ``local`` (default): existing local TLE manager path.
-    - ``satchecker``: try SatChecker first, then local fallback unless
-      ``ARGUS_SATCHECKER_FALLBACK_LOCAL=0``.
-    - ``satchecker_fallback``: use local first, then SatChecker only if local
-      returns no candidates.
-    """
-    provider_name = _candidate_provider_name()
-    if provider_name in {"", _LOCAL_PROVIDER}:
-        return _fetch_tle_catalog(obs_time, epoch_window_days, min_mean_motion)
-
-    if provider_name == _SATCHECKER_FALLBACK_PROVIDER:
-        local_catalog = _fetch_tle_catalog(obs_time, epoch_window_days, min_mean_motion)
-        if local_catalog:
-            return local_catalog
-        try:
-            return _fetch_satchecker_catalog(
-                detections,
-                obs_time,
-                observer_lat,
-                observer_lon,
-                observer_alt_m,
-                exposure_time,
-            )
-        except Exception:
-            logger.warning("SatChecker candidate fallback failed", exc_info=True)
-            return []
-
-    if provider_name == _SATCHECKER_PROVIDER:
-        try:
-            satchecker_catalog = _fetch_satchecker_catalog(
-                detections,
-                obs_time,
-                observer_lat,
-                observer_lon,
-                observer_alt_m,
-                exposure_time,
-            )
-        except Exception:
-            logger.warning("SatChecker candidate provider failed", exc_info=True)
-            satchecker_catalog = []
-        if satchecker_catalog:
-            return satchecker_catalog
-        if os.environ.get("ARGUS_SATCHECKER_FALLBACK_LOCAL", "1").lower() in {"0", "false", "no"}:
-            return []
-        return _fetch_tle_catalog(obs_time, epoch_window_days, min_mean_motion)
-
-    logger.warning(
-        "Unknown ARGUS_CANDIDATE_PROVIDER=%r; using local TLE catalog",
-        provider_name,
-    )
-    return _fetch_tle_catalog(obs_time, epoch_window_days, min_mean_motion)
 
 
 def _catalog_has_mode(catalog: list[dict[str, Any]], mode: str) -> bool:
@@ -699,19 +600,10 @@ def cross_identify(
         catalog = _catalog_override
     else:
         try:
-            catalog = _fetch_candidate_catalog(
-                detections,
-                obs_time,
-                epoch_window_days,
-                min_mean_motion,
-                observer_lat,
-                observer_lon,
-                observer_alt_m,
-                exposure_time,
-            )
+            catalog = _fetch_tle_catalog(obs_time, epoch_window_days, min_mean_motion)
         except Exception:
             logger.warning(
-                "Candidate catalog fetch failed — skipping cross-identification",
+                "TLE catalog fetch failed — skipping cross-identification",
                 exc_info=True,
             )
             catalog = []
