@@ -146,32 +146,42 @@ pip install -r requirements-api.txt
 pip install -r requirements-inference.txt   # model-serving worker
 pip install -r requirements-training.txt    # training/evaluation
 pip install -r requirements-dev.txt         # tests on top of training
+```
 
-# Required env vars for local dev
-export MODEL_SIZE=dinov3_vitb                   # dinov3_vitb (default), dinov3_vitl, tiny=Swin-T, large=Swin-L
-# MODEL_WEIGHTS auto-resolved from MODEL_SIZE; override only if using a non-default checkpoint:
-# export MODEL_WEIGHTS=weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth
-export PYTORCH_ENABLE_MPS_FALLBACK=1            # required on Apple Silicon
-export DATABASE_URL=sqlite+aiosqlite:///./argus.db
+All runtime configuration lives in a `.env` file in the project root.
+The API loads it automatically via `python-dotenv` on startup — no `export` needed.
+Create `.env` from this template (`.env` is gitignored; never commit credentials):
 
-# Optional: lower the confidence threshold for locally-trained models
-export CONFIDENCE_THRESHOLD=0.01               # local dev; raise after cloud calibration
+```bash
+# .env — ARGUS local dev configuration
 
-# Match preprocessing to the loaded checkpoint:
-export ARGUS_NORM=zscore                       # current local Swin-T weights
-# export ARGUS_NORM=autostretch                # future autostretch-trained Swin-L weights
+# Space-Track credentials (required for TLE bootstrap; free account at space-track.org)
+SPACETRACK_USER=your@email.com
+SPACETRACK_PASS=yourpassword
 
-# Space-Track credentials (required for TLE bootstrap — free account):
-# Register at https://www.space-track.org/auth/createAccount
-export SPACETRACK_USER=your@email.com
-export SPACETRACK_PASS=yourpassword
+# Multi-model ensemble — each entry is one DINO checkpoint.
+# Paths are relative to the project root (or absolute).
+# YOLO / StreakMind YOLO are auto-detected from their default weight paths.
+ARGUS_MODEL_CONFIGS=[{"id":"dinov3_vitb","size":"dinov3_vitb","weights":"weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth","label":"DINOv3 Base","dataset":"SatStreaks+GTImages"},{"id":"dinov3_vitb_multisource","size":"dinov3_vitb_multisource","weights":"weights/run3_cold_nodm/best.pth","label":"DINOv3 Base - Multi-source (Run 3)","dataset":"SatStreaks+BrentImages+Frigate"}]
+
+PYTORCH_ENABLE_MPS_FALLBACK=1           # required on Apple Silicon
+DATABASE_URL=sqlite+aiosqlite:///./argus.db
+CONFIDENCE_THRESHOLD=0.05
+
+# Fast mode: 256px inference, no Radon refinement, no cross-ID (~25x faster on CPU)
+FAST_MODE=false
+
+# ASTRiDE classical detector — disabled by default (high FP rate on real FITS)
+# ARGUS_ENABLE_ASTRIDE=1
+
+# Override YOLO weight paths if yours are not at the default locations:
+# YOLO_WEIGHTS=weights/yolo_tiled/run/weights/best.pt
+# STREAKMIND_YOLO_WEIGHTS=weights/streakmind_yolo_real/run/weights/best.pt
 
 # ARGUS_ENV controls which Space-Track endpoint is used:
 #   development (default) → https://for-testing-only.space-track.org/
 #   production            → https://www.space-track.org/
-# Leave unset (or set to development) for all local work — the test site
-# mirrors production data and uses the same credentials.
-export ARGUS_ENV=development   # default; omit to get the same behaviour
+ARGUS_ENV=development
 ```
 
 ### TLE Catalog Setup
@@ -228,19 +238,23 @@ object unidentified (`unknown`) rather than querying Space-Track at runtime.
 Run the API directly with the satid conda environment. The satid env has torch,
 mmdet, ultralytics, and all ML packages installed.
 
-### Prerequisites — model weights
+### Detector inventory
 
-Two weight files are needed to run DINOv3 and YOLO side-by-side in the UI:
+ARGUS runs up to seven detectors in parallel. Each is activated differently:
 
-| Detector | Expected path | Size |
-|----------|--------------|------|
-| DINOv3 ViT-B (primary ML) | `weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth` | ~330 MB |
-| YOLO11n-OBB full dataset | `weights/run_full_yolo_obb/run/weights/best.pt` | ~5.4 MB |
+| Detector | ID | How it activates | Weight path |
+|---|---|---|---|
+| DINOv3 ViT-B (SatStreaks+GTImages) | `dinov3_vitb` | `MODEL_SIZE` or `ARGUS_MODEL_CONFIGS` | `weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth` |
+| DINOv3 ViT-B (Multi-source, Run 3) | `dinov3_vitb_multisource` | `ARGUS_MODEL_CONFIGS` only | `weights/run3_cold_nodm/best.pth` (early ckpt — Run 3 still training) |
+| YOLO11n-OBB full dataset | `yolo_full` | auto-detected if weights exist | `weights/run_full_yolo_obb/run/weights/best.pt` |
+| YOLO11n-OBB tiled | `yolo` | auto-detected if weights exist | `weights/yolo_tiled/run/weights/best.pt` (or `YOLO_WEIGHTS`) |
+| StreakMind YOLO | `streakmind_yolo` | auto-detected if weights exist | `weights/streakmind_yolo_real/run/weights/best.pt` (or `STREAKMIND_YOLO_WEIGHTS`) |
+| OpenCV morphological | `opencv` | always runs | — |
+| ASTRiDE | `astride` | **opt-in**: `ARGUS_ENABLE_ASTRIDE=1` | — (high false-positive rate on real FITS) |
 
-The YOLO weight is auto-detected by the pipeline — if the file exists, YOLO runs
-automatically alongside DINOv3 with no extra configuration required.
+YOLO and StreakMind YOLO weights are auto-detected — if the file exists the detector runs with no extra configuration.
 
-To produce the YOLO weights locally (~9 hours on Mac M3 CPU, ~30 min on GPU):
+To produce the `yolo_full` weights locally (~9 hours on Mac M3 CPU, ~30 min on GPU):
 
 ```bash
 # 1. Get annotated training data if not already present
@@ -257,24 +271,22 @@ bash scripts/train_yolo_full.sh
 
 ### Starting the dev servers
 
+All configuration is read from `.env` — no environment variables need to be exported manually.
+
 ```bash
 conda activate satid
 
-# DINOv3 ViT-B — runs on CPU (MPS fallback) on Apple Silicon
-export MODEL_SIZE=dinov3_vitb
-export PYTORCH_ENABLE_MPS_FALLBACK=1
-export DATABASE_URL=sqlite+aiosqlite:///./argus.db
-export CONFIDENCE_THRESHOLD=0.05
-
-# Start the API (port 8000)
+# Start the API (port 8000) — reads .env automatically
 uvicorn api.main:app --reload --port 8000
 
 # In a second terminal — start the frontend dev server (port 5173)
 cd frontend && npm run dev
 ```
 
-Open `http://localhost:5173`, upload a FITS file, and both detectors will run in
-parallel.  In the results canvas:
+To switch between single-model and full-ensemble mode, edit `ARGUS_MODEL_CONFIGS` in `.env`.
+Remove the variable entirely to fall back to the single model set by `MODEL_SIZE`.
+
+Open `http://localhost:5173`, upload a FITS file.  In the results canvas:
 - **Cyan** lines = DINOv3 ViT-B detections
 - **Purple** lines = YOLO11n-OBB detections
 - **Amber** lines = ASTRiDE / OpenCV classical detections
@@ -282,18 +294,17 @@ parallel.  In the results canvas:
 Use the **Filters** panel to slide confidence thresholds per-method and isolate
 each detector's output independently.
 
-### Verifying both detectors are active
+### Verifying which detectors are active
 
 ```bash
-# Quick smoke-test — prints per-method detection counts
+# Prints status for every detector without loading any model weights
 python -c "
-from inference import pipeline
-dets = pipeline.run('data/sample/synth_streak_000.fits', fast=True)
-from collections import Counter
-print(Counter(s['method'] for d in dets for s in (d.get('sources') or [{'method': d['method']}])))
+from inference.pipeline import get_detector_statuses
+for d in get_detector_statuses():
+    print(f\"{d['status']:12} {d['id']:30} {d['name']}\")
 "
-# Expected output includes 'dinov3_vitb' and 'yolo_full' keys
-# 'yolo_full' absent → check weights/run_full_yolo_obb/run/weights/best.pt exists
+# status is one of: active | no_weights | unavailable
+# 'no_weights' → the detector is implemented but the weight file is missing
 ```
 
 ## Running Tests

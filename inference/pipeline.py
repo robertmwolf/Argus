@@ -999,7 +999,7 @@ def resolve_model_specs() -> list[dict]:
     _dinov3_defaults: dict[str, Path] = {
         "dinov3_vitb":             root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
         "dinov3_vitl":             root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
-        "dinov3_vitb_multisource": root / "weights" / "run_clean_vitb_nodm" / "best_coco_bbox_mAP_epoch_15.pth",
+        "dinov3_vitb_multisource": root / "weights" / "run3_cold_nodm" / "best.pth",
     }
     _meta: dict[str, tuple[str, str]] = {
         "tiny":                    ("DINO Swin-Tiny",                  "SatStreaks"),
