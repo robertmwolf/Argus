@@ -92,10 +92,20 @@ frames at 6248×4176 px (native resolution; downsampled for training).
 All training splits are COCO-format JSON with a single category:
 `{"id": 1, "name": "streak", "supercategory": "satellite"}`.
 
-Tiled Frigate crops use a virtual path encoding:
+Tiled crops use a virtual path encoding:
 `<original_stem>__tx<x0>_ty<y0>_ts<tile_size><ext>`
 which is resolved to the real crop at load time by `training/transforms.py:LoadFITSFromFile`.
-Tile parameters: 400×400 px, 25% overlap.
+
+**Adaptive tiling parameters** (see `docs/adaptive_tiling_plan.md`):
+
+| Dataset | `native_tile_size` | magnification | overlap | rationale |
+|---------|-------------------|---------------|---------|-----------|
+| BrentImages (400px tiles) | 400 px | 1.0× | 50% | 1:1 native crops; baseline |
+| Frigate (short-streak regime) | 110 px | 3.64× | 50% | 20–80 px streaks → 70–290 px at model input |
+
+The `magnification = model_input_size / native_tile_size` factor is applied by
+`inference/tiled_pipeline.py:tile_image` (cv2 resize) and reversed by
+`remap_predictions` when mapping tile-space detections back to image coordinates.
 
 ### 2.4 Training Split Sizes (current pilot runs)
 
@@ -141,7 +151,7 @@ The following runs informed but do **not** constitute the publishable final mode
 **Run 2 — Phase 2 quality run (May 22–25, 2026):**
 - Config: `models/dino/streak_dinov3_vitb_400px.py` (15 epochs, cosine LR, 400px)
 - Data: `all_train_nodm.json` (3,971 images, 3,816 annotations — winner from Run 1)
-- Warm start: Run 0 checkpoint
+- Warm start: Run 0 checkpoint (**⚠️ DM-contaminated warm start — see note below**)
 - Hardware: Mac M3 CPU, ~72h (thermal throttling; ~1.4–2.5 s/step)
 - Checkpoint: `weights/run_best_400px_nodm/best_coco_bbox_mAP_epoch_15.pth`
 - Val results on `dm_merged_val.json`:
@@ -163,6 +173,35 @@ The following runs informed but do **not** constitute the publishable final mode
 
 This model is deployed as **DINOv3 Base - Multi-source** (`dinov3_vitb_multisource`) in
 the production API.
+
+> **⚠️ DM contamination note:** Every checkpoint in Runs 0–2 has been exposed to
+> DarkMatters data. Run 0 was trained on DM; Runs 1 and 2 warm-started from Run 0.
+> The "nodm" label means DM was excluded from the fine-tuning data, but the
+> detection head weights were *initialised* from a model that saw DM. This is
+> sufficient for production use but **disqualifies these checkpoints as the paper
+> model** without a clearly disclosed methods caveat. Run 3 (below) is the clean
+> cold-start replacement.
+
+---
+
+**Run 3 — Cold-start DM-free paper model (planned):**
+- **Decision (2026-05-26):** Start from scratch — no warm start from any DM-exposed
+  checkpoint. This is **Option A** from the §4 Methodology checklist and closes
+  Open Question 5.
+- Config: `models/dino/streak_dinov3_vitb_400px.py` (same as Run 2)
+- Data: `all_train_nodm.json` ± tiled BrentImages and Frigate crops (pending
+  attribution resolution — see §4 Data checklist and `docs/adaptive_tiling_plan.md`)
+- Warm start: **None** (`load_from = None`) — detection head initialised from scratch
+- Hardware: Cloud GPU recommended (RTX 4090); Run 2 took 72h on Mac M3 at 400px
+- Expected convergence: ~4–6h to reach Run 0 baseline quality, then continues
+  improving through 15 epochs as the head learns without any DM prior
+- Checkpoint destination: `weights/run3_cold_nodm/` (to be updated on completion)
+
+> **Why cold-start matters for the paper:** A reviewer could reasonably object that
+> the "no-DM" model still has DM-derived weights as its starting point. A cold-start
+> eliminates that objection entirely. The mAP cost (if any) from removing the warm
+> start is expected to be small — Run 1 showed DM contributes only ~0.001 mAP@50
+> in the fine-tuning phase.
 
 ### 3.3 BrentImages Night 2 Evaluation Caveat
 
@@ -239,13 +278,13 @@ evaluation output.
 
 ### Methodology
 
-- [ ] Decide on warm-start strategy:
-  - **Option A (recommended for clean ablation):** Cold-start the detection head
-    directly on the final dataset. No prior exposure to DM data in any checkpoint.
-    Longer to converge (~4–6h to reach Run 0 baseline, then continues improving).
-  - **Option B:** Accept the Run 0 warm start and disclose in the paper that the
-    initial 4-epoch checkpoint included DarkMatters data, then fine-tuned without it.
-    Simpler but requires a clear methods footnote.
+- [x] Decide on warm-start strategy:
+  - ✅ **Option A selected (2026-05-26):** Cold-start the detection head directly on
+    the final dataset. No prior exposure to DM data in any checkpoint. This is Run 3.
+    See §3.1 for rationale and plan.
+  - ~~Option B: Accept the Run 0 warm start~~ — rejected; DM contamination in all
+    existing checkpoints makes Option B require a methods footnote that weakens the
+    no-DM claim.
 - [ ] Training resolution confirmed (256px or 400px — 400px substantially slower
       on Mac MPS; consider whether the compute cost is justified vs mAP gain from Run 1)
 - [ ] Val set composition confirmed and frozen; report which images are in it
@@ -253,12 +292,12 @@ evaluation output.
 ### Paper Run Config Parameters (informed by Run 1 and Run 2)
 
 ```python
-# Decisions made after Run 1 A/B + Run 2 results:
+# Decisions made after Run 1 A/B + Run 2 results + Run 3 decision (2026-05-26):
 _img_scale     = (400, 400)                        # 400px: +0.066 mAP@50 vs 256px
 TRAIN_ANN_FILE = 'annotations/all_train_nodm.json' # no-DM: avoids consent issue, ~identical perf
 max_epochs     = 15                                # cosine schedule converges well by ep15
 randomness     = dict(seed=42, deterministic=True) # [TODO: add to final config]
-load_from      = None   # TBD: Option A (cold start) vs Option B (Run 0 warm-start); see §4 Methodology
+load_from      = None   # ✅ DECIDED: cold start (Option A) — no DM-exposed checkpoint
 ```
 
 Note: `all_train_nodm.json` does not yet include tiled BrentImages crops (Night 1 FITS are
@@ -290,8 +329,17 @@ Zero-shot sets are never seen during training; they measure generalisation.
 ### 5.3 Inference Variants
 
 - **Standard:** Full-image resize to training resolution; use for SatStreaks and DM
-- **Tiled:** `inference/tiled_pipeline.py`, tile_size=400, overlap=0.5, cross-tile NMS
-  at IoU=0.4; use for Frigate and any high-resolution frames
+- **Tiled (BrentImages / high-res FITS):** `inference/tiled_pipeline.py`,
+  `native_tile_size=400`, `overlap=0.5`, cross-tile NMS at IoU=0.4; restores 1:1 native
+  resolution for large FITS frames
+- **Adaptive tiled (Frigate / short-streak):** same pipeline with
+  `native_tile_size=110`, `overlap=0.5`, `magnification=3.64×`; brings 20–80 px
+  native streaks to 70–290 px at model input where the detector can find them.
+  §6.1 verification result (2026-05-26): mAP@50 = **0.008** vs 0.000 full-frame
+  baseline — ✅ PASS. FP rate high until fine-tuned on Frigate data (§6.4).
+- **Optional post-NMS stitching:** `stitch_collinear_fragments()` merges collinear
+  detection fragments separated by gaps ≤ `max_gap_px` (default: 1 tile width).
+  Enable with `--stitch` flag on eval scripts.
 
 ---
 
@@ -322,7 +370,9 @@ Approximate training throughput on this hardware:
 2. **Frigate attribution** — blocks use of Frigate tiles in the published training set
 3. **DINOv3 citation** — need the exact paper reference (not DINOv2)
 4. **Data hosting** — HuggingFace Datasets vs Zenodo; need DOI before paper submission
-5. **Warm-start strategy** — Option A vs B (see §4 Methodology above)
+5. ~~**Warm-start strategy**~~ — ✅ Resolved (2026-05-26): **Option A — cold start.**
+   All existing checkpoints (Runs 0–2) are contaminated by DM warm-start data; Run 3
+   will cold-start the detection head from scratch on `all_train_nodm.json`. See §3.1.
 6. **400px vs 256px** — ✅ Resolved: 400px yields mAP@50=0.468 vs 0.402 at 256px (+0.066).
    The gain justifies the compute cost; paper run will use 400px. For a Mac M3 (~72h),
    cloud GPU is strongly recommended for the final paper run.
