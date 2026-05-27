@@ -248,6 +248,29 @@ python scripts/bootstrap_tle_catalog.py --zip-dir data/tle_zips/ --years 2024
 download resource (policy: 1 query per lifetime per object) and may only be
 used via explicit operator/admin scripts, not from inference code.
 
+### Why Not Direct Orbital-Object API Lookup?
+
+ARGUS keeps runtime cross-identification anchored to the local `tle_catalog`.
+Direct field-of-view or ephemeris APIs are tempting because they can return a
+smaller candidate list, but they add operational risk in the exact part of the
+pipeline that needs to be deterministic:
+
+- External services introduce latency, outages, rate limits, and changing
+  upstream catalog behavior.
+- Historical research images need reproducible results; local TLE rows preserve
+  the epoch, source, and exact lines used for SGP4 scoring.
+- Real FITS uploads often need solved WCS or sidecar `.wcs` files before a
+  field-of-view API can be queried correctly. Header RA/DEC hints are useful
+  for solving and diagnostics, but not a full substitute for streak endpoint
+  RA/Dec.
+- Space-Track policy still favors one-time fetch, cache, and reuse for
+  historical TLE data rather than repeated runtime lookup.
+
+Treat third-party orbital lookup APIs as offline comparison candidates only.
+Do not make them an inference fallback unless they have been benchmarked for
+availability, latency, expected-NORAD recovery, historical coverage, and
+provenance against the local catalog.
+
 ### Coverage source tags in `tle_catalog_coverage`
 
 | Tag | Source | Written by |
