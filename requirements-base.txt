@@ -20,7 +20,7 @@ spacetrack==0.14.0
 # Headless variant: safe in WSL2 and server environments.
 opencv-python-headless==4.10.0.84
 scikit-image==0.24.0
-Pillow==10.4.0
+Pillow==12.2.0
 shapely==2.0.4
 
 # Data / compute
@@ -30,7 +30,7 @@ scipy==1.13.1
 pandas==2.2.2
 
 # Utilities
-requests==2.32.3
+requests==2.33.0
 python-dateutil==2.9.0
 tqdm==4.66.4
 diskcache==5.6.3
