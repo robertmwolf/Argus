@@ -180,6 +180,27 @@ The lookup path in `crossid.py` is:
 Bootstrap the DB once per environment with `scripts/bootstrap_tle_catalog.py`.
 Current/live Space-Track integration is intentionally not automatic.
 
+### External Orbital Lookup Services
+ARGUS intentionally keeps the local TLE catalog as the primary orbital-object
+lookup source.  A direct runtime replacement, such as a field-of-view ephemeris
+API, has two practical problems for this project:
+
+1. **Runtime reliability and reproducibility** — external services can be slow,
+   unavailable, rate-limited, or change their backing catalog.  Cross-ID results
+   need to be repeatable for research runs, regression tests, and historical
+   images.
+2. **Input readiness** — field-of-view lookup APIs require reliable sky
+   geometry: observation time, observer location, and solved RA/Dec endpoints or
+   a trustworthy field center/radius.  Many uploaded real streak FITS files have
+   useful DATE-OBS/site/target hints but no celestial WCS until ASTAP or a
+   sidecar solve is available.
+
+For these reasons, external orbital-object APIs should be treated as research
+probes or offline comparison tools only.  They should not replace the local
+`tle_catalog` inference path unless they can demonstrate low latency, high
+availability, historical coverage, expected-NORAD recovery, and stable
+provenance across the ARGUS real-image benchmark set.
+
 ### ML FITS Loading and WCS Sidecars
 `inference/fits_loader.py` normalises FITS image data for the DINO path and
 loads celestial WCS in this order:
