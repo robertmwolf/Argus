@@ -1,0 +1,134 @@
+{
+  "date_recorded": "2026-05-27T04:24:53.445834+00:00",
+  "model_size": "dinov3_vitb_multisource",
+  "streakmind_yolo_weights": "/Users/robert/Argus/weights/streakmind_yolo_combined/run/weights/best.pt",
+  "results": {
+    "custom": {
+      "label": "BrentImages (50-image sample)",
+      "n_images": 50,
+      "n_skipped": 0,
+      "methods": {
+        "dinov3_vitb_multisource": {
+          "precision": 0.0135,
+          "recall": 0.0233,
+          "f1": 0.0171,
+          "map_50": 0.0015,
+          "map_75": 0.0,
+          "mean_angle_error_deg": 0.511,
+          "per_band": {
+            "short": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "medium": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "long": {
+              "precision": 0.0192,
+              "recall": 0.0244,
+              "f1": 0.0215
+            }
+          },
+          "n_predictions": 74,
+          "precision_30": 0.0204,
+          "recall_30": 0.0233,
+          "f1_30": 0.0217,
+          "n_predictions_30": 49
+        },
+        "streakmind_yolo": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "map_50": 0.0,
+          "map_75": 0.0,
+          "mean_angle_error_deg": 0.0,
+          "per_band": {
+            "short": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "medium": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "long": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            }
+          },
+          "n_predictions": 8,
+          "precision_30": 0.0,
+          "recall_30": 0.0,
+          "f1_30": 0.0,
+          "n_predictions_30": 2
+        },
+        "astride": {
+          "precision": 0.0004,
+          "recall": 0.0233,
+          "f1": 0.0008,
+          "map_50": 0.0008,
+          "map_75": 0.0,
+          "mean_angle_error_deg": 0.511,
+          "per_band": {
+            "short": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "medium": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "long": {
+              "precision": 0.0222,
+              "recall": 0.0244,
+              "f1": 0.0233
+            }
+          },
+          "n_predictions": 2500,
+          "precision_30": 0.0004,
+          "recall_30": 0.0233,
+          "f1_30": 0.0008,
+          "n_predictions_30": 2500
+        },
+        "unified": {
+          "precision": 0.0004,
+          "recall": 0.0233,
+          "f1": 0.0008,
+          "map_50": 0.0015,
+          "map_75": 0.0,
+          "mean_angle_error_deg": 0.511,
+          "per_band": {
+            "short": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "medium": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "long": {
+              "precision": 0.0217,
+              "recall": 0.0244,
+              "f1": 0.023
+            }
+          },
+          "n_predictions": 2500,
+          "precision_30": 0.0204,
+          "recall_30": 0.0233,
+          "f1_30": 0.0217,
+          "n_predictions_30": 49
+        }
+      }
+    }
+  }
+}
