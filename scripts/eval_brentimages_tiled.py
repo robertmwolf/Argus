@@ -1,22 +1,13 @@
 """Tiled inference evaluation on BrentImages Night 2.
 
-Runs tiled inference on every image in brentimages_20260515_eval.json and
-reports COCO mAP + P/R/F1 + per-band recall — identical metrics to
-evaluate_comprehensive.py but using native-resolution tiles instead of
-full-frame downsampling.
+Runs run_tiled_inference (tile_size=400, overlap=0.5) on every image in
+brentimages_20260515_eval.json and reports COCO mAP + P/R/F1 + per-band
+recall — identical metrics to evaluate_comprehensive.py but using native-
+resolution tiles instead of full-frame downsampling.
 
-Default parameters (native_tile_size=400, overlap=0.5) reproduce the original
-1:1 tiled evaluation.  Pass --native-tile-size to experiment with alternative
-magnifications.
-
-Usage::
-
-    PYTORCH_ENABLE_MPS_FALLBACK=1 python scripts/eval_brentimages_tiled.py \\
-        --checkpoint weights/run_best_400px_nodm/best_coco_bbox_mAP_epoch_15.pth
-
-    # Different native tile size (e.g. larger crops for long streaks):
-    PYTORCH_ENABLE_MPS_FALLBACK=1 python scripts/eval_brentimages_tiled.py \\
-        --checkpoint weights/... --native-tile-size 600
+Usage:
+    PYTORCH_ENABLE_MPS_FALLBACK=1 python scripts/eval_brentimages_tiled.py \
+        --checkpoint weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth
 """
 
 from __future__ import annotations
@@ -172,39 +163,12 @@ def compute_coco_map(gt_coco, pred_list):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoint", type=Path,
-                        default=_REPO_ROOT / "weights/run_best_400px_nodm/best_coco_bbox_mAP_epoch_15.pth")
+                        default=_REPO_ROOT / "weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth")
     parser.add_argument("--conf",  type=float, default=0.3)
-    parser.add_argument(
-        "--native-tile-size",
-        type=int,
-        default=400,
-        help=(
-            "Native crop footprint in source-image pixels (default 400). "
-            "model_input_size is always 400; magnification = 400 / native_tile_size."
-        ),
-    )
-    parser.add_argument("--overlap", type=float, default=0.5)
-    parser.add_argument(
-        "--interp",
-        choices=["bilinear", "lanczos", "cubic", "nearest"],
-        default="bilinear",
-        help="Interpolation method for tile resize (default: bilinear).",
-    )
-    parser.add_argument(
-        "--stitch",
-        action="store_true",
-        help="Run collinear-fragment stitcher after NMS (useful for long streaks).",
-    )
-    parser.add_argument(
-        "--stitch-max-gap",
-        type=float,
-        default=400.0,
-        help="Max gap in native pixels between collinear fragments to merge.",
-    )
+    parser.add_argument("--tile-size", type=int, default=400)
+    parser.add_argument("--overlap",   type=float, default=0.5)
     parser.add_argument("--ann-file",  type=Path, default=ANN_FILE)
     args = parser.parse_args()
-    # Back-compat: keep args.tile_size pointing to native_tile_size
-    args.tile_size = args.native_tile_size
 
     sys.path.insert(0, str(_REPO_ROOT))
 
@@ -227,17 +191,10 @@ def main():
     config_path = _select_config("dinov3_vitb_multisource")
     model = _load_model(config_path, args.checkpoint, inf_device)
 
-    from inference.tiled_pipeline import (
-        tile_image, remap_predictions, nms_predictions,
-        stitch_collinear_fragments,
-        _clip_predictions_to_image, _pipeline_det_to_prediction,
-    )
+    from inference.tiled_pipeline import tile_image, remap_predictions, nms_predictions, _clip_predictions_to_image, _pipeline_det_to_prediction
     from inference.pipeline import _run_inference
     import astropy.io.fits as astrofits
     import numpy as np
-
-    model_input_size = 400
-    magnification = model_input_size / args.native_tile_size
 
     def _load_fits_array(path: Path) -> np.ndarray:
         """Load pixel data only — no WCS, no plate solve, no sidecar lookup."""
@@ -269,26 +226,18 @@ def main():
             logger.warning("Failed to load %s: %s — skipping", img_path.name, e)
             continue
 
-        resize_to = model_input_size if magnification != 1.0 else None
-        tiles = list(tile_image(arr, tile_size=args.native_tile_size,
-                                overlap=args.overlap, resize_to=resize_to,
-                                interp=args.interp))
+        tiles = list(tile_image(arr, tile_size=args.tile_size, overlap=args.overlap))
         preds_this: list[dict] = []
         for tile, x0, y0 in tiles:
-            dets = _run_inference(model, tile, image_size=model_input_size,
+            dets = _run_inference(model, tile, image_size=args.tile_size,
                                   confidence_threshold=0.05,
                                   model_name="tiled_eval")
             tile_preds = [_pipeline_det_to_prediction(d) for d in dets]
-            preds_this.extend(remap_predictions(tile_preds, x0, y0,
-                                                magnification=magnification))
+            preds_this.extend(remap_predictions(tile_preds, x0, y0))
 
-        after_nms = nms_predictions(preds_this, iou_threshold=0.4)
-        if args.stitch:
-            after_nms = stitch_collinear_fragments(
-                after_nms, max_gap_px=args.stitch_max_gap
-            )
         final = _clip_predictions_to_image(
-            after_nms, width=arr.shape[1], height=arr.shape[0],
+            nms_predictions(preds_this, iou_threshold=0.4),
+            width=arr.shape[1], height=arr.shape[0],
         )
         for p in final:
             all_preds.append({
@@ -310,13 +259,7 @@ def main():
     pr = compute_pr(gt_coco, all_preds, conf_threshold=args.conf)
     coco = compute_coco_map(gt_coco, all_preds)
 
-    mag_str = f"{magnification:.2f}×" if magnification != 1.0 else "1× (native)"
-    stitch_label = f", stitch(gap≤{args.stitch_max_gap:.0f}px)" if args.stitch else ""
-    print(
-        f"\n=== BrentImages Night 2 — TILED INFERENCE "
-        f"(native_tile={args.native_tile_size}, model_input=400, "
-        f"mag={mag_str}, overlap={args.overlap}, interp={args.interp}{stitch_label}) ==="
-    )
+    print("\n=== BrentImages Night 2 — TILED INFERENCE (tile=400, overlap=0.5) ===")
     if coco:
         print(f"COCO mAP:       {coco['mAP']:.3f}")
         print(f"COCO mAP@50:    {coco['mAP50']:.3f}")
@@ -338,14 +281,9 @@ def main():
     print("=== COMPARISON: full-frame (original eval) vs tiled ===")
     print("  Full-frame:  mAP@50=0.296  P=47.8%  R=31.9%  medium=14.2%  long=60.8%")
     if coco:
-        med_n = pr['band_gt']['medium']
-        lng_n = pr['band_gt']['long']
-        med_r = pr['band_tp']['medium'] / med_n if med_n else float('nan')
-        lng_r = pr['band_tp']['long'] / lng_n if lng_n else float('nan')
-        print(
-            f"  Tiled:       mAP@50={coco['mAP50']:.3f}  P={pr['precision']:.1%}  "
-            f"R={pr['recall']:.1%}  medium={med_r:.1%}  long={lng_r:.1%}"
-        )
+        print(f"  Tiled:       mAP@50={coco['mAP50']:.3f}  P={pr['precision']:.1%}  R={pr['recall']:.1%}  "
+              f"medium={pr['band_tp']['medium']/pr['band_gt']['medium']:.1%}  "
+              f"long={pr['band_tp']['long']/pr['band_gt']['long']:.1%}")
 
 
 if __name__ == "__main__":
