@@ -35,9 +35,24 @@ Progress:
 - ✅ DINOv3 Phase E (partial): Swin-T vs ViT-B comparison in `results/phase_e/` — ViT-B dominant
 - ✅ YOLO11n-OBB full dataset: 15 epochs, 3 023 images → 14 385 tiles, mAP@0.5=67.3% P=57% R=85% F1=68% (tiled val); integrated as `yolo_full` 5th detector in `inference/pipeline.py`
 - ✅ DINOv3 Base - Multi-source (frozen ViT-B, 400px, 15 epochs, no-DM): standard mAP@50=**0.755** F1=71.8%; DarkMatters zero-shot mAP@50=0.720; deployed as `dinov3_vitb_multisource` (`weights/run_best_400px_nodm/best_coco_bbox_mAP_epoch_15.pth`)
+- ✅ Adaptive tiling (`inference/tiled_pipeline.py`): `native_tile_size` + `magnification` decoupled from `model_input_size`; collinear stitcher; §6.1 verified mAP@50=0.008 vs 0.000 baseline on 20-image Frigate sample at 3.64× magnification
+- ⏳ Run 3 — Cold-start DM-free paper model: `load_from=None`, `all_train_nodm.json` at 400px, cloud GPU recommended; see `docs/training_methods.md §3.1`
 - ⏳ DINOv3 Phase D: Frozen ViT-L, full dataset — two routes available, see `agent_docs/Training_Handoff.md`
 
-## Next Step: Phase D — DINOv3 ViT-L Training (Two Routes)
+## Next Steps
+
+### Run 3 — Cold-start DM-free ViT-B (immediate priority)
+**Decision (2026-05-26):** Build a clean paper-grade model from scratch. All existing
+checkpoints (Runs 0–2) are contaminated because Run 0 trained on DarkMatters data and
+Runs 1–2 warm-started from Run 0. Run 3 cold-starts the detection head (`load_from=None`)
+directly on `all_train_nodm.json` at 400px. See `docs/training_methods.md §3.1`.
+
+- Config: `models/dino/streak_dinov3_vitb_400px.py` with `load_from = None`
+- Recommended hardware: Cloud RTX 4090 (~$7–18, ~15–20h); Mac M3 took 72h for Run 2
+- See `docs/cloud_training_preparation.md` and `agent_docs/Training_Handoff.md` for
+  the cloud bring-up checklist
+
+### Phase D — DINOv3 ViT-L Training (after Run 3 baseline)
 Phase C² result: DINOv3 ViT-B frozen, full merged dataset, 4 epochs → mAP@0.5=0.74 (test.json).
 This beats Swin-T (0.19) by a wide margin. Phase D trains ViT-L on the same data for the definitive result.
 Phase 8 targets (≥94% precision, ≥97% recall) are expected to be met with ViT-L on the full dataset.
@@ -67,6 +82,8 @@ Always read the relevant agent_docs file before writing code:
 - `agent_docs/spacetrack.md`         — Space-Track API policy, TLE catalog setup, rate limits
 - `agent_docs/Training_Handoff.md`   — Phase D training: Route 1 (RTX 5070 Ti workstation) and Route 2 (RTX 4090 cloud rental)
 - `docs/cloud_training_preparation.md` — cloud rental readiness, reproducibility checklist, run manifest, transfer/sync plan
+- `docs/adaptive_tiling_plan.md`     — adaptive tiling design: magnification, collinear stitcher, Frigate regime params, §6 verification results
+- `docs/training_methods.md`         — full training lineage (Runs 0–3), DM contamination history, paper run checklist
 
 ## Stack
 - Python 3.11, conda environment named `satid`
