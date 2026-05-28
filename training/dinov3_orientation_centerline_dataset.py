@@ -288,8 +288,26 @@ class DINOv3OrientationCenterlineDataset(Dataset):
             arr = np.squeeze(arr)
         if arr.ndim != 2:
             raise ValueError(f"Unsupported FITS image shape for {path.name}: {arr.shape}")
-        scaled = self._scale_float_image(arr)
+        scaled = self._scale_zscore(arr)
         return np.repeat(scaled[..., None], 3, axis=2)
+
+    @staticmethod
+    def _scale_zscore(arr: np.ndarray, sigma: float = 3.0) -> np.ndarray:
+        """Z-score normalise FITS pixels to float32 [0, 1].
+
+        Clips to [mean − sigma*std, mean + sigma*std] then rescales linearly.
+        Matches the zscore mode in inference.fits_loader._normalise_zscore.
+        """
+        finite = arr[np.isfinite(arr)]
+        if finite.size == 0:
+            return np.zeros_like(arr, dtype=np.float32)
+        mean = float(finite.mean())
+        std = float(finite.std())
+        if std == 0.0:
+            return np.zeros_like(arr, dtype=np.float32)
+        lo = mean - sigma * std
+        hi = mean + sigma * std
+        return np.clip((arr - lo) / (hi - lo), 0.0, 1.0).astype(np.float32)
 
     @staticmethod
     def _scale_float_image(arr: np.ndarray) -> np.ndarray:

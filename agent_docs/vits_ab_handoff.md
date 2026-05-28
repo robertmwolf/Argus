@@ -96,7 +96,7 @@ Run the MMDetection ViT-S smoke test:
 
 ```bash
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
-ARGUS_NORM=autostretch \
+ARGUS_NORM=zscore \
 python -m training.train_dino \
   --config models/dino/streak_dinov3_vits_400px_run3.py \
   --work-dir weights/run3_cold_nodm_vits_smoke \
@@ -107,7 +107,7 @@ Run a small plain heatmap ViT-S smoke test:
 
 ```bash
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
-ARGUS_NORM=autostretch \
+ARGUS_NORM=zscore \
 python -m training.train_dinov3_heatmap \
   --train-annotations data/annotations/all_train_nodm.json \
   --val-annotations data/annotations/val.json \
@@ -129,7 +129,7 @@ PYTORCH_ENABLE_MPS_FALLBACK=1 \
 USE_DEV_SUBSET=false \
 TRAIN_ANN_FILE=annotations/all_train_nodm.json \
 VAL_ANN_FILE=annotations/val.json \
-ARGUS_NORM=autostretch \
+ARGUS_NORM=zscore \
 caffeinate -i python -m training.train_dino \
   --config models/dino/streak_dinov3_vits_400px_run3.py \
   --work-dir weights/run3_cold_nodm_vits \
@@ -142,7 +142,7 @@ the center/box head:
 
 ```bash
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
-ARGUS_NORM=autostretch \
+ARGUS_NORM=zscore \
 python scripts/cache_dinov3_heatmap_features.py \
   --annotations data/annotations/all_train_nodm.json \
   --output-dir data/cache/plain_dinov3_vits/train_384 \
@@ -151,7 +151,7 @@ python scripts/cache_dinov3_heatmap_features.py \
   --image-size 384
 
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
-ARGUS_NORM=autostretch \
+ARGUS_NORM=zscore \
 python scripts/cache_dinov3_heatmap_features.py \
   --annotations data/annotations/val.json \
   --output-dir data/cache/plain_dinov3_vits/val_384 \
@@ -209,7 +209,7 @@ ViT-B at 512px but with a lighter backbone — a reasonable comparison point.
 
 ```bash
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
-ARGUS_NORM=autostretch \
+ARGUS_NORM=zscore \
 python training/train_dinov3_orientation_centerline.py \
   --train-annotations data/annotations/all_train_nodm.json \
   --val-annotations data/annotations/val.json \
@@ -230,7 +230,7 @@ Check logs: no `ASTAP`, `plate`, `solve`, or `WCS` activity.
 
 ```bash
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
-ARGUS_NORM=autostretch \
+ARGUS_NORM=zscore \
 caffeinate -i python training/train_dinov3_orientation_centerline.py \
   --train-annotations data/annotations/all_train_nodm.json \
   --val-annotations data/annotations/val.json \
