@@ -150,30 +150,6 @@ def _model_registry() -> list[dict]:
             "weights": root / "weights" / "run3_cold_nodm" / "best.pth",
             "config":  root / "models" / "dino" / "streak_dinov3_vitb_400px_run3.py",
         },
-        {
-            "id":      "dinov3_vitl",
-            "size":    "dinov3_vitl",
-            "label":   "DINOv3 ViT-L",
-            "dataset": "SatStreaks+GTImages",
-            "weights": root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
-            "config":  root / "models" / "dino" / "streak_dinov3_vitl.py",
-        },
-        {
-            "id":      "tiny",
-            "size":    "tiny",
-            "label":   "DINO Swin-Tiny",
-            "dataset": "SatStreaks",
-            "weights": root / "weights" / "dino_tiny.pth",
-            "config":  root / "models" / "dino" / "streak_codino_swin_t.py",
-        },
-        {
-            "id":      "large",
-            "size":    "large",
-            "label":   "DINO Swin-Large",
-            "dataset": "SatStreaks",
-            "weights": root / "weights" / "dino_large.pth",
-            "config":  root / "models" / "dino" / "streak_codino_swin_l.py",
-        },
     ]
 
 
