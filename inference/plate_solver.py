@@ -170,8 +170,9 @@ def solve(
         cmd += ["-ra", f"{ra_deg / 15.0:.6f}"]   # ASTAP uses decimal hours
     if dec_deg is not None:
         cmd += ["-spd", f"{90.0 + dec_deg:.6f}"]  # south polar distance
-    if fov_deg is not None:
-        cmd += ["-fov", f"{fov_deg:.4f}"]
+    # Do NOT pass -fov: an over-constrained quad scale prevents matching when
+    # FOCALLEN/XPIXSZ header values are slightly inaccurate.  ASTAP auto-detects
+    # the plate scale reliably when only RA/DEC/r are given.
 
     # Use tighter radius when we have a pointing hint
     if ra_deg is not None and dec_deg is not None and search_radius_deg == _DEFAULT_SEARCH_RADIUS_DEG:
@@ -209,10 +210,11 @@ def solve(
     ini_path = solve_path.with_suffix(".ini")
 
     if not wcs_path.exists():
-        logger.debug(
-            "ASTAP produced no .wcs for %s (exit=%d); solve failed or no stars",
+        logger.warning(
+            "ASTAP produced no .wcs for %s (exit=%d): %s",
             fits_path.name,
             proc.returncode,
+            (proc.stdout or proc.stderr or "no output").strip(),
         )
         return None
 
