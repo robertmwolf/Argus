@@ -56,7 +56,7 @@ pixel coordinates are filled in via the manual annotation workflow.
 - **Supplemental training:** fold labeled images alongside SatStreaks; BrentImages
   alone lacks short streaks and scene diversity
 
-### Workflow for a new capture night
+### Workflow for a new Atwood capture night (same scope)
 
 ```bash
 # 1. Generate .strk stubs from FITS headers (one per NORAD ID, Reject=2 pending):
@@ -72,8 +72,13 @@ python scripts/convert_gtimages.py \
     --output data/annotations/brentimages_YYYYMMDD.json \
     --negatives-output data/annotations/brentimages_YYYYMMDD_negatives.json
 
-# 4. Rebuild training splits to include the new night:
-python scripts/merge_annotations.py --seed 42 --val-fraction 0.2
+# 4. Add the new session to the manifest:
+#    Edit data/sessions/manifest.yaml — add an entry with split: train
+#    (copy the atwood_20260515 entry as a template)
+
+# 5. Rebuild the canonical training JSON:
+python scripts/build_training_json.py \
+    --output data/annotations/all_train_nodm_vN.json
 ```
 
 **Notes on `generate_brentimages_strk.py`:**
@@ -374,3 +379,160 @@ python -m eval.benchmark \
 The benchmark reports whether the correct NORAD ID appears in the top-3
 `CandidateMatch` results for each image.  As additional BrentImages nights are
 annotated and merged, re-run the benchmark against the updated annotation file.
+
+---
+
+## Adding a New Telescope
+
+When images arrive from a scope other than Atwood (different sensor, optics, or
+site), follow this workflow.  The key rule: **Night 1 from any new scope is
+always evaluated zero-shot before any training decision is made.**
+
+### Step 1 — Annotate Night 1
+
+Use the same pipeline as a new Atwood night:
+
+```bash
+# Generate .strk stubs (if FITS headers contain NORAD IDs):
+python scripts/generate_brentimages_strk.py \
+    --night-dir /path/to/new_scope/Img_YYYYMMDD
+
+# Or annotate from scratch via the annotation tool.
+
+# Convert to COCO JSON:
+python scripts/convert_gtimages.py \
+    --strk-dir /path/to/new_scope/Img_YYYYMMDD \
+    --output data/annotations/newscope_YYYYMMDD.json \
+    --negatives-output data/annotations/newscope_YYYYMMDD_negatives.json
+```
+
+### Step 2 — Zero-shot evaluation (DO THIS BEFORE TRAINING)
+
+Run the current production model against Night 1 without any fine-tuning:
+
+```bash
+python scripts/zero_shot_eval.py \
+    --annotation data/annotations/newscope_YYYYMMDD.json \
+    --negatives data/annotations/newscope_YYYYMMDD_negatives.json \
+    --raw-dir /path/to/new_scope/Img_YYYYMMDD \
+    --scope newscope \
+    --label "New Scope Night 1 (zero-shot)"
+```
+
+The script prints a **RECOMMENDATION** based on long-band recall:
+
+| Long-band recall | Recommendation |
+|---|---|
+| ≥ 80% | Fine-tuning optional — fold into next scheduled retrain |
+| 60–80% | Fine-tune advised — see Step 3B |
+| < 60% | Investigate domain shift before training — see Step 3C |
+
+Results are saved to `results/zero_shot_newscope_YYYYMMDD_HHMMSS/`.
+
+### Step 3A — No fine-tuning needed (recall ≥ 80%)
+
+Add the scope to the manifest with `split: holdout` for Night 1 (eval only).
+As additional nights accumulate, promote them to `split: train` and rebuild
+the training JSON for the next full retrain:
+
+```bash
+# Edit data/sessions/manifest.yaml: set split: train for Night 2+
+python scripts/build_training_json.py \
+    --output data/annotations/all_train_nodm_vN.json
+```
+
+### Step 3B — Fine-tune (recall 60–80%)
+
+```bash
+# 1. Annotate Night 2+ (target: ≥200 images).
+# 2. Add to manifest (split: train) with an appropriate mix_weight.
+#    A 1:1 ratio with existing Atwood data is a safe starting point.
+#    Example: if Atwood has ~4000 images and new scope has 200,
+#    set mix_weight: 20.0 to reach parity (200 × 20 = 4000).
+
+# 3. Build the fine-tune training JSON:
+python scripts/build_training_json.py \
+    --mix-ratio newscope:20.0 \
+    --output data/annotations/all_train_ft_newscope.json
+
+# 4. Run fine-tune (~8 epochs, ~3–4h on Mac M3):
+PYTORCH_ENABLE_MPS_FALLBACK=1 \
+USE_DEV_SUBSET=false \
+TRAIN_ANN_FILE=annotations/all_train_ft_newscope.json \
+VAL_ANN_FILE=annotations/val.json \
+ARGUS_NORM=autostretch \
+caffeinate -i \
+python -m training.train_dino \
+    --config models/dino/streak_dinov3_vitb_400px_ft.py \
+    --work-dir weights/run_ft_newscope \
+    --max-epochs 8 \
+    --val-interval 1 \
+    --checkpoint-interval 1
+
+# 5. Evaluate on BOTH new scope Night 1 AND standard test set:
+python scripts/evaluate_comprehensive.py \
+    --checkpoint weights/run_ft_newscope/best.pth \
+    --config models/dino/streak_dinov3_vitb_400px_ft.py \
+    --sets test_standard
+
+python scripts/zero_shot_eval.py \
+    --annotation data/annotations/newscope_YYYYMMDD.json \
+    --raw-dir /path/to/new_scope/Img_YYYYMMDD \
+    --scope newscope \
+    --checkpoint weights/run_ft_newscope/best.pth \
+    --config models/dino/streak_dinov3_vitb_400px_ft.py
+```
+
+**Accept the fine-tune only if:**
+- New scope long-band recall improves by ≥ 5pp vs zero-shot baseline, AND
+- Standard test set recall does **not** drop by more than 2pp vs Run 3 baseline (83.8%)
+
+### Step 3C — Investigate domain shift (recall < 60%)
+
+Before fine-tuning, diagnose the cause of the gap:
+
+1. **Pixel scale**: compute `206265 × pixel_size_mm / focal_length_mm` (arcsec/px).
+   Atwood baseline is 1.27 arcsec/px.  A significantly different scale means
+   streak diagonal lengths will fall in different bands — verify that your GT
+   annotations span the expected diagonal range at 400px tile resolution.
+
+2. **Normalisation**: check that `apply_norm()` (in `inference/fits_loader.py`)
+   stretches the new scope's images to the same 0–255 range as training data.
+   Inspect a sample tile: if it appears very dark or very bright after
+   normalisation, the auto-stretch parameters may need tuning.
+
+3. **Anchor coverage**: DINO uses 300 learned queries, not hand-crafted anchors,
+   so scale mismatch is less critical than in classic detectors — but if streaks
+   at 400px tile resolution are systematically shorter or longer than in the
+   training set, adding a data augmentation step (resize + crop) may help.
+
+4. Once the root cause is understood, consider a full retrain with a new manifest
+   version rather than fine-tuning.
+
+### Session manifest entry for a new scope
+
+Add to `data/sessions/manifest.yaml`:
+
+```yaml
+- session_id: newscope_YYYYMMDD
+  scope_id: newscope               # short stable ID for --mix-ratio flags
+  source_type: brentimages         # or public_dataset / synthetic
+  date: "YYYY-MM-DD"
+  split: holdout                   # Night 1: zero-shot eval only
+  mix_weight: 1.0                  # will be set when promoted to train
+  annotation_file: "data/annotations/newscope_YYYYMMDD.json"
+  negatives_file: "data/annotations/newscope_YYYYMMDD_negatives.json"
+  raw_dir: "/path/to/new_scope/Img_YYYYMMDD"
+  n_images: 0                      # fill in after annotation
+  n_annotations: 0
+  camera: "Sensor @ focal_length mm"
+  pixel_scale_arcsec: 0.0          # 206265 * pixel_size_mm / focal_length_mm
+  focal_length_mm: 0
+  exposure_s: 0.5
+  filter: "Lum"
+  norad_ids: 0
+  notes: "Night 1 — run zero_shot_eval.py before promoting to train"
+```
+
+Promote to `split: train` and set `mix_weight` once the zero-shot evaluation
+and annotation of Night 2+ are complete.

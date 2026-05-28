@@ -1,0 +1,212 @@
+# ARGUS Session Manifest
+# ========================
+# Source of truth for all training data sources.  Every imaging session (a
+# capture night, a public dataset, a tiled crop set) gets one entry.
+#
+# Fields
+# ------
+# session_id    : unique slug used in CLI flags and log output
+# scope_id      : telescope/instrument family — all entries from the same
+#                 physical instrument share this value.  Used to control
+#                 per-scope mix ratios (--mix-ratio scope_id:N).
+# source_type   : brentimages | public_dataset | synthetic
+# split         : train | val | test | holdout
+#                   train    – include when building training JSON
+#                   val      – validation set (managed by merge_annotations.py)
+#                   test     – frozen test set, NEVER train on
+#                   holdout  – first night from a new scope; zero-shot eval only
+#                              until enough annotation exists to promote to train
+# mix_weight    : float (default 1.0)
+#                   Relative sampling weight for this session when building a
+#                   training JSON.  1.0 = natural frequency.  2.0 = oversample
+#                   2×.  0.5 = keep 50% (random, seeded).  Applied per source
+#                   after loading, before the global merge.
+# annotation_file  : path relative to repo root
+# negatives_file   : optional second COCO JSON with no-streak images
+# raw_dir          : absolute path on disk (external drive or local)
+# n_images         : image count in annotation_file (informational)
+# n_annotations    : annotation count in annotation_file (informational)
+# camera           : human description of the sensor/optics
+# pixel_scale_arcsec : image scale at the detector (arcsec per pixel)
+# focal_length_mm  : telescope/lens focal length in mm
+# exposure_s       : nominal exposure time in seconds
+# filter           : optical filter used
+# norad_ids        : number of unique NORAD IDs in this session (0 = unknown)
+# notes            : free text
+
+version: 1
+
+sources:
+
+  # =========================================================================
+  # SatStreaks — HST archival + mixed ground-based (public)
+  # =========================================================================
+  - session_id: satstreaks_train
+    scope_id: satstreaks
+    source_type: public_dataset
+    split: train
+    mix_weight: 1.0
+    annotation_file: "data/annotations/train.json"
+    n_images: 3023
+    n_annotations: 2957
+    camera: "HST + mixed ground-based (SatStreaks dataset)"
+    pixel_scale_arcsec: null
+    norad_ids: 0
+    notes: >
+      train.json is the merged SatStreaks train split + BrentImages Night 1,
+      built by scripts/merge_annotations.py.  Treated here as a single
+      opaque source; build_training_json.py loads it directly without
+      path-fixing.
+
+  - session_id: satstreaks_val
+    scope_id: satstreaks
+    source_type: public_dataset
+    split: val
+    annotation_file: "data/annotations/val.json"
+    n_images: 411
+    n_annotations: 386
+    notes: "Validation split; managed by merge_annotations.py, not build_training_json.py."
+
+  - session_id: satstreaks_test
+    scope_id: satstreaks
+    source_type: public_dataset
+    split: test
+    annotation_file: "data/annotations/test.json"
+    n_images: 308
+    n_annotations: 308
+    notes: >
+      Frozen held-out test set.  308 SatStreaks images.
+      Never include in any training JSON.
+      Evaluated by scripts/evaluate_comprehensive.py.
+
+  # =========================================================================
+  # BrentImages — Atwood Observatory (ZWO ASI2600MM Pro, 612mm f/l)
+  # Site: 43.6735556°N  81.0204722°W  365m ASL
+  # Plate scale: ~1.27 arcsec/px  (3.76μm pixel, 612mm focal length)
+  # Software: SkyTrack 1.9.8  (NORAD ID + TLE in FITS headers)
+  # =========================================================================
+  - session_id: atwood_20260412
+    scope_id: atwood
+    source_type: brentimages
+    date: "2026-04-12"
+    split: train
+    mix_weight: 1.0
+    annotation_file: "data/annotations/gtimages.json"
+    negatives_file: "data/annotations/gtimages_negatives.json"
+    raw_dir: "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood"
+    n_images: 578          # streak images
+    n_negatives: 91        # no-streak images
+    n_annotations: 578
+    camera: "ZWO ASI2600MM Pro @ 612mm f/l"
+    pixel_scale_arcsec: 1.27
+    focal_length_mm: 612
+    exposure_s: 0.5
+    filter: "Lum"
+    norad_ids: 68
+    notes: >
+      Night 1.  Fully annotated with .strk pixel coords + ASTAP plate solutions.
+      Already embedded in train.json via merge_annotations.py; listed here as a
+      separate entry so build_training_json.py can track it independently if
+      per-night mix ratios are needed.  paths in gtimages.json are absolute.
+
+  - session_id: atwood_20260515
+    scope_id: atwood
+    source_type: brentimages
+    date: "2026-05-15"
+    split: train
+    mix_weight: 1.0
+    annotation_file: "data/annotations/brentimages_20260515.json"
+    negatives_file: "data/annotations/brentimages_20260515_negatives.json"
+    raw_dir: "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood"
+    n_images: 204          # streak images
+    n_negatives: 27
+    n_annotations: 204
+    camera: "ZWO ASI2600MM Pro @ 612mm f/l"
+    pixel_scale_arcsec: 1.27
+    focal_length_mm: 612
+    exposure_s: 0.5
+    filter: "Lum"
+    norad_ids: 39
+    notes: >
+      Night 2.  Annotated without ASTAP plate solutions.  Bare filenames in
+      annotation_file are resolved to absolute paths using raw_dir at build time.
+      Long + medium streaks; mean length 725px.
+
+  - session_id: atwood_geo_20260520
+    scope_id: atwood
+    source_type: brentimages
+    date: "2026-05-20"
+    split: train
+    mix_weight: 1.0
+    annotation_file: "data/annotations/geo_20260520.json"
+    raw_dir: "/Volumes/External/TrainingData/raw/BrentImages/Geo_20260520_Atwood"
+    n_images: 11
+    n_annotations: 11
+    camera: "ZWO ASI2600MM Pro @ 612mm f/l"
+    pixel_scale_arcsec: 1.27
+    focal_length_mm: 612
+    exposure_s: 0.5
+    filter: "Lum"
+    norad_ids: 0
+    notes: >
+      Geostationary streak session.  Small set; bare filenames resolved
+      at build time via raw_dir.
+
+  # =========================================================================
+  # Frigate — ExoAnalytic Solutions QHY600M (public dataset)
+  # Very short streaks (~20–80 px) — only source of this morphology.
+  # =========================================================================
+  - session_id: frigate_train
+    scope_id: frigate
+    source_type: public_dataset
+    split: train
+    mix_weight: 1.0
+    annotation_file: "data/annotations/frigate_tiled_train.json"
+    raw_dir: "/Volumes/External/TrainingData/raw/frigate"
+    n_images: 717
+    n_annotations: 655
+    camera: "QHY600M (9600×6422, 3.76μm) — tiled 400px crops"
+    pixel_scale_arcsec: null
+    norad_ids: 0
+    notes: >
+      Tiled 400px crops built by scripts/build_tiled_frigate_json.py.
+      Virtual paths (stem__tx<x>_ty<y>_ts400.png) resolved at load time
+      by training/transforms.py LoadFITSFromFile.  Paths are absolute;
+      no raw_dir path-fixing needed at build time.
+      Critical source for short-band recall — do not exclude.
+
+  - session_id: frigate_eval
+    scope_id: frigate
+    source_type: public_dataset
+    split: test
+    annotation_file: "data/annotations/frigate_streaks.json"
+    n_images: 350
+    n_annotations: 377
+    notes: >
+      Held-out eval set (full Frigate annotated set, un-tiled).
+      Used by evaluate_comprehensive.py for zero-shot short-streak eval.
+      Never include in training.
+
+  # =========================================================================
+  # Template for a new telescope night — copy and fill in when onboarding
+  # a new scope.  Change split to "holdout" for Night 1 (zero-shot eval only),
+  # then promote to "train" for Night 2+ once annotation and mix ratio are set.
+  # =========================================================================
+  # - session_id: newscope_YYYYMMDD
+  #   scope_id: newscope                   # e.g. "ridge_park", "observatory_b"
+  #   source_type: brentimages             # or public_dataset / synthetic
+  #   date: "YYYY-MM-DD"
+  #   split: holdout                       # Night 1 is always holdout (zero-shot eval only)
+  #   mix_weight: 1.0
+  #   annotation_file: "data/annotations/newscope_YYYYMMDD.json"
+  #   negatives_file: "data/annotations/newscope_YYYYMMDD_negatives.json"
+  #   raw_dir: "/path/to/raw/images"
+  #   n_images: 0
+  #   n_annotations: 0
+  #   camera: "Sensor model @ focal_length mm f/N"
+  #   pixel_scale_arcsec: 0.0              # 206265 * pixel_size_mm / focal_length_mm
+  #   focal_length_mm: 0
+  #   exposure_s: 0.5
+  #   filter: "Lum"
+  #   norad_ids: 0
+  #   notes: "Night 1 — run zero_shot_eval.py before promoting to train"
