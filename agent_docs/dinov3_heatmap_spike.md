@@ -784,6 +784,41 @@ and includes many segment proposals that do not mutually support the GT
 centerline. The next quality step is line-support scoring/tracing, not another
 backbone training run.
 
+### First Side-by-Side Comparison (val.json)
+
+Ran `scripts/run_box_eval_and_compare.sh` to regenerate a plain DINOv3 box head
+from the existing 384px cached features (80 epochs, val center Dice 0.517) and
+compare against the heatmap centerline proposals using `eval/line_metrics.py`
+(tolerance 6 px, coverage threshold 0.10):
+
+```text
+results/heatmap_vs_obb_line_comparison.json
+results/plain_dinov3_box_gauss_384_regen_val/metrics_t0.10.json
+```
+
+| Metric | Heatmap centerline | Plain DINOv3 box (384px) |
+|--------|-------------------|--------------------------|
+| Precision | 0.087 | **0.238** |
+| Recall | 0.174 | **0.249** |
+| F1 | 0.116 | **0.243** |
+| TP / FP / FN | 67 / 703 / 319 | 96 / 307 / 290 |
+| Predictions | 770 | 403 |
+| Images w/ pred (positive) | 376 / 386 | 384 / 386 |
+| Images w/ pred (negative) | 1 / 25 | 3 / 25 |
+| Mean angle error on matches | 8.2° | **1.4°** |
+
+Box ARGUS metrics (mAP@50=0.250, F1=0.479, angle error=0.28°). Zero recall
+on short and medium streaks for both methods.
+
+Interpretation: box head wins on all line-segment metrics and has 6× better
+angle accuracy. The heatmap fires on 97% of positive images (image recall
+nearly perfect) but produces 703 FP segment proposals vs 307 for box. The
+FP density — not the heatmap quality — is the limiting factor. The geometry
+on matched predictions is similar (GT coverage ~0.51–0.55 for both), so the
+backbone is learning the right shape; the segment extractor is over-generating.
+The next engineering step is a better line-support score to prune low-quality
+proposals before they become FPs.
+
 ## Exact Split / CUDA Notes
 
 The colleague split cannot be recreated from the currently linked local
