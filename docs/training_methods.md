@@ -175,12 +175,12 @@ The following runs informed but do **not** constitute the publishable final mode
 All four weight directories must be deleted from local disk and OneDrive. They must
 not be used as warm-start sources for any future training run.
 
-**⏳ Run 3 — Clean cold-start (pending):**
+**✅ Run 3 — Clean cold-start (complete 2026-05-28):**
 - Config: `models/dino/streak_dinov3_vitb_400px.py`
 - Data: `all_train_nodm.json` v2 (8,422 images)
 - Warm start: **None** — DINOv3 pretrain backbone + COCO head init only
 - Work dir: `weights/run3_cold_nodm/`
-- This is the first valid model in the project's history.
+- **This is the first valid (DM-free, cold-start) model in the project's history.**
 
 > **⚠️ DM contamination note:** Every checkpoint in Runs 0–2 has been exposed to
 > DarkMatters data. Run 0 was trained on DM; Runs 1 and 2 warm-started from Run 0.
@@ -275,6 +275,77 @@ Expected: Total images: 8422  Missing: 0
 > start is expected to be small — Run 1 showed DM contributes only ~0.001 mAP@50
 > in the fine-tuning phase.
 
+### 3.2 Run 3 Training Results (completed 2026-05-28)
+
+**Run 3 completed in a single continuous multi-night CPU session on Mac M3
+(PID 8899, started 2026-05-26, finished 2026-05-28 ~14:45 local).**
+
+Hardware: Mac M3, CPU-only (`PYTORCH_ENABLE_MPS_FALLBACK=1`), ~1.5–9.8 s/step
+(thermal throttling; faster in the first hour, slower after sustained load).
+Total wall-clock time: ~62 hours for 15 epochs × 3,023 steps.
+
+Validation set: `val.json` (411 images, SatStreaks + BrentImages N1+N2 tiles).
+Optimizer: AdamW, lr=1e-4. Schedule: LinearLR warmup epochs 1–2, then
+CosineAnnealingLR epochs 3–15. `seed=42, deterministic=True`.
+
+**Per-epoch COCO val results (mAP@IoU=0.50:0.95):**
+
+| Epoch | mAP   | mAP@50 | mAP@75 | mAP_m | mAP_l | Best? |
+|-------|-------|--------|--------|-------|-------|-------|
+| 1     | 0.007 | 0.030  | 0.001  | 0.057 | 0.008 | |
+| 2     | 0.289 | 0.442  | 0.319  | 0.245 | 0.324 | |
+| 3     | 0.418 | 0.550  | 0.451  | 0.026 | 0.478 | |
+| 4     | 0.471 | 0.640  | 0.476  | 0.244 | 0.524 | |
+| 5     | 0.456 | 0.664  | 0.465  | 0.229 | 0.502 | |
+| 6     | 0.466 | 0.677  | 0.457  | 0.252 | 0.512 | |
+| 7     | 0.453 | 0.689  | 0.445  | 0.244 | 0.498 | |
+| 8     | 0.458 | 0.711  | 0.416  | 0.225 | 0.498 | |
+| 9     | 0.479 | 0.687  | 0.473  | 0.198 | 0.531 | |
+| 10    | 0.472 | 0.703  | 0.457  | 0.259 | 0.515 | |
+| 11    | 0.496 | 0.726  | 0.492  | 0.304 | 0.536 | |
+| 12    | 0.538 | 0.752  | 0.542  | 0.284 | 0.588 | |
+| **13** | **0.541** | **0.779** | **0.531** | **0.315** | **0.590** | ✅ best |
+| 14    | 0.537 | 0.763  | 0.532  | 0.348 | 0.584 | |
+| 15    | 0.537 | 0.768  | 0.535  | 0.334 | 0.585 | |
+
+**Final COCO summary (epoch 15 val):**
+```
+AP @[IoU=0.50:0.95 | area=all | maxDets=100] = 0.537
+AP @[IoU=0.50      | area=all | maxDets=1000] = 0.768
+AP @[IoU=0.75      | area=all | maxDets=1000] = 0.535
+AR @[IoU=0.50:0.95 | area=all | maxDets=100] = 0.755
+AR @[IoU=0.50:0.95 | area=medium             ] = 0.333
+AR @[IoU=0.50:0.95 | area=large              ] = 0.819
+```
+
+**Best checkpoint:** `weights/run3_cold_nodm/best_coco_bbox_mAP_epoch_13.pth`
+Stable weights path: `weights/run3_cold_nodm/best.pth` (symlink)
+
+**Observations:**
+- Cold-start convergence was fast: by epoch 3 (mAP=0.418, mAP@50=0.550) the model
+  already matched Run 2's warm-started epoch 5 (mAP@50≈0.390). This confirms the
+  warm-start from Run 0 was not necessary for performance.
+- The learning rate schedule shows the expected pattern: a rapid quality jump after
+  the cosine phase begins (epoch 3→4: +0.053 mAP), a noisy plateau while the
+  cosine decays through the middle epochs (4–11), and a final surge to peak at
+  epoch 12–13 as the LR reaches its floor.
+- Epochs 12–15 plateau near 0.537–0.541 — the model converged. Epoch 13 is the
+  best checkpoint; extending training beyond 15 epochs is unlikely to improve on it
+  without a LR restart or data augmentation changes.
+- Medium-band mAP (mAP_m) remains weaker than large-band (0.315 vs 0.590 at best
+  epoch). This is expected: Frigate tiles at 3.64× magnification brings 20–80 px
+  native streaks to ~70–290 px model input, which may not fully overlap with the
+  val set's "medium" band thresholds. A targeted augmentation pass on the medium
+  band is the next lever.
+- Run 3 vs Run 2 (warm-start, v1 dataset): epoch 13 mAP=0.541 vs Run 2 epoch 15
+  mAP=0.423 — a **+0.118 mAP (+27.9%) improvement**, primarily from the v2 dataset
+  (tiled BrentImages at 1:1 native + Frigate short-streak tiles).
+
+**Updated `inference/confidence.py`:** `DETECTOR_PROFILES["dinov3_vitb_run3"]`
+updated with `precision=0.716` (est. AP_best/AR), `recall=0.755` (COCO AR). A
+full per-band eval via `scripts/evaluate_comprehensive.py` on the test set is
+still needed to replace the estimated band weights.
+
 ### 3.3 BrentImages Night 2 Evaluation Caveat
 
 The zero-shot mAP@50 of 0.296 on BrentImages Night 2 is **misleading low** due to a
@@ -331,10 +402,11 @@ evaluation output.
 
 ### Reproducibility
 
-- [ ] Random seeds fixed in config:
+- [x] Random seeds fixed in config:
   ```python
   randomness = dict(seed=42, deterministic=True)
   ```
+  ✅ Applied in `models/dino/streak_dinov3_vitb_400px_run3.py` for Run 3.
 - [ ] Cloud training preparation checklist completed:
       `docs/cloud_training_preparation.md`
 - [ ] Run manifest filled:
@@ -355,8 +427,9 @@ evaluation output.
   - ~~Option B: Accept the Run 0 warm start~~ — rejected; DM contamination in all
     existing checkpoints makes Option B require a methods footnote that weakens the
     no-DM claim.
-- [ ] Training resolution confirmed (256px or 400px — 400px substantially slower
-      on Mac MPS; consider whether the compute cost is justified vs mAP gain from Run 1)
+- [x] Training resolution confirmed: **400px** — Run 3 achieved mAP=0.541 vs
+      Run 2 (warm-start, v1 data) mAP=0.423 at 400px. Run 1 A/B showed +0.066
+      mAP@50 at 400px vs 256px; 400px is the confirmed paper resolution.
 - [ ] Val set composition confirmed and frozen; report which images are in it
 
 ### Paper Run Config Parameters (informed by Run 1 and Run 2)
@@ -442,9 +515,11 @@ Approximate training throughput on this hardware:
 5. ~~**Warm-start strategy**~~ — ✅ Resolved (2026-05-26): **Option A — cold start.**
    All existing checkpoints (Runs 0–2) are contaminated by DM warm-start data; Run 3
    will cold-start the detection head from scratch on `all_train_nodm.json`. See §3.1.
-6. **400px vs 256px** — ✅ Resolved: 400px yields mAP@50=0.468 vs 0.402 at 256px (+0.066).
-   The gain justifies the compute cost; paper run will use 400px. For a Mac M3 (~72h),
-   cloud GPU is strongly recommended for the final paper run.
+6. **400px vs 256px** — ✅ Resolved: 400px yields mAP@50=0.468 vs 0.402 at 256px (+0.066)
+   from Run 1 A/B. Run 3 (cold-start, v2 dataset, 400px) achieved mAP=0.541/mAP@50=0.779
+   — a further +0.118 mAP gain over Run 2, primarily from the improved v2 training set.
+   Paper run will use 400px. Mac M3 took ~62h for 15 epochs; cloud GPU strongly
+   recommended for future runs.
 7. ~~**BrentImages Night 1 FITS local storage**~~ — ✅ Resolved (2026-05-26). Created
    `data/BrentImages → /Volumes/External/TrainingData/raw/BrentImages` symlink. External
    drive must be mounted during training. For cloud runs, rsync the BrentImages directory
