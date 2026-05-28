@@ -271,6 +271,59 @@ class TestCrossIdentifyKnownTle:
         assert best["satellite_name"] == "CURRENT-GOOD"
         assert best["tle_search_mode"] == "current_fallback"
 
+    def test_edge_clipped_single_tip_scores_against_exposure_endpoints(self):
+        """One tip off-frame: score the known tip against t_start and t_end propagations."""
+        from inference.crossid import cross_identify
+
+        catalog = [
+            {"name": "ENDPOINT-HIT", "line1": _TEST_TLE_LINE1, "line2": _TEST_TLE_LINE2},
+            {"name": "MIDTIME-HIT",  "line1": _ISS_LINE1,      "line2": _ISS_LINE2},
+        ]
+
+        call_log: list[tuple[str, object]] = []
+
+        def fake_propagate(name, l1, l2, t, *args, **kwargs):
+            call_log.append((name, t))
+            if name == "ENDPOINT-HIT":
+                # At exposure start this satellite is right on the known tip (0.0, 0.0).
+                # At mid-exposure it is half a degree away — the old code would have used
+                # mid-exposure and given it a poor score.
+                if t == _OBS_TIME:                           # start_time
+                    return {"object_name": name, "norad_id": 44713,
+                            "predicted_ra": 0.0, "predicted_dec": 0.0,
+                            "tle_age_hours": 0.0, "tle_epoch": _OBS_TIME}
+                return {"object_name": name, "norad_id": 44713,       # mid or end
+                        "predicted_ra": 0.5, "predicted_dec": 0.5,
+                        "tle_age_hours": 0.0, "tle_epoch": _OBS_TIME}
+            # MIDTIME-HIT lands exactly at (0.0, 0.0) at mid-exposure — old code winner
+            if t == _OBS_TIME + __import__("datetime").timedelta(seconds=5):  # mid_time
+                return {"object_name": name, "norad_id": 25544,
+                        "predicted_ra": 0.0, "predicted_dec": 0.0,
+                        "tle_age_hours": 0.0, "tle_epoch": _OBS_TIME}
+            return {"object_name": name, "norad_id": 25544,
+                    "predicted_ra": 5.0, "predicted_dec": 5.0,
+                    "tle_age_hours": 0.0, "tle_epoch": _OBS_TIME}
+
+        # Only tip1 is known — tip2 is off-frame (None).
+        dets = [{
+            "ra_tip1_deg": 0.0, "dec_tip1_deg": 0.0,
+            "ra_tip2_deg": None, "dec_tip2_deg": None,
+            "edge_clipped": True,
+            "obb": None,
+            "streak_length_px": 500,
+        }]
+
+        with patch("inference.crossid._propagate_to_radec", side_effect=fake_propagate):
+            result = cross_identify(
+                dets, _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT,
+                exposure_time=10.0,
+                _catalog_override=catalog,
+            )
+
+        best = result[0]["identifications"][0]
+        assert best["satellite_name"] == "ENDPOINT-HIT"
+        assert best["position_score_mode"] == "single_tip_endpoint"
+
     def test_edge_clipped_detection_scores_against_visible_segment(self):
         """Border-clipped streaks should not force the TLE onto clipped midpoint."""
         from inference.crossid import cross_identify

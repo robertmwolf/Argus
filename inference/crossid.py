@@ -667,6 +667,29 @@ def cross_identify(
                     det["dec_tip2_deg"],
                 )
                 position_score_mode = "edge_visible_segment"
+            elif edge_clipped and not has_both_tips and end_time is not None:
+                # One tip is off-frame: mid_ra/mid_dec is the single visible tip
+                # (from _streak_mid_radec fallback). Score it against where the
+                # satellite actually was at exposure start and exposure end — the
+                # visible tip must be near one of those two positions.
+                start_r = _propagate_to_radec(
+                    name, line1, line2, start_time,
+                    observer_lat, observer_lon, observer_alt_m,
+                )
+                end_r = _propagate_to_radec(
+                    name, line1, line2, end_time,
+                    observer_lat, observer_lon, observer_alt_m,
+                )
+                endpoint_seps = [
+                    _angular_separation_arcsec(
+                        mid_ra, mid_dec, r["predicted_ra"], r["predicted_dec"]
+                    )
+                    for r in (start_r, end_r)
+                    if r is not None
+                ]
+                if endpoint_seps:
+                    sep_arcsec = min(endpoint_seps)
+                    position_score_mode = "single_tip_endpoint"
 
             pos_score = _gaussian_score(sep_arcsec, sigma=_POSITION_SIGMA_ARCSEC)
             confidence, epoch_penalty = _confidence_with_epoch_penalty(
