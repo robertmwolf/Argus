@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS tle_catalog (
 );
 CREATE INDEX IF NOT EXISTS idx_tle_catalog_epoch ON tle_catalog(epoch);
 CREATE INDEX IF NOT EXISTS idx_tle_catalog_norad  ON tle_catalog(norad_id);
+CREATE INDEX IF NOT EXISTS idx_tle_catalog_epoch_norad ON tle_catalog(epoch, norad_id);
 CREATE TABLE IF NOT EXISTS tle_catalog_coverage (
     source_tag    TEXT PRIMARY KEY,
     description   TEXT,
@@ -420,12 +421,7 @@ def query_tles_for_window(
     epoch_end = obs_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     sql = (
-        "SELECT c.norad_id, c.epoch, "
-        "       COALESCE(("
-        "         SELECT n.object_name FROM tle_catalog n "
-        "         WHERE n.norad_id = c.norad_id AND n.object_name NOT LIKE 'NORAD-%' "
-        "         ORDER BY n.epoch DESC LIMIT 1"
-        "       ), c.object_name) AS object_name, "
+        "SELECT c.norad_id, c.epoch, c.object_name, "
         "       c.object_type, c.mean_motion, "
         "       c.tle_line1, c.tle_line2, c.source "
         "FROM tle_catalog c "
@@ -519,22 +515,31 @@ def query_tles_for_epoch_drift(
     epoch_start = (obs_time - timedelta(days=epoch_window_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
     epoch_end = (obs_time + timedelta(days=epoch_window_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+    # Use GROUP BY in SQL to return one TLE per NORAD ID (the latest epoch in the
+    # window) rather than loading all matching rows and deduplicating in Python.
+    # The old flat WHERE scan returned 1M+ rows on large catalogs; this returns
+    # ~36K rows (one per unique NORAD), cutting query time from minutes to seconds.
     sql = (
-        "SELECT c.norad_id, c.epoch, "
-        "       COALESCE(("
-        "         SELECT n.object_name FROM tle_catalog n "
-        "         WHERE n.norad_id = c.norad_id AND n.object_name NOT LIKE 'NORAD-%' "
-        "         ORDER BY n.epoch DESC LIMIT 1"
-        "       ), c.object_name) AS object_name, "
+        "SELECT c.norad_id, c.epoch, c.object_name, "
         "       c.object_type, c.mean_motion, "
         "       c.tle_line1, c.tle_line2, c.source "
         "FROM tle_catalog c "
-        "WHERE c.epoch >= :start AND c.epoch <= :end "
+        "JOIN ("
+        "  SELECT norad_id, MAX(epoch) AS max_epoch "
+        "  FROM tle_catalog "
+        "  WHERE epoch >= :start AND epoch <= :end "
     )
     params: dict[str, Any] = {"start": epoch_start, "end": epoch_end}
     if min_mean_motion > 0:
         sql += "AND (mean_motion IS NULL OR mean_motion >= :mm) "
         params["mm"] = min_mean_motion
+
+    sql += (
+        "  GROUP BY norad_id"
+        ") latest ON c.norad_id = latest.norad_id AND c.epoch = latest.max_epoch "
+        "WHERE c.epoch >= :start AND c.epoch <= :end "
+        "ORDER BY c.epoch DESC"
+    )
 
     with eng.connect() as conn:
         rows = conn.execute(text(sql), params).fetchall()

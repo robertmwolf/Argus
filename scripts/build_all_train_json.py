@@ -1,7 +1,7 @@
 """Build the canonical training annotation JSON.
 
 Produces:
-  data/annotations/all_train_nodm.json   — SatStreaks + Night1 + Night2 + Frigate tiles
+  data/annotations/all_train_nodm.json   — SatStreaks + Night1 + Night2 + Geo_20260520 + Frigate tiles
 
 Night 2 (brentimages_20260515.json) has bare filenames that are resolved to
 absolute paths under /Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/.
@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _ANN_DIR = _REPO_ROOT / "data/annotations"
 _BRENT_N2_DIR = "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood"
+_BRENT_GEO_DIR = "/Volumes/External/TrainingData/raw/BrentImages/Geo_20260520_Atwood"
 _CANONICAL_CATEGORIES = [{"id": 1, "name": "streak", "supercategory": "satellite"}]
 
 
@@ -33,14 +34,14 @@ def _load(path: Path) -> dict:
         return json.load(f)
 
 
-def _fix_brent_paths(images: list[dict]) -> list[dict]:
-    """Resolve bare filenames in BrentImages Night 2 to absolute paths."""
+def _fix_brent_paths(images: list[dict], base_dir: str) -> list[dict]:
+    """Resolve bare filenames to absolute paths under base_dir."""
     fixed = []
     for img in images:
         new = dict(img)
         fname = img["file_name"]
         if not fname.startswith("/"):
-            new["file_name"] = f"{_BRENT_N2_DIR}/{fname}"
+            new["file_name"] = f"{base_dir}/{fname}"
         fixed.append(new)
     return fixed
 
@@ -89,8 +90,8 @@ def main() -> None:
     n2_streaks = _load(_ANN_DIR / "brentimages_20260515.json")
     n2_neg = _load(_ANN_DIR / "brentimages_20260515_negatives.json")
 
-    n2_streaks["images"] = _fix_brent_paths(n2_streaks["images"])
-    n2_neg["images"] = _fix_brent_paths(n2_neg["images"])
+    n2_streaks["images"] = _fix_brent_paths(n2_streaks["images"], _BRENT_N2_DIR)
+    n2_neg["images"] = _fix_brent_paths(n2_neg["images"], _BRENT_N2_DIR)
 
     n2_images_count = len(n2_streaks["images"]) + len(n2_neg["images"])
     n2_ann_count = len(n2_streaks.get("annotations", []))
@@ -101,6 +102,20 @@ def main() -> None:
         len(n2_neg["images"]),
         n2_ann_count,
     )
+
+    # Load Geo_20260520 — geostationary streak captures
+    geo_path = _ANN_DIR / "geo_20260520.json"
+    if geo_path.exists():
+        geo = _load(geo_path)
+        geo["images"] = _fix_brent_paths(geo["images"], _BRENT_GEO_DIR)
+        logger.info(
+            "Geo_20260520: %d images, %d annotations",
+            len(geo["images"]),
+            len(geo.get("annotations", [])),
+        )
+    else:
+        geo = None
+        logger.warning("geo_20260520.json not found — skipping Geo_20260520_Atwood")
 
     # Load Frigate tiled crops (built by build_tiled_frigate_json.py)
     frigate_tiled_path = _ANN_DIR / "frigate_tiled_train.json"
@@ -116,7 +131,10 @@ def main() -> None:
     )
 
     # Canonical training set (no DarkMatters)
-    merged_nodm = merge([base_nodm, n2_streaks, n2_neg, frigate_tiled])
+    sources = [base_nodm, n2_streaks, n2_neg, frigate_tiled]
+    if geo is not None:
+        sources.append(geo)
+    merged_nodm = merge(sources)
     out_nodm = _ANN_DIR / "all_train_nodm.json"
     with open(out_nodm, "w") as f:
         json.dump(merged_nodm, f)
