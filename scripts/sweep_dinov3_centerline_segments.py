@@ -128,11 +128,14 @@ def _config_key(
     min_orientation_consistency: float,
     min_component_pixels: int,
     max_components: int,
+    min_line_support: float,
+    min_radon_snr: float,
 ) -> str:
     """Create a stable JSON key for one sweep setting."""
     return (
         f"t{threshold:.3f}_oc{min_orientation_consistency:.3f}"
         f"_min{min_component_pixels}_max{max_components}"
+        f"_ls{min_line_support:.2f}_snr{min_radon_snr:.1f}"
     )
 
 
@@ -157,6 +160,12 @@ def main() -> int:
     parser.add_argument("--radon-step-degrees", type=float, default=0.5)
     parser.add_argument("--min-length-px", type=float, default=16.0)
     parser.add_argument("--extension-px", type=float, default=8.0)
+    parser.add_argument("--min-line-supports", default="0.0,0.30,0.50,0.65,0.80",
+                        help="Comma-separated min_line_support values to sweep.")
+    parser.add_argument("--min-radon-snrs", default="1.0,2.0,3.0,5.0",
+                        help="Comma-separated min_radon_snr values to sweep.")
+    parser.add_argument("--line-support-tolerance-px", type=float, default=3.0,
+                        help="Perpendicular tolerance for line-support ratio (held fixed during sweep).")
     parser.add_argument("--max-samples", type=int, default=None)
     parser.add_argument("--preserve-image-bit-depth", action="store_true")
     args = parser.parse_args()
@@ -166,6 +175,8 @@ def main() -> int:
     consistencies = _parse_float_list(args.min_orientation_consistencies)
     min_pixels_values = _parse_int_list(args.min_component_pixels)
     max_component_values = _parse_int_list(args.max_components_per_image)
+    min_line_supports = _parse_float_list(args.min_line_supports)
+    min_radon_snrs = _parse_float_list(args.min_radon_snrs)
 
     config_order: list[dict[str, Any]] = []
     counts_by_key: dict[str, dict[str, Any]] = {}
@@ -173,16 +184,22 @@ def main() -> int:
         for consistency in consistencies:
             for min_pixels in min_pixels_values:
                 for max_components in max_component_values:
-                    key = _config_key(threshold, consistency, min_pixels, max_components)
-                    config = {
-                        "key": key,
-                        "threshold": threshold,
-                        "min_orientation_consistency": consistency,
-                        "min_component_pixels": min_pixels,
-                        "max_components_per_image": max_components,
-                    }
-                    config_order.append(config)
-                    counts_by_key[key] = _new_counts()
+                    for min_ls in min_line_supports:
+                        for min_snr in min_radon_snrs:
+                            key = _config_key(
+                                threshold, consistency, min_pixels, max_components, min_ls, min_snr
+                            )
+                            config = {
+                                "key": key,
+                                "threshold": threshold,
+                                "min_orientation_consistency": consistency,
+                                "min_component_pixels": min_pixels,
+                                "max_components_per_image": max_components,
+                                "min_line_support": min_ls,
+                                "min_radon_snr": min_snr,
+                            }
+                            config_order.append(config)
+                            counts_by_key[key] = _new_counts()
 
     device = get_device()
     model, train_args = _load_checkpoint_model(Path(args.checkpoint), args.weights, device)
@@ -206,7 +223,20 @@ def main() -> int:
         max_samples=args.max_samples,
     )
 
-    logger.info("sweeping %d configs on %d images", len(config_order), len(dataset))
+    # Build the set of unique extraction groups (threshold × min_pixels × consistency).
+    # Radon refinement runs once per group per image; (min_line_support, min_radon_snr,
+    # max_components) are applied as cheap numpy filters afterward.
+    from itertools import product as iproduct
+
+    extraction_groups: list[tuple[float, float, int]] = sorted(
+        {(cfg["threshold"], cfg["min_orientation_consistency"], cfg["min_component_pixels"])
+         for cfg in config_order}
+    )
+
+    logger.info(
+        "sweeping %d configs (%d extraction groups) on %d images",
+        len(config_order), len(extraction_groups), len(dataset),
+    )
     with torch.no_grad():
         for idx in range(len(dataset)):
             item = dataset[idx]
@@ -223,24 +253,46 @@ def main() -> int:
             gt_mask = target_heat > args.target_threshold
             gt_positive = bool(gt_mask.any())
 
-            for config in config_order:
-                proposals = _extract_proposals(
+            # Phase 1: run _extract_proposals (Radon) once per extraction group.
+            # Gates are disabled so every scored candidate is retained.
+            group_proposals: dict[tuple[float, float, int], list[Any]] = {}
+            for group_key in extraction_groups:
+                threshold, consistency, min_pixels = group_key
+                group_proposals[group_key] = _extract_proposals(
                     heat=heat,
                     bins=bins,
                     gray=gray,
                     sample=sample,
-                    threshold=float(config["threshold"]),
-                    min_component_pixels=int(config["min_component_pixels"]),
+                    threshold=threshold,
+                    min_component_pixels=min_pixels,
                     orientation_neighbor_bins=args.orientation_neighbor_bins,
-                    min_orientation_consistency=float(config["min_orientation_consistency"]),
+                    min_orientation_consistency=consistency,
                     crop_padding=args.crop_padding,
                     radon_search_degrees=args.radon_search_degrees,
                     radon_step_degrees=args.radon_step_degrees,
                     min_length_px=args.min_length_px,
                     extension_px=args.extension_px,
-                    max_components=int(config["max_components_per_image"]),
+                    max_components=9999,   # no cap yet; applied per-config below
                     n_bins=orientation_bins,
+                    min_line_support=0.0,  # gates off; applied per-config below
+                    line_support_tolerance_px=args.line_support_tolerance_px,
+                    min_radon_snr=1.0,     # gates off; applied per-config below
                 )
+
+            # Phase 2: apply cheap (ls, snr, max_components) filters per config.
+            for config in config_order:
+                group_key = (
+                    config["threshold"],
+                    config["min_orientation_consistency"],
+                    config["min_component_pixels"],
+                )
+                candidates = group_proposals[group_key]
+                proposals = [
+                    p for p in candidates
+                    if p.line_support_ratio >= config["min_line_support"]
+                    and p.radon_snr >= config["min_radon_snr"]
+                ][: config["max_components_per_image"]]
+
                 coverages = [
                     _proposal_gt_coverage(
                         proposal,

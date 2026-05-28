@@ -114,6 +114,33 @@ def _refine_angle_radon(
     return float((90.0 - best_radon) % 180.0)
 
 
+def _line_support_ratio(
+    component_mask: np.ndarray,
+    heat: np.ndarray,
+    start: _Point,
+    end: _Point,
+    tolerance_px: float = 3.0,
+) -> float:
+    """Return heat-weighted fraction of component pixels within tolerance_px of the line."""
+    ys, xs = np.nonzero(component_mask)
+    if xs.size == 0:
+        return 0.0
+    weights = heat[ys, xs].astype(np.float64)
+    dx = end.x - start.x
+    dy = end.y - start.y
+    length = math.hypot(dx, dy)
+    if length < 1e-6:
+        return 0.0
+    px = -dy / length
+    py = dx / length
+    cross = np.abs((xs.astype(np.float64) - start.x) * px + (ys.astype(np.float64) - start.y) * py)
+    within = cross <= tolerance_px
+    w_sum = float(weights.sum())
+    if w_sum < 1e-9:
+        return float(within.mean())
+    return float((weights * within).sum() / w_sum)
+
+
 def _crop_bounds(
     xs: np.ndarray,
     ys: np.ndarray,
@@ -267,11 +294,12 @@ def run_heatmap_centerline_detector(array: np.ndarray) -> list[dict[str, Any]]:
     weights_override = os.environ.get("HEATMAP_DINOV3_WEIGHTS") or None
     model, train_args, device = _load_heatmap_model(checkpoint, weights_override)
     image_size = int(os.environ.get("HEATMAP_IMAGE_SIZE", str(train_args.get("image_size", 512))))
-    threshold = float(os.environ.get("HEATMAP_SEGMENT_THRESHOLD", "0.50"))
+    threshold = float(os.environ.get("HEATMAP_SEGMENT_THRESHOLD", "0.85"))
     min_component_pixels = int(os.environ.get("HEATMAP_MIN_COMPONENT_PIXELS", "4"))
     orientation_neighbor_bins = int(os.environ.get("HEATMAP_ORIENTATION_NEIGHBOR_BINS", "1"))
     min_orientation_consistency = float(os.environ.get("HEATMAP_MIN_ORIENTATION_CONSISTENCY", "0.55"))
-    max_components = int(os.environ.get("HEATMAP_MAX_COMPONENTS", "4"))
+    max_components = int(os.environ.get("HEATMAP_MAX_COMPONENTS", "2"))
+    min_line_support = float(os.environ.get("HEATMAP_MIN_LINE_SUPPORT", "0.50"))
     crop_padding = int(os.environ.get("HEATMAP_CROP_PADDING", "48"))
     radon_search_degrees = float(os.environ.get("HEATMAP_RADON_SEARCH_DEGREES", "12.0"))
     radon_step_degrees = float(os.environ.get("HEATMAP_RADON_STEP_DEGREES", "0.5"))
@@ -338,6 +366,10 @@ def run_heatmap_centerline_detector(array: np.ndarray) -> list[dict[str, Any]]:
         if segment is None:
             continue
         input_start, input_end = segment
+        if min_line_support > 0.0:
+            lsr = _line_support_ratio(component, heat, input_start, input_end)
+            if lsr < min_line_support:
+                continue
         native_start = _Point(input_start.x * w_native / image_size, input_start.y * h_native / image_size)
         native_end = _Point(input_end.x * w_native / image_size, input_end.y * h_native / image_size)
         obb = _line_to_obb(native_start, native_end, compat_width_px)
