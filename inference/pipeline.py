@@ -136,20 +136,22 @@ def _model_registry() -> list[dict]:
     root = Path(__file__).resolve().parent.parent
     return [
         {
-            "id":      "dinov3_vitb",
-            "size":    "dinov3_vitb",
-            "label":   "DINOv3 ViT-B",
-            "dataset": "SatStreaks+GTImages",
-            "weights": root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
-            "config":  root / "models" / "dino" / "streak_dinov3_vitb.py",
+            "id":        "dinov3_vitb",
+            "size":      "dinov3_vitb",
+            "label":     "DINOv3 ViT-B",
+            "dataset":   "SatStreaks+GTImages",
+            "weights":   root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
+            "config":    root / "models" / "dino" / "streak_dinov3_vitb.py",
+            "norm_mode": "autostretch",
         },
         {
-            "id":      "dinov3_vitb_run3",
-            "size":    "dinov3_vitb_run3",
-            "label":   "DINOv3 ViT-B Run 3 (cold-start, nodm)",
-            "dataset": "SatStreaks+BrentImages+Frigate",
-            "weights": root / "weights" / "run3_cold_nodm" / "best.pth",
-            "config":  root / "models" / "dino" / "streak_dinov3_vitb_400px_run3.py",
+            "id":        "dinov3_vitb_run3",
+            "size":      "dinov3_vitb_run3",
+            "label":     "DINOv3 ViT-B Run 3 (cold-start, nodm)",
+            "dataset":   "SatStreaks+BrentImages+Frigate",
+            "weights":   root / "weights" / "run3_cold_nodm" / "best.pth",
+            "config":    root / "models" / "dino" / "streak_dinov3_vitb_400px_run3.py",
+            "norm_mode": "autostretch",
         },
     ]
 
@@ -1030,11 +1032,12 @@ def resolve_model_specs() -> list[dict]:
             w = Path(s["weights"])
             weights_str = str(w if w.is_absolute() else root / w)
             result.append({
-                "id":      s["id"],
-                "size":    s["size"],
-                "weights": weights_str,
-                "label":   s.get("label", s["id"]),
-                "dataset": s.get("dataset", ""),
+                "id":        s["id"],
+                "size":      s["size"],
+                "weights":   weights_str,
+                "label":     s.get("label", s["id"]),
+                "dataset":   s.get("dataset", ""),
+                "norm_mode": s.get("norm_mode", ""),  # '' → use ARGUS_NORM / pipeline default
             })
         return result
 
@@ -1049,15 +1052,17 @@ def resolve_model_specs() -> list[dict]:
         # Run 3: best.pth symlink is updated each night to the current best checkpoint.
         "dinov3_vitb_run3":        root / "weights" / "run3_cold_nodm" / "best.pth",
     }
-    _meta: dict[str, tuple[str, str]] = {
-        "tiny":                    ("DINO Swin-Tiny",                  "SatStreaks"),
-        "large":                   ("DINO Swin-Large",                 "SatStreaks"),
-        "dinov3_vitb":             ("DINOv3 ViT-B",                    "SatStreaks+GTImages"),
-        "dinov3_vitl":             ("DINOv3 ViT-L",                    "SatStreaks+GTImages"),
-        "dinov3_vitb_multisource": ("DINOv3 Base - Multi-source",      "SatStreaks+BrentImages+Frigate"),
-        "dinov3_vitb_run3":        ("DINOv3 ViT-B Run 3 (cold-start, nodm)", "SatStreaks+BrentImages+Frigate"),
+    _meta: dict[str, tuple[str, str, str]] = {
+        # (label, dataset, norm_mode)
+        "tiny":                    ("DINO Swin-Tiny",                       "SatStreaks",                    "zscore"),
+        "large":                   ("DINO Swin-Large",                      "SatStreaks",                    "zscore"),
+        "dinov3_vitb":             ("DINOv3 ViT-B",                         "SatStreaks+GTImages",            "autostretch"),
+        "dinov3_vitl":             ("DINOv3 ViT-L",                         "SatStreaks+GTImages",            "autostretch"),
+        "dinov3_gt_dm_satstreaks": ("DINOv3 ViT-B (GT+DM+SatStreaks)",      "SatStreaks+GTImages+DarkMatters","autostretch"),
+        "dinov3_vitb_multisource": ("DINOv3 Base - Multi-source",           "SatStreaks+BrentImages+Frigate","autostretch"),
+        "dinov3_vitb_run3":        ("DINOv3 ViT-B Run 3 (cold-start, nodm)","SatStreaks+BrentImages+Frigate","autostretch"),
     }
-    label, dataset = _meta.get(model_size, (model_size, ""))
+    label, dataset, norm_mode = _meta.get(model_size, (model_size, "", ""))
     if weights_env:
         weights_str = weights_env
     elif model_size in _dinov3_defaults:
@@ -1065,7 +1070,7 @@ def resolve_model_specs() -> list[dict]:
     else:
         weights_str = str(root / "weights" / f"dino_{model_size}.pth")
     return [{"id": model_size, "size": model_size, "weights": weights_str,
-             "label": label, "dataset": dataset}]
+             "label": label, "dataset": dataset, "norm_mode": norm_mode}]
 
 
 def load_models() -> list[tuple[Any, Any, dict]]:
@@ -1198,6 +1203,48 @@ def get_detector_statuses() -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Per-model normalisation helper
+# ---------------------------------------------------------------------------
+
+def _get_model_array(
+    spec: dict,
+    default_array: "np.ndarray",
+    raw_array_f32: "np.ndarray | None",
+    default_norm_mode: str,
+) -> "np.ndarray":
+    """Return an image array normalised for this model's training distribution.
+
+    When ``spec`` carries a ``norm_mode`` that differs from
+    ``default_norm_mode`` (the normalisation already applied to
+    ``default_array``) **and** the raw float32 FITS pixels are available,
+    re-normalises from the raw data so the model sees the correct input
+    distribution.  Falls back to ``default_array`` for PNG/JPEG inputs or
+    when the spec has no ``norm_mode``.
+
+    Args:
+        spec: Model spec dict (from ``resolve_model_specs()``).
+        default_array: uint8 (H, W, 3) array pre-normalised with
+            ``default_norm_mode``.
+        raw_array_f32: Raw float32 (H, W) FITS pixels before any
+            normalisation, or None for non-FITS inputs.
+        default_norm_mode: Normalisation mode used to produce
+            ``default_array`` (e.g. ``'zscore'``, ``'autostretch'``).
+
+    Returns:
+        uint8 (H, W, 3) array correctly normalised for this model.
+    """
+    spec_norm = spec.get("norm_mode", "").lower()
+    if not spec_norm or spec_norm == default_norm_mode or raw_array_f32 is None:
+        return default_array
+    from inference.fits_loader import apply_norm
+    logger.debug(
+        "Re-normalising for model %s: %s → %s",
+        spec.get("id", "?"), default_norm_mode, spec_norm,
+    )
+    return apply_norm(raw_array_f32, spec_norm)
+
+
+# ---------------------------------------------------------------------------
 # Parallel detector runner
 # ---------------------------------------------------------------------------
 
@@ -1209,6 +1256,8 @@ def _run_all_detectors(
     confidence_threshold: float,
     tta_enabled: bool,
     enabled_detectors: set[str] | None,
+    raw_array_f32: "np.ndarray | None" = None,
+    default_norm_mode: str = "",
 ) -> dict[str, list[dict]]:
     """Run all enabled detectors concurrently via a ThreadPoolExecutor.
 
@@ -1218,12 +1267,15 @@ def _run_all_detectors(
 
     Args:
         models_with_specs: List of (model, device, spec) from load_models().
-        array: uint8 (H, W, 3) image array.
+        array: uint8 (H, W, 3) image pre-normalised with ``default_norm_mode``.
         fits_path: Path to the FITS file (needed by ASTRiDE).
         image_size: Inference resolution for DINO.
         confidence_threshold: Minimum detection score.
         tta_enabled: Whether to run 3x TTA inference for each DINO model.
         enabled_detectors: Set of detector IDs to run; None means all.
+        raw_array_f32: Raw float32 (H, W) FITS pixels for per-model
+            re-normalisation.  None for PNG/JPEG inputs.
+        default_norm_mode: Normalisation applied to produce ``array``.
 
     Returns:
         Dict mapping detector ID → raw detection list.
@@ -1253,18 +1305,21 @@ def _run_all_detectors(
 
     n_workers = len(models_with_specs) + 6
     with ThreadPoolExecutor(max_workers=max(1, n_workers)) as pool:
-        # DINO models
+        # DINO models — each may need its own normalisation
         for model, _dev, spec in models_with_specs:
             if not _enabled(spec["id"]):
                 results[spec["id"]] = []
                 continue
+            model_array = _get_model_array(
+                spec, array, raw_array_f32, default_norm_mode
+            )
             fn = _run_tta_inference if tta_enabled else _run_inference
             f = pool.submit(
                 _timed_detector,
                 spec["id"],
                 fn,
                 model,
-                array,
+                model_array,
                 image_size,
                 confidence_threshold,
                 spec["id"],
@@ -1404,9 +1459,11 @@ def run_with_array(
     from inference.fits_loader import FITSLoader
     loader = FITSLoader()
     fits_data = loader.load(fits_path)
-    array    = fits_data["array"]       # uint8 (H, W, 3)
-    wcs      = fits_data["wcs"]
-    obs_time = fits_data.get("obs_time")
+    array          = fits_data["array"]           # uint8 (H, W, 3)
+    raw_array_f32  = fits_data.get("raw_float32") # float32 (H, W) or None for PNGs
+    default_norm   = fits_data.get("norm_mode", "zscore")
+    wcs            = fits_data["wcs"]
+    obs_time       = fits_data.get("obs_time")
     fits_load_ms = (time.perf_counter() - t0) * 1000
     logger.debug("fits_load_ms=%.1f", fits_load_ms)
     logger.info("fits_load_ms=%.1f", fits_load_ms)
@@ -1469,6 +1526,8 @@ def run_with_array(
     all_det_results = _run_all_detectors(
         _models_with_specs, array, fits_path, image_size,
         confidence_threshold, tta_enabled, enabled_detectors,
+        raw_array_f32=raw_array_f32,
+        default_norm_mode=default_norm,
     )
 
     # Collect results — DINO detections from all models are merged before NMS.
