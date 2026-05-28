@@ -146,7 +146,17 @@ def main() -> int:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {"metrics": metrics, "n_predictions": len(predictions)}
     out_path.write_text(json.dumps(payload, indent=2))
-    (out_path.parent / "predictions.json").write_text(json.dumps(predictions, indent=2))
+
+    # Resolve integer COCO image IDs → file_name strings for the comparison
+    # script (compare_heatmap_centerline_to_obb.py / eval/line_metrics.py),
+    # which keys ground truth by filename rather than integer ID.
+    coco = json.loads(Path(args.annotations).read_text())
+    id_to_filename = {img["id"]: img["file_name"] for img in coco["images"]}
+    filename_predictions = [
+        {**pred, "image_id": id_to_filename.get(int(pred["image_id"]), str(pred["image_id"]))}
+        for pred in predictions
+    ]
+    (out_path.parent / "predictions.json").write_text(json.dumps(filename_predictions, indent=2))
     logger.info("wrote %s (%d predictions)", out_path, len(predictions))
     return 0
 
