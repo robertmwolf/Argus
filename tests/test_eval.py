@@ -686,3 +686,65 @@ class TestRunMultiMethodBenchmark:
                 method_predictions=None,
                 run_pipeline=False,
             )
+
+
+# ---------------------------------------------------------------------------
+# line_metrics
+# ---------------------------------------------------------------------------
+
+class TestLineMetrics:
+    def test_line_segment_prediction_matches_centerline_gt(self):
+        from eval.line_metrics import evaluate_line_segments
+
+        ground_truth = [{
+            "image_id": "img001.fits",
+            "line_segment": {
+                "x1": 10.0, "y1": 20.0,
+                "x2": 110.0, "y2": 20.0,
+                "angle_deg": 0.0,
+                "length_px": 100.0,
+            },
+            "streak_length_px": 100.0,
+        }]
+        predictions = [{
+            "image_id": "img001.fits",
+            "confidence": 0.9,
+            "line_segment": {
+                "x1": 11.0, "y1": 22.0,
+                "x2": 109.0, "y2": 22.0,
+                "angle_deg": 0.0,
+                "length_px": 98.0,
+            },
+        }]
+
+        metrics = evaluate_line_segments(predictions, ground_truth, tolerance_px=3.0)
+
+        assert metrics["precision"] == pytest.approx(1.0)
+        assert metrics["recall"] == pytest.approx(1.0)
+        assert metrics["mean_angle_error_deg"] == pytest.approx(0.0)
+
+    def test_obb_prediction_can_be_compared_as_centerline(self):
+        from eval.line_metrics import evaluate_line_segments
+
+        ground_truth = [{
+            "image_id": "img001.fits",
+            "line_segment": {
+                "x1": 50.0, "y1": 100.0,
+                "x2": 150.0, "y2": 100.0,
+                "angle_deg": 0.0,
+                "length_px": 100.0,
+            },
+            "streak_length_px": 100.0,
+        }]
+        predictions = [{
+            "image_id": "img001.fits",
+            "confidence": 0.8,
+            "obb": {"cx": 100.0, "cy": 100.0, "w": 100.0, "h": 10.0, "angle_deg": 0.0},
+            "streak_length_px": 100.0,
+        }]
+
+        metrics = evaluate_line_segments(predictions, ground_truth, tolerance_px=1.0)
+
+        assert metrics["tp"] == 1
+        assert metrics["fp"] == 0
+        assert metrics["fn"] == 0

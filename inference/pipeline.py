@@ -618,6 +618,13 @@ def _run_streakmind_yolo_detector(
     return detections
 
 
+def _run_heatmap_centerline_detector(array: "np.ndarray") -> list[dict]:
+    """Run the DINOv3 heatmap-centerline detector if its weights are available."""
+    from inference.heatmap_detector import run_heatmap_centerline_detector
+
+    return run_heatmap_centerline_detector(array)
+
+
 def _downsample_fits_image_for_astride(fits_image: Any, max_pixels: int) -> tuple[Any, float]:
     """Return a downsampled FITSImage-like object and its linear scale.
 
@@ -1065,6 +1072,19 @@ def get_detector_statuses() -> list[dict]:
             "status":  "active" if weight_ok else "no_weights",
         })
 
+    # Heatmap centerline detector
+    try:
+        from inference.heatmap_detector import get_heatmap_detector_status
+        statuses.append(get_heatmap_detector_status())
+    except ImportError:
+        statuses.append({
+            "id": "dinov3_heatmap_centerline",
+            "name": "DINOv3 Heatmap Centerline",
+            "type": "ml",
+            "dataset": "SatStreaks centerline catchment",
+            "status": "unavailable",
+        })
+
     # YOLO variants
     _yolo_entries = [
         {
@@ -1165,7 +1185,7 @@ def _run_all_detectors(
     )
     logger.info("Enabled detectors: %s", enabled_label)
 
-    n_workers = len(models_with_specs) + 5
+    n_workers = len(models_with_specs) + 6
     with ThreadPoolExecutor(max_workers=max(1, n_workers)) as pool:
         # DINO models
         for model, _dev, spec in models_with_specs:
@@ -1210,6 +1230,11 @@ def _run_all_detectors(
             tasks[pool.submit(_timed_detector, "streakmind_yolo", _run_streakmind_yolo_detector, array, confidence_threshold)] = "streakmind_yolo"
         else:
             results["streakmind_yolo"] = []
+
+        if _enabled("dinov3_heatmap_centerline"):
+            tasks[pool.submit(_timed_detector, "dinov3_heatmap_centerline", _run_heatmap_centerline_detector, array)] = "dinov3_heatmap_centerline"
+        else:
+            results["dinov3_heatmap_centerline"] = []
 
         for f in as_completed(tasks):
             key = tasks[f]
@@ -1427,6 +1452,7 @@ def run_with_array(
     yolo_dets            = all_det_results.get("yolo", [])
     yolo_full_dets       = all_det_results.get("yolo_full", [])
     streakmind_yolo_dets = all_det_results.get("streakmind_yolo", [])
+    heatmap_dets         = all_det_results.get("dinov3_heatmap_centerline", [])
 
     if raw_mode:
         # Raw mode: no Radon, no extent tracing, no NMS, no grouping.
@@ -1447,7 +1473,7 @@ def run_with_array(
 
         detections = (
             raw_dets + classical_dets + astride_dets
-            + yolo_dets + yolo_full_dets + streakmind_yolo_dets
+            + yolo_dets + yolo_full_dets + streakmind_yolo_dets + heatmap_dets
         )
         for idx, det in enumerate(detections):
             det["streak_id"] = idx + 1
@@ -1492,10 +1518,11 @@ def run_with_array(
         yolo_dets            = nms_detections(yolo_dets,            iou_threshold=0.5)
         yolo_full_dets       = nms_detections(yolo_full_dets,       iou_threshold=0.5)
         streakmind_yolo_dets = nms_detections(streakmind_yolo_dets, iou_threshold=0.5)
+        heatmap_dets         = nms_detections(heatmap_dets,         iou_threshold=0.5)
 
         combined = (
             raw_dets + classical_dets + astride_dets
-            + yolo_dets + yolo_full_dets + streakmind_yolo_dets
+            + yolo_dets + yolo_full_dets + streakmind_yolo_dets + heatmap_dets
         )
         detections = group_detections(combined, iou_threshold=0.5)
         detections = fuse_group_geometries(detections)

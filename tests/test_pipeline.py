@@ -111,6 +111,7 @@ class TestRunFastMode:
              patch.object(pl, "_run_yolo_detector", return_value=[]), \
              patch.object(pl, "_run_yolo_full_detector", return_value=[]), \
              patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
+             patch.object(pl, "_run_heatmap_centerline_detector", return_value=[]), \
              patch.dict(os.environ, extra_env, clear=False):
             return pl.run(_SYNTH_FITS, fast=fast)
 
@@ -165,6 +166,7 @@ class TestRunFastMode:
              patch.object(pl, "_run_yolo_detector", return_value=[]), \
              patch.object(pl, "_run_yolo_full_detector", return_value=[]), \
              patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
+             patch.object(pl, "_run_heatmap_centerline_detector", return_value=[]), \
              patch.dict(os.environ,
                         {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS)},
                         clear=False):
@@ -190,6 +192,7 @@ class TestRunFastMode:
              patch.object(pl, "_run_yolo_detector", return_value=[]), \
              patch.object(pl, "_run_yolo_full_detector", return_value=[]), \
              patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
+             patch.object(pl, "_run_heatmap_centerline_detector", return_value=[]), \
              patch.dict(os.environ,
                         {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS),
                          "FAST_MODE": "true"},
@@ -356,6 +359,7 @@ class TestAstrideFiltering:
              patch.object(pl, "_run_yolo_detector", return_value=[]), \
              patch.object(pl, "_run_yolo_full_detector", return_value=[]), \
              patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
+             patch.object(pl, "_run_heatmap_centerline_detector", return_value=[]), \
              patch.object(pl, "_pixel_to_sky", return_value=(10.0, 20.0)), \
              patch.object(pp, "refine_angle", return_value=0.0), \
              patch.object(crossid, "cross_identify", side_effect=_mark_identified) as mock_crossid, \

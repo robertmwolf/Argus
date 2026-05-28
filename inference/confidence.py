@@ -107,6 +107,12 @@ DETECTOR_PROFILES: dict[str, DetectorProfile] = {
         recall=0.78,
         notes="mAP@0.5=0.740 on test.json; same precision/recall est. as dinov3_vitb baseline",
     ),
+    "dinov3_heatmap_centerline": DetectorProfile(
+        name="DINOv3 Heatmap Centerline",
+        precision=0.96,
+        recall=0.74,
+        notes="centerline proposal sweep: 284/386 matched positives, 1/25 negative images with segments",
+    ),
     # DINOv3 ViT-L: Phase D target (RTX 5070 Ti workstation); conservative estimate
     "dinov3_vitl": DetectorProfile(
         name="DINOv3 ViT-L",
