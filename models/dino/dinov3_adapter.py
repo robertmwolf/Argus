@@ -14,7 +14,7 @@ This module bridges the gap:
 Usage in an MMDet config:
     backbone=dict(
         type='DINOv3Backbone',
-        model_size='base',           # 'base' (ViT-B) or 'large' (ViT-L)
+        model_size='base',           # 'small' (ViT-S), 'base' (ViT-B), or 'large' (ViT-L)
         weights='weights/dinov3_vitb16_lvd1689m.pth',
         frozen=True,                 # keep False only for optional Stage F unfreeze
         out_channels=768,            # 768 for ViT-B, 1024 for ViT-L
@@ -43,6 +43,12 @@ logger = logging.getLogger(__name__)
 
 # Map model_size → (constructor fn name, embed_dim, constructor kwargs)
 _MODEL_CONFIGS: dict[str, tuple[str, int, dict]] = {
+    "small": (
+        "vit_small",
+        384,
+        dict(patch_size=16, img_size=518, n_storage_tokens=4,
+             layerscale_init=1e-4, mask_k_bias=True),
+    ),
     "base": (
         "vit_base",
         768,
