@@ -173,6 +173,31 @@ def _normalise_zscale(arr: np.ndarray) -> np.ndarray:
     return (scaled * 255.0).astype(np.uint8)
 
 
+def apply_norm(raw_f32: np.ndarray, norm_mode: str) -> np.ndarray:
+    """Normalise a raw float32 FITS array with the requested mode.
+
+    Used by the inference pipeline to re-normalise a stored raw array for a
+    specific model checkpoint whose training normalisation differs from the
+    globally-loaded ``array``.
+
+    Args:
+        raw_f32: Raw float32 pixel data, shape (H, W).
+        norm_mode: ``'autostretch'``, ``'zscore'``, or ``'zscale'``.
+
+    Returns:
+        uint8 3-channel array (H, W, 3) with all three channels identical
+        (grayscale replicated), ready to pass to an MMDetection model.
+    """
+    mode = norm_mode.lower()
+    if mode == "autostretch":
+        arr_u8 = _normalise_autostretch(raw_f32)
+    elif mode == "zscale":
+        arr_u8 = _normalise_zscale(raw_f32)
+    else:
+        arr_u8 = _normalise_zscore(raw_f32)
+    return np.stack([arr_u8, arr_u8, arr_u8], axis=-1)
+
+
 class FITSLoader:
     """Load and normalise FITS images for ML inference.
 
@@ -221,6 +246,7 @@ class FITSLoader:
             arr_u8 = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
             return {
                 "array": arr_u8,
+                "raw_float32": None,
                 "header": {},
                 "exposure_time": None,
                 "filename": path.name,
@@ -249,6 +275,11 @@ class FITSLoader:
                     raise ValueError(
                         f"No finite pixel values found in {path.name}"
                     )
+
+                # Keep a copy of the raw float32 pixels before normalisation so
+                # the inference pipeline can re-normalise per-model if different
+                # checkpoints were trained with different ARGUS_NORM settings.
+                raw_float32: np.ndarray = arr.copy()
 
                 # --- Normalisation -------------------------------------------
                 norm = os.environ.get("ARGUS_NORM", _NORM_MODE).lower()
@@ -325,6 +356,7 @@ class FITSLoader:
 
                 return {
                     "array":          array_3ch,
+                    "raw_float32":    raw_float32,
                     "wcs":            wcs,
                     "exposure_time":  exposure_time,
                     "filename":       path.name,
