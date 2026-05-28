@@ -1277,6 +1277,14 @@ def run_with_array(
         for det in detections:
             det["identifications"] = []
         crossid_ms = 0.0
+    elif wcs is None:
+        for det in detections:
+            det["identifications"] = []
+        crossid_ms = 0.0
+        logger.info(
+            "Skipping cross-ID: plate solve failed or no WCS available for %s",
+            fits_path.name,
+        )
     elif not any(
         det.get("ra_tip1_deg") is not None or det.get("ra_tip2_deg") is not None
         for det in detections
