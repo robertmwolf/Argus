@@ -6,6 +6,7 @@ import argparse
 import json
 import logging
 from pathlib import Path
+import sys
 from typing import Any
 
 import torch
@@ -13,6 +14,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from inference.device import get_device
 from models.plain_dinov3.streak_heatmap import decode_geometry
 
 logger = logging.getLogger(__name__)
@@ -132,7 +138,7 @@ def main() -> int:
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
+    device = get_device()
     work_dir = Path(args.work_dir)
     work_dir.mkdir(parents=True, exist_ok=True)
 

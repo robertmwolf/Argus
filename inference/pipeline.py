@@ -448,6 +448,225 @@ def _run_tta_inference(
     return all_dets
 
 
+def _run_yolo_detector(
+    array: "np.ndarray",
+    confidence_threshold: float = 0.25,
+) -> list[dict]:
+    """Run YOLO11-OBB baseline on an image array; return standard detection dicts.
+
+    Reads weights from ``weights/yolo_baseline.pt``.  Silently returns an
+    empty list if the weights file is missing or ultralytics is not installed,
+    so this function is always safe to call even when YOLO is not set up.
+
+    Args:
+        array: uint8 (H, W, 3) image array (RGB, same as pipeline input).
+        confidence_threshold: Minimum YOLO confidence to keep a detection.
+
+    Returns:
+        List of detection dicts with keys: bbox, confidence, method, obb,
+        streak_length_px.  The obb already contains the true oriented angle
+        from YOLO's xywhr output.
+    """
+    from pathlib import Path as _Path
+
+    weights = _Path(os.environ.get("YOLO_WEIGHTS", "weights/yolo_tiled/run/weights/best.pt"))
+    if not weights.exists():
+        logger.debug("YOLO baseline weights not found at %s; skipping", weights)
+        return []
+
+    try:
+        from ultralytics import YOLO  # type: ignore[import]
+    except ImportError:
+        logger.debug("ultralytics not installed; skipping YOLO ensemble")
+        return []
+
+    cache_key = str(weights)
+    if cache_key not in _yolo_model_cache:
+        _yolo_model_cache[cache_key] = YOLO(str(weights))
+    yolo = _yolo_model_cache[cache_key]
+    results = yolo(array, verbose=False, conf=confidence_threshold)
+
+    detections: list[dict] = []
+    for result in results:
+        if result.obb is None:
+            continue
+        for box, conf in zip(result.obb.xywhr, result.obb.conf):
+            cx, cy, bw, bh, angle_rad = box.tolist()
+            angle_deg = float(angle_rad) * 180.0 / math.pi
+            half_w, half_h = bw / 2.0, bh / 2.0
+            detections.append({
+                "bbox": [cx - half_w, cy - half_h, cx + half_w, cy + half_h],
+                "confidence": float(conf),
+                "method": "yolo",
+                "obb": {"cx": cx, "cy": cy, "w": bw, "h": bh, "angle_deg": angle_deg},
+                "streak_length_px": float(max(bw, bh)),
+            })
+
+    logger.debug("YOLO ensemble: %d detections above threshold %.2f",
+                 len(detections), confidence_threshold)
+    return detections
+
+
+def _run_yolo_full_detector(
+    array: "np.ndarray",
+    confidence_threshold: float = 0.25,
+) -> list[dict]:
+    """Run the full-dataset YOLO11n-OBB model with tiled inference.
+
+    Loads weights from ``weights/run_full_yolo_obb/run/weights/best.pt``.
+    Tiles large images at 640 px (matching training resolution) with 50%
+    overlap; bounding boxes are remapped to full-image coordinates before
+    returning.  Silently returns an empty list if weights are missing.
+
+    Args:
+        array: uint8 (H, W, 3) image array (RGB).
+        confidence_threshold: Minimum YOLO confidence to keep a detection.
+
+    Returns:
+        List of detection dicts with method='yolo_full'.
+    """
+    import numpy as np
+
+    root = Path(__file__).resolve().parent.parent
+    weights = root / "weights" / "run_full_yolo_obb" / "run" / "weights" / "best.pt"
+    if not weights.exists():
+        logger.debug("YOLO-full weights not found at %s; skipping", weights)
+        return []
+
+    try:
+        from ultralytics import YOLO  # type: ignore[import]
+    except ImportError:
+        logger.debug("ultralytics not installed; skipping YOLO-full")
+        return []
+
+    cache_key = str(weights)
+    if cache_key not in _yolo_model_cache:
+        _yolo_model_cache[cache_key] = YOLO(str(weights))
+    yolo = _yolo_model_cache[cache_key]
+
+    h_img, w_img = array.shape[:2]
+    _tile_size = 640
+    _stride = _tile_size // 2  # 50% overlap
+
+    if max(h_img, w_img) <= _tile_size:
+        tile_list = [(array, 0, 0)]
+    else:
+        tile_list = []
+        for y0 in range(0, h_img, _stride):
+            for x0 in range(0, w_img, _stride):
+                x1 = min(x0 + _tile_size, w_img)
+                y1 = min(y0 + _tile_size, h_img)
+                tile = array[y0:y1, x0:x1]
+                if tile.shape[0] < 32 or tile.shape[1] < 32:
+                    continue
+                tile_list.append((tile, x0, y0))
+
+    detections: list[dict] = []
+    for tile, x_off, y_off in tile_list:
+        for result in yolo(tile, verbose=False, conf=confidence_threshold):
+            if result.obb is None:
+                continue
+            for box, conf in zip(result.obb.xywhr, result.obb.conf):
+                cx, cy, bw, bh, angle_rad = box.tolist()
+                cx += x_off
+                cy += y_off
+                angle_deg = float(angle_rad) * 180.0 / math.pi
+                half_w, half_h = bw / 2.0, bh / 2.0
+                detections.append({
+                    "bbox": [cx - half_w, cy - half_h, cx + half_w, cy + half_h],
+                    "confidence": float(conf),
+                    "method": "yolo_full",
+                    "obb": {"cx": cx, "cy": cy, "w": bw, "h": bh, "angle_deg": angle_deg},
+                    "streak_length_px": float(max(bw, bh)),
+                })
+
+    logger.debug("YOLO-full: %d raw detections above threshold %.2f",
+                 len(detections), confidence_threshold)
+    return detections
+
+
+def _run_streakmind_yolo_detector(
+    array: "np.ndarray",
+    confidence_threshold: float = 0.25,
+) -> list[dict]:
+    """Run the GTImages StreakMindYOLO detector.
+
+    Loads weights from ``STREAKMIND_YOLO_WEIGHTS`` or the best local comparison
+    training output. Returns detections with method ``"streakmind_yolo"`` so
+    the web UI can surface them as StreakMindYOLO.
+    """
+    import numpy as np
+
+    root = Path(__file__).resolve().parent.parent
+    weights = Path(
+        os.environ.get(
+            "STREAKMIND_YOLO_WEIGHTS",
+            str(root / "weights" / "streakmind_yolo_real" / "run" / "weights" / "best.pt"),
+        )
+    )
+    if not weights.exists():
+        logger.debug("StreakMindYOLO weights not found at %s; skipping", weights)
+        return []
+
+    try:
+        from ultralytics import YOLO  # type: ignore[import]
+    except ImportError:
+        logger.debug("ultralytics not installed; skipping StreakMindYOLO")
+        return []
+
+    cache_key = str(weights)
+    if cache_key not in _yolo_model_cache:
+        _yolo_model_cache[cache_key] = YOLO(str(weights))
+    yolo = _yolo_model_cache[cache_key]
+
+    h_img, w_img = array.shape[:2]
+    tile_size = int(os.environ.get("STREAKMIND_YOLO_TILE_SIZE", "640"))
+    stride = int(os.environ.get("STREAKMIND_YOLO_STRIDE", str(tile_size // 2)))
+
+    if max(h_img, w_img) <= tile_size:
+        tile_list = [(array, 0, 0)]
+    else:
+        tile_list = []
+        for y0 in range(0, h_img, stride):
+            for x0 in range(0, w_img, stride):
+                x1 = min(x0 + tile_size, w_img)
+                y1 = min(y0 + tile_size, h_img)
+                tile = array[y0:y1, x0:x1]
+                if tile.shape[0] < 32 or tile.shape[1] < 32:
+                    continue
+                tile_list.append((tile, x0, y0))
+
+    detections: list[dict] = []
+    for tile, x_off, y_off in tile_list:
+        for result in yolo(tile, verbose=False, conf=confidence_threshold):
+            if result.obb is None:
+                continue
+            for box, conf in zip(result.obb.xywhr, result.obb.conf):
+                cx, cy, bw, bh, angle_rad = box.tolist()
+                cx += x_off
+                cy += y_off
+                angle_deg = float(angle_rad) * 180.0 / math.pi
+                half_w, half_h = bw / 2.0, bh / 2.0
+                detections.append({
+                    "bbox": [cx - half_w, cy - half_h, cx + half_w, cy + half_h],
+                    "confidence": float(conf),
+                    "method": "streakmind_yolo",
+                    "obb": {"cx": cx, "cy": cy, "w": bw, "h": bh, "angle_deg": angle_deg},
+                    "streak_length_px": float(max(bw, bh)),
+                })
+
+    logger.debug("StreakMindYOLO: %d raw detections above threshold %.2f",
+                 len(detections), confidence_threshold)
+    return detections
+
+
+def _run_heatmap_centerline_detector(array: "np.ndarray") -> list[dict]:
+    """Run the DINOv3 heatmap-centerline detector if its weights are available."""
+    from inference.heatmap_detector import run_heatmap_centerline_detector
+
+    return run_heatmap_centerline_detector(array)
+
+
 def _downsample_fits_image_for_astride(fits_image: Any, max_pixels: int) -> tuple[Any, float]:
     """Return a downsampled FITSImage-like object and its linear scale.
 
@@ -886,6 +1105,7 @@ def get_detector_statuses() -> list[dict]:
         status is one of 'active' | 'no_weights' | 'unavailable'.
     """
     statuses: list[dict] = []
+    root = Path(__file__).resolve().parent.parent
 
     # All registered DINO variants — show everything, active or not.
     seen_ids: set[str] = set()
@@ -911,6 +1131,52 @@ def get_detector_statuses() -> list[dict]:
                 "dataset": spec["dataset"],
                 "status":  "active" if weight_ok else "no_weights",
             })
+
+    # Heatmap centerline detector
+    try:
+        from inference.heatmap_detector import get_heatmap_detector_status
+        statuses.append(get_heatmap_detector_status())
+    except ImportError:
+        statuses.append({
+            "id": "dinov3_heatmap_centerline",
+            "name": "DINOv3 Heatmap Centerline",
+            "type": "ml",
+            "dataset": "SatStreaks centerline catchment",
+            "status": "unavailable",
+        })
+
+    # YOLO variants
+    _yolo_entries = [
+        {
+            "id":      "yolo",
+            "name":    "YOLO11n-OBB",
+            "dataset": "SatStreaks",
+            "weights": Path(os.environ.get("YOLO_WEIGHTS", str(root / "weights" / "yolo_tiled" / "run" / "weights" / "best.pt"))),
+        },
+        {
+            "id":      "yolo_full",
+            "name":    "YOLO11n-OBB — Full Dataset",
+            "dataset": "SatStreaks (14 385 tiles)",
+            "weights": root / "weights" / "run_full_yolo_obb" / "run" / "weights" / "best.pt",
+        },
+        {
+            "id":      "streakmind_yolo",
+            "name":    "StreakMind YOLO",
+            "dataset": "GTImages",
+            "weights": Path(os.environ.get(
+                "STREAKMIND_YOLO_WEIGHTS",
+                str(root / "weights" / "streakmind_yolo_real" / "run" / "weights" / "best.pt"),
+            )),
+        },
+    ]
+    for entry in _yolo_entries:
+        statuses.append({
+            "id":      entry["id"],
+            "name":    entry["name"],
+            "type":    "ml",
+            "dataset": entry["dataset"],
+            "status":  "active" if Path(entry["weights"]).exists() else "no_weights",
+        })
 
     # Classical / ASTRiDE (share the same import gate)
     try:
@@ -984,7 +1250,7 @@ def _run_all_detectors(
     )
     logger.info("Enabled detectors: %s", enabled_label)
 
-    n_workers = len(models_with_specs) + 5
+    n_workers = len(models_with_specs) + 6
     with ThreadPoolExecutor(max_workers=max(1, n_workers)) as pool:
         # DINO models
         for model, _dev, spec in models_with_specs:
@@ -1014,6 +1280,26 @@ def _run_all_detectors(
             tasks[pool.submit(_timed_detector, "astride", _run_astride_detector, fits_path)] = "astride"
         else:
             results["astride"] = []
+
+        if _enabled("yolo"):
+            tasks[pool.submit(_timed_detector, "yolo", _run_yolo_detector, array, confidence_threshold)] = "yolo"
+        else:
+            results["yolo"] = []
+
+        if _enabled("yolo_full"):
+            tasks[pool.submit(_timed_detector, "yolo_full", _run_yolo_full_detector, array, confidence_threshold)] = "yolo_full"
+        else:
+            results["yolo_full"] = []
+
+        if _enabled("streakmind_yolo"):
+            tasks[pool.submit(_timed_detector, "streakmind_yolo", _run_streakmind_yolo_detector, array, confidence_threshold)] = "streakmind_yolo"
+        else:
+            results["streakmind_yolo"] = []
+
+        if _enabled("dinov3_heatmap_centerline"):
+            tasks[pool.submit(_timed_detector, "dinov3_heatmap_centerline", _run_heatmap_centerline_detector, array)] = "dinov3_heatmap_centerline"
+        else:
+            results["dinov3_heatmap_centerline"] = []
 
         for f in as_completed(tasks):
             key = tasks[f]
@@ -1229,6 +1515,11 @@ def run_with_array(
     h_img = array.shape[0]
     w_img = array.shape[1]
 
+    yolo_dets            = all_det_results.get("yolo", [])
+    yolo_full_dets       = all_det_results.get("yolo_full", [])
+    streakmind_yolo_dets = all_det_results.get("streakmind_yolo", [])
+    heatmap_dets         = all_det_results.get("dinov3_heatmap_centerline", [])
+
     if raw_mode:
         # Raw mode: no Radon, no extent tracing, no NMS, no grouping.
         # Every detection from every model is an independent unique streak.
@@ -1246,7 +1537,10 @@ def run_with_array(
                 det["obb"] = bbox_to_obb(det["bbox"], seed_angle)
                 det["streak_length_px"] = float(det["obb"]["w"])
 
-        detections = raw_dets + classical_dets + astride_dets
+        detections = (
+            raw_dets + classical_dets + astride_dets
+            + yolo_dets + yolo_full_dets + streakmind_yolo_dets + heatmap_dets
+        )
         for idx, det in enumerate(detections):
             det["streak_id"] = idx + 1
 
@@ -1287,8 +1581,14 @@ def run_with_array(
         raw_dets             = nms_detections(raw_dets,             iou_threshold=0.5)
         classical_dets       = nms_detections(classical_dets,       iou_threshold=0.5)
         astride_dets         = nms_detections(astride_dets,         iou_threshold=0.5)
+        yolo_dets            = nms_detections(yolo_dets,            iou_threshold=0.5)
+        yolo_full_dets       = nms_detections(yolo_full_dets,       iou_threshold=0.5)
+        streakmind_yolo_dets = nms_detections(streakmind_yolo_dets, iou_threshold=0.5)
+        heatmap_dets         = nms_detections(heatmap_dets,         iou_threshold=0.5)
+
         combined = (
             raw_dets + classical_dets + astride_dets
+            + yolo_dets + yolo_full_dets + streakmind_yolo_dets + heatmap_dets
         )
         detections = group_detections(combined, iou_threshold=0.5)
         detections = fuse_group_geometries(detections)

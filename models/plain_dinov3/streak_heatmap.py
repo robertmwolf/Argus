@@ -148,6 +148,101 @@ class DINOv3StreakHeatmap(nn.Module):
         return self.head(features)
 
 
+class DINOv3OrientationCenterline(nn.Module):
+    """Frozen DINOv3 encoder plus an upsampling orientation-centerline decoder.
+
+    This model follows the heatmap-only detector formulation: every output
+    channel is a centerline probability for one orientation bin. It does not
+    predict bounding boxes.
+    """
+
+    def __init__(
+        self,
+        model_size: str = "base",
+        weights: str | Path = "weights/dinov3_vitb16_lvd1689m.pth",
+        decoder_channels: int = 192,
+        orientation_bins: int = 18,
+        last_layers: int = 4,
+        freeze_backbone: bool = True,
+    ) -> None:
+        """Initialise the orientation-binned centerline model.
+
+        Args:
+            model_size: ``base`` for ViT-B/16 or ``large`` for ViT-L/16.
+            weights: Local DINOv3 checkpoint.
+            decoder_channels: Width of the trainable decoder.
+            orientation_bins: Number of half-circle orientation bins.
+            last_layers: Number of DINOv3 intermediate layers to concatenate.
+            freeze_backbone: Keep the DINOv3 encoder frozen.
+        """
+        super().__init__()
+        self.model_size = model_size
+        self.freeze_backbone = freeze_backbone
+        self.orientation_bins = orientation_bins
+        self.last_layers = last_layers
+        _, embed_dim, _ = _MODEL_CONFIGS[model_size]
+        self.encoder = load_dinov3_encoder(model_size, Path(weights))
+        if not freeze_backbone:
+            for param in self.encoder.parameters():
+                param.requires_grad_(True)
+
+        in_channels = embed_dim * last_layers
+        c = decoder_channels
+        self.decoder = nn.Sequential(
+            nn.Conv2d(in_channels, c, kernel_size=1),
+            nn.GELU(),
+            nn.Conv2d(c, c, kernel_size=3, padding=1),
+            nn.GELU(),
+            nn.Upsample(scale_factor=2.0, mode="bilinear", align_corners=False),
+            nn.Conv2d(c, c // 2, kernel_size=3, padding=1),
+            nn.GELU(),
+            nn.Upsample(scale_factor=2.0, mode="bilinear", align_corners=False),
+            nn.Conv2d(c // 2, c // 4, kernel_size=3, padding=1),
+            nn.GELU(),
+            nn.Upsample(scale_factor=2.0, mode="bilinear", align_corners=False),
+            nn.Conv2d(c // 4, c // 8, kernel_size=3, padding=1),
+            nn.GELU(),
+            nn.Upsample(scale_factor=2.0, mode="bilinear", align_corners=False),
+            nn.Conv2d(c // 8, orientation_bins, kernel_size=1),
+        )
+        self.image_classifier = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Flatten(),
+            nn.Linear(in_channels, max(c, 32)),
+            nn.GELU(),
+            nn.Linear(max(c, 32), 1),
+        )
+
+    def train(self, mode: bool = True) -> "DINOv3OrientationCenterline":
+        """Keep the encoder in eval mode when frozen."""
+        super().train(mode)
+        if self.freeze_backbone:
+            self.encoder.eval()
+        return self
+
+    def extract_features(self, x: torch.Tensor) -> torch.Tensor:
+        """Extract and concatenate the last DINOv3 spatial feature maps."""
+        if self.freeze_backbone:
+            with torch.no_grad():
+                feats = self.encoder.get_intermediate_layers(
+                    x, n=self.last_layers, reshape=True
+                )
+        else:
+            feats = self.encoder.get_intermediate_layers(
+                x, n=self.last_layers, reshape=True
+            )
+        return torch.cat(list(feats), dim=1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Predict orientation-binned centerline logits at input resolution."""
+        return self.decoder(self.extract_features(x))
+
+    def forward_with_image_logit(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Predict centerline logits and an image-level streak logit."""
+        features = self.extract_features(x)
+        return self.decoder(features), self.image_classifier(features)
+
+
 def imagenet_normalize(batch: torch.Tensor) -> torch.Tensor:
     """Apply ImageNet normalisation to a ``[0, 1]`` RGB batch."""
     mean = batch.new_tensor(_IMAGENET_MEAN).view(1, 3, 1, 1)

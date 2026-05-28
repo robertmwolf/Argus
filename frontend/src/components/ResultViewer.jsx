@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 
 const OBB_COLOUR = '#00DCFF'        // cyan  — DINOv3 / ML
+const HEATMAP_COLOUR = '#A3E635'    // lime  — DINOv3 heatmap centerline
+const YOLO_COLOUR = '#C084FC'       // purple — YOLO (dev + full)
+const STREAKMIND_COLOUR = '#E879F9' // fuchsia — StreakMindYOLO
 const CLASSICAL_COLOUR = '#F59E0B'  // amber  — ASTRiDE / OpenCV
 const HIGHLIGHT_COLOUR = '#FF6B35'  // orange — highlighted row
 
@@ -186,7 +189,18 @@ function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
     .filter(s => s.method !== 'unified')
   const isClassical = individualSources.length > 0 &&
     individualSources.every(s => s.method === 'astride' || s.method === 'opencv' || s.method === 'classical')
-  const colour = highlighted ? HIGHLIGHT_COLOUR : isClassical ? CLASSICAL_COLOUR : OBB_COLOUR
+  const isYolo = individualSources.length > 0 &&
+    individualSources.every(s => s.method === 'yolo' || s.method === 'yolo_full')
+  const isStreakMind = individualSources.length > 0 &&
+    individualSources.every(s => s.method === 'streakmind_yolo')
+  const isHeatmap = individualSources.length > 0 &&
+    individualSources.every(s => s.method === 'dinov3_heatmap_centerline')
+  const colour = highlighted ? HIGHLIGHT_COLOUR
+    : isClassical ? CLASSICAL_COLOUR
+    : isStreakMind ? STREAKMIND_COLOUR
+    : isHeatmap ? HEATMAP_COLOUR
+    : isYolo ? YOLO_COLOUR
+    : OBB_COLOUR
   const alpha = highlighted ? 1.0 : 0.4 + conf * 0.6
   const endpointR = highlighted ? 5.5 : 4
   const lineWidth = highlighted ? 2.5 : 1.5
@@ -277,7 +291,18 @@ export default function ResultViewer({
       const indSources = (det.sources ?? [{ method: det.method }]).filter(s => s.method !== 'unified')
       const isClassical = indSources.length > 0 &&
         indSources.every(s => s.method === 'astride' || s.method === 'opencv' || s.method === 'classical')
-      const colour = i === highlightIndex ? HIGHLIGHT_COLOUR : isClassical ? CLASSICAL_COLOUR : OBB_COLOUR
+      const isYolo = indSources.length > 0 &&
+        indSources.every(s => s.method === 'yolo' || s.method === 'yolo_full')
+      const isStreakMind = indSources.length > 0 &&
+        indSources.every(s => s.method === 'streakmind_yolo')
+      const isHeatmap = indSources.length > 0 &&
+        indSources.every(s => s.method === 'dinov3_heatmap_centerline')
+      const colour = i === highlightIndex ? HIGHLIGHT_COLOUR
+        : isClassical ? CLASSICAL_COLOUR
+        : isStreakMind ? STREAKMIND_COLOUR
+        : isHeatmap ? HEATMAP_COLOUR
+        : isYolo ? YOLO_COLOUR
+        : OBB_COLOUR
       const alpha = i === highlightIndex ? 1.0 : 0.4 + (det.confidence ?? 1) * 0.6
       drawLabel(ctx, det.obb, i, colour, alpha, scaleX, scaleY)
     })

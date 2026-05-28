@@ -149,6 +149,12 @@ DETECTOR_PROFILES: dict[str, DetectorProfile] = {
         band_weights={"short": 0.2, "medium": 0.9, "long": 1.3},
         notes="est. from comprehensive_eval; update with direct per-model P/R after Phase D",
     ),
+    "dinov3_heatmap_centerline": DetectorProfile(
+        name="DINOv3 Heatmap Centerline",
+        precision=0.96,
+        recall=0.74,
+        notes="centerline proposal sweep: 284/386 matched positives, 1/25 negative images with segments",
+    ),
     # DINOv3 ViT-L: Phase D target (RTX 5070 Ti workstation); conservative estimate
     "dinov3_vitl": DetectorProfile(
         name="DINOv3 ViT-L",
