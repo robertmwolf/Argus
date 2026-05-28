@@ -1,77 +1,37 @@
-# DINOv3 ViT-S A/B Handoff
+# DINOv3 ViT-S Training Handoff
 
 Date: 2026-05-28
 
 ## Goal
 
-Compare apples-to-apples ViT-S replacements against the two relevant existing
-ViT-B baselines:
+Train two new ViT-S models and compare each against its existing ViT-B baseline:
 
-- `dinov3_vitb_run3`: MMDetection DINO Run 3, frozen DINOv3 ViT-B backbone.
-- `dinov3_heatmap_centerline_vitb`: plain PyTorch DINOv3 heatmap/centerline
-  detector, frozen ViT-B encoder.
+| New model | Architecture | Baseline to beat |
+|-----------|-------------|-----------------|
+| `dinov3_vits_run3` | MMDetection DINO ViT-S, OBB output | `dinov3_vitb_run3` |
+| `dinov3_orientation_centerline_vits` | Orientation-centerline heatmap ViT-S, line-segment output | `dinov3_orientation_centerline_vitb` |
 
-There are two new ViT-S weight tracks to produce:
+The two model families produce **different outputs** (OBB boxes vs line segments) and are
+evaluated separately. Do not compare them to each other using the same metric.
 
-1. `dinov3_vits_run3`: MMDetection DINO Run 3 settings with a frozen DINOv3
-   ViT-S backbone.
-2. `dinov3_heatmap_centerline_vits`: plain PyTorch heatmap/centerline head
-   with a frozen DINOv3 ViT-S encoder.
-
-Do not restart or retrain ViT-B for this comparison unless the existing
-baseline weights are missing or invalid.
+Do not restart or retrain ViT-B for this comparison unless the existing baseline
+weights are missing or invalid.
 
 ## Important Guardrail
 
-Training must not plate solve. The training FITS loaders should use
-`FITSLoader(load_wcs=False)` so data loading skips FITS WCS parsing, sidecar
-WCS, and ASTAP plate solving. Keep inference WCS behavior unchanged.
-
-Before any long run, smoke-test the training path and check logs for accidental
-`ASTAP`, `plate`, `solve`, or `WCS` activity.
-
-## Models in Scope
-
-There are three model families in this comparison.
-
-**OBB detectors (primary comparison):**
-
-- `dinov3_vitb_run3` — MMDetection DINO ViT-B, produces OBBs.
-- `dinov3_vits_run3` — MMDetection DINO ViT-S, produces OBBs.
-- `dinov3_heatmap_centerline_vitb` — `train_dinov3_box_cached` ViT-B, produces
-  OBBs via center-heatmap + regression.
-- `dinov3_heatmap_centerline_vits` — `train_dinov3_box_cached` ViT-S, produces
-  OBBs via center-heatmap + regression.
-
-**Orientation-centerline detector (supplemental / optional track):**
-
-- `dinov3_orientation_centerline_vitb` — `train_dinov3_orientation_centerline`
-  ViT-B, produces line segments (not OBBs). Existing baseline:
-  `weights/run_dinov3_vitb_orientation_centerline_input512_catchment/best.pt`.
-- `dinov3_orientation_centerline_vits` — same architecture with ViT-S backbone
-  (optional; see Step 3c). Produces line segments, evaluated separately with
-  `eval/line_metrics.py`.
-
-The orientation-centerline family outputs are **not directly comparable** to the
-OBB family outputs. Evaluate them separately with `compare_heatmap_centerline_to_obb.py`
-and `eval/line_metrics.py`, not with `eval.benchmark`.
+Training must not plate solve. Before any long run, smoke-test the training path
+and check logs for accidental `ASTAP`, `plate`, `solve`, or `WCS` activity.
 
 ## Expected Local Inputs
-
-Use the DM-free Run 3 dataset unless superseded intentionally:
 
 - Train annotations: `data/annotations/all_train_nodm.json`
 - Validation annotations: `data/annotations/val.json`
 - ViT-S weights: `weights/dinov3_vits16_lvd1689m.pth`
 - ViT-B Run 3 baseline weights: `weights/run3_cold_nodm/best.pth`
-- ViT-B heatmap baseline weights:
-  `weights/run_plain_dinov3_box_gauss_thin_full_384_e100/best.pt`
 - ViT-B orientation-centerline baseline weights:
   `weights/run_dinov3_vitb_orientation_centerline_input512_catchment/best.pt`
 
 ## Step 1: Preflight
-
-Confirm the data and weights exist:
 
 ```bash
 test -f data/annotations/all_train_nodm.json
@@ -80,19 +40,15 @@ test -f weights/dinov3_vits16_lvd1689m.pth
 test -f weights/dinov3_vitb16_lvd1689m.pth
 ```
 
-Also check for stale training jobs:
+Check for stale training jobs:
 
 ```bash
 ps -ef | rg "training.train_dino|train_dinov3|caffeinate"
 ```
 
-If a ViT-B Run 3 job is already running, treat it as an unrelated existing job.
-Do not queue ViT-S behind it by default; either stop it explicitly or wait until
-the machine is free.
-
 ## Step 2: Smoke Tests
 
-Run the MMDetection ViT-S smoke test:
+### 2a: MMDetection DINO ViT-S
 
 ```bash
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
@@ -103,109 +59,7 @@ python -m training.train_dino \
   --smoke-test
 ```
 
-Run a small plain heatmap ViT-S smoke test:
-
-```bash
-PYTORCH_ENABLE_MPS_FALLBACK=1 \
-ARGUS_NORM=zscore \
-python -m training.train_dinov3_heatmap \
-  --train-annotations data/annotations/all_train_nodm.json \
-  --val-annotations data/annotations/val.json \
-  --weights weights/dinov3_vits16_lvd1689m.pth \
-  --model-size small \
-  --work-dir weights/run_plain_dinov3_heatmap_vits_smoke \
-  --image-size 384 \
-  --smoke-test
-```
-
-Both smoke tests should complete without plate solving.
-
-## Step 3: Train ViT-S Weights
-
-Train the MMDetection DINO ViT-S detector:
-
-```bash
-PYTORCH_ENABLE_MPS_FALLBACK=1 \
-USE_DEV_SUBSET=false \
-TRAIN_ANN_FILE=annotations/all_train_nodm.json \
-VAL_ANN_FILE=annotations/val.json \
-ARGUS_NORM=zscore \
-caffeinate -i python -m training.train_dino \
-  --config models/dino/streak_dinov3_vits_400px_run3.py \
-  --work-dir weights/run3_cold_nodm_vits \
-  --val-interval 1 \
-  --checkpoint-interval 1
-```
-
-For the heatmap/centerline ViT-S track, first cache ViT-S features, then train
-the center/box head:
-
-```bash
-PYTORCH_ENABLE_MPS_FALLBACK=1 \
-ARGUS_NORM=zscore \
-python scripts/cache_dinov3_heatmap_features.py \
-  --annotations data/annotations/all_train_nodm.json \
-  --output-dir data/cache/plain_dinov3_vits/train_384 \
-  --weights weights/dinov3_vits16_lvd1689m.pth \
-  --model-size small \
-  --image-size 384
-
-PYTORCH_ENABLE_MPS_FALLBACK=1 \
-ARGUS_NORM=zscore \
-python scripts/cache_dinov3_heatmap_features.py \
-  --annotations data/annotations/val.json \
-  --output-dir data/cache/plain_dinov3_vits/val_384 \
-  --weights weights/dinov3_vits16_lvd1689m.pth \
-  --model-size small \
-  --image-size 384
-
-python -m training.train_dinov3_box_cached \
-  --train-cache data/cache/plain_dinov3_vits/train_384 \
-  --val-cache data/cache/plain_dinov3_vits/val_384 \
-  --work-dir weights/run_plain_dinov3_box_gauss_thin_vits_384_e100 \
-  --epochs 100
-```
-
-Use the same center/box head settings as the ViT-B
-`plain_dinov3_box_gauss_thin_full_384_e100` baseline unless there is a specific
-reason to change them.
-
-## Step 3c: (Optional) Train ViT-S Orientation-Centerline
-
-This track trains the orientation-binned centerline model (`train_dinov3_orientation_centerline`)
-with a ViT-S backbone. It is independent of the OBB tracks and evaluated on
-different metrics (line-segment F1 with `eval/line_metrics.py`, not `eval.benchmark`).
-
-### Why and when to add this track
-
-Analysis of the existing ViT-B orientation-centerline model (512px input,
-`best.pt` above) against the ViT-B box-cached baseline shows:
-
-- Heatmap F1 = 0.218 vs box F1 = 0.243 overall.
-- **Heatmap wins on small (<500 px) and medium (500–1500 px) streaks.**
-- **Heatmap fails entirely on large (>1500 px) streaks.** Root cause: at 512px
-  input the per-patch angle error (~10°) combined with long streak length
-  (median 3378 px native) creates a 500+ px perpendicular drift that exceeds
-  the 6 px evaluation tolerance. Short heatmap segments (median ~400 px) also
-  cannot cover 1500–4000 px GT streaks.
-- The LSR gate (≥0.50) further rejects most large-streak candidates (they are
-  diffuse blobs, lsr = 0.05–0.33). Dropping the gate recovers only 3 TPs out
-  of 178 large-streak GT items — the fundamental limit is resolution and
-  segment length, not the gate.
-
-**Do not run this track at 512px.** Use `--image-size 1024`. The trainer
-already defaults to 1024px; the existing ViT-B script used 512px only as a
-spike setting. ViT-S at 1024px gives roughly the same spatial resolution as
-ViT-B at 512px but with a lighter backbone — a reasonable comparison point.
-
-### Code prerequisites (already applied in this branch)
-
-- `models/plain_dinov3/streak_heatmap.py`: added `"small"` entry to
-  `_MODEL_CONFIGS` (embed_dim=384, `vit_small`).
-- `training/train_dinov3_orientation_centerline.py`: `--model-size` choices
-  now include `"small"`.
-
-### Smoke test
+### 2b: Orientation-centerline ViT-S
 
 ```bash
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
@@ -224,9 +78,31 @@ python training/train_dinov3_orientation_centerline.py \
   --negative-train-tiles 4
 ```
 
-Check logs: no `ASTAP`, `plate`, `solve`, or `WCS` activity.
+Both smoke tests should complete without plate solving.
 
-### Full training run
+## Step 3a: Train MMDetection DINO ViT-S
+
+```bash
+PYTORCH_ENABLE_MPS_FALLBACK=1 \
+USE_DEV_SUBSET=false \
+TRAIN_ANN_FILE=annotations/all_train_nodm.json \
+VAL_ANN_FILE=annotations/val.json \
+ARGUS_NORM=zscore \
+caffeinate -i python -m training.train_dino \
+  --config models/dino/streak_dinov3_vits_400px_run3.py \
+  --work-dir weights/run3_cold_nodm_vits \
+  --val-interval 1 \
+  --checkpoint-interval 1
+```
+
+Output weights: `weights/run3_cold_nodm_vits/best.pth`
+
+## Step 3b: Train Orientation-Centerline ViT-S
+
+**Use `--image-size 1024`, not 512.** The existing ViT-B baseline was trained at
+512px; analysis showed that 512px fails entirely on large streaks (>1500 px native)
+because the per-patch angle error × streak length exceeds the 6 px evaluation
+tolerance. At 1024px the angle resolution halves and segment traces are longer.
 
 ```bash
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
@@ -271,61 +147,33 @@ caffeinate -i python training/train_dinov3_orientation_centerline.py \
   --log-interval 200
 ```
 
-The ViT-B orientation-centerline baseline to compare against is
-`weights/run_dinov3_vitb_orientation_centerline_input512_catchment/best.pt`.
-Be aware that the ViT-B baseline was trained at **512px** and this ViT-S run is
-at **1024px** — they are not perfectly apples-to-apples on resolution. If you
-want a true resolution-matched baseline, train `--model-size base --image-size
-1024` first.
+Output weights: `weights/run_dinov3_vits_orientation_centerline_1024/best.pt`
 
-## Step 4: Evaluate Apples-to-Apples
+**Resolution caveat**: the ViT-B baseline was trained at 512px so ViT-S (1024px)
+vs ViT-B (512px) is not resolution-matched. If you want a fair resolution
+comparison, train `--model-size base --image-size 1024` as an additional
+reference run.
 
-### 4a: OBB track benchmark
+## Step 4: Evaluate
 
-Generate predictions for all four OBB models:
+### 4a: MMDetection DINO — ViT-S vs ViT-B
 
-- `dinov3_vits_run3`
-- `dinov3_vitb_run3`
-- `dinov3_heatmap_centerline_vits`
-- `dinov3_heatmap_centerline_vitb`
-
-Then compare with the same annotation file, IoU thresholds, confidence policy,
-and postprocessing caps. The benchmark should not allow one DINO model to
-globally suppress another before metrics are computed.
+Generate predictions for `dinov3_vits_run3` and `dinov3_vitb_run3` with the same
+annotation file, IoU thresholds, confidence policy, and postprocessing caps.
+The benchmark must not allow one DINO model to globally suppress the other.
 
 ```bash
 python -m eval.benchmark \
   --annotations data/annotations/test.json \
   --vits-predictions results/vits_run3/predictions.json \
   --vitb-run3-predictions results/vitb_run3/predictions.json \
-  --heatmap-centerline-predictions results/plain_dinov3_box_gauss_thin_full_384_e100/predictions.json \
-  --output results/ab_vits_vs_vitb_vs_heatmap/benchmark.json
+  --output results/ab_vits_vs_vitb/benchmark.json
 ```
 
-If adding the ViT-S heatmap method to the benchmark CLI, keep its method ID
-separate from the ViT-B heatmap method.
+### 4b: Orientation-centerline — ViT-S vs ViT-B
 
-### 4b: Per-size breakdown (all models)
-
-Break down recall and precision by native-pixel streak length using the
-`streak_length_px` field in the GT annotations. Size boundaries:
-
-| Class  | Native length |
-|--------|---------------|
-| Small  | < 500 px      |
-| Medium | 500–1500 px   |
-| Large  | > 1500 px     |
-
-This breakdown is critical for interpreting the results:
-- OBB models tend to have uniform recall across sizes.
-- The orientation-centerline model currently **fails entirely on large streaks**
-  at 512px input. At 1024px the large-streak recall should improve meaningfully.
-
-### 4c: Orientation-centerline track evaluation (if Step 3c was run)
-
-Use `compare_heatmap_centerline_to_obb.py` and `eval/line_metrics.py` to
-evaluate the orientation-centerline ViT-S model. Do **not** pass its predictions
-to `eval.benchmark` (different output format).
+Use `propose_dinov3_centerline_segments.py` and `eval/line_metrics.py`.
+Do **not** use `eval.benchmark` — the output format is line segments, not OBBs.
 
 ```bash
 python scripts/propose_dinov3_centerline_segments.py \
@@ -344,61 +192,44 @@ python eval/line_metrics.py \
   --output results/orientation_centerline_vits/metrics.json
 ```
 
-Compare this against the ViT-B baseline (`proposals.json` from
-`run_dinov3_vitb_orientation_centerline_input512_catchment/best.pt`) using the
-same thresholds and gates. Report overall F1 plus the per-size breakdown.
+Compare against the ViT-B baseline at the same thresholds and gates.
 
-Key known baselines from the ViT-B 512px analysis:
+**Per-size breakdown**: report recall and precision by streak length using the
+`streak_length_px` field in GT annotations:
+
+| Class  | Native length |
+|--------|---------------|
+| Small  | < 500 px      |
+| Medium | 500–1500 px   |
+| Large  | > 1500 px     |
+
+Known ViT-B 512px baselines for orientation-centerline:
 - Overall: F1=0.218, precision=0.349, recall=0.158 (TP=61, FP=114).
-- Large-streak recall is near 0 at 512px (only 2 of 178 large-streak GT items
-  match even without the LSR gate).
-- Expected improvement with 1024px: better angle resolution and longer traced
-  segments should raise large-streak recall substantially.
+- Large-streak recall near 0 (fundamental resolution limit at 512px).
 
-**LSR gate note for large streaks**: the LSR gate (≥0.50) rejects large-streak
-candidates because their heatmap activations are diffuse blobs (lsr ≈ 0.05–0.33).
-If large-streak recall is the priority, consider evaluating with
-`--min-line-support 0.0` alongside the default `--min-line-support 0.50` to
-isolate the gate's contribution. Do not change the default (0.50 is optimal for
-precision on small/medium streaks).
+**LSR gate note**: the lsr≥0.50 gate hurts recall on large streaks (their
+heatmap activations are diffuse blobs, lsr≈0.05–0.33). Evaluate with both
+`--min-line-support 0.50` (default, optimal for small/medium) and
+`--min-line-support 0.0` to isolate the gate's contribution on large streaks.
 
-## Known State From 2026-05-28 Worktree
+## Known State From 2026-05-28
 
-The detached Codex worktree had partial implementation support for:
+Code changes already committed to this branch and main:
 
-- `models/dino/streak_dinov3_vits_400px_run3.py`
-- ViT-S support in the MMDetection DINO adapter.
-- `dinov3_vits_run3` model registry and benchmark wiring.
-- Per-model DINO postprocess/NMS caps.
-- `FITSLoader(load_wcs=False)` for training loaders.
-- Plain DINOv3 heatmap `model_size=small` support.
+- `models/plain_dinov3/streak_heatmap.py`: `"small"` (ViT-S, embed_dim=384,
+  `vit_small`) added to `_MODEL_CONFIGS`.
+- `training/train_dinov3_orientation_centerline.py`: `--model-size small`
+  added to choices.
+- `training/dinov3_orientation_centerline_dataset.py`: FITS loading switched
+  from min/max scaling to z-score (3σ clip → [0,1] float32).
+- `inference/heatmap_detector.py`: optimal inference defaults applied
+  (`HEATMAP_SEGMENT_THRESHOLD=0.85`, `HEATMAP_MIN_LINE_SUPPORT=0.50`,
+  `HEATMAP_MAX_COMPONENTS=2`).
 
-Targeted verification completed there:
+Verification completed in a prior worktree:
 
 - `tests/test_model_configs.py`
 - `tests/test_train_dino.py`
 - `tests/test_fits_loader.py::TestASTAPPlateSolver::test_load_wcs_false_skips_astap_even_with_header_hints`
-- MMDetection ViT-S smoke test.
-- Plain heatmap ViT-S smoke test (`val_dice=0.393` on the tiny smoke run).
-
-The `claude/jolly-visvesvaraya-62540a` Claude Code worktree added:
-
-- `models/plain_dinov3/streak_heatmap.py`: `"small"` entry in `_MODEL_CONFIGS`
-  (ViT-S, embed_dim=384, `vit_small`) — enables Step 3c orientation-centerline
-  training.
-- `training/train_dinov3_orientation_centerline.py`: `--model-size small` added
-  to choices.
-
-Analysis of existing ViT-B orientation-centerline model (512px input) that
-informed the Step 3c and Step 4c additions:
-
-- ViT-B heatmap vs ViT-B box at the per-size level: heatmap wins small/medium
-  but fails entirely on large (>1500 px native). Resolution is the bottleneck.
-- `line_support_ratio` (LSR) is anti-correlated with image-level GT match but
-  positively correlated with segment-level strict TPs — raising threshold to
-  0.85 and applying lsr≥0.50 improved F1 from 0.116 to 0.218.
-- `radon_snr` is not discriminative (clusters at 1.0–1.2 for all proposals).
-- Optimal inference settings now default in `inference/heatmap_detector.py`:
-  `HEATMAP_SEGMENT_THRESHOLD=0.85`, `HEATMAP_MIN_LINE_SUPPORT=0.50`,
-  `HEATMAP_MAX_COMPONENTS=2`.
-
+- MMDetection ViT-S smoke test passed.
+- Orientation-centerline ViT-S smoke test passed (`val_dice=0.393` on tiny run).
