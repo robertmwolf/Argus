@@ -228,7 +228,7 @@ def main() -> int:
     parser.add_argument("--holdout-annotations", default=None)
     parser.add_argument("--work-dir", default="weights/run_dinov3_orientation_centerline")
     parser.add_argument("--weights", default="weights/dinov3_vitb16_lvd1689m.pth")
-    parser.add_argument("--model-size", choices=["base", "large"], default="base")
+    parser.add_argument("--model-size", choices=["small", "base", "large"], default="base")
     parser.add_argument("--resume", default=None)
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--batch-size", type=int, default=1)

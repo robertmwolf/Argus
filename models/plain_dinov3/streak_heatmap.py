@@ -23,6 +23,12 @@ _IMAGENET_MEAN: Final[tuple[float, float, float]] = (0.485, 0.456, 0.406)
 _IMAGENET_STD: Final[tuple[float, float, float]] = (0.229, 0.224, 0.225)
 
 _MODEL_CONFIGS: dict[str, tuple[str, int, dict]] = {
+    "small": (
+        "vit_small",
+        384,
+        dict(patch_size=16, img_size=518, n_storage_tokens=4,
+             layerscale_init=1e-4, mask_k_bias=True),
+    ),
     "base": (
         "vit_base",
         768,
@@ -42,7 +48,7 @@ def load_dinov3_encoder(model_size: str, weights_path: Path) -> nn.Module:
     """Load a DINOv3 ViT encoder without OpenMMLab dependencies.
 
     Args:
-        model_size: ``base`` for ViT-B/16 or ``large`` for ViT-L/16.
+        model_size: ``small`` for ViT-S/16, ``base`` for ViT-B/16, or ``large`` for ViT-L/16.
         weights_path: Local DINOv3 checkpoint path.
 
     Returns:
@@ -168,7 +174,7 @@ class DINOv3OrientationCenterline(nn.Module):
         """Initialise the orientation-binned centerline model.
 
         Args:
-            model_size: ``base`` for ViT-B/16 or ``large`` for ViT-L/16.
+            model_size: ``small`` for ViT-S/16, ``base`` for ViT-B/16, or ``large`` for ViT-L/16.
             weights: Local DINOv3 checkpoint.
             decoder_channels: Width of the trainable decoder.
             orientation_bins: Number of half-circle orientation bins.
