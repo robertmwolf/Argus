@@ -129,21 +129,21 @@ DETECTOR_PROFILES: dict[str, DetectorProfile] = {
               "measured P/R from comprehensive_eval_20260526",
     ),
     # Run 3 — cold-start, DM-free, all_train_nodm v2 (8,422 images).
-    # Completed 2026-05-28.  Best checkpoint: epoch 13 (mAP=0.541, mAP@50=0.779).
-    # precision: estimated as AP_best / AR_val = 0.541 / 0.755 ≈ 0.716.
-    # recall: COCO AR @ IoU=0.50:0.95, max-det=100, val set (epoch 13 ≈ epoch 15).
-    # Per-band weights carried over from multisource baseline; a full
-    # evaluate_comprehensive.py run on the test set is needed for calibrated
-    # per-band P/R.  Update this entry when that eval is complete.
+    # Completed 2026-05-28.  Best checkpoint: epoch 13 (val mAP=0.541, mAP@50=0.779).
+    # Measured on standard test set (308 SatStreaks images) at conf≥0.30, IoU≥0.50:
+    #   P=0.949  R=0.838  F1=0.890  COCO mAP=0.782  mAP@50=0.878
+    # Per-band recall: short=100% (n=2 — small sample), medium=90.9% (n=11), long=83.4% (n=295).
+    # Band weights derived as recall_band / recall_overall; short capped at 1.0 (tiny sample).
+    # Source: results/comprehensive_eval_20260528_154914/test_standard/metrics.json
     "dinov3_vitb_run3": DetectorProfile(
         name="DINOv3 ViT-B Run 3 (cold-start, nodm)",
-        precision=0.716,
-        recall=0.755,
-        band_weights={"short": 0.2, "medium": 0.9, "long": 1.3},
-        notes="run3_cold_nodm completed 2026-05-28; best epoch 13: mAP=0.541 "
-              "mAP@50=0.779 AR=0.755; precision est. from AP/AR; "
-              "band weights from multisource baseline — update after "
-              "evaluate_comprehensive.py on test set",
+        precision=0.9485,
+        recall=0.8377,
+        band_weights={"short": 1.0, "medium": 1.1, "long": 1.0},
+        notes="measured on test set 2026-05-28; conf≥0.30 IoU≥0.50; "
+              "P=94.9% R=83.8% F1=89.0%; COCO mAP=0.782 mAP@50=0.878; "
+              "band recall: short=100%(n=2) medium=90.9%(n=11) long=83.4%(n=295); "
+              "results/comprehensive_eval_20260528_154914",
     ),
     # Source: multi_method_benchmark.json dinov3_vitb entry (older model, low-threshold run)
     # Re-estimated from mAP@0.5=0.74; per-band similar to multisource.

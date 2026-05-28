@@ -1,0 +1,46 @@
+{
+  "test_standard": {
+    "label": "Standard test (satstreaks)",
+    "split": "test",
+    "coco_metrics": {
+      "coco/bbox_mAP": 0.782,
+      "coco/bbox_mAP_50": 0.878,
+      "coco/bbox_mAP_75": 0.826,
+      "coco/bbox_mAP_s": -1.0,
+      "coco/bbox_mAP_m": 0.703,
+      "coco/bbox_mAP_l": 0.784
+    },
+    "pr": {
+      "conf_threshold": 0.3,
+      "iou_threshold": 0.5,
+      "precision": 0.9485,
+      "recall": 0.8377,
+      "f1": 0.8897,
+      "tp": 258,
+      "fp": 14,
+      "fn": 50,
+      "n_gt": 308,
+      "n_pred_above_conf": 272
+    },
+    "per_band_recall": {
+      "short": {
+        "recall": 1.0,
+        "tp": 2,
+        "fn": 0,
+        "n_gt": 2
+      },
+      "medium": {
+        "recall": 0.9091,
+        "tp": 10,
+        "fn": 1,
+        "n_gt": 11
+      },
+      "long": {
+        "recall": 0.8339,
+        "tp": 246,
+        "fn": 49,
+        "n_gt": 295
+      }
+    }
+  }
+}

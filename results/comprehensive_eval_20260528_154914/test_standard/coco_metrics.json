@@ -1,0 +1,13 @@
+{
+  "checkpoint": "weights/run3_cold_nodm/best.pth",
+  "config": "models/dino/streak_dinov3_vitb_400px_run3.py",
+  "metrics": {
+    "coco/bbox_mAP": 0.782,
+    "coco/bbox_mAP_50": 0.878,
+    "coco/bbox_mAP_75": 0.826,
+    "coco/bbox_mAP_l": 0.784,
+    "coco/bbox_mAP_m": 0.703,
+    "coco/bbox_mAP_s": -1.0
+  },
+  "split": "test"
+}

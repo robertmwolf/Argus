@@ -484,6 +484,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--conf", type=float, default=0.3, help="Confidence threshold for P/R")
     parser.add_argument("--checkpoint", type=Path, default=CHECKPOINT)
+    parser.add_argument("--config", type=Path, default=None,
+                        help="Override MMDetection config path (default: hardcoded CONFIG)")
     parser.add_argument(
         "--sets",
         nargs="+",
@@ -494,6 +496,11 @@ def main() -> None:
 
     os.chdir(_REPO_ROOT)
     sys.path.insert(0, str(_REPO_ROOT))
+
+    # Allow config override (e.g. for run3 400px vs default 256px)
+    if args.config is not None:
+        global CONFIG
+        CONFIG = args.config
 
     run_sets = EVAL_SETS if "all" in args.sets else [s for s in EVAL_SETS if s["key"] in args.sets]
 

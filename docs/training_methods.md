@@ -341,10 +341,48 @@ Stable weights path: `weights/run3_cold_nodm/best.pth` (symlink)
   mAP=0.423 — a **+0.118 mAP (+27.9%) improvement**, primarily from the v2 dataset
   (tiled BrentImages at 1:1 native + Frigate short-streak tiles).
 
+**Test-set evaluation (2026-05-28):**
+Run on standard test set (308 SatStreaks images) at conf≥0.30, IoU≥0.50.
+Results: `results/comprehensive_eval_20260528_154914/`
+
+| Metric | Value |
+|--------|-------|
+| COCO mAP | 0.782 |
+| COCO mAP@50 | 0.878 |
+| COCO mAP@75 | 0.826 |
+| Precision | **94.9%** |
+| Recall | **83.8%** |
+| F1 | 89.0% |
+| COCO AR | 0.908 |
+
+**Per-band recall (conf≥0.30, IoU≥0.50):**
+
+| Band | Recall | TP | FN | GT count |
+|------|--------|----|----|----------|
+| Short (<269px) | 100.0% | 2 | 0 | 2 |
+| Medium (269–800px) | 90.9% | 10 | 1 | 11 |
+| Long (>800px) | 83.4% | 246 | 49 | 295 |
+
+Notes: The test set is dominated by long streaks (295/308 = 95.8%). Short sample is too
+small (n=2) to draw conclusions. Medium recall (90.9%) is strong. Long recall (83.4%)
+drives the overall recall number.
+
+**Comparison to multisource baseline** (`comprehensive_eval_20260526`):
+
+| Model | mAP@50 | Precision | Recall | F1 |
+|-------|--------|-----------|--------|----|
+| multisource (run_clean_vitb_nodm, ep15) | 0.550 | 71.2% | 72.4% | 71.8% |
+| **Run 3 (run3_cold_nodm, ep13)** | **0.878** | **94.9%** | **83.8%** | **89.0%** |
+| Δ | +0.328 | +23.7pp | +11.4pp | +17.2pp |
+
+Run 3 substantially outperforms the multisource model on every metric. The gain
+is primarily from the v2 training dataset (tiled BrentImages + Frigate).
+
 **Updated `inference/confidence.py`:** `DETECTOR_PROFILES["dinov3_vitb_run3"]`
-updated with `precision=0.716` (est. AP_best/AR), `recall=0.755` (COCO AR). A
-full per-band eval via `scripts/evaluate_comprehensive.py` on the test set is
-still needed to replace the estimated band weights.
+updated with measured values: `precision=0.9485`, `recall=0.8377`,
+`band_weights={"short": 1.0, "medium": 1.1, "long": 1.0}` (derived from
+per-band recall ratios). All values sourced from
+`results/comprehensive_eval_20260528_154914/test_standard/metrics.json`.
 
 ### 3.3 BrentImages Night 2 Evaluation Caveat
 
