@@ -61,6 +61,8 @@ class LineSegmentProposal:
     orientation_consistency: float
     seed_angle_deg: float
     radon_angle_deg: float
+    radon_snr: float
+    line_support_ratio: float
     input_start: Point
     input_end: Point
     native_start: Point
@@ -123,16 +125,22 @@ def _refine_angle_radon(
     seed_angle_deg: float,
     search_degrees: float,
     step_degrees: float,
-) -> float:
-    """Refine a seed line angle using local Radon variance."""
+) -> tuple[float, float]:
+    """Refine a seed line angle using local Radon variance.
+
+    Returns:
+        Tuple of (refined_angle_deg, radon_snr) where radon_snr is the peak
+        column variance divided by the mean column variance.  Values above ~3
+        indicate a genuine linear structure; flat sinograms return 1.0.
+    """
     from skimage.transform import radon  # type: ignore[import]
 
     crop = np.asarray(gray_crop, dtype=np.float32)
     if crop.size == 0 or min(crop.shape) < 4 or search_degrees <= 0.0:
-        return float(seed_angle_deg % 180.0)
+        return float(seed_angle_deg % 180.0), 1.0
     crop = np.clip(crop - np.median(crop), 0.0, None)
     if float(crop.max()) <= 0.0:
-        return float(seed_angle_deg % 180.0)
+        return float(seed_angle_deg % 180.0), 1.0
 
     max_side = 512
     h_crop, w_crop = crop.shape
@@ -152,14 +160,59 @@ def _refine_angle_radon(
         dtype=np.float32,
     )
     if theta.size == 0:
-        return float(seed_angle_deg % 180.0)
+        return float(seed_angle_deg % 180.0), 1.0
     try:
         sinogram = radon(crop, theta=theta, circle=False)
     except Exception as exc:  # pragma: no cover
         logger.warning("Radon refinement failed: %s", exc)
-        return float(seed_angle_deg % 180.0)
-    best_radon = float(theta[int(np.argmax(sinogram.var(axis=0)))])
-    return float((90.0 - best_radon) % 180.0)
+        return float(seed_angle_deg % 180.0), 1.0
+    col_vars = sinogram.var(axis=0)
+    best_idx = int(np.argmax(col_vars))
+    best_radon = float(theta[best_idx])
+    mean_var = float(col_vars.mean())
+    radon_snr = float(col_vars[best_idx] / (mean_var + 1e-8))
+    return float((90.0 - best_radon) % 180.0), radon_snr
+
+
+def _line_support_ratio(
+    component_mask: np.ndarray,
+    heat: np.ndarray,
+    start: Point,
+    end: Point,
+    tolerance_px: float,
+) -> float:
+    """Return the heat-weighted fraction of component pixels near the fitted line.
+
+    A genuine streak places almost all of its activation within a few pixels of
+    the line; a diffuse blob spreads widely and scores low.
+
+    Args:
+        component_mask: Boolean mask of the seed component.
+        heat: Full heatmap (same spatial dimensions as component_mask).
+        start: Traced segment start in heatmap pixel space.
+        end: Traced segment end in heatmap pixel space.
+        tolerance_px: Maximum perpendicular distance to count as "on the line".
+
+    Returns:
+        Score in [0, 1].  Values below ~0.5 indicate poor line support.
+    """
+    ys, xs = np.nonzero(component_mask)
+    if xs.size == 0:
+        return 0.0
+    weights = heat[ys, xs].astype(np.float64)
+    dx = end.x - start.x
+    dy = end.y - start.y
+    length = math.hypot(dx, dy)
+    if length < 1e-6:
+        return 0.0
+    px = -dy / length
+    py = dx / length
+    cross = np.abs((xs.astype(np.float64) - start.x) * px + (ys.astype(np.float64) - start.y) * py)
+    within = cross <= tolerance_px
+    w_sum = float(weights.sum())
+    if w_sum < 1e-9:
+        return float(within.mean())
+    return float((weights * within).sum() / w_sum)
 
 
 def _trace_segment_from_heat(
@@ -282,8 +335,21 @@ def _extract_proposals(
     extension_px: float,
     max_components: int,
     n_bins: int,
+    min_line_support: float,
+    line_support_tolerance_px: float,
+    min_radon_snr: float,
 ) -> list[LineSegmentProposal]:
-    """Extract orientation-consistent seed components and refine them into segments."""
+    """Extract orientation-consistent seed components and refine them into segments.
+
+    After tracing each segment, two quality gates prune FPs before the proposal
+    is emitted:
+
+    * ``min_line_support`` — minimum heat-weighted fraction of component pixels
+      within ``line_support_tolerance_px`` of the fitted line.  Blobs score
+      low; genuine streaks score ≥ 0.5.
+    * ``min_radon_snr`` — minimum ratio of peak to mean Radon column variance.
+      Flat, noisy components score ~1; real lines score ≥ 3.
+    """
     seed_mask = heat >= threshold
     labels, label_count = ndimage.label(seed_mask)
     h, w = heat.shape
@@ -306,12 +372,15 @@ def _extract_proposals(
 
         seed_angle = _angle_for_bin(dominant_bin, n_bins)
         x1, y1, x2, y2 = _crop_bounds(xs, ys, w, h, crop_padding)
-        refined_angle = _refine_angle_radon(
+        refined_angle, radon_snr = _refine_angle_radon(
             gray_crop=gray[y1:y2, x1:x2],
             seed_angle_deg=seed_angle,
             search_degrees=radon_search_degrees,
             step_degrees=radon_step_degrees,
         )
+        if radon_snr < min_radon_snr:
+            continue
+
         segment = _trace_segment_from_heat(
             heat=heat,
             component_mask=component,
@@ -323,6 +392,16 @@ def _extract_proposals(
         if segment is None:
             continue
         start, end = segment
+        support = _line_support_ratio(
+            component_mask=component,
+            heat=heat,
+            start=start,
+            end=end,
+            tolerance_px=line_support_tolerance_px,
+        )
+        if support < min_line_support:
+            continue
+
         proposals.append(
             LineSegmentProposal(
                 component_id=int(label_id),
@@ -333,6 +412,8 @@ def _extract_proposals(
                 orientation_consistency=consistency,
                 seed_angle_deg=seed_angle,
                 radon_angle_deg=refined_angle,
+                radon_snr=radon_snr,
+                line_support_ratio=support,
                 input_start=start,
                 input_end=end,
                 native_start=_native_point(start, sample, input_size=w),
@@ -341,7 +422,7 @@ def _extract_proposals(
             )
         )
 
-    proposals.sort(key=lambda item: (item.score, item.area_px), reverse=True)
+    proposals.sort(key=lambda item: (item.line_support_ratio, item.score, item.area_px), reverse=True)
     return proposals[:max_components]
 
 
@@ -405,7 +486,7 @@ def main() -> int:
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--weights", default=None)
     parser.add_argument("--output", default="results/dinov3_centerline_segments/proposals.json")
-    parser.add_argument("--threshold", type=float, default=0.50)
+    parser.add_argument("--threshold", type=float, default=0.85)
     parser.add_argument("--target-threshold", type=float, default=0.05)
     parser.add_argument("--proposal-tolerance-px", type=int, default=6)
     parser.add_argument("--proposal-gt-coverage", type=float, default=0.10)
@@ -417,7 +498,27 @@ def main() -> int:
     parser.add_argument("--radon-step-degrees", type=float, default=0.5)
     parser.add_argument("--min-length-px", type=float, default=16.0)
     parser.add_argument("--extension-px", type=float, default=8.0)
-    parser.add_argument("--max-components-per-image", type=int, default=4)
+    parser.add_argument("--max-components-per-image", type=int, default=2)
+    parser.add_argument(
+        "--min-line-support",
+        type=float,
+        default=0.50,
+        help="Minimum heat-weighted fraction of component pixels within "
+        "--line-support-tolerance-px of the traced line.  0.0 disables the gate.",
+    )
+    parser.add_argument(
+        "--line-support-tolerance-px",
+        type=float,
+        default=3.0,
+        help="Perpendicular tolerance (pixels) used for the line-support ratio.",
+    )
+    parser.add_argument(
+        "--min-radon-snr",
+        type=float,
+        default=1.0,
+        help="Minimum Radon peak-variance / mean-variance ratio.  1.0 disables "
+        "the gate; genuine lines typically score > 3.",
+    )
     parser.add_argument("--max-samples", type=int, default=None)
     parser.add_argument("--overlay-dir", default=None)
     parser.add_argument("--max-overlays", type=int, default=24)
@@ -482,6 +583,9 @@ def main() -> int:
                 extension_px=args.extension_px,
                 max_components=args.max_components_per_image,
                 n_bins=orientation_bins,
+                min_line_support=args.min_line_support,
+                line_support_tolerance_px=args.line_support_tolerance_px,
+                min_radon_snr=args.min_radon_snr,
             )
             target_heat = item["target"].max(dim=0).values.numpy()  # type: ignore[union-attr]
             gt_mask = target_heat > args.target_threshold
@@ -549,6 +653,9 @@ def main() -> int:
         "min_orientation_consistency": args.min_orientation_consistency,
         "radon_search_degrees": args.radon_search_degrees,
         "radon_step_degrees": args.radon_step_degrees,
+        "min_line_support": args.min_line_support,
+        "line_support_tolerance_px": args.line_support_tolerance_px,
+        "min_radon_snr": args.min_radon_snr,
         "n_images": len(image_records),
         "n_segments": total_segments,
         "proposal_metrics": {

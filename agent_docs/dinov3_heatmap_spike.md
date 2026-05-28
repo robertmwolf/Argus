@@ -791,10 +791,7 @@ from the existing 384px cached features (80 epochs, val center Dice 0.517) and
 compare against the heatmap centerline proposals using `eval/line_metrics.py`
 (tolerance 6 px, coverage threshold 0.10):
 
-```text
-results/heatmap_vs_obb_line_comparison.json
-results/plain_dinov3_box_gauss_384_regen_val/metrics_t0.10.json
-```
+Initial baseline (t=0.50, no line-support gate, max_components=4):
 
 | Metric | Heatmap centerline | Plain DINOv3 box (384px) |
 |--------|-------------------|--------------------------|
@@ -803,21 +800,65 @@ results/plain_dinov3_box_gauss_384_regen_val/metrics_t0.10.json
 | F1 | 0.116 | **0.243** |
 | TP / FP / FN | 67 / 703 / 319 | 96 / 307 / 290 |
 | Predictions | 770 | 403 |
-| Images w/ pred (positive) | 376 / 386 | 384 / 386 |
-| Images w/ pred (negative) | 1 / 25 | 3 / 25 |
 | Mean angle error on matches | 8.2° | **1.4°** |
 
-Box ARGUS metrics (mAP@50=0.250, F1=0.479, angle error=0.28°). Zero recall
-on short and medium streaks for both methods.
+Interpretation: box head won on all line-segment metrics. The heatmap was
+over-generating proposals (703 FPs vs 307 for box head). The next step was to
+add line-support scoring to prune low-quality proposals.
 
-Interpretation: box head wins on all line-segment metrics and has 6× better
-angle accuracy. The heatmap fires on 97% of positive images (image recall
-nearly perfect) but produces 703 FP segment proposals vs 307 for box. The
-FP density — not the heatmap quality — is the limiting factor. The geometry
-on matched predictions is similar (GT coverage ~0.51–0.55 for both), so the
-backbone is learning the right shape; the segment extractor is over-generating.
-The next engineering step is a better line-support score to prune low-quality
-proposals before they become FPs.
+### Line-Support Scoring Analysis (val.json)
+
+Ran `scripts/propose_dinov3_centerline_segments.py` with gates disabled
+(`min_line_support=0.0`, `min_radon_snr=1.0`) on all 411 val images to collect
+raw `line_support_ratio` and `radon_snr` distributions. Key findings:
+
+**radon_snr** (peak/mean Radon column variance) is clustered at 1.0–1.2 for
+all proposals — genuine streak components do NOT produce discriminative sinogram
+peaks. Radon angle refinement adds noise rather than resolving angle ambiguity.
+
+**line_support_ratio** (heat-weighted fraction of component pixels within 3 px
+of the fitted line) appears anti-correlated with GT match at image-level: matched
+proposals median LSR=0.14 vs unmatched median LSR=0.38. This is because genuine
+streak heatmaps form large diffuse blobs (wide, low LSR) while incidental noise
+components happen to be more compact/linear (high LSR). However, at
+segment-level (strict bidirectional coverage), LSR>=0.50 is a strong filter:
+
+| Config | Proposals | F1 | TP | FP | Precision | Recall |
+|--------|-----------|----|----|-----|-----------|--------|
+| t=0.50, lsr=0.00 | 770 | 0.116 | 67 | 703 | 0.087 | 0.174 |
+| t=0.70, lsr=0.00 | 596 | 0.143 | 70 | 526 | 0.117 | 0.181 |
+| t=0.80, lsr=0.50 | 176 | 0.210 | 59 | 117 | 0.335 | 0.153 |
+| t=0.85, lsr=0.50 | 192 | 0.211 | 61 | 131 | 0.318 | 0.158 |
+| **t=0.85, lsr=0.50, mc=2** | **175** | **0.218** | **61** | **114** | **0.349** | **0.158** |
+| Box head (OBB) | 403 | **0.243** | 96 | 307 | 0.238 | 0.249 |
+
+The sweep also confirmed that `max_components=2` (per image) reduces FPs slightly
+(192→175) with no recall loss, so this was adopted as the new default.
+
+Updated defaults in `scripts/propose_dinov3_centerline_segments.py`:
+- `--threshold 0.85`
+- `--min-line-support 0.50`
+- `--max-components-per-image 2`
+
+Updated comparison result (now saved to `results/heatmap_vs_obb_line_comparison.json`):
+
+| Metric | **Heatmap (tuned)** | Plain DINOv3 box (384px) |
+|--------|-------------------|--------------------------|
+| Precision | **0.349** | 0.238 |
+| Recall | 0.158 | **0.249** |
+| F1 | 0.218 | **0.243** |
+| TP / FP / FN | 61 / 114 / 325 | 96 / 307 / 290 |
+| Predictions | 175 | 403 |
+| Mean angle error on matches | 9.96° | **1.4°** |
+
+The tuned heatmap now has **higher precision** than the box head (0.349 vs 0.238),
+a net F1 improvement of 88% over the baseline (0.116→0.218), and is within 10%
+of the box head F1. The main remaining gaps are:
+- **Recall**: heatmap covers 16% of GT streaks vs 25% for box head — limited by
+  fundamental heatmap sensitivity at the current model size/training
+- **Angle error**: 10° vs 1.4° — Radon SNR is near 1.0 for most components,
+  so Radon provides no refinement over the model's own orientation bins; the
+  seed angle (model output directly) gives 7.8° error — slightly better
 
 ## Exact Split / CUDA Notes
 
