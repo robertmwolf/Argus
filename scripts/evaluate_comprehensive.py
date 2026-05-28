@@ -10,6 +10,25 @@ For each set reports:
   - Precision / Recall / F1 at conf>=0.3, IoU>=0.5 (greedy matching)
   - Per-band recall: short (<269 px diagonal), medium (269–800 px), long (>800 px)
 
+Band threshold definition
+-------------------------
+SHORT_MAX and LONG_MIN are in **pixels, measured in the original image coordinate
+space** — i.e. the diagonal of the COCO [x,y,w,h] bounding box before any
+model-input downscaling.  Both GT annotations and model predictions are rescaled
+back to original-image coordinates by MMDetection before band classification.
+
+These are NOT arcsecond thresholds.  The pixel values have different angular
+meanings for each source:
+  - SatStreaks (4096×4096, HST ~0.05 arcsec/px):  269px ≈ 13 arcsec
+  - Atwood     (6248×4176, ZWO @ 1.27 arcsec/px): 269px ≈ 342 arcsec (5.7 arcmin)
+  - Frigate    (2325×1555, pixel scale unknown)
+
+The thresholds are therefore a detection-difficulty proxy tied to the original
+image resolution, not a physically invariant size classification.  They were
+calibrated on the SatStreaks test set (308 images, all 4096×4096).  When
+comparing results across sources with different resolutions, interpret band
+numbers with this in mind.
+
 Outputs:
   results/comprehensive_eval_YYYYMMDD_HHMMSS/
     {set}/metrics.json
@@ -38,8 +57,10 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 CHECKPOINT = _REPO_ROOT / "weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth"
 CONFIG = _REPO_ROOT / "models/dino/streak_dinov3_vitb.py"
 
-SHORT_MAX = 269.0
-LONG_MIN = 800.0
+# Band thresholds — pixels in ORIGINAL IMAGE coordinate space (not model-input space,
+# not arcseconds).  See module docstring for angular equivalents per source.
+SHORT_MAX = 269.0   # px diagonal; below this → "short"  (at Atwood: < 342 arcsec)
+LONG_MIN  = 800.0   # px diagonal; above this → "long"   (at Atwood: > 1016 arcsec)
 
 BRENT_RAW_DIR = "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood"
 

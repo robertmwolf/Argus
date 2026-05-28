@@ -3,6 +3,20 @@
 # Source of truth for all training data sources.  Every imaging session (a
 # capture night, a public dataset, a tiled crop set) gets one entry.
 #
+# Training data policy
+# --------------------
+# SatStreaks (HST + mixed ground-based public dataset) is EXCLUDED from training.
+# Rationale: HST images are JPEG/PNG from a space telescope — no atmosphere,
+# space-based PSF, completely different sensor noise from ground FITS cameras.
+# The domain gap is too large to be a reliable training signal for Atwood/FITS
+# production data.  SatStreaks IS used as a held-out verification benchmark
+# (test.json, 308 images) to track model quality across runs.
+#
+# Training data comes exclusively from:
+#   - Atwood Observatory (ZWO ASI2600MM Pro, real FITS, SkyTrack NORAD headers)
+#   - Frigate (QHY600M, processed PNGs, very short streaks — only source for
+#     this morphology class; acceptable domain gap for short-band coverage)
+#
 # Fields
 # ------
 # session_id    : unique slug used in CLI flags and log output
@@ -10,10 +24,11 @@
 #                 physical instrument share this value.  Used to control
 #                 per-scope mix ratios (--mix-ratio scope_id:N).
 # source_type   : brentimages | public_dataset | synthetic
-# split         : train | val | test | holdout
+# split         : train | val | test | excluded
 #                   train    – include when building training JSON
 #                   val      – validation set (managed by merge_annotations.py)
-#                   test     – frozen test set, NEVER train on
+#                   test     – frozen benchmark set, NEVER train on
+#                   excluded – do not use for training; may be used for eval
 #                   holdout  – first night from a new scope; zero-shot eval only
 #                              until enough annotation exists to promote to train
 # mix_weight    : float (default 1.0)
@@ -40,12 +55,13 @@ sources:
 
   # =========================================================================
   # SatStreaks — HST archival + mixed ground-based (public)
+  # EXCLUDED from training.  Used only as a held-out verification benchmark.
+  # See training data policy above.
   # =========================================================================
   - session_id: satstreaks_train
     scope_id: satstreaks
     source_type: public_dataset
-    split: train
-    mix_weight: 1.0
+    split: excluded           # POLICY: SatStreaks not used for training
     annotation_file: "data/annotations/train.json"
     n_images: 3023
     n_annotations: 2957
@@ -53,19 +69,24 @@ sources:
     pixel_scale_arcsec: null
     norad_ids: 0
     notes: >
-      train.json is the merged SatStreaks train split + BrentImages Night 1,
-      built by scripts/merge_annotations.py.  Treated here as a single
-      opaque source; build_training_json.py loads it directly without
-      path-fixing.
+      SatStreaks training split — excluded from all training builds.
+      train.json is a merged file (SatStreaks train + BrentImages Night 1)
+      produced by scripts/merge_annotations.py.  Not used by build_training_json.py.
+      Atwood Night 1 training data comes from gtimages.json (atwood_20260412 entry)
+      rather than from this merged file.
 
   - session_id: satstreaks_val
     scope_id: satstreaks
     source_type: public_dataset
-    split: val
+    split: excluded           # POLICY: SatStreaks not used for training or val
     annotation_file: "data/annotations/val.json"
     n_images: 411
     n_annotations: 386
-    notes: "Validation split; managed by merge_annotations.py, not build_training_json.py."
+    notes: >
+      SatStreaks validation split — excluded.  Training validation uses the
+      SatStreaks test set (satstreaks_test) as a held-out benchmark instead;
+      until a ground-FITS val set is built, val during training runs uses
+      val.json as a monitoring signal only (not a policy gate).
 
   - session_id: satstreaks_test
     scope_id: satstreaks
@@ -75,9 +96,11 @@ sources:
     n_images: 308
     n_annotations: 308
     notes: >
-      Frozen held-out test set.  308 SatStreaks images.
-      Never include in any training JSON.
-      Evaluated by scripts/evaluate_comprehensive.py.
+      Frozen held-out verification benchmark.  308 SatStreaks images.
+      NEVER include in any training JSON.  Used by evaluate_comprehensive.py
+      to track model quality across runs.  Cross-domain: SatStreaks is HST/mixed
+      ground PNG, not FITS — treat scores as a relative trend indicator, not an
+      absolute ground-truth recall figure for Atwood production performance.
 
   # =========================================================================
   # BrentImages — Atwood Observatory (ZWO ASI2600MM Pro, 612mm f/l)
@@ -105,9 +128,9 @@ sources:
     norad_ids: 68
     notes: >
       Night 1.  Fully annotated with .strk pixel coords + ASTAP plate solutions.
-      Already embedded in train.json via merge_annotations.py; listed here as a
-      separate entry so build_training_json.py can track it independently if
-      per-night mix ratios are needed.  paths in gtimages.json are absolute.
+      Use gtimages.json directly (not train.json, which is a mixed SatStreaks+Atwood
+      file from the old merge workflow).  Paths in gtimages.json are absolute.
+      This is the canonical source for Atwood Night 1 training data.
 
   - session_id: atwood_20260515
     scope_id: atwood

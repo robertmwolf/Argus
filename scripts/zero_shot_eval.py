@@ -65,8 +65,18 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 _DEFAULT_CHECKPOINT = _REPO_ROOT / "weights/run3_cold_nodm/best.pth"
 _DEFAULT_CONFIG = _REPO_ROOT / "models/dino/streak_dinov3_vitb_400px_run3.py"
 
-SHORT_MAX = 269.0   # px diagonal threshold for "short" streak band
-LONG_MIN  = 800.0   # px diagonal threshold for "long" streak band
+# Band thresholds — pixels in ORIGINAL IMAGE coordinate space (not model-input
+# space, not arcseconds).  Both GT and predictions are compared in original-image
+# coords after MMDetection's keep_ratio rescale.
+#
+# These values have different angular meanings per source:
+#   Atwood (1.27 arcsec/px): 269px ≈ 342 arcsec (5.7'), 800px ≈ 1016 arcsec (16.9')
+#   SatStreaks (HST, ~0.05 arcsec/px): 269px ≈ 13 arcsec
+#   Other sources: depends on sensor pixel scale and optics
+#
+# The thresholds are a detection-difficulty proxy, NOT a physical size classification.
+SHORT_MAX = 269.0   # px diagonal; below → "short"
+LONG_MIN  = 800.0   # px diagonal; above → "long"
 
 # Run 3 baseline metrics on the standard test set — used for the decision report
 _RUN3_BASELINE = {

@@ -225,64 +225,82 @@ merged into the train/validation pool unless `--satstreaks-only` is supplied.
 
 ---
 
+## Training Data Policy
+
+**SatStreaks is excluded from training.**  It is a public dataset of JPEG/PNG images
+from the Hubble Space Telescope and mixed ground-based sources — space-based PSF,
+no atmosphere, different sensor noise from Atwood FITS.  The domain gap is large
+enough that including it as training data risks teaching the model features that
+do not transfer to ground-based FITS production images.
+
+SatStreaks **is** used as a held-out verification benchmark (`test.json`, 308 images).
+Scores against it track relative model quality across runs but are not a direct
+measure of Atwood production performance.
+
+Training data comes exclusively from:
+- **Atwood Observatory** — ground FITS, real atmosphere, SkyTrack NORAD headers
+- **Frigate** — tiled 400px crops of ground PNGs; only source of short-band
+  training examples (~20–80 px streaks); acceptable domain gap for this morphology
+
+---
+
 ## Combined Training Splits
 
-### Canonical training set — `all_train_nodm.json`
+### Current canonical training set (Run 4+)
 
-Built by `scripts/build_all_train_json.py`. Contains no DarkMatters data.
+Built by `scripts/build_training_json.py` from `data/sessions/manifest.yaml`.
+SatStreaks excluded per policy above.
+
+| Source | Images | Annotations | Band coverage |
+|---|---|---|---|
+| Atwood Night 1 (`gtimages.json`) | 578 + 91 neg | 578 | Medium + long (802–1540px) |
+| Atwood Night 2 (`brentimages_20260515.json`) | 204 + 27 neg | 204 | Medium + long |
+| Atwood Geo (`geo_20260520.json`) | 11 | 11 | Long (geostationary) |
+| Frigate tiled (`frigate_tiled_train.json`) | 717 | 655 | Short only (~20–80px in tile) |
+| **Total** | **~1,483** | **~1,328** | Short 50%, Medium 33%, Long 17% |
+
+Rebuild:
+```bash
+python scripts/build_training_json.py --output data/annotations/all_train_nodm_v3.json
+```
+
+**Band distribution note:** With SatStreaks excluded the long band is thin (219
+examples, max diagonal 1,540px).  Adding more Atwood nights is the primary lever
+for improving long-band coverage.  Until then, consider running
+`scripts/augment_short_medium.py` to supplement medium-band coverage with synthetic
+injections into existing backgrounds.
+
+### Legacy training set — `all_train_nodm.json` (Run 3 and earlier)
+
+Used for Run 3.  Included SatStreaks (2,488 images) as training data — this
+predates the training data policy above.  Retained for reproducibility.  Do not
+use for new training runs.
 
 | Source | Images | Annotations | Notes |
 |---|---|---|---|
-| SatStreaks | 2,488 | 2,488 | JPEG/PNG, space + ground scopes |
-| BrentImages Night 1 (Img_20260412_Atwood) | ~535 | ~469 | FITS, Atwood Night 1 |
-| BrentImages Night 2 (Img_20260515_Atwood) | 231 | 204 | FITS, Atwood Night 2 |
-| Frigate tiled crops | ~717 | ~655 | Very short streaks |
+| SatStreaks (train split) | 2,488 | 2,488 | ⚠ Now excluded from training |
+| BrentImages Night 1 | ~578 | ~578 | via train.json merge |
+| BrentImages Night 2 | 231 | 204 | — |
+| Frigate tiled crops | ~717 | ~655 | — |
 | **Total** | **~3,971** | **~3,816** | — |
 
-Val split: `val.json` (SatStreaks + BrentImages Night 1)
-Test split: `test.json` (308 images — SatStreaks + BrentImages Night 1 only, held-out)
+### Verification benchmark — `test.json`
 
-### Base split — `train.json` / `val.json` / `test.json`
+308 SatStreaks images.  Frozen.  Never train on.  Used by
+`scripts/evaluate_comprehensive.py` to track long-band recall across runs.
 
-Original SatStreaks + BrentImages Night 1 split, used as the evaluation
-reference and as a component of `all_train_nodm.json`:
+### Legacy merged files — `train.json` / `val.json`
 
-```text
-train.json  — 3,023 images, 2,957 annotations
-val.json    —   411 images,   386 annotations
-test.json   —   308 images,   308 annotations
-```
+`train.json` (3,023 images) is a merge of SatStreaks train + BrentImages Night 1
+produced by `scripts/merge_annotations.py`.  With SatStreaks excluded from
+training, this file is no longer used as a training source.  It is retained for
+reference and for compatibility with the legacy eval scripts.
 
-Rebuild with:
-
-```bash
-# Convert the fully-annotated BrentImages Night 1:
-python scripts/convert_gtimages.py \
-    --strk-dir /Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood \
-    --output data/annotations/gtimages.json \
-    --negatives-output data/annotations/gtimages_negatives.json
-
-python scripts/merge_annotations.py --seed 42 --val-fraction 0.2
-```
-
-### Available but not yet in any split
-
-| Dataset | File(s) | Images | Annotations | Notes |
-|---|---|---|---|---|
-| BrentImages Night 2 | `brentimages_20260515.json` + `_negatives.json` | 231 | 204 streaks | Clean holdout; long + medium streaks |
-| Frigate (streaks) | `frigate_streaks.json` | 350 | 377 | Very short ~20–80 px streaks (only source) |
-| Frigate (negatives) | `frigate_negatives.json` | 300 | 0 | — |
-
-To include Frigate in a training run:
-```bash
-python scripts/merge_annotations.py --seed 42 --val-fraction 0.2 --include-frigate
-```
-
-SatStreaks keeps its provided train/val/test split. GTImages/BrentImages labeled
-and negative images are shuffled with the configured seed and split according to
-`--val-fraction`; BrentImages does not enter the held-out SatStreaks test split.
-The optional handoff manifest at `data/Manifest.txt` records the staged dataset
-counts used for external workstation training.
+`val.json` (411 images, SatStreaks + Atwood N1) is still used as the MMDetection
+validation target during training runs as a monitoring signal.  It contains
+SatStreaks images — treat val metrics as a trend indicator, not a ground-truth
+Atwood performance figure.  A ground-FITS-only val split is a future improvement
+(requires splitting off a held-out subset of Atwood nights).
 
 ---
 

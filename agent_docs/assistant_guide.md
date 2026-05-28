@@ -16,49 +16,55 @@ propagation and multi-factor confidence scoring. Results are served through a
 FastAPI backend and React frontend.
 
 ## Current Phase
-**ALL IMPLEMENTATION PHASES COMPLETE. DINOv3 ViT-B backbone (Phase C²) complete — awaiting Phase D (ViT-L workstation).**
+**Run 3 complete (2026-05-28). Data strategy overhaul in progress. Run 4 is next.**
 
 Progress:
 - ✅ Phase 0 (Classical baseline): `src/` — fits_parser, classical_detector, plate_solver, SGP4 matching
 - ✅ Phase 1 (Data pipeline): `inference/fits_loader.py`, `training/convert_labels.py`, `training/dataset.py`, `training/augmentations.py`
-- ✅ Phase 2 (DINO model): `inference/device.py`, `models/dino/` configs, `training/train_dino.py`, `scripts/download_weights.py`, `scripts/make_test_fits.py`
+- ✅ Phase 2 (DINO model): `inference/device.py`, `models/dino/` configs, `training/train_dino.py`
 - ✅ Phase 3 (Inference pipeline): `inference/pipeline.py`, `inference/postprocess.py`, `inference/crossid.py`
-- ✅ Phase 4 (Database): `db/schema.sql`, `db/models.py` — SQLAlchemy async ORM (SQLite + PostgreSQL)
-- ✅ Phase 5 (API): `api/main.py`, `api/storage.py`, `api/queue.py`, `api/worker.py` — FastAPI + background worker
-- ✅ Phase 6 (Frontend): `frontend/` — React 18 + Vite + Tailwind, canvas OBB rendering, detection table
-- ✅ Phase 8 (Evaluation): `eval/metrics.py`, `eval/benchmark.py` — mAP, angle error, per-band, DINO evaluation
-- ✅ Local training: Swin-T DINO (50 epochs, CPU) — results in `results/phase8_benchmark.json`
-- ✅ DINOv3 Phase A (feasibility probe): cosine dissimilarity = 0.095 — PASS
-- ✅ DINOv3 Phase B (adapter + configs): `models/dino/dinov3_adapter.py`, `streak_dinov3_vitb.py`, `streak_dinov3_vitl.py` — smoke test PASS
-- ✅ DINOv3 Phase C (frozen ViT-B dev subset): mAP@0.5=0.274 on dev_subset
-- ✅ DINOv3 Phase C² (frozen ViT-B full dataset, 4 epochs): mAP@0.5=**0.74** on test.json — beats Swin-T (0.19) by +0.55
-- ✅ DINOv3 Phase E (partial): Swin-T vs ViT-B comparison in `results/phase_e/` — ViT-B dominant
-- ⚠️  DINOv3 Base prior weights (`weights/run_best_400px_nodm/`) are **tainted** — they descended from a warm-start checkpoint (Run 0) that was trained on DarkMatters data. Those weights and all ancestor checkpoints must not be used. A clean cold-start retraining on `all_train_nodm.json` is required before this slot can be marked ✅. See `docs/training_methods.md §3.1`.
-- ✅ Adaptive tiling (`inference/tiled_pipeline.py`): `native_tile_size` + `magnification` decoupled from `model_input_size`; collinear stitcher; §6.1 verified mAP@50=0.008 vs 0.000 baseline on 20-image Frigate sample at 3.64× magnification
-- ⏳ Run 3 — Cold-start DM-free paper model: `load_from=None`, `all_train_nodm.json` at 400px, cloud GPU recommended; see `docs/training_methods.md §3.1`
-- ⏳ DINOv3 Phase D: Frozen ViT-L, full dataset — two routes available, see `agent_docs/Training_Handoff.md`
+- ✅ Phase 4 (Database): `db/schema.sql`, `db/models.py` — SQLAlchemy async ORM
+- ✅ Phase 5 (API): `api/main.py`, `api/storage.py`, `api/queue.py`, `api/worker.py`
+- ✅ Phase 6 (Frontend): `frontend/` — React 18 + Vite + Tailwind
+- ✅ Phase 8 (Evaluation): `eval/metrics.py`, `eval/benchmark.py`
+- ✅ DINOv3 ViT-B backbone integrated — `models/dino/dinov3_adapter.py`
+- ✅ Adaptive tiling — `inference/tiled_pipeline.py`
+- ✅ **Run 3 complete** — cold-start DM-free ViT-B, 15 epochs, `all_train_nodm.json` (8,422 images).
+  Best checkpoint: epoch 13. Results: mAP=0.782, P=94.9%, R=83.8% on SatStreaks test set.
+  Weights: `weights/run3_cold_nodm/best.pth`. See `docs/training_methods.md §3.2`.
+- ✅ Data strategy formalised — `docs/data_strategy.md` (2026-05-28). SatStreaks excluded
+  from training; geometry-based stratification adopted; multi-scope workflow implemented.
+- ⏳ **Run 4** — first run under the new data strategy (Atwood-only + Frigate, geometry-stratified).
+  Blocked on: feature extraction script, stratified split script. See `docs/data_strategy.md §11`.
 
 ## Next Steps
 
-### Run 3 — Cold-start DM-free ViT-B (immediate priority)
-**Decision (2026-05-26):** Build a clean paper-grade model from scratch. All existing
-checkpoints (Runs 0–2) are contaminated because Run 0 trained on DarkMatters data and
-Runs 1–2 warm-started from Run 0. Run 3 cold-starts the detection head (`load_from=None`)
-directly on `all_train_nodm.json` at 400px. See `docs/training_methods.md §3.1`.
+### Immediate: build the geometry-stratified splits (prerequisite for Run 4)
 
-- Config: `models/dino/streak_dinov3_vitb_400px.py` with `load_from = None`
-- Recommended hardware: Cloud RTX 4090 (~$7–18, ~15–20h); Mac M3 took 72h for Run 2
-- See `docs/cloud_training_preparation.md` and `agent_docs/Training_Handoff.md` for
-  the cloud bring-up checklist
+Three scripts need to be written in order (see `docs/data_strategy.md §11`):
 
-### Phase D — DINOv3 ViT-L Training (after Run 3 baseline)
-Phase C² result: DINOv3 ViT-B frozen, full merged dataset, 4 epochs → mAP@0.5=0.74 (test.json).
-This beats Swin-T (0.19) by a wide margin. Phase D trains ViT-L on the same data for the definitive result.
-Phase 8 targets (≥94% precision, ≥97% recall) are expected to be met with ViT-L on the full dataset.
+1. **`scripts/extract_streak_features.py`** — compute per-annotation feature table
+   (length, aspect_ratio, angle, SNR).  SNR requires loading FITS from external drive.
 
-Phase D has two independent execution routes — both are documented in `agent_docs/Training_Handoff.md`:
-- **Route 1** — Colleague's RTX 5070 Ti workstation (Windows WSL2): $0 compute cost, 512 px, ~30–40 hr
-- **Route 2** — Cloud GPU rental, RTX 4090 on Vast.ai/RunPod: ~$7–18, 800 px, early stopping
+2. **`scripts/build_stratified_splits.py`** — produce `atwood_train.json`,
+   `val_atwood.json`, `test_atwood.json` from the feature table using geometry bins.
+
+3. **`scripts/sample_frigate_tiles.py`** — diversity-maximising subset of ~150–200
+   Frigate tiles for short-band training coverage.
+
+### After splits are built: Run 4
+
+- Config: `models/dino/streak_dinov3_vitb_400px_run3.py` (same architecture as Run 3)
+- Training data: `atwood_train.json` + Frigate diversity subset (no SatStreaks)
+- Val: `val_atwood.json` (replaces `val.json`)
+- Expected: lower SatStreaks benchmark score than Run 3 (that is fine and expected);
+  primary quality gate is `test_atwood.json` long-band recall ≥ 85%.
+
+### Also needed before Run 4: augmentation additions
+
+- `snr_scale` parameter in `SyntheticStreakInject` — faint streak injection
+- Scale jitter (±25%) and Gaussian blur (σ 0.5–2.0 px) in training pipeline
+- See `docs/data_strategy.md §6.3`
 
 ## Hardware
 - **Dev / CI:** MacBook Air M3 — CPU or MPS. Use `MODEL_SIZE=tiny` (Swin-T).
