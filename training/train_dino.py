@@ -91,11 +91,10 @@ _CONFIG_MAP: dict[str, str] = {
     "large":                   "models/dino/streak_codino_swin_l.py",
     "dinov3_vitb":             "models/dino/streak_dinov3_vitb.py",
     "dinov3_vitl":             "models/dino/streak_dinov3_vitl.py",
-    "dinov3_gt_dm_satstreaks": "models/dino/streak_dinov3_vitb.py",
 }
 
 # Backbones that are permanently frozen — Stage2UnfreezeHook is skipped.
-_FROZEN_BACKBONES: frozenset[str] = frozenset({"dinov3_vitb", "dinov3_vitl", "dinov3_gt_dm_satstreaks"})
+_FROZEN_BACKBONES: frozenset[str] = frozenset({"dinov3_vitb", "dinov3_vitl"})
 
 _STAGE2_EPOCH = 21   # epoch at which Swin backbone is unfrozen (not used for DINOv3)
 
@@ -424,7 +423,7 @@ def train(
         logger.info("Initialising from checkpoint: %s", load_from)
     if os.environ.get("USE_DEV_SUBSET", "true").lower() in {"0", "false", "no"}:
         # TRAIN_ANN_FILE / VAL_ANN_FILE let callers substitute annotation files
-        # (e.g. all_train_nodm.json) without changing any other config.  Paths
+        # (e.g. all_train.json) without changing any other config.  Paths
         # may be relative to data_root or absolute external-drive paths.
         train_ann = os.environ.get("TRAIN_ANN_FILE", "annotations/train.json")
         val_ann = os.environ.get("VAL_ANN_FILE", "annotations/val.json")

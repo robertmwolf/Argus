@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 
-CHECKPOINT = _REPO_ROOT / "weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth"
+CHECKPOINT = _REPO_ROOT / "weights/run_clean_vitb/best_coco_bbox_mAP_epoch_15.pth"
 CONFIG = _REPO_ROOT / "models/dino/streak_dinov3_vitb.py"
 
 # Band thresholds — pixels in ORIGINAL IMAGE coordinate space (not model-input space,

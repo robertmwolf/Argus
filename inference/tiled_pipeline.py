@@ -813,7 +813,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--image", required=True, help="Path to FITS/PNG/JPEG image")
     parser.add_argument(
         "--model-config",
-        default="dinov3_gt_dm_satstreaks",
+        default="dinov3_vitb",
         help="MMDetection config path or ARGUS model size alias",
     )
     parser.add_argument("--checkpoint", required=True, help="Path to model checkpoint")

@@ -12,7 +12,7 @@
 #
 # USAGE (via train_overnight.sh or manually):
 #   USE_DEV_SUBSET=false \
-#   TRAIN_ANN_FILE=annotations/all_train_nodm.json \
+#   TRAIN_ANN_FILE=annotations/all_train.json \
 #   VAL_ANN_FILE=annotations/val.json \
 #   PYTORCH_ENABLE_MPS_FALLBACK=1 \
 #   python -m training.train_dino \

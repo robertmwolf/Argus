@@ -1,9 +1,9 @@
 # Comprehensive Evaluation Report
 
-**Model:** DINOv3 ViT-B Multi-source (clean cold-start)  
-**Checkpoint:** `/Users/robert/Argus/weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth`  
-**Date:** 2026-05-28 16:01  
-**Confidence threshold (P/R/band):** 0.30 | IoU threshold: 0.50  
+**Model:** DINOv3 ViT-B Multi-source (clean cold-start)
+**Checkpoint:** `/Users/robert/Argus/weights/run_clean_vitb/best_coco_bbox_mAP_epoch_15.pth`
+**Date:** 2026-05-28 16:01
+**Confidence threshold (P/R/band):** 0.30 | IoU threshold: 0.50
 
 ## Summary
 

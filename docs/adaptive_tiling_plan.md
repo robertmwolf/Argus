@@ -207,5 +207,5 @@ No changes to `inference/pipeline.py` or any model configs.
    mAP@50 should remain 0.755.
 
 4. **Training experiment** — retile Frigate crops at `native_tile_size=110`,
-   add to `all_train_nodm.json`, run a 15-epoch fine-tune on top of the current
+   add to `all_train.json`, run a 15-epoch fine-tune on top of the current
    best checkpoint; eval should show Frigate mAP@50 > 0.10.

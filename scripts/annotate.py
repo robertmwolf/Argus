@@ -8,11 +8,6 @@ annotate_streaks.py, annotate_frigate_streaks.py, and
 annotate_brentimages_streaks.py.
 
 Usage:
-    # DarkMatters JPEG positives (loads image list from curated_streak CSV):
-    python scripts/annotate.py \\
-        --image-dir /Volumes/External/TrainingData/raw/DarkMatters/exports \\
-        --output results/darkmatters_eval/streak_annotations.json
-
     # Frigate processed PNGs:
     python scripts/annotate.py \\
         --image-dir /Volumes/External/TrainingData/raw/frigate/processed \\
@@ -49,12 +44,10 @@ Keybindings:
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 import logging
 import math
 import pathlib
-import re
 import sys
 import tkinter as tk
 from datetime import datetime, timezone
@@ -156,8 +149,7 @@ def load_image(path: pathlib.Path) -> Image.Image:
 
 # Preset parameters: (threshold, minLineLength, maxLineGap, downsample)
 _HOUGH_PRESETS: dict[str, dict] = {
-    "darkmatters": {"threshold": 80, "min_length_frac": 0.05, "max_gap": 25, "downsample": 1},
-    "frigate":     {"threshold": 35, "min_length_frac": None, "min_length_px": 40, "max_gap": 10, "downsample": 1},
+    "frigate": {"threshold": 35, "min_length_frac": None, "min_length_px": 40, "max_gap": 10, "downsample": 1},
     "brentimages": {"threshold": 60, "min_length_frac": None, "min_length_px": 50, "max_gap": 8,  "downsample": 4},
 }
 
@@ -206,7 +198,7 @@ def _deduplicate_obbs(
     return kept
 
 
-def hough_detect_streaks(img_path: pathlib.Path, preset: str = "darkmatters") -> list[dict]:
+def hough_detect_streaks(img_path: pathlib.Path, preset: str = "frigate") -> list[dict]:
     """Run Hough line detection on one image. Returns a list of OBB dicts."""
     try:
         import cv2 as cv
@@ -214,7 +206,7 @@ def hough_detect_streaks(img_path: pathlib.Path, preset: str = "darkmatters") ->
         log.warning("opencv-python not available — skipping Hough detection")
         return []
 
-    params = _HOUGH_PRESETS.get(preset, _HOUGH_PRESETS["darkmatters"])
+    params = _HOUGH_PRESETS.get(preset, _HOUGH_PRESETS["frigate"])
     downsample = params.get("downsample", 1)
 
     pil = load_image(img_path)
@@ -273,7 +265,7 @@ def hough_detect_streaks(img_path: pathlib.Path, preset: str = "darkmatters") ->
 def precompute_all_suggestions(
     images: list[dict],
     suggestions_path: pathlib.Path,
-    preset: str = "darkmatters",
+    preset: str = "frigate",
     force: bool = False,
 ) -> dict[str, list[dict]]:
     """Hough-detect streaks on all images and write a sidecar JSON cache."""
@@ -302,36 +294,6 @@ def precompute_all_suggestions(
 
 
 # ---- image list loading ------------------------------------------------------
-
-def _win_preview_to_path(win_path: str, dataset_dir: pathlib.Path) -> pathlib.Path | None:
-    """Convert a Windows-style preview path from DarkMatters CSV to a local path."""
-    m = re.search(r"(set_\d+[/\\]previews[/\\].+\.(?:jpg|jpeg|png))", win_path, re.IGNORECASE)
-    if not m:
-        return None
-    return dataset_dir / m.group(1).replace("\\", "/")
-
-
-def load_from_csv(dataset_dir: pathlib.Path) -> list[dict]:
-    """Load DarkMatters streak-positive images from the latest curated_streak CSV."""
-    candidates = sorted(dataset_dir.glob("curated_streak_v*.csv"))
-    if not candidates:
-        raise FileNotFoundError(f"No curated_streak_v*.csv in {dataset_dir}")
-    entries: list[dict] = []
-    with open(candidates[-1], newline="", encoding="utf-8") as fh:
-        reader = csv.DictReader(fh)
-        for row in reader:
-            if not row.get("source_group", "").startswith("positive"):
-                continue
-            path = _win_preview_to_path(row["preview_path"], dataset_dir)
-            if path and path.exists():
-                entries.append({
-                    "path": path,
-                    "set_id": row.get("set_id", ""),
-                    "frame_id": row.get("frame_id", ""),
-                })
-    return entries
-
-
 def load_from_dir(image_dir: pathlib.Path, priority_list: pathlib.Path | None = None,
                   min_score: float = 0.0) -> list[dict]:
     """Load all images from a directory (FITS, PNG, or JPEG)."""
@@ -1365,8 +1327,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--image-dir", type=pathlib.Path, default=None,
-        help="Directory containing images (FITS, PNG, or JPEG). "
-             "For DarkMatters, pass the exports/ directory — images are loaded from curated_streak CSV.",
+        help="Directory containing images (FITS, PNG, or JPEG).",
     )
     parser.add_argument(
         "--night-dir", type=pathlib.Path, default=None,
@@ -1379,13 +1340,15 @@ def main() -> None:
         help="Output COCO JSON path (created fresh or resumed).",
     )
     parser.add_argument(
-        "--hough-preset", choices=list(_HOUGH_PRESETS), default="darkmatters",
-        help="Hough parameter preset (default: darkmatters). "
-             "frigate = short streaks (PNG), brentimages = long streaks (FITS 4× downsample).",
+        "--hough-preset", choices=list(_HOUGH_PRESETS), default="frigate",
+        help=(
+            "Hough parameter preset. frigate = short streaks (PNG), "
+            "brentimages = long streaks (FITS 4x downsample)."
+        ),
     )
     parser.add_argument(
         "--source-name", default="",
-        help="Source label written into annotation attributes (e.g. darkmatters_manual).",
+        help="Source label written into annotation attributes.",
     )
     parser.add_argument(
         "--priority-list", type=pathlib.Path, default=None,
@@ -1460,23 +1423,13 @@ def main() -> None:
     else:
         suggestions_path = args.output.parent / (args.output.stem + ".suggestions.json")
 
-        # Detect DarkMatters CSV layout vs plain directory
         log.info("Loading image list from %s", args.image_dir)
-        csv_files = list(args.image_dir.glob("curated_streak_v*.csv"))
-        if csv_files:
-            try:
-                images = load_from_csv(args.image_dir)
-                log.info("Loaded %d positive images from curated_streak CSV", len(images))
-            except FileNotFoundError as exc:
-                log.error("%s", exc)
-                sys.exit(1)
-        else:
-            try:
-                images = load_from_dir(args.image_dir, args.priority_list, args.min_score)
-                log.info("Loaded %d images from directory", len(images))
-            except FileNotFoundError as exc:
-                log.error("%s", exc)
-                sys.exit(1)
+        try:
+            images = load_from_dir(args.image_dir, args.priority_list, args.min_score)
+            log.info("Loaded %d images from directory", len(images))
+        except FileNotFoundError as exc:
+            log.error("%s", exc)
+            sys.exit(1)
 
     if not images:
         log.error("No images found")

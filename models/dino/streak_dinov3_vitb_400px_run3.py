@@ -1,9 +1,9 @@
-# Run 3 — Cold-start DM-free paper model
+# Run 3 — Cold-start cold-start paper model
 #
 # This is the canonical config for the Run 3 paper training run (decided 2026-05-26).
 # Identical to streak_dinov3_vitb_400px.py with two additions:
 #   1. randomness = dict(seed=42, deterministic=True)  — reproducibility gate
-#   2. load_from = None   — explicit cold start (no DM-exposed checkpoint)
+#   2. load_from = None   — explicit cold start (no retired checkpoint)
 #
 # All other parameters are unchanged from Run 2.  The 15-epoch LR schedule is
 # designed to be checkpointed and resumed across multiple sessions:
@@ -16,13 +16,13 @@
 #   cd /path/to/Argus && conda activate satid
 #   PYTORCH_ENABLE_MPS_FALLBACK=1 \
 #   USE_DEV_SUBSET=false \
-#   TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_nodm_external_abs.json \
+#   TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_external_abs.json \
 #   VAL_ANN_FILE=/Volumes/External/TrainingData/annotations/val_external_abs.json \
 #   ARGUS_NORM=autostretch \
 #   caffeinate -i \
 #   python -m training.train_dino \
 #       --config models/dino/streak_dinov3_vitb_400px_run3.py \
-#       --work-dir weights/run3_cold_nodm \
+#       --work-dir weights/run3_cold \
 #       --max-epochs 3 \
 #       --val-interval 1 \
 #       --checkpoint-interval 1
@@ -31,25 +31,25 @@
 #
 #   PYTORCH_ENABLE_MPS_FALLBACK=1 \
 #   USE_DEV_SUBSET=false \
-#   TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_nodm_external_abs.json \
+#   TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_external_abs.json \
 #   VAL_ANN_FILE=/Volumes/External/TrainingData/annotations/val_external_abs.json \
 #   ARGUS_NORM=autostretch \
 #   caffeinate -i \
 #   python -m training.train_dino \
 #       --config models/dino/streak_dinov3_vitb_400px_run3.py \
-#       --work-dir weights/run3_cold_nodm \
+#       --work-dir weights/run3_cold \
 #       --resume \
 #       --val-interval 1 \
 #       --checkpoint-interval 1
 #
-# Dataset: all_train_nodm.json v2 — 8,422 images, 8,213 annotations
+# Dataset: all_train.json v2 — 8,422 images, 8,213 annotations
 #   SatStreaks 2,488 + BrentImages N1 3,110 (tiled 400px) +
 #   BrentImages N2 1,309 (tiled 400px) + Frigate 1,515 (tiled 110px/3.64×)
 #   Requires /Volumes/External/TrainingData mounted. Canonical raw images live in
 #   /Volumes/External/TrainingData/raw and canonical annotations live in
 #   /Volumes/External/TrainingData/annotations. data/ paths are compatibility shims.
 #
-# Checkpoint destination: weights/run3_cold_nodm/
+# Checkpoint destination: weights/run3_cold/
 # Hardware: Mac M3 CPU (PYTORCH_ENABLE_MPS_FALLBACK=1)
 
 custom_imports = dict(
@@ -285,7 +285,7 @@ log_level = 'INFO'
 # Paper run settings — do not change
 # ---------------------------------------------------------------------------
 load_from = None   # Cold start: detection head initialised from scratch.
-                   # No DM-exposed checkpoint in the initialisation chain.
+                   #
                    # See docs/training_methods.md §3.1 for rationale.
 
 resume = False

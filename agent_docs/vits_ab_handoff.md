@@ -24,17 +24,17 @@ and check logs for accidental `ASTAP`, `plate`, `solve`, or `WCS` activity.
 
 ## Expected Local Inputs
 
-- Train annotations: `data/annotations/all_train_nodm.json`
+- Train annotations: `data/annotations/all_train.json`
 - Validation annotations: `data/annotations/val.json`
 - ViT-S weights: `weights/dinov3_vits16_lvd1689m.pth`
-- ViT-B Run 3 baseline weights: `weights/run3_cold_nodm/best.pth`
+- ViT-B Run 3 baseline weights: `weights/run3_cold/best.pth`
 - ViT-B orientation-centerline baseline weights:
   `weights/run_dinov3_vitb_orientation_centerline_input512_catchment/best.pt`
 
 ## Step 1: Preflight
 
 ```bash
-test -f data/annotations/all_train_nodm.json
+test -f data/annotations/all_train.json
 test -f data/annotations/val.json
 test -f weights/dinov3_vits16_lvd1689m.pth
 test -f weights/dinov3_vitb16_lvd1689m.pth
@@ -55,7 +55,7 @@ PYTORCH_ENABLE_MPS_FALLBACK=1 \
 ARGUS_NORM=zscore \
 python -m training.train_dino \
   --config models/dino/streak_dinov3_vits_400px_run3.py \
-  --work-dir weights/run3_cold_nodm_vits_smoke \
+  --work-dir weights/run3_cold_vits_smoke \
   --smoke-test
 ```
 
@@ -65,7 +65,7 @@ python -m training.train_dino \
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
 ARGUS_NORM=zscore \
 python training/train_dinov3_orientation_centerline.py \
-  --train-annotations data/annotations/all_train_nodm.json \
+  --train-annotations data/annotations/all_train.json \
   --val-annotations data/annotations/val.json \
   --work-dir weights/run_dinov3_vits_orientation_centerline_1024_smoke \
   --weights weights/dinov3_vits16_lvd1689m.pth \
@@ -85,17 +85,17 @@ Both smoke tests should complete without plate solving.
 ```bash
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
 USE_DEV_SUBSET=false \
-TRAIN_ANN_FILE=annotations/all_train_nodm.json \
+TRAIN_ANN_FILE=annotations/all_train.json \
 VAL_ANN_FILE=annotations/val.json \
 ARGUS_NORM=zscore \
 caffeinate -i python -m training.train_dino \
   --config models/dino/streak_dinov3_vits_400px_run3.py \
-  --work-dir weights/run3_cold_nodm_vits \
+  --work-dir weights/run3_cold_vits \
   --val-interval 1 \
   --checkpoint-interval 1
 ```
 
-Output weights: `weights/run3_cold_nodm_vits/best.pth`
+Output weights: `weights/run3_cold_vits/best.pth`
 
 ## Step 3b: Train Orientation-Centerline ViT-S
 
@@ -108,7 +108,7 @@ tolerance. At 1024px the angle resolution halves and segment traces are longer.
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
 ARGUS_NORM=zscore \
 caffeinate -i python training/train_dinov3_orientation_centerline.py \
-  --train-annotations data/annotations/all_train_nodm.json \
+  --train-annotations data/annotations/all_train.json \
   --val-annotations data/annotations/val.json \
   --work-dir weights/run_dinov3_vits_orientation_centerline_1024 \
   --weights weights/dinov3_vits16_lvd1689m.pth \

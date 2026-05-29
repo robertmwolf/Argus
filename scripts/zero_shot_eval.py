@@ -32,7 +32,7 @@ Usage
       --annotation data/annotations/newscope_20260601.json \\
       --raw-dir /Volumes/External/newscope/Img_20260601 \\
       --scope newscope \\
-      --checkpoint weights/run3_cold_nodm/best.pth \\
+      --checkpoint weights/run3_cold/best.pth \\
       --config models/dino/streak_dinov3_vitb_400px_run3.py
 
   # Multiple annotation files (streaks + negatives — negatives need no annotation):
@@ -62,7 +62,7 @@ logger = logging.getLogger(__name__)
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # Defaults — override with --checkpoint / --config as needed
-_DEFAULT_CHECKPOINT = _REPO_ROOT / "weights/run3_cold_nodm/best.pth"
+_DEFAULT_CHECKPOINT = _REPO_ROOT / "weights/run3_cold/best.pth"
 _DEFAULT_CONFIG = _REPO_ROOT / "models/dino/streak_dinov3_vitb_400px_run3.py"
 
 # Band thresholds — pixels in ORIGINAL IMAGE coordinate space (not model-input

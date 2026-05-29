@@ -15,8 +15,8 @@ the Status column.  mAP values are COCO bbox_mAP metrics from MMDetection's eval
 | DINO Swin-T (Phase E) | Swin-T | GTImages + SatStreaks (full, 3 023 imgs) | 3 023 | 0.190 | — | — | Complete — test.json |
 | YOLO11n-OBB full dataset | YOLO11n | GTImages + SatStreaks (tiled, 14 385 tiles) | 3 023 | 0.673 | 0.572 | 0.846 | Complete — tiled val split; not directly comparable to full-image COCO |
 | **DINOv3 ViT-B (Phase C², best model)** | **DINOv3 ViT-B frozen** | **GTImages + SatStreaks (full, 3 023 imgs)** | **3 023** | **0.740** | — | — | **Complete — test.json, 4 epochs** |
-| DINOv3 ViT-B (clean retrain, pending) | DINOv3 ViT-B frozen | `all_train_nodm.json` (3,971 imgs) | 3 971 | TBD | TBD | TBD | ⏳ Cold-start required — see docs/training_methods.md §3.1 |
-| DINOv3 ViT-L (Phase D) | DINOv3 ViT-L frozen | `all_train_nodm.json` (3,971 imgs) | 3 971 | — | — | — | ⏳ Pending — after clean ViT-B retrain |
+| DINOv3 ViT-B (clean retrain, pending) | DINOv3 ViT-B frozen | `all_train.json` (3,971 imgs) | 3 971 | TBD | TBD | TBD | ⏳ Cold-start required — see docs/training_methods.md §3.1 |
+| DINOv3 ViT-L (Phase D) | DINOv3 ViT-L frozen | `all_train.json` (3,971 imgs) | 3 971 | — | — | — | ⏳ Pending — after clean ViT-B retrain |
 
 ## Notes
 

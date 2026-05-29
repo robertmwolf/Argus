@@ -389,7 +389,7 @@ files that are inconvenient to regenerate, not the full image datasets:
 Argus-training-handoff/
 |-- data/
 |   |-- annotations/
-|   |   |-- all_train_nodm.json        ← canonical training set (~3,971 imgs: SatStreaks + BrentImages N1+N2 + Frigate tiles)
+|   |   |-- all_train.json        ← canonical training set (~3,971 imgs: SatStreaks + BrentImages N1+N2 + Frigate tiles)
 |   |   |-- train.json                 ← base split (SatStreaks + BrentImages Night 1 only)
 |   |   |-- val.json
 |   |   |-- test.json                  ← evaluation reference (308 imgs, SatStreaks + BrentImages Night 1)

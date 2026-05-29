@@ -1,9 +1,9 @@
 # ARGUS Methodology
 ### Automated Recognition and Grading of Unidentified Streaks
 
-**Version:** 2026-05-16  
-**Benchmark commit:** see `results/multi_method_benchmark.json`  
-**Code:** `inference/`, `src/detection/`, `inference/confidence.py`, `inference/postprocess.py`  
+**Version:** 2026-05-16
+**Benchmark commit:** see `results/multi_method_benchmark.json`
+**Code:** `inference/`, `src/detection/`, `inference/confidence.py`, `inference/postprocess.py`
 **Cite as:** cite this repository per its `CITATION.cff`
 
 ARGUS detects satellite streak artifacts in astronomical FITS images using five
@@ -96,10 +96,10 @@ convention `Img_YYYYMMDD_Atwood/`; additional nights are expected as the series
 continues.
 
 **Current nights:**
-- **Night 1 (Apr 12 2026):** ~277 images; included in training via `all_train_nodm.json`. FITS files on external drive at
+- **Night 1 (Apr 12 2026):** ~277 images; included in training via `all_train.json`. FITS files on external drive at
   `/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/`.
 - **Night 2 (May 15 2026):** 204 annotated + 27 negative images; 204 streak annotations;
-  median streak 687 px native (p10 = 373, p90 = 1003). Added to training in `all_train_nodm.json`.
+  median streak 687 px native (p10 = 373, p90 = 1003). Added to training in `all_train.json`.
   FITS files on external drive at `/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/`.
 
 **Composition (combined):** ~481 labelled images across two nights; ~68 unique NORAD
@@ -116,7 +116,7 @@ classical detectors.
 
 ### 2.3 Training Data
 
-The current training corpus (`all_train_nodm.json`) consists of: the SatStreaks train
+The current training corpus (`all_train.json`) consists of: the SatStreaks train
 split (~2,460 JPEG/PNG images), BrentImages Night 1 (~277 images), BrentImages Night 2
 (204 annotated + 27 negative images), and tiled Frigate crops (558 positive tiles +
 159 negative tiles). Total: **3,971 images, 3,816 streak annotations**.
@@ -155,7 +155,7 @@ into a single pool before post-processing.
 
 ### 3.1 ASTRiDE — Phase 0 Classical Baseline
 
-**Implementation:** `src/detection/classical_detector.py`  
+**Implementation:** `src/detection/classical_detector.py`
 **When active:** Always (on raw FITS input)
 
 **Algorithm:**
@@ -189,7 +189,7 @@ and should be assessed on BrentImages raw FITS only.
 
 ### 3.2 OpenCV Connected-Components Detector
 
-**Implementation:** `_run_classical_detector()` in `inference/pipeline.py`  
+**Implementation:** `_run_classical_detector()` in `inference/pipeline.py`
 **When active:** Always
 
 **Algorithm:**
@@ -215,7 +215,7 @@ threshold correctly isolates only the brightest structures.
 
 ### 3.3 YOLO11n-OBB
 
-**Implementation:** Ultralytics YOLO11 with Oriented Bounding Box (OBB) head  
+**Implementation:** Ultralytics YOLO11 with Oriented Bounding Box (OBB) head
 **Variants:**
 - **Full dataset** (`weights/run_full_yolo_obb/run/weights/best.pt`, ~5.4 MB) — active when weights file is present; reported as the primary YOLO result
 - **Dev subset** (`weights/yolo_tiled/run/weights/best.pt`) — fallback; lower performance, not reported in headline results
@@ -255,9 +255,9 @@ Direct comparison of P/R numbers is not valid (see §2.4).
 
 ### 3.4 DINOv3 ViT-B/16 + DINO-DETR (Primary ML Detector)
 
-**Config:** `models/dino/streak_dinov3_vitb_400px.py`  
-**Checkpoint:** `weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth` (pending clean retrain)  
-**API model ID:** `dinov3_vitb_multisource` ("DINOv3 Base - Multi-source")  
+**Config:** `models/dino/streak_dinov3_vitb_400px.py`
+**Checkpoint:** `weights/run_clean_vitb/best_coco_bbox_mAP_epoch_15.pth` (pending clean retrain)
+**API model ID:** `dinov3_vitb_multisource` ("DINOv3 Base - Multi-source")
 **When active:** Always (primary detector)
 
 #### 3.4.1 Backbone: DINOv3 ViT-B/16
@@ -335,16 +335,11 @@ DINO-DETR extends DETR with three key innovations:
 
 | Run | Config | Data | Epochs | Hardware | mAP@0.5 | Status |
 |-----|--------|------|--------|----------|---------|--------|
-| Run 0 (May 18) | `streak_dinov3_vitb.py` (256px) | SatStreaks + BrentImages N1 + **DarkMatters** | 4 | Mac M3 CPU | 0.436 | ⛔ ARCHIVED — trained on DarkMatters data |
-| Run 1A (May 20–22) | `streak_dinov3_vitb_longrun.py` (256px) | `all_train_nodm.json` | 15 | Mac M3 CPU | 0.402 | ⛔ ARCHIVED — warm-started from Run 0 |
-| Run 1B (May 20–22) | `streak_dinov3_vitb_longrun.py` (256px) | `all_train_withdm.json` | 15 | Mac M3 CPU | 0.403 | ⛔ ARCHIVED — warm-started from Run 0 + DM data |
-| Run 2 (May 22–25) | `streak_dinov3_vitb_400px.py` (400px) | `all_train_nodm.json` | 15 | Mac M3 CPU ~72h | 0.468 | ⛔ ARCHIVED — warm-started from Run 0 |
-| **Clean retrain (pending)** | `streak_dinov3_vitb_400px.py` (400px) | `all_train_nodm.json` | 15 | TBD | TBD | ⏳ Cold-start required |
-| Phase D (pending) | ViT-L config | `all_train_nodm.json` | 50 | RTX 5070 Ti | TBD | ⏳ After clean retrain |
+| Run 3 (May 26–28) | `streak_dinov3_vitb_400px_run3.py` (400px) | `all_train.json` | 15 | Mac M3 CPU | 0.878 | ✅ Complete |
+| Run 4 (planned) | `streak_dinov3_vitb_400px_run3.py` (400px) | Geometry-stratified Atwood + Frigate | 15 | TBD | TBD | ⏳ Pending |
+| Phase D (pending) | ViT-L config | `all_train.json` | 50 | RTX 5070 Ti | TBD | ⏳ After clean retrain |
 
-All runs prior to the clean cold-start retrain are archived. Their weights descended
-from Run 0, which was trained on DarkMatters data. DarkMatters data is excluded from
-this project. See `docs/training_methods.md §3.1` for the full lineage record.
+Archived pilot runs and their associated artifacts have been removed from this repository.
 
 **Archived Run 2 metrics (historical reference only — weights must not be used):**
 
@@ -398,7 +393,7 @@ classical detectors and changes the apparent signal-to-noise ratio of faint stre
 
 ### 4.2 Radon Transform Angle Refinement
 
-**Implementation:** `inference/postprocess.py::refine_angle()`  
+**Implementation:** `inference/postprocess.py::refine_angle()`
 **Source attribution:** Radon refinement approach follows StreakMind (arXiv 2605.03429).
 
 DINOv3/DINO-DETR produces axis-aligned bounding boxes — streak orientation is not directly
@@ -602,7 +597,7 @@ happened to be highest confidence.
 group. The frontend exposes per-method agreement as a quality signal
 ("3 of 4 detectors agree on this streak").
 
-**Compression effect on test set:**  
+**Compression effect on test set:**
 3,192 individual predictions from all detectors → **742 streak-level groups**
 after cross-detector grouping.
 
@@ -1029,7 +1024,7 @@ The following steps reproduce the headline benchmark results recorded in
    ```
 
 4. Obtain the DINOv3 ViT-B checkpoint:
-   `weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth` (~330 MB).
+   `weights/run_clean_vitb/best_coco_bbox_mAP_epoch_15.pth` (~330 MB).
    This checkpoint is not distributed with the repository; it must be trained
    locally (see `docs/training_methods.md`) or obtained from the ARGUS authors.
 
@@ -1043,7 +1038,7 @@ The following steps reproduce the headline benchmark results recorded in
 
 6. Run the benchmark evaluation:
    ```bash
-   MODEL_WEIGHTS=weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth \
+   MODEL_WEIGHTS=weights/run_clean_vitb/best_coco_bbox_mAP_epoch_15.pth \
    MODEL_SIZE=dinov3_vitb_multisource USE_DEV_SUBSET=false \
    python -m eval.benchmark \
        --run-pipeline \

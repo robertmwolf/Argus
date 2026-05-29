@@ -17,7 +17,7 @@ passes the §6 verification criterion.
 Usage::
 
     PYTORCH_ENABLE_MPS_FALLBACK=1 python scripts/eval_frigate_tiled.py \\
-        --checkpoint weights/run_best_400px_nodm/best_coco_bbox_mAP_epoch_15.pth
+        --checkpoint weights/run_best_400px/best_coco_bbox_mAP_epoch_15.pth
 
     # Try a different native tile size:
     PYTORCH_ENABLE_MPS_FALLBACK=1 python scripts/eval_frigate_tiled.py \\
@@ -182,7 +182,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--checkpoint", type=Path,
-                        default=_REPO_ROOT / "weights/run_best_400px_nodm/best_coco_bbox_mAP_epoch_15.pth")
+                        default=_REPO_ROOT / "weights/run_best_400px/best_coco_bbox_mAP_epoch_15.pth")
     parser.add_argument("--conf",  type=float, default=0.3)
     parser.add_argument(
         "--native-tile-size",

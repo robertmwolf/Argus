@@ -160,7 +160,7 @@ SPACETRACK_PASS=yourpassword
 
 # Multi-model ensemble — each entry is one DINO checkpoint.
 # Paths are relative to the project root (or absolute).
-ARGUS_MODEL_CONFIGS=[{"id":"dinov3_vitb","size":"dinov3_vitb","weights":"weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth","label":"DINOv3 Base","dataset":"SatStreaks+GTImages"},{"id":"dinov3_vitb_multisource","size":"dinov3_vitb_multisource","weights":"weights/run3_cold_nodm/best.pth","label":"DINOv3 Base - Multi-source (Run 3)","dataset":"SatStreaks+BrentImages+Frigate"}]
+ARGUS_MODEL_CONFIGS=[{"id":"dinov3_vitb","size":"dinov3_vitb","weights":"weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth","label":"DINOv3 Base","dataset":"SatStreaks+GTImages"},{"id":"dinov3_vitb_multisource","size":"dinov3_vitb_multisource","weights":"weights/run3_cold/best.pth","label":"DINOv3 Base - Multi-source (Run 3)","dataset":"SatStreaks+BrentImages+Frigate"}]
 
 PYTORCH_ENABLE_MPS_FALLBACK=1           # required on Apple Silicon
 DATABASE_URL=sqlite+aiosqlite:///./argus.db
@@ -239,7 +239,7 @@ ARGUS runs up to four detectors in parallel. Each is activated differently:
 | Detector | ID | How it activates | Weight path |
 |---|---|---|---|
 | DINOv3 ViT-B (SatStreaks+GTImages) | `dinov3_vitb` | `MODEL_SIZE` or `ARGUS_MODEL_CONFIGS` | `weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth` |
-| DINOv3 ViT-B (Multi-source, Run 3) | `dinov3_vitb_multisource` | `ARGUS_MODEL_CONFIGS` only | `weights/run3_cold_nodm/best.pth` (early ckpt — Run 3 still training) |
+| DINOv3 ViT-B (Multi-source, Run 3) | `dinov3_vitb_multisource` | `ARGUS_MODEL_CONFIGS` only | `weights/run3_cold/best.pth` (early ckpt — Run 3 still training) |
 | OpenCV morphological | `opencv` | always runs | — |
 | ASTRiDE | `astride` | **opt-in**: `ARGUS_ENABLE_ASTRIDE=1` | — (high false-positive rate on real FITS) |
 

@@ -1,8 +1,6 @@
 """Interactive OBB annotation tool for Frigate processed PNGs.
 
-Adapted from scripts/annotate_streaks.py (DarkMatters labeler).
-
-Key differences from the DarkMatters version:
+Key differences:
   - No CSV dependency — images are loaded by globbing a directory of PNGs.
   - Hough parameters tuned for short streaks (50–150 px) in 2325×1555 images:
       threshold=35  (was 80), minLineLength=40 px (was 77 px), maxLineGap=10 px.

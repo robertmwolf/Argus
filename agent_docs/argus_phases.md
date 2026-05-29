@@ -455,8 +455,7 @@ P/R/F1 reported at conf ≥ 0.30. mAP computed on unfiltered predictions.
 | ASTRiDE | — (JPEG, skipped) | — | — | — |
 | **Unified Ensemble v2** | 0.079 | 24.1 % | 26.6 % | 25.3 % |
 
-**DarkMatters holdout (332 images, zero-shot):**
-
+**
 | Method | mAP@0.50 | P @0.30 | R @0.30 | F1 @0.30 |
 |--------|:--------:|:-------:|:-------:|:--------:|
 | DINOv3 ViT-B Multisource | **0.083** | **25.4 %** | **24.9 %** | **25.2 %** |
@@ -483,8 +482,7 @@ purpose-built overlap metric for thin-streak GT.
 **Key findings:**
 
 1. **DINOv3 is the strongest individual model** — 5–6× higher mAP than YOLO
-   on both evaluatable sets; generalises well zero-shot to DarkMatters.
-2. **Unified Ensemble v2 is marginally worse than DINO alone** (mAP 0.079 vs
+   on both evaluatable sets; generalises well zero-shot to 2. **Unified Ensemble v2 is marginally worse than DINO alone** (mAP 0.079 vs
    0.091 on SatStreaks). The corroboration weighting is slightly downgrading
    valid DINO detections instead of boosting them.
 3. **YOLO-OBB is weak at single-pass 8 192 px** — the model was trained on
@@ -492,8 +490,7 @@ purpose-built overlap metric for thin-streak GT.
    Re-enabling tiled inference (STREAKMIND_YOLO_TILE_SIZE=640) should recover
    the ~80 % medium-streak recall seen in the per-detector analysis.
 4. **ASTRiDE contributes nothing** — cannot run on JPEG inputs (SatStreaks,
-   DarkMatters); on real FITS it produces 600+ FP detections per image and its
-   maximum confidence boost is capped at 4 %. **Disabled by default** as of
+      maximum confidence boost is capped at 4 %. **Disabled by default** as of
    2026-05-26 (`_ASTRIDE_ENABLED_BY_DEFAULT = False` in `inference/pipeline.py`).
    Re-enable with `ARGUS_ENABLE_ASTRIDE=1`.
 

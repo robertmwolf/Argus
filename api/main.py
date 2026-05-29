@@ -1155,7 +1155,6 @@ async def health(request: Request) -> dict[str, Any]:
         "large":                   "DINO Swin-Large - SatStreaks",
         "dinov3_vitb":             "DINOv3 ViT-Base - SatStreaks+GTImages",
         "dinov3_vitl":             "DINOv3 ViT-Large - SatStreaks+GTImages",
-        "dinov3_gt_dm_satstreaks": "DINOv3 - GT+DM+SatStreaks",
     }
     space_track_refreshed_at = None
     try:

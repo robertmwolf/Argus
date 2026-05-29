@@ -10,12 +10,12 @@
 #
 # USAGE (via train_overnight.sh or manually):
 #   USE_DEV_SUBSET=false \
-#   TRAIN_ANN_FILE=annotations/all_train_nodm.json \
+#   TRAIN_ANN_FILE=annotations/all_train.json \
 #   VAL_ANN_FILE=annotations/val.json \
 #   PYTORCH_ENABLE_MPS_FALLBACK=1 \
 #   python -m training.train_dino \
 #     --config models/dino/streak_dinov3_vitb_400px.py \
-#     --work-dir weights/run_clean_vitb_nodm
+#     --work-dir weights/run_clean_vitb
 
 custom_imports = dict(
     imports=['training.transforms', 'models.dino.dinov3_adapter'],

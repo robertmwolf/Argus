@@ -1,13 +1,12 @@
 """Build the canonical external-drive training annotation JSON.
 
-Produces ``all_train_nodm_external_abs.json`` under ``ARGUS_ANNOTATIONS_DIR``
+Produces ``all_train_external_abs.json`` under ``ARGUS_ANNOTATIONS_DIR``
 (default: ``/Volumes/External/TrainingData/annotations``).  The resulting COCO
 file is assembled from external annotation components and uses external-drive
 image paths, so training does not depend on repo-local annotation or image
 copies. Set ``ARGUS_ALL_TRAIN_OUT`` to override the output path.
 
-Note: DarkMatters data is excluded from this project and must not be added.
-"""
+Note: """
 
 from __future__ import annotations
 
@@ -144,19 +143,18 @@ def main() -> None:
         len(frigate_tiled.get("annotations", [])),
     )
 
-    # Canonical training set (no DarkMatters)
-    sources = [satstreaks, brent_n1_tiled, brent_n2_tiled, frigate_tiled]
-    merged_nodm = merge(sources)
-    out_nodm = Path(
-        os.environ.get("ARGUS_ALL_TRAIN_OUT", _ANN_DIR / "all_train_nodm_external_abs.json")
+    # Canonical training set (no     sources = [satstreaks, brent_n1_tiled, brent_n2_tiled, frigate_tiled]
+    merged = merge(sources)
+    out = Path(
+        os.environ.get("ARGUS_ALL_TRAIN_OUT", _ANN_DIR / "all_train_external_abs.json")
     )
-    with open(out_nodm, "w") as f:
-        json.dump(merged_nodm, f)
+    with open(out, "w") as f:
+        json.dump(merged, f)
     logger.info(
         "%s: %d images, %d annotations",
-        out_nodm,
-        len(merged_nodm["images"]),
-        len(merged_nodm["annotations"]),
+        out,
+        len(merged["images"]),
+        len(merged["annotations"]),
     )
 
 

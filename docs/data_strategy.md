@@ -348,7 +348,7 @@ When a new Atwood capture night is available:
 5. Change manifest `split` to `train`.  Rebuild the training JSON:
    ```bash
    python scripts/build_training_json.py \
-       --output data/annotations/all_train_nodm_v<N>.json
+       --output data/annotations/all_train_v<N>.json
    ```
 
 ---

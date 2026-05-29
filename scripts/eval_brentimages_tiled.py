@@ -7,7 +7,7 @@ resolution tiles instead of full-frame downsampling.
 
 Usage:
     PYTORCH_ENABLE_MPS_FALLBACK=1 python scripts/eval_brentimages_tiled.py \
-        --checkpoint weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth
+        --checkpoint weights/run_clean_vitb/best_coco_bbox_mAP_epoch_15.pth
 """
 
 from __future__ import annotations
@@ -163,7 +163,7 @@ def compute_coco_map(gt_coco, pred_list):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoint", type=Path,
-                        default=_REPO_ROOT / "weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth")
+                        default=_REPO_ROOT / "weights/run_clean_vitb/best_coco_bbox_mAP_epoch_15.pth")
     parser.add_argument("--conf",  type=float, default=0.3)
     parser.add_argument("--tile-size", type=int, default=400)
     parser.add_argument("--overlap",   type=float, default=0.5)

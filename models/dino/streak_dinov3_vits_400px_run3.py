@@ -1,4 +1,4 @@
-# Run 3 — Cold-start DM-free, ViT-S backbone
+# Run 3 — Cold-start cold-start, ViT-S backbone
 #
 # Identical to streak_dinov3_vitb_400px_run3.py with two backbone changes:
 #   1. model_size='small'  (ViT-S/16, embed_dim=384)
@@ -12,12 +12,12 @@
 #
 #   PYTORCH_ENABLE_MPS_FALLBACK=1 \
 #   USE_DEV_SUBSET=false \
-#   TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_nodm_external_abs.json \
+#   TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_external_abs.json \
 #   VAL_ANN_FILE=/Volumes/External/TrainingData/annotations/val_external_abs.json \
 #   ARGUS_NORM=zscore \
 #   caffeinate -i python -m training.train_dino \
 #       --config models/dino/streak_dinov3_vits_400px_run3.py \
-#       --work-dir weights/run3_cold_nodm_vits \
+#       --work-dir weights/run3_cold_vits \
 #       --val-interval 1 \
 #       --checkpoint-interval 1
 #
@@ -25,17 +25,17 @@
 #
 #   PYTORCH_ENABLE_MPS_FALLBACK=1 \
 #   USE_DEV_SUBSET=false \
-#   TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_nodm_external_abs.json \
+#   TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_external_abs.json \
 #   VAL_ANN_FILE=/Volumes/External/TrainingData/annotations/val_external_abs.json \
 #   ARGUS_NORM=zscore \
 #   caffeinate -i python -m training.train_dino \
 #       --config models/dino/streak_dinov3_vits_400px_run3.py \
-#       --work-dir weights/run3_cold_nodm_vits \
+#       --work-dir weights/run3_cold_vits \
 #       --resume \
 #       --val-interval 1 \
 #       --checkpoint-interval 1
 #
-# Baseline to compare against: weights/run3_cold_nodm/best.pth (ViT-B)
+# Baseline to compare against: weights/run3_cold/best.pth (ViT-B)
 
 custom_imports = dict(
     imports=['training.transforms', 'models.dino.dinov3_adapter'],

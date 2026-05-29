@@ -119,16 +119,7 @@ DETECTOR_PROFILES: dict[str, DetectorProfile] = {
         notes="comprehensive_eval_20260526; P=71.2% R=72.4% at conf≥0.30; "
               "long dominant (295 GT annotations vs 11 medium)",
     ),
-    # Source: comprehensive_eval_20260526/report.md — same checkpoint
-    "dinov3_gt_dm_satstreaks": DetectorProfile(
-        name="DINOv3 GT+DM+SatStreaks",
-        precision=0.712,
-        recall=0.724,
-        band_weights={"short": 0.2, "medium": 0.9, "long": 1.3},
-        notes="Same checkpoint as dinov3_vitb_multisource (run_best_400px_nodm); "
-              "measured P/R from comprehensive_eval_20260526",
-    ),
-    # Run 3 — cold-start, DM-free, all_train_nodm v2 (8,422 images).
+    # Run 3 — cold-start, all_train v2 (8,422 images).
     # Completed 2026-05-28.  Best checkpoint: epoch 13 (val mAP=0.541, mAP@50=0.779).
     # Measured on standard test set (308 SatStreaks images) at conf≥0.30, IoU≥0.50:
     #   P=0.949  R=0.838  F1=0.890  COCO mAP=0.782  mAP@50=0.878
@@ -136,7 +127,7 @@ DETECTOR_PROFILES: dict[str, DetectorProfile] = {
     # Band weights derived as recall_band / recall_overall; short capped at 1.0 (tiny sample).
     # Source: results/comprehensive_eval_20260528_154914/test_standard/metrics.json
     "dinov3_vitb_run3": DetectorProfile(
-        name="DINOv3 ViT-B Run 3 (cold-start, nodm)",
+        name="DINOv3 ViT-B Run 3 (cold-start)",
         precision=0.9485,
         recall=0.8377,
         band_weights={"short": 1.0, "medium": 1.1, "long": 1.0},
