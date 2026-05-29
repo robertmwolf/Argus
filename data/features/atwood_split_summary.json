@@ -1,0 +1,81 @@
+{
+  "cells": {
+    "short\u00d7faint": {
+      "total": 3,
+      "train": 1,
+      "val": 1,
+      "test": 1,
+      "note": "n=3"
+    },
+    "short\u00d7medium": {
+      "total": 12,
+      "train": 8,
+      "val": 2,
+      "test": 2,
+      "note": "n=12"
+    },
+    "short\u00d7bright": {
+      "total": 2,
+      "train": 2,
+      "val": 0,
+      "test": 0,
+      "note": "all_to_train (n<3)"
+    },
+    "medium\u00d7faint": {
+      "total": 63,
+      "train": 45,
+      "val": 9,
+      "test": 9,
+      "note": "n=63"
+    },
+    "medium\u00d7medium": {
+      "total": 305,
+      "train": 213,
+      "val": 46,
+      "test": 46,
+      "note": "n=305"
+    },
+    "medium\u00d7bright": {
+      "total": 173,
+      "train": 121,
+      "val": 26,
+      "test": 26,
+      "note": "n=173"
+    },
+    "long\u00d7faint": {
+      "total": 34,
+      "train": 24,
+      "val": 5,
+      "test": 5,
+      "note": "n=34"
+    },
+    "long\u00d7medium": {
+      "total": 141,
+      "train": 99,
+      "val": 21,
+      "test": 21,
+      "note": "n=141"
+    },
+    "long\u00d7bright": {
+      "total": 60,
+      "train": 42,
+      "val": 9,
+      "test": 9,
+      "note": "n=60"
+    }
+  },
+  "totals": {
+    "train": {
+      "positive": 555,
+      "negative": 63
+    },
+    "val": {
+      "positive": 119,
+      "negative": 14
+    },
+    "test": {
+      "positive": 119,
+      "negative": 14
+    }
+  }
+}
