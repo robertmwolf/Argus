@@ -24,6 +24,7 @@ export default function App() {
   const [methodThresholds, setMethodThresholds] = useState({})        // { method: 0-1 }
   const [enabledDetectors, setEnabledDetectors] = useState(null)      // null until DetectorsPanel loads
   const [rawMode, setRawMode] = useState(false)
+  const [showHeatmap, setShowHeatmap] = useState(false)
 
   useEffect(() => {
     fetch('/health')
@@ -274,6 +275,21 @@ export default function App() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
               <div className="lg:col-span-2">
+                {result.has_heatmap && (
+                  <div className="flex justify-end mb-2">
+                    <button
+                      onClick={() => setShowHeatmap(v => !v)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                        showHeatmap
+                          ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                          : 'bg-slate-800 border-slate-600 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <span className={`inline-block w-3 h-3 rounded-sm ${showHeatmap ? 'bg-amber-400' : 'bg-slate-600'}`} />
+                      Heatmap
+                    </button>
+                  </div>
+                )}
                 <ResultViewer
                   jobId={result.jobId}
                   detections={displayDetections}
@@ -282,6 +298,7 @@ export default function App() {
                   imageHeight={result.image_height}
                   highlightIndex={highlightIndex}
                   onHover={setHighlightIndex}
+                  showHeatmap={showHeatmap}
                 />
               </div>
               <div className="lg:col-span-1">
