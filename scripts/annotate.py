@@ -39,6 +39,7 @@ Keybindings:
     Right / D / Space   — next image
     Left  / A           — previous image
     B                   — mark as blank (no streak), advance to next
+    R                   — reject unusable, advance to next
     H / T               — toggle Hough hints on/off (global, persists across images)
     Delete / BackSpace  — delete selected OBB
     S                   — save now
@@ -77,6 +78,8 @@ BLANK_COLOR = "#ff4444"
 OBB_LINE_WIDTH = 2
 DEFAULT_WIDTH = 10
 DEFAULT_STRK_WIDTH = 16.0
+UNUSABLE_REJECT_CODE = "5"
+UNUSABLE_REJECT_COMMENT = "Rejected unusable - do not use"
 
 # ---- geometry ----------------------------------------------------------------
 
@@ -449,7 +452,11 @@ def update_strk_obs(
         f"{exposure:.4f}",
         f"{gain:.1f}",
         "Manual annotation" if reject == "0" else (
-            "Confirmed no streak" if reject == "-1" else "Pending manual annotation"
+            "Confirmed no streak" if reject == "-1" else (
+                UNUSABLE_REJECT_COMMENT
+                if reject == UNUSABLE_REJECT_CODE
+                else "Pending manual annotation"
+            )
         ),
     ]
 
@@ -538,6 +545,7 @@ def load_night_frames(night_dir: pathlib.Path) -> list[dict]:
                         "x_end": float(parts[5]) if parts[5].strip() else 0.0,
                         "y_end": float(parts[6]) if parts[6].strip() else 0.0,
                         "reject": parts[13].strip(),
+                        "comment": parts[-1].strip() if len(parts) > 25 else "",
                         "exposure": float(parts[23].strip()) if len(parts) > 23 and parts[23].strip() else 0.5,
                         "gain": float(parts[24].strip()) if len(parts) > 24 and parts[24].strip() else 0.0,
                     })
@@ -584,6 +592,18 @@ def seed_coco_from_strk(coco: dict[str, Any], frames: list[dict], source_name: s
             "frame_in_pass": frame.get("frame_in_pass", 0),
             "pass_idx": frame.get("pass_idx", 0),
             "blank": frame.get("reject") == "-1",
+            "rejected": (
+                frame.get("reject") not in ("0", "-1", "2")
+                or frame.get("comment") == UNUSABLE_REJECT_COMMENT
+            ),
+            "exclude_reason": (
+                "rejected_unusable"
+                if (
+                    frame.get("reject") not in ("0", "-1", "2")
+                    or frame.get("comment") == UNUSABLE_REJECT_COMMENT
+                )
+                else ""
+            ),
         })
         existing.add(fname)
 
@@ -626,6 +646,12 @@ def write_coco_to_strk(coco: dict[str, Any], frames: list[dict]) -> None:
         lines = line_cache.setdefault(strk_path, load_strk_lines(strk_path))
         anns = anns_by_image.get(img["id"], [])
 
+        if img.get("rejected"):
+            line_cache[strk_path] = update_strk_obs(
+                lines, frame["filename"], 0, 0, 0, 0, UNUSABLE_REJECT_CODE,
+                frame["jd"], frame["exposure"], frame["gain"],
+            )
+            continue
         if img.get("blank"):
             line_cache[strk_path] = update_strk_obs(
                 lines, frame["filename"], 0, 0, 0, 0, "-1",
@@ -772,6 +798,7 @@ class AnnotationApp(tk.Tk):
             ("[D]  ▶",        self._next),
             ("Accept  [Y]",   self._accept_suggestion),
             ("Blank  [B]",    self._mark_blank),
+            ("Reject  [R]",   self._mark_rejected),
             ("Dismiss  [Esc]", self._cancel_pending),
             ("Delete  [Del]", self._delete_selected),
             ("Save  [S]",     self._save),
@@ -814,6 +841,7 @@ class AnnotationApp(tk.Tk):
         self.bind("<y>",         lambda _: self._accept_suggestion())
         self.bind("<Return>",    lambda _: self._accept_suggestion())
         self.bind("<b>",         lambda _: self._mark_blank())
+        self.bind("<r>",         lambda _: self._mark_rejected())
         self.bind("<s>",         lambda _: self._save())
         self.bind("<q>",         lambda _: self._quit())
         self.bind("<h>",         lambda _: self._toggle_suggestions())
@@ -887,6 +915,12 @@ class AnnotationApp(tk.Tk):
                 return img.get("blank", False)
         return False
 
+    def _is_rejected(self, img_id: int) -> bool:
+        for img in self.coco["images"]:
+            if img["id"] == img_id:
+                return img.get("rejected", False)
+        return False
+
     def _get_or_create_image_id(self, entry: dict) -> int:
         fname = str(entry["path"])
         for img in self.coco["images"]:
@@ -932,7 +966,13 @@ class AnnotationApp(tk.Tk):
             resized = crop.resize((disp_w, disp_h), Image.LANCZOS)
 
             img_id = self._get_or_create_image_id(self.images[self.idx])
-            if self._is_blank(img_id):
+            if self._is_rejected(img_id):
+                r, g, b = resized.split()
+                r = r.point(lambda v: int(v * 0.55))
+                g = g.point(lambda v: int(v * 0.55))
+                b = b.point(lambda v: min(255, int(v * 1.25)))
+                resized = Image.merge("RGB", (r, g, b))
+            elif self._is_blank(img_id):
                 r, g, b = resized.split()
                 r = r.point(lambda v: min(255, int(v * 1.2)))
                 g = g.point(lambda v: int(v * 0.7))
@@ -952,8 +992,16 @@ class AnnotationApp(tk.Tk):
         self.canvas.delete("confirmed")
         self.canvas.delete("pending")
         self.canvas.delete("blank_label")
+        self.canvas.delete("reject_label")
 
         img_id = self._get_or_create_image_id(self.images[self.idx])
+        if self._is_rejected(img_id):
+            cw = self.canvas.winfo_width() or CANVAS_W
+            self.canvas.create_text(
+                cw // 2, 30, text="REJECTED UNUSABLE (not training/eval)",
+                fill="#88aaff", font=("Helvetica", 16, "bold"), tags="reject_label",
+            )
+            return
         if self._is_blank(img_id):
             cw = self.canvas.winfo_width() or CANVAS_W
             self.canvas.create_text(
@@ -1007,7 +1055,14 @@ class AnnotationApp(tk.Tk):
         n = len(self.images)
         annotated_ids = {a["image_id"] for a in self.coco["annotations"]}
         blank_ids = {img["id"] for img in self.coco["images"] if img.get("blank")}
-        done = len(annotated_ids | blank_ids)
+        rejected_ids = {img["id"] for img in self.coco["images"] if img.get("rejected")}
+        image_id_by_file = {img["file_name"]: img["id"] for img in self.coco["images"]}
+        queue_ids = {
+            image_id_by_file[str(entry["path"])]
+            for entry in self.images
+            if str(entry["path"]) in image_id_by_file
+        }
+        done = len((annotated_ids | blank_ids | rejected_ids) & queue_ids)
         self.lbl_progress.config(text=f"Image {self.idx + 1} / {n}  |  Done: {done}")
         self.lbl_fname.config(text=self.images[self.idx]["path"].name[:70])
 
@@ -1016,15 +1071,22 @@ class AnnotationApp(tk.Tk):
 
         img_id = self._get_or_create_image_id(self.images[self.idx])
         cur_blank = self._is_blank(img_id)
-        count_text  = "BLANK" if cur_blank else f"OBBs: {len(self._img_obbs)}"
-        count_color = BLANK_COLOR if cur_blank else "#66ff88"
+        cur_rejected = self._is_rejected(img_id)
+        count_text = (
+            "REJECT"
+            if cur_rejected
+            else ("BLANK" if cur_blank else f"OBBs: {len(self._img_obbs)}")
+        )
+        count_color = "#88aaff" if cur_rejected else (BLANK_COLOR if cur_blank else "#66ff88")
         self.lbl_count.config(text=count_text, fg=count_color)
         self.lbl_zoom.config(text=f"zoom {self.zoom:.2f}×")
 
         hints_label = "Hints ✓ [H]" if self._show_suggestions else "Hints  [H]"
         self.btn_hints.config(text=hints_label)
 
-        if cur_blank:
+        if cur_rejected:
+            hint, color = "REJECTED — press R to undo", "#88aaff"
+        elif cur_blank:
             hint, color = "BLANK — press B to undo", BLANK_COLOR
         elif self._pending_a is not None:
             hint, color = "→ Click streak END", "#88ffcc"
@@ -1032,7 +1094,7 @@ class AnnotationApp(tk.Tk):
             hint = f"Y = accept {len(self._img_suggestions)} suggestion(s)  |  click to annotate manually"
             color = SUGGESTION_COLOR
         else:
-            hint = "Click streak START  |  B = blank  |  H = toggle hints"
+            hint = "Click streak START  |  B = blank  |  R = reject unusable  |  H = toggle hints"
             color = "#88ffcc"
         self.lbl_hint.config(text=hint, fg=color)
 
@@ -1067,8 +1129,12 @@ class AnnotationApp(tk.Tk):
         if not self._img_suggestions:
             return
         img_id = self._get_or_create_image_id(self.images[self.idx])
-        if self._is_blank(img_id):
-            return
+        for img in self.coco["images"]:
+            if img["id"] == img_id:
+                img["blank"] = False
+                img["rejected"] = False
+                img.pop("exclude_reason", None)
+                break
         for obb in self._img_suggestions:
             self._img_obbs.append(obb)
         self.width_var.set(int(round(self._img_suggestions[0]["h"])))
@@ -1092,6 +1158,8 @@ class AnnotationApp(tk.Tk):
         for img in self.coco["images"]:
             if img["id"] == img_id:
                 img["blank"] = not currently_blank
+                img["rejected"] = False
+                img.pop("exclude_reason", None)
                 break
 
         self._autosave()
@@ -1100,6 +1168,34 @@ class AnnotationApp(tk.Tk):
             self._next()
         else:
             # Un-blanked — stay and redraw
+            self._redraw()
+            self._update_labels()
+
+    def _mark_rejected(self) -> None:
+        """Toggle unusable reject status for the current image and advance."""
+        entry = self.images[self.idx]
+        img_id = self._get_or_create_image_id(entry)
+        currently_rejected = self._is_rejected(img_id)
+
+        self.coco["annotations"] = [
+            a for a in self.coco["annotations"] if a["image_id"] != img_id
+        ]
+        self._img_obbs = []
+
+        for img in self.coco["images"]:
+            if img["id"] == img_id:
+                img["rejected"] = not currently_rejected
+                img["blank"] = False
+                if currently_rejected:
+                    img.pop("exclude_reason", None)
+                else:
+                    img["exclude_reason"] = "rejected_unusable"
+                break
+
+        self._autosave()
+        if not currently_rejected:
+            self._next()
+        else:
             self._redraw()
             self._update_labels()
 
@@ -1133,6 +1229,12 @@ class AnnotationApp(tk.Tk):
     def _commit_obbs(self) -> None:
         entry = self.images[self.idx]
         img_id = self._get_or_create_image_id(entry)
+        for img in self.coco["images"]:
+            if img["id"] == img_id:
+                img["blank"] = False
+                img["rejected"] = False
+                img.pop("exclude_reason", None)
+                break
         self.coco["annotations"] = [
             a for a in self.coco["annotations"] if a["image_id"] != img_id
         ]
@@ -1174,7 +1276,7 @@ class AnnotationApp(tk.Tk):
 
     def _on_click(self, event: tk.Event) -> None:
         img_id = self._get_or_create_image_id(self.images[self.idx])
-        if self._is_blank(img_id):
+        if self._is_blank(img_id) or self._is_rejected(img_id):
             return
         ix, iy = self._canvas_to_img(event.x, event.y)
         img_w = self._pil_img.width  if self._pil_img else 3000
@@ -1299,6 +1401,13 @@ def main() -> None:
         help="1-based image number to start at (default: first unannotated).",
     )
     parser.add_argument(
+        "--review-reject", default=None,
+        help=(
+            "BrentImages only: comma-separated .strk Reject codes to review "
+            "(for example, -1 for confirmed no-streak frames)."
+        ),
+    )
+    parser.add_argument(
         "--precompute", action="store_true",
         help="Run Hough detection on all images and write suggestion cache, then exit.",
     )
@@ -1339,6 +1448,14 @@ def main() -> None:
             len(images),
             max((f["pass_idx"] for f in images), default=-1) + 1,
         )
+        if args.review_reject:
+            review_codes = {code.strip() for code in args.review_reject.split(",") if code.strip()}
+            images = [frame for frame in images if str(frame.get("reject", "")).strip() in review_codes]
+            log.info(
+                "Review filter Reject in %s: %d frames",
+                ",".join(sorted(review_codes)),
+                len(images),
+            )
         strk_save_hook = lambda coco: write_coco_to_strk(coco, strk_frames)
     else:
         suggestions_path = args.output.parent / (args.output.stem + ".suggestions.json")
@@ -1392,10 +1509,11 @@ def main() -> None:
 
     annotated_ids = {a["image_id"] for a in coco["annotations"]}
     blank_ids = {img["id"] for img in coco["images"] if img.get("blank")}
-    already_done = len(annotated_ids | blank_ids)
+    rejected_ids = {img["id"] for img in coco["images"] if img.get("rejected")}
+    already_done = len(annotated_ids | blank_ids | rejected_ids)
     if already_done:
-        log.info("Resuming — %d images already reviewed (%d blanks)",
-                 already_done, len(blank_ids))
+        log.info("Resuming — %d images already reviewed (%d blanks, %d rejected)",
+                 already_done, len(blank_ids), len(rejected_ids))
 
     # Determine start index (--start-at is 1-based; 0 means auto)
     if args.start_at > 0:
@@ -1404,7 +1522,7 @@ def main() -> None:
         # Jump to first unannotated, unskipped image
         done_fnames = {
             img["file_name"] for img in coco["images"]
-            if img["id"] in annotated_ids or img.get("blank")
+            if img["id"] in annotated_ids or img.get("blank") or img.get("rejected")
         }
         start_idx = 0
         for i, entry in enumerate(images):
@@ -1424,8 +1542,9 @@ def main() -> None:
     n_ann = len(coco["annotations"])
     n_img = len({a["image_id"] for a in coco["annotations"]})
     n_blank = sum(1 for img in coco["images"] if img.get("blank"))
-    log.info("Done. %d OBBs across %d images, %d blanks → %s",
-             n_ann, n_img, n_blank, args.output)
+    n_rejected = sum(1 for img in coco["images"] if img.get("rejected"))
+    log.info("Done. %d OBBs across %d images, %d blanks, %d rejected → %s",
+             n_ann, n_img, n_blank, n_rejected, args.output)
 
 
 if __name__ == "__main__":

@@ -7,7 +7,8 @@ emits:
   - every tile that contains ≥1 annotation centre
   - one random negative tile per unannotated image (domain adaptation)
 
-Output: data/annotations/frigate_tiled_train.json  (COCO format)
+Output: `$ARGUS_ANNOTATIONS_DIR/frigate_tiled_train.json` (COCO format),
+defaulting to `/Volumes/External/TrainingData/annotations/`.
 
 Tile coordinates are embedded in file_name as a virtual path::
 
@@ -39,14 +40,16 @@ import argparse
 import json
 import logging
 import math
+import os
 import random
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-_ANN_DIR = _REPO_ROOT / "data/annotations"
+_ANN_DIR = Path(
+    os.environ.get("ARGUS_ANNOTATIONS_DIR", "/Volumes/External/TrainingData/annotations")
+)
 _CANONICAL_CATEGORIES = [{"id": 1, "name": "streak", "supercategory": "satellite"}]
 
 # Defaults — can be overridden via CLI.
@@ -91,7 +94,7 @@ def _parse_args() -> argparse.Namespace:
         default=None,
         help=(
             "Output JSON path.  Defaults to "
-            "data/annotations/frigate_tiled_train_ts<native_tile_size>.json "
+            "$ARGUS_ANNOTATIONS_DIR/frigate_tiled_train_ts<native_tile_size>.json "
             "(or frigate_tiled_train.json when native_tile_size=400)."
         ),
     )
@@ -155,9 +158,9 @@ def build_tiled_frigate_json(
         overlap: Fractional tile overlap.  Increase to 0.5 for small tiles
             (``native_tile_size < 200``) to reduce missed-streak rate.
         src_path: Source COCO annotation file.  Defaults to
-            ``data/annotations/frigate_streaks.json``.
+            ``$ARGUS_ANNOTATIONS_DIR/frigate_streaks.json``.
         out_path: Output path.  Defaults to
-            ``data/annotations/frigate_tiled_train.json`` (for 400 px tiles)
+            ``$ARGUS_ANNOTATIONS_DIR/frigate_tiled_train.json`` (for 400 px tiles)
             or ``frigate_tiled_train_ts<size>.json`` for other sizes.
     """
     if src_path is None:

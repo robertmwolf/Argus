@@ -3,8 +3,30 @@
 ## Overview
 Four data sources support the ARGUS pipeline. BrentImages (which subsumes the
 original GTImages night) is the primary ground-truth and ongoing capture source.
-All BrentImages data lives on the external drive under
-`/Volumes/External/TrainingData/raw/BrentImages/`.
+Training data lives on the external drive:
+
+- Raw images: `/Volumes/External/TrainingData/raw/`
+- Canonical annotation JSONs: `/Volumes/External/TrainingData/annotations/`
+
+`data/annotations` is a compatibility symlink to the external annotation
+directory in this worktree; it is not the source of truth. New training runs
+should pass absolute annotation paths from
+`/Volumes/External/TrainingData/annotations/` or set
+`ARGUS_ANNOTATIONS_DIR=/Volumes/External/TrainingData/annotations`.
+
+Additive external-absolute JSONs are available for new runs without disturbing
+legacy filenames that may be in use by active jobs:
+
+```text
+/Volumes/External/TrainingData/annotations/all_train_nodm_external_abs.json
+/Volumes/External/TrainingData/annotations/all_train_nodm_v3_external_abs.json
+/Volumes/External/TrainingData/annotations/train_external_abs.json
+/Volumes/External/TrainingData/annotations/val_external_abs.json
+/Volumes/External/TrainingData/annotations/test_external_abs.json
+```
+
+These files keep annotations on the external drive and store every training
+`file_name` as an absolute path under `/Volumes/External/TrainingData/raw/`.
 
 ---
 
@@ -28,8 +50,9 @@ solution sidecars.
 
 | Directory | Date | Frames | NORAD IDs | Annotation status |
 |---|---|---|---|---|
-| `Img_20260412_Atwood/` | 2026-04-12 | 759 | 68 | ✅ Fully annotated (.strk + .ini/.wcs sidecars, GAIN=300) |
-| `Img_20260515_Atwood/` | 2026-05-15 | 300 | 39 | ✅ Annotated — 204 streak images + 27 negatives (`brentimages_20260515.json`, `brentimages_20260515_negatives.json`) |
+| `Img_20260412_Atwood/` | 2026-04-12 | 759 | 68 | In review cleanup: 596 labeled, 38 true negatives, 115 rejected unusable, 1 pending among existing FITS rows |
+| `Img_20260515_Atwood/` | 2026-05-15 | 300 | 39 | Partially annotated: 204 labeled, 27 current negatives, 69 pending `Reject=2` |
+| `Geo_20260520_Atwood/` | 2026-05-20 | 16 | 1 | Reviewed: 11 labeled, 5 rejected unusable |
 
 The `Img_20260412_Atwood/` night is the original GTImages dataset — it has
 ASTAP plate solutions and fully pixel-annotated `.strk` files from SkyTrack.
@@ -37,15 +60,20 @@ Subsequent nights (starting with `Img_20260515_Atwood/`) have rich FITS
 headers but no plate solutions; `.strk` stubs are generated from headers and
 pixel coordinates are filled in via the manual annotation workflow.
 
-**Key statistics (Img_20260412_Atwood — fully annotated):**
-- 593 usable labeled streak images (reject=0)
-- 93 real no-streak images (reject=−1) — valuable negative training examples
+**Key statistics (Img_20260412_Atwood — reviewed status as of 2026-05-28):**
+- 596 usable labeled streak images (reject=0)
+- 38 confirmed no-streak images (reject=−1)
+- 115 rejected unusable images (reject=5) — do not train/evaluate
+- 1 pending image (reject=2)
 - 68 unique NORAD IDs (79% Starlink; also Meteor-M2, Yaogan, Cosmos, Iridium)
 - Streak lengths: median 624 px, p10=373 px, p90=1003 px (mostly long streaks)
 
-**Key statistics (Img_20260515_Atwood — fully annotated):**
+**Key statistics (Img_20260515_Atwood — partially annotated):**
 - 204 streak images, 204 annotations (`brentimages_20260515.json`)
-- 27 confirmed no-streak images (`brentimages_20260515_negatives.json`)
+- 27 old no-streak candidates archived under
+  `archive/legacy_cleanup_20260528/brentimages_20260515_negatives.NEEDS_REVIEW.json`;
+  review against `.strk` labels before using as true negatives
+- 69 pending images (`Reject=2`) — do not train/evaluate until reviewed
 - 39 unique NORAD IDs
 - Streak lengths: mean 725 px, median 687 px, min 215 px, max 1404 px (long + medium)
 - **Not yet merged into any training split** — available as a clean holdout for out-of-distribution evaluation or future training expansion
@@ -63,14 +91,15 @@ pixel coordinates are filled in via the manual annotation workflow.
 python scripts/generate_brentimages_strk.py \
     --night-dir /Volumes/External/TrainingData/raw/BrentImages/Img_YYYYMMDD_Atwood
 
-# 2. Manually annotate pixel coordinates using the annotation tool, which flips
-#    Reject to 0 (streak present) or -1 (no streak).
+# 2. Manually annotate pixel coordinates using the annotation tool:
+#    Reject=0 for streak present, Reject=-1 for true no-streak negative,
+#    Reject=5 for rejected/unusable (do not train/evaluate).
 
 # 3. Convert annotated night to COCO JSON:
 python scripts/convert_gtimages.py \
     --strk-dir /Volumes/External/TrainingData/raw/BrentImages/Img_YYYYMMDD_Atwood \
-    --output data/annotations/brentimages_YYYYMMDD.json \
-    --negatives-output data/annotations/brentimages_YYYYMMDD_negatives.json
+    --output /Volumes/External/TrainingData/annotations/brentimages_YYYYMMDD.json \
+    --negatives-output /Volumes/External/TrainingData/annotations/brentimages_YYYYMMDD_negatives.json
 
 # 4. Add the new session to the manifest:
 #    Edit data/sessions/manifest.yaml — add an entry with split: train
@@ -93,8 +122,8 @@ python scripts/build_training_json.py \
 ```bash
 python scripts/convert_gtimages.py \
     --strk-dir /Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood \
-    --output data/annotations/gtimages.json \
-    --negatives-output data/annotations/gtimages_negatives.json
+    --output /Volumes/External/TrainingData/annotations/gtimages.json \
+    --negatives-output /Volumes/External/TrainingData/annotations/gtimages_negatives.json
 ```
 
 ---
@@ -111,14 +140,19 @@ both released. This is purpose-built for exactly this pipeline.
 
 **Location:** `/Volumes/External/TrainingData/raw/frigate/` (raw FITS + processed PNGs at 2325×1555)
 
-**Annotation status — ✅ ready for training inclusion:**
+**Annotation status — staged, needs cleanup before treating unannotated frames as negatives:**
 - 350 frames manually reviewed via `scripts/annotate_frigate_streaks.py`
 - 191 frames contain satellite streaks (377 OBBs total) — all **very short streaks**
   (~20–80 px), filling a morphology gap absent from GTImages and SatStreaks
-- 159 frames confirmed streak-free (explicit negatives)
+- 159 frames are unannotated in `frigate_streaks.json`; review before treating
+  them as true negatives
 - Frames are scattered across the full observation sequence (priority-list ordering),
   providing diversity across sky conditions throughout the night
-- Annotations: `data/annotations/frigate_streaks.json`
+- Annotations: `/Volumes/External/TrainingData/annotations/frigate_streaks.json`
+- The old negative-only file was archived as
+  `archive/legacy_cleanup_20260528/frigate_negatives.STALE_UNSAFE.json`; do not
+  use it as-is because it overlaps frames now labeled positive in
+  `frigate_streaks.json`.
 - Remaining 1,630 frames: unreviewed — do NOT include in training
 
 **To include in a training run:**
@@ -219,7 +253,7 @@ python scripts/merge_annotations.py --seed 42 --val-fraction 0.2
 
 The merge script reads each image size, computes the foreground mask bounding
 box and pixel area, and writes real COCO `bbox` values into
-`data/annotations/train.json`, `val.json`, and `test.json`. Entries with
+`/Volumes/External/TrainingData/annotations/train.json`, `val.json`, and `test.json`. Entries with
 missing or empty masks are skipped. GTImages labeled and negative examples are
 merged into the train/validation pool unless `--satstreaks-only` is supplied.
 
@@ -242,7 +276,12 @@ Training data comes exclusively from:
 - **Frigate** — tiled 400px crops of ground PNGs; only source of short-band
   training examples (~20–80 px streaks); acceptable domain gap for this morphology
 
----
+All canonical training annotations live under
+`/Volumes/External/TrainingData/annotations/`. New training builds should write
+external-absolute image paths, with no repo-local image or annotation copies.
+
+Val split: `/Volumes/External/TrainingData/annotations/val_external_abs.json`
+Test split: `/Volumes/External/TrainingData/annotations/test_external_abs.json`
 
 ## Combined Training Splits
 
@@ -254,14 +293,14 @@ SatStreaks excluded per policy above.
 | Source | Images | Annotations | Band coverage |
 |---|---|---|---|
 | Atwood Night 1 (`gtimages.json`) | 578 + 91 neg | 578 | Medium + long (802–1540px) |
-| Atwood Night 2 (`brentimages_20260515.json`) | 204 + 27 neg | 204 | Medium + long |
+| Atwood Night 2 (`brentimages_20260515.json`) | 204 | 204 | Medium + long |
 | Atwood Geo (`geo_20260520.json`) | 11 | 11 | Long (geostationary) |
-| Frigate tiled (`frigate_tiled_train.json`) | 717 | 655 | Short only (~20–80px in tile) |
-| **Total** | **~1,483** | **~1,328** | Short 50%, Medium 33%, Long 17% |
+| Frigate diversity (`frigate_diversity.json`) | 250 | 251 | Short only (~20–80px in tile) |
+| **Total** | **1,134** | **1,044** | Short + medium + long; SatStreaks excluded |
 
 Rebuild:
 ```bash
-python scripts/build_training_json.py --output data/annotations/all_train_nodm_v3.json
+python scripts/build_training_json.py
 ```
 
 **Band distribution note:** With SatStreaks excluded the long band is thin (219
@@ -269,6 +308,16 @@ examples, max diagonal 1,540px).  Adding more Atwood nights is the primary lever
 for improving long-band coverage.  Until then, consider running
 `scripts/augment_short_medium.py` to supplement medium-band coverage with synthetic
 injections into existing backgrounds.
+
+### Legacy training set — `all_train_nodm.json` (Run 3 and earlier)
+
+### Archived or staged annotation files
+
+| Dataset | File(s) | Images | Annotations | Notes |
+|---|---|---|---|---|
+| BrentImages Night 2 | `brentimages_20260515.json` | 204 | 204 streaks | Positive holdout; old negative candidates archived pending review |
+| Frigate (streaks) | `frigate_streaks.json` | 350 | 377 | Very short ~20–80 px streaks (only source) |
+| Archived Frigate negatives | `archive/legacy_cleanup_20260528/frigate_negatives.STALE_UNSAFE.json` | 300 | 0 | Stale/unsafe; overlaps labeled positives, do not use as-is |
 
 ### Legacy training set — `all_train_nodm.json` (Run 3 and earlier)
 

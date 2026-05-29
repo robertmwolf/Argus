@@ -424,18 +424,21 @@ def train(
         logger.info("Initialising from checkpoint: %s", load_from)
     if os.environ.get("USE_DEV_SUBSET", "true").lower() in {"0", "false", "no"}:
         # TRAIN_ANN_FILE / VAL_ANN_FILE let callers substitute annotation files
-        # (e.g. all_train_nodm.json) without changing any other config.
-        # Paths must be relative to cfg.train_dataloader.dataset.data_root ("data/").
+        # (e.g. all_train_nodm.json) without changing any other config.  Paths
+        # may be relative to data_root or absolute external-drive paths.
         train_ann = os.environ.get("TRAIN_ANN_FILE", "annotations/train.json")
         val_ann = os.environ.get("VAL_ANN_FILE", "annotations/val.json")
         cfg.train_dataloader.dataset.ann_file = train_ann
         cfg.val_dataloader.dataset.ann_file = val_ann
         cfg.test_dataloader = cfg.val_dataloader
-        cfg.val_evaluator.ann_file = f"data/{val_ann}"
+        cfg.val_evaluator.ann_file = (
+            val_ann if Path(val_ann).is_absolute() else f"data/{val_ann}"
+        )
         cfg.test_evaluator = cfg.val_evaluator
         logger.info(
-            "USE_DEV_SUBSET=false → train=data/%s  val=data/%s",
-            train_ann, val_ann,
+            "USE_DEV_SUBSET=false → train=%s  val=%s",
+            train_ann if Path(train_ann).is_absolute() else f"data/{train_ann}",
+            val_ann if Path(val_ann).is_absolute() else f"data/{val_ann}",
         )
     if not _torch.cuda.is_available():
         cfg.train_dataloader.num_workers = 0

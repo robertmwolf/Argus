@@ -31,6 +31,11 @@ Status labels:
 
 ## Dataset Build And Merge Scripts
 
+Canonical training annotation JSONs live on the external drive under
+`/Volumes/External/TrainingData/annotations/`. Dataset builders default there
+via `ARGUS_ANNOTATIONS_DIR`; repo-local `data/annotations` is a compatibility
+path for older commands and active runs.
+
 | Script | Status | Purpose | Notes |
 |---|---:|---|---|
 | `convert_gtimages.py` | Active | Converts GTImages `.strk`/FITS metadata into COCO-style annotations. | Covered by tests. |
@@ -73,7 +78,7 @@ handling that will likely be useful for future labeling passes.
 | Script | Status | Purpose | Notes |
 |---|---:|---|---|
 | `annotate.py` | Manual | Unified Tkinter OBB streak annotation tool for FITS, PNG, and JPEG inputs. | Handles Frigate priority lists, generic image directories, and BrentImages `.strk` write-back via `--night-dir`. |
-| `annotate_frigate.py` | Manual | Builds Frigate negative-example COCO corpus. | Also serves as provenance for Frigate-as-background decision. |
+| `annotate_frigate.py` | Manual | Builds Frigate unreviewed background-candidate COCO files. | Output is not a true-negative label set unless reviewed. |
 | `screen_frigate.py` | Manual | Ranks Frigate frames by short-streak likelihood. | Produces priority JSON/contact sheet for annotation. |
 
 Archived superseded entry points live under `scripts/archive/` for provenance:

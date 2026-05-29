@@ -139,10 +139,9 @@ sources:
     split: train
     mix_weight: 1.0
     annotation_file: "data/annotations/brentimages_20260515.json"
-    negatives_file: "data/annotations/brentimages_20260515_negatives.json"
     raw_dir: "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood"
     n_images: 204          # streak images
-    n_negatives: 27
+    n_negatives: 0
     n_annotations: 204
     camera: "ZWO ASI2600MM Pro @ 612mm f/l"
     pixel_scale_arcsec: 1.27
@@ -153,7 +152,8 @@ sources:
     notes: >
       Night 2.  Annotated without ASTAP plate solutions.  Bare filenames in
       annotation_file are resolved to absolute paths using raw_dir at build time.
-      Long + medium streaks; mean length 725px.
+      Long + medium streaks; mean length 725px. Old negative candidates were
+      archived under annotations/archive/legacy_cleanup_20260528 pending review.
 
   - session_id: atwood_geo_20260520
     scope_id: atwood
@@ -182,8 +182,8 @@ sources:
   - session_id: frigate_train
     scope_id: frigate
     source_type: public_dataset
-    split: train
-    mix_weight: 1.0
+    split: excluded          # Full 717-tile set excluded from training builds.
+    mix_weight: 1.0          # Use frigate_diversity instead (geometry-sampled subset).
     annotation_file: "data/annotations/frigate_tiled_train.json"
     raw_dir: "/Volumes/External/TrainingData/raw/frigate"
     n_images: 717
@@ -192,10 +192,28 @@ sources:
     pixel_scale_arcsec: null
     norad_ids: 0
     notes: >
-      Tiled 400px crops built by scripts/build_tiled_frigate_json.py.
-      Virtual paths (stem__tx<x>_ty<y>_ts400.png) resolved at load time
-      by training/transforms.py LoadFITSFromFile.  Paths are absolute;
-      no raw_dir path-fixing needed at build time.
+      Full tiled set — superseded by frigate_diversity for training.
+      Retained for reference and for re-running sample_frigate_tiles.py
+      with different parameters.  Set split=train to use the full set
+      (not recommended — single-night instrument dominance risk).
+
+  - session_id: frigate_diversity
+    scope_id: frigate
+    source_type: public_dataset
+    split: train
+    mix_weight: 1.0
+    annotation_file: "data/annotations/frigate_diversity.json"
+    raw_dir: "/Volumes/External/TrainingData/raw/frigate"
+    n_images: 250            # 200 positive + 50 negative (FPS-selected subset)
+    n_annotations: 251
+    camera: "QHY600M (9600×6422, 3.76μm) — tiled 400px crops"
+    pixel_scale_arcsec: null
+    norad_ids: 0
+    notes: >
+      Geometry-diversity subset of frigate_train, selected by Furthest-Point
+      Sampling across (length, aspect_ratio, angle, tile_position) feature space.
+      Built by scripts/sample_frigate_tiles.py --n-tiles 200 --seed 42.
+      250 tiles total: 200 positive (short streaks ~7-66px) + 50 negatives.
       Critical source for short-band recall — do not exclude.
 
   - session_id: frigate_eval

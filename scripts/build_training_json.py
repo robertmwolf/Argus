@@ -13,8 +13,8 @@ manifest-driven approach that supports:
 
 Usage
 -----
-# Equivalent to the old build_all_train_json.py (all train sources, weight 1):
-python scripts/build_training_json.py --output data/annotations/all_train_nodm_v3.json
+# Build the canonical external-absolute training set:
+python scripts/build_training_json.py
 
 # Fine-tune run: oversample a new scope 2× to compensate for small dataset size:
 python scripts/build_training_json.py \\
@@ -65,7 +65,8 @@ logger = logging.getLogger(__name__)
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _MANIFEST_PATH = _REPO_ROOT / "data/sessions/manifest.yaml"
-_ANN_DIR = _REPO_ROOT / "data/annotations"
+_ANN_DIR = Path("/Volumes/External/TrainingData/annotations")
+_RAW_DIR = Path("/Volumes/External/TrainingData/raw")
 _CANONICAL_CATEGORIES = [{"id": 1, "name": "streak", "supercategory": "satellite"}]
 
 # Splits that are eligible to be included in training builds
@@ -95,12 +96,18 @@ def _load_json(path: Path) -> dict:
 
 
 def _fix_bare_paths(images: list[dict], raw_dir: str) -> list[dict]:
-    """Resolve bare filenames to absolute paths under raw_dir."""
+    """Resolve image filenames to absolute paths under external raw data."""
     fixed = []
     for img in images:
         new = dict(img)
         fname = img["file_name"]
-        if not fname.startswith("/"):
+        if fname.startswith("/Volumes/External/frigate/"):
+            new["file_name"] = fname.replace(
+                "/Volumes/External/frigate/",
+                f"{_RAW_DIR}/frigate/",
+                1,
+            )
+        elif not fname.startswith("/"):
             new["file_name"] = f"{raw_dir}/{fname}"
         fixed.append(new)
     return fixed
@@ -270,9 +277,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--output",
         type=Path,
-        default=_ANN_DIR / "all_train_nodm.json",
+        default=_ANN_DIR / "all_train_nodm_v3_external_abs.json",
         help="Output path for the merged COCO JSON "
-             "(default: data/annotations/all_train_nodm.json)",
+             "(default: /Volumes/External/TrainingData/annotations/"
+             "all_train_nodm_v3_external_abs.json)",
     )
     p.add_argument(
         "--include",

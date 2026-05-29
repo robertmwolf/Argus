@@ -25,15 +25,15 @@ and for the collinear stitcher to receive training signal.
 
 Usage::
 
-    # Night 1 (local FITS — default):
+    # Night 1:
     python scripts/build_tiled_brentimages_json.py \\
-        --src data/annotations/brentimages_night1_full.json \\
-        --out data/annotations/brentimages_night1_tiled_train.json
+        --src /Volumes/External/TrainingData/annotations/brentimages_night1_full.json \\
+        --out /Volumes/External/TrainingData/annotations/brentimages_night1_tiled_train.json
 
-    # Night 2 (external volume):
+    # Night 2:
     python scripts/build_tiled_brentimages_json.py \\
-        --src data/annotations/brentimages_night2_full.json \\
-        --out data/annotations/brentimages_night2_tiled_train.json
+        --src /Volumes/External/TrainingData/annotations/brentimages_night2_full.json \\
+        --out /Volumes/External/TrainingData/annotations/brentimages_night2_tiled_train.json
 
     # Larger tiles for very long streaks:
     python scripts/build_tiled_brentimages_json.py \\
@@ -50,14 +50,16 @@ import argparse
 import json
 import logging
 import math
+import os
 import random
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-_ANN_DIR = _REPO_ROOT / "data/annotations"
+_ANN_DIR = Path(
+    os.environ.get("ARGUS_ANNOTATIONS_DIR", "/Volumes/External/TrainingData/annotations")
+)
 _CANONICAL_CATEGORIES = [{"id": 1, "name": "streak", "supercategory": "satellite"}]
 
 # Defaults — can be overridden via CLI.
@@ -87,7 +89,7 @@ def _parse_args() -> argparse.Namespace:
         default=None,
         help=(
             "Output JSON path.  Defaults to "
-            "data/annotations/<src-stem>_tiled_ts<native_tile_size>.json."
+            "$ARGUS_ANNOTATIONS_DIR/<src-stem>_tiled_ts<native_tile_size>.json."
         ),
     )
     parser.add_argument(
@@ -186,7 +188,7 @@ def build_tiled_brentimages_json(
             annotations.  Image ``width``/``height`` must be correct (they are
             used to compute tile positions; no actual FITS files are loaded).
         out_path: Output path.  Defaults to
-            ``data/annotations/<src-stem>_tiled_ts<size>.json``.
+            ``$ARGUS_ANNOTATIONS_DIR/<src-stem>_tiled_ts<size>.json``.
         native_tile_size: Crop footprint in source pixels (default 400).
             The output JSON encodes images as ``native_tile_size × native_tile_size``;
             the MMDetection pipeline's resize step upscales to model input size.

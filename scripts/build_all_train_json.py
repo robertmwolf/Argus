@@ -1,14 +1,10 @@
-"""Build the canonical training annotation JSON.
+"""Build the canonical external-drive training annotation JSON.
 
-Produces:
-  data/annotations/all_train_nodm.json   — SatStreaks + Night1 + Night2 + Geo_20260520 + Frigate tiles
-
-Night 2 (brentimages_20260515.json) has bare filenames that are resolved to
-absolute paths under /Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/.
-
-Frigate tiles come from frigate_tiled_train.json (built by build_tiled_frigate_json.py).
-The virtual paths encoded in that file (stem__tx<x>_ty<y>_ts400.png) are handled at
-load time by training/transforms.py LoadFITSFromFile.
+Produces ``all_train_nodm_external_abs.json`` under ``ARGUS_ANNOTATIONS_DIR``
+(default: ``/Volumes/External/TrainingData/annotations``).  The resulting COCO
+file is assembled from external annotation components and uses external-drive
+image paths, so training does not depend on repo-local annotation or image
+copies. Set ``ARGUS_ALL_TRAIN_OUT`` to override the output path.
 
 Note: DarkMatters data is excluded from this project and must not be added.
 """
@@ -17,15 +13,16 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-_ANN_DIR = _REPO_ROOT / "data/annotations"
-_BRENT_N2_DIR = "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood"
-_BRENT_GEO_DIR = "/Volumes/External/TrainingData/raw/BrentImages/Geo_20260520_Atwood"
+_ANN_DIR = Path(
+    os.environ.get("ARGUS_ANNOTATIONS_DIR", "/Volumes/External/TrainingData/annotations")
+)
+_RAW_DIR = Path(os.environ.get("ARGUS_RAW_DATA_DIR", "/Volumes/External/TrainingData/raw"))
 _CANONICAL_CATEGORIES = [{"id": 1, "name": "streak", "supercategory": "satellite"}]
 
 
@@ -34,16 +31,43 @@ def _load(path: Path) -> dict:
         return json.load(f)
 
 
-def _fix_brent_paths(images: list[dict], base_dir: str) -> list[dict]:
-    """Resolve bare filenames to absolute paths under base_dir."""
-    fixed = []
-    for img in images:
+def _external_image_path(file_name: str) -> str:
+    """Resolve known training image paths to the external raw-data tree."""
+    path = Path(file_name)
+    if path.is_absolute():
+        return str(path)
+
+    parts = path.parts
+    if parts and parts[0] == "satstreaks":
+        return str(_RAW_DIR / path)
+    if parts and parts[0] == "BrentImages":
+        return str(_RAW_DIR / path)
+    if parts and parts[0] == "frigate":
+        return str(_RAW_DIR / path)
+    return str(path)
+
+
+def _normalise_image_paths(coco: dict) -> dict:
+    """Return a shallow COCO copy whose image paths are external-drive paths."""
+    fixed = {**coco, "images": []}
+    for img in coco.get("images", []):
         new = dict(img)
-        fname = img["file_name"]
-        if not fname.startswith("/"):
-            new["file_name"] = f"{base_dir}/{fname}"
-        fixed.append(new)
+        new["file_name"] = _external_image_path(new["file_name"])
+        fixed["images"].append(new)
     return fixed
+
+
+def _filter_images(coco: dict, predicate) -> dict:
+    """Filter COCO images and annotations while preserving original IDs."""
+    images = [img for img in coco.get("images", []) if predicate(img)]
+    image_ids = {img["id"] for img in images}
+    return {
+        **coco,
+        "images": images,
+        "annotations": [
+            ann for ann in coco.get("annotations", []) if ann["image_id"] in image_ids
+        ],
+    }
 
 
 def merge(sources: list[dict]) -> dict:
@@ -83,63 +107,54 @@ def merge(sources: list[dict]) -> dict:
 
 
 def main() -> None:
-    # Load base split (SatStreaks + BrentImages Night 1)
-    base_nodm = _load(_ANN_DIR / "train.json")          # 3,023 images
-
-    # Load Night 2 — fix bare filenames to absolute paths
-    n2_streaks = _load(_ANN_DIR / "brentimages_20260515.json")
-    n2_neg = _load(_ANN_DIR / "brentimages_20260515_negatives.json")
-
-    n2_streaks["images"] = _fix_brent_paths(n2_streaks["images"], _BRENT_N2_DIR)
-    n2_neg["images"] = _fix_brent_paths(n2_neg["images"], _BRENT_N2_DIR)
-
-    n2_images_count = len(n2_streaks["images"]) + len(n2_neg["images"])
-    n2_ann_count = len(n2_streaks.get("annotations", []))
+    # Base train.json contains SatStreaks plus full-frame Night 1.  For the
+    # canonical adaptive-tiling set, keep only SatStreaks and use tiled
+    # BrentImages components below.
+    base = _normalise_image_paths(_load(_ANN_DIR / "train.json"))
+    satstreaks = _filter_images(
+        base,
+        lambda img: "/satstreaks/" in img["file_name"],
+    )
     logger.info(
-        "Night 2: %d images (%d annotated, %d negatives), %d annotations",
-        n2_images_count,
-        len(n2_streaks["images"]),
-        len(n2_neg["images"]),
-        n2_ann_count,
+        "SatStreaks train: %d images, %d annotations",
+        len(satstreaks["images"]),
+        len(satstreaks.get("annotations", [])),
     )
 
-    # Load Geo_20260520 — geostationary streak captures
-    geo_path = _ANN_DIR / "geo_20260520.json"
-    if geo_path.exists():
-        geo = _load(geo_path)
-        geo["images"] = _fix_brent_paths(geo["images"], _BRENT_GEO_DIR)
-        logger.info(
-            "Geo_20260520: %d images, %d annotations",
-            len(geo["images"]),
-            len(geo.get("annotations", [])),
-        )
-    else:
-        geo = None
-        logger.warning("geo_20260520.json not found — skipping Geo_20260520_Atwood")
-
-    # Load Frigate tiled crops (built by build_tiled_frigate_json.py)
-    frigate_tiled_path = _ANN_DIR / "frigate_tiled_train.json"
-    if not frigate_tiled_path.exists():
-        raise FileNotFoundError(
-            f"{frigate_tiled_path} not found — run scripts/build_tiled_frigate_json.py first"
-        )
-    frigate_tiled = _load(frigate_tiled_path)
+    brent_n1_tiled = _normalise_image_paths(
+        _load(_ANN_DIR / "brentimages_night1_tiled_train.json")
+    )
+    brent_n2_tiled = _normalise_image_paths(
+        _load(_ANN_DIR / "brentimages_night2_tiled_train.json")
+    )
+    frigate_tiled = _normalise_image_paths(_load(_ANN_DIR / "frigate_tiled_train_ts110.json"))
     logger.info(
-        "Frigate tiled: %d images, %d annotations",
+        "Brent N1 tiled: %d images, %d annotations",
+        len(brent_n1_tiled["images"]),
+        len(brent_n1_tiled.get("annotations", [])),
+    )
+    logger.info(
+        "Brent N2 tiled: %d images, %d annotations",
+        len(brent_n2_tiled["images"]),
+        len(brent_n2_tiled.get("annotations", [])),
+    )
+    logger.info(
+        "Frigate ts110 tiled: %d images, %d annotations",
         len(frigate_tiled["images"]),
         len(frigate_tiled.get("annotations", [])),
     )
 
     # Canonical training set (no DarkMatters)
-    sources = [base_nodm, n2_streaks, n2_neg, frigate_tiled]
-    if geo is not None:
-        sources.append(geo)
+    sources = [satstreaks, brent_n1_tiled, brent_n2_tiled, frigate_tiled]
     merged_nodm = merge(sources)
-    out_nodm = _ANN_DIR / "all_train_nodm.json"
+    out_nodm = Path(
+        os.environ.get("ARGUS_ALL_TRAIN_OUT", _ANN_DIR / "all_train_nodm_external_abs.json")
+    )
     with open(out_nodm, "w") as f:
         json.dump(merged_nodm, f)
     logger.info(
-        "all_train_nodm.json: %d images, %d annotations",
+        "%s: %d images, %d annotations",
+        out_nodm,
         len(merged_nodm["images"]),
         len(merged_nodm["annotations"]),
     )

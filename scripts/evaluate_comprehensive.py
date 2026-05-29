@@ -88,53 +88,20 @@ EVAL_SETS = [
 # ---------------------------------------------------------------------------
 
 def build_brentimages_eval_json() -> Path:
-    """Merge BrentImages Night 2 streaks + negatives into a single eval file.
+    """Build a BrentImages Night 2 eval file from reviewed labels.
 
     Bare filenames in the source annotations are resolved to absolute paths.
+    Archived negative-only candidate files are intentionally not used here.
     """
     ann_dir = _REPO_ROOT / "data/annotations"
     out_path = ann_dir / "brentimages_20260515_eval.json"
 
     streaks_path = ann_dir / "brentimages_20260515.json"
-    negatives_path = ann_dir / "brentimages_20260515_negatives.json"
 
     with open(streaks_path) as f:
         streaks = json.load(f)
-    with open(negatives_path) as f:
-        negatives = json.load(f)
 
-    # Build id remapping: original image_id → new sequential id
-    all_images: list[dict] = []
-    old_to_new: dict[int, int] = {}
-    next_id = 1
-
-    for src in (streaks, negatives):
-        for img in src["images"]:
-            fname = img["file_name"]
-            # Resolve bare filenames to absolute paths
-            if not fname.startswith("/"):
-                fname = f"{BRENT_RAW_DIR}/{fname}"
-            new_img = dict(img)
-            new_img["file_name"] = fname
-            new_img["id"] = next_id
-            old_to_new[img["id"]] = next_id
-            all_images.append(new_img)
-            next_id += 1
-
-    # Remap annotation image_ids
-    all_annotations: list[dict] = []
-    next_ann_id = 1
-    for src in (streaks, negatives):
-        # Determine which source this annotation came from by checking if
-        # the image_id exists in this src's images
-        src_img_ids = {img["id"] for img in src["images"]}
-        # We need to identify which old_to_new mapping corresponds to this src.
-        # Since we iterated (streaks, negatives) in order, we must rebuild mapping per-src.
-        pass
-
-    # Redo: build per-source id maps to avoid collisions between the two files
     old_to_new_streaks: dict[int, int] = {}
-    old_to_new_negs: dict[int, int] = {}
     all_images = []
     next_id = 1
 
@@ -149,29 +116,12 @@ def build_brentimages_eval_json() -> Path:
         all_images.append(new_img)
         next_id += 1
 
-    for img in negatives["images"]:
-        fname = img["file_name"]
-        if not fname.startswith("/"):
-            fname = f"{BRENT_RAW_DIR}/{fname}"
-        new_img = dict(img)
-        new_img["file_name"] = fname
-        new_img["id"] = next_id
-        old_to_new_negs[img["id"]] = next_id
-        all_images.append(new_img)
-        next_id += 1
-
     all_annotations = []
     next_ann_id = 1
     for ann in streaks.get("annotations", []):
         new_ann = dict(ann)
         new_ann["id"] = next_ann_id
         new_ann["image_id"] = old_to_new_streaks[ann["image_id"]]
-        all_annotations.append(new_ann)
-        next_ann_id += 1
-    for ann in negatives.get("annotations", []):
-        new_ann = dict(ann)
-        new_ann["id"] = next_ann_id
-        new_ann["image_id"] = old_to_new_negs[ann["image_id"]]
         all_annotations.append(new_ann)
         next_ann_id += 1
 

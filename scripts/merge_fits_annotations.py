@@ -1,25 +1,26 @@
-"""Merge GTImages and Frigate COCO annotation files into a combined training corpus.
+"""Merge GTImages and a reviewed Frigate COCO file into a combined corpus.
 
 Combines:
   - GTImages real training annotations (positives + existing negatives)
-  - Frigate negative-example corpus (background diversity from a different sensor)
+  - A reviewed Frigate corpus
 
-The combined file is used for the ``gtimages_plus_frigate`` training track in
-``train_compare_streakmind_yolo.py``.
+The old ``gtimages_plus_frigate_train.json`` was built from stale Frigate
+negative labels and has been archived. Do not recreate that artifact from
+unreviewed Frigate frames.
 
 Validation and test splits are kept as GTImages-only; Frigate is never mixed
 into held-out evaluation sets so the test distribution stays consistent across
 all tracks.
 
 Outputs:
-  data/annotations/gtimages_plus_frigate_train.json
+  /Volumes/External/TrainingData/annotations/gtimages_plus_frigate_reviewed.json
 
 Usage:
   python scripts/merge_fits_annotations.py
   python scripts/merge_fits_annotations.py \\
       --gtimages data/annotations/gtimages_train_real.json \\
-      --frigate  data/annotations/frigate_negatives.json \\
-      --output   data/annotations/gtimages_plus_frigate_train.json
+      --frigate  /Volumes/External/TrainingData/annotations/frigate_streaks.json \\
+      --output   /Volumes/External/TrainingData/annotations/gtimages_plus_frigate_reviewed.json
 """
 
 from __future__ import annotations
@@ -45,7 +46,7 @@ def merge(
 
     Args:
         gtimages_path: Path to GTImages COCO training JSON.
-        frigate_path: Path to Frigate negative COCO JSON.
+        frigate_path: Path to reviewed Frigate COCO JSON.
 
     Returns:
         Merged COCO dict with unified, sequential IDs.
@@ -72,10 +73,13 @@ def merge(
         merged_annotations.append({**ann, "id": next_ann_id, "image_id": new_img_id})
         next_ann_id += 1
 
-    # Frigate — negative examples only (annotations list is empty by design).
+    # Frigate — carry over reviewed positives and any reviewed negatives.
+    fr_img_remap: dict[int, int] = {}
     for img in fr_coco.get("images", []):
+        new_id = next_img_id
+        fr_img_remap[int(img["id"])] = new_id
         merged_images.append({
-            "id": next_img_id,
+            "id": new_id,
             "file_name": img["file_name"],
             "width": img["width"],
             "height": img["height"],
@@ -83,27 +87,37 @@ def merge(
         })
         next_img_id += 1
 
+    for ann in fr_coco.get("annotations", []):
+        new_img_id = fr_img_remap[int(ann["image_id"])]
+        merged_annotations.append({**ann, "id": next_ann_id, "image_id": new_img_id})
+        next_ann_id += 1
+
     gt_positives = sum(
         1 for a in gt_coco.get("annotations", []) if a.get("category_id", 1) == 1
     )
     gt_images = len(gt_coco.get("images", []))
+    fr_positives = sum(
+        1 for a in fr_coco.get("annotations", []) if a.get("category_id", 1) == 1
+    )
     fr_images = len(fr_coco.get("images", []))
 
     logger.info(
-        "Merged: %d GTImages frames (%d streak annotations) + %d Frigate negatives "
+        "Merged: %d GTImages frames (%d streak annotations) + "
+        "%d Frigate frames (%d streak annotations) "
         "= %d total frames, %d annotations",
-        gt_images, gt_positives, fr_images, len(merged_images), len(merged_annotations),
+        gt_images, gt_positives, fr_images, fr_positives,
+        len(merged_images), len(merged_annotations),
     )
 
     return {
         "info": {
-            "description": "GTImages (real, streak-annotated) + Frigate (negative examples)",
+            "description": "GTImages (real, streak-annotated) + reviewed Frigate",
             "gtimages_source": str(gtimages_path),
             "frigate_source": str(frigate_path),
             "gtimages_frames": gt_images,
             "gtimages_streak_annotations": gt_positives,
             "frigate_frames": fr_images,
-            "frigate_streak_annotations": 0,
+            "frigate_streak_annotations": fr_positives,
         },
         "images": merged_images,
         "annotations": merged_annotations,
@@ -124,13 +138,16 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--frigate",
         type=Path,
-        default=Path("data/annotations/frigate_negatives.json"),
-        help="Frigate negative-example COCO JSON (output of annotate_frigate.py).",
+        default=Path("/Volumes/External/TrainingData/annotations/frigate_streaks.json"),
+        help="Reviewed Frigate COCO JSON. Do not pass archived stale negatives.",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("data/annotations/gtimages_plus_frigate_train.json"),
+        default=Path(
+            "/Volumes/External/TrainingData/annotations/"
+            "gtimages_plus_frigate_reviewed.json"
+        ),
         help="Output merged COCO JSON path.",
     )
     parser.add_argument("--verbose", action="store_true")

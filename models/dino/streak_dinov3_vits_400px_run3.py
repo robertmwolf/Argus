@@ -12,8 +12,8 @@
 #
 #   PYTORCH_ENABLE_MPS_FALLBACK=1 \
 #   USE_DEV_SUBSET=false \
-#   TRAIN_ANN_FILE=annotations/all_train_nodm.json \
-#   VAL_ANN_FILE=annotations/val.json \
+#   TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_nodm_external_abs.json \
+#   VAL_ANN_FILE=/Volumes/External/TrainingData/annotations/val_external_abs.json \
 #   ARGUS_NORM=zscore \
 #   caffeinate -i python -m training.train_dino \
 #       --config models/dino/streak_dinov3_vits_400px_run3.py \
@@ -25,8 +25,8 @@
 #
 #   PYTORCH_ENABLE_MPS_FALLBACK=1 \
 #   USE_DEV_SUBSET=false \
-#   TRAIN_ANN_FILE=annotations/all_train_nodm.json \
-#   VAL_ANN_FILE=annotations/val.json \
+#   TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_nodm_external_abs.json \
+#   VAL_ANN_FILE=/Volumes/External/TrainingData/annotations/val_external_abs.json \
 #   ARGUS_NORM=zscore \
 #   caffeinate -i python -m training.train_dino \
 #       --config models/dino/streak_dinov3_vits_400px_run3.py \

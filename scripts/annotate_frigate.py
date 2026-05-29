@@ -1,4 +1,4 @@
-"""Build a negative-example COCO corpus from the Frigate FITS dataset.
+"""Build a candidate background COCO corpus from the Frigate FITS dataset.
 
 Frigate (DanSRoll/frigate, Nature Scientific Data 2025) is a 2,000-frame raw FITS
 time series (QHY600M, 9600×6422 px, 0.5 s, single site). Auto-detection attempts
@@ -7,18 +7,18 @@ frame-differencing all produce zero reliable streak annotations — either no
 satellite transited during the observation window, or the streaks are below any
 threshold that remains selective against background features.
 
-This script therefore uses Frigate as a **negative-example corpus**: all FITS
-frames are registered in the output COCO JSON with no annotations. The
-YOLO tiling pipeline (train_compare_streakmind_yolo.py) will tile each FITS
-frame and treat unannotated tiles as background training examples.
+This legacy script registers FITS frames with no annotations. Do not treat the
+output as true negatives unless each frame has been reviewed: the old
+``frigate_negatives.json`` artifact overlapped frames later labeled positive in
+``frigate_streaks.json`` and was archived as unsafe.
 
 Value: GTImages provides only 93 no-streak frames from a single site. Frigate
 adds ~1,980 frames from a different camera (QHY600M), different site, and
 different sky conditions — improving background diversity and model precision.
 
-Outputs (written to data/annotations/):
-  frigate_negatives.json   — COCO format, file_name = absolute FITS path,
-                             zero annotations.
+Outputs:
+  frigate_unreviewed_background_candidates.json — COCO format,
+      file_name = absolute FITS path, zero annotations, not true negatives.
 
 Usage:
   # Full corpus (all 1,980 frames with matched processed PNGs):
@@ -86,7 +86,7 @@ def build_negatives_coco(
         raise FileNotFoundError(f"No FITS files found in {raw_dir}")
     fits_w, fits_h = _fits_dimensions(fits_files[0])
     logger.info(
-        "FITS dimensions: %d × %d — registering %d frames as negatives",
+        "FITS dimensions: %d × %d — registering %d frames as candidates",
         fits_w, fits_h, len(fits_files),
     )
 
@@ -103,8 +103,8 @@ def build_negatives_coco(
     return {
         "info": {
             "description": (
-                "Frigate negative-example corpus — no streak annotations. "
-                "All frames are background-only training examples. "
+                "Frigate unreviewed background candidates — no streak annotations. "
+                "Frames must be reviewed before use as true negatives. "
                 "Auto-detection (threshold/contour, z-score norm, frame-diff) "
                 "found no reliable streak signal in this observation sequence."
             ),
@@ -122,13 +122,13 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--raw-dir",
         type=Path,
-        default=Path("/Volumes/External/frigate/raw"),
+        default=Path("/Volumes/External/TrainingData/raw/frigate/raw"),
         help="Directory containing Frigate raw FITS files.",
     )
     parser.add_argument(
         "--processed-dir",
         type=Path,
-        default=Path("/Volumes/External/frigate/processed"),
+        default=Path("/Volumes/External/TrainingData/raw/frigate/processed"),
         help="Directory containing Frigate processed PNGs (used to filter "
              "the first/last frames that lack processed counterparts). "
              "Pass --raw-only to skip this filter.",
@@ -142,8 +142,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("data/annotations/frigate_negatives.json"),
-        help="Output COCO JSON path.",
+        default=Path(
+            "/Volumes/External/TrainingData/annotations/archive/"
+            "frigate_unreviewed_background_candidates.json"
+        ),
+        help="Output COCO JSON path. This is not a true-negative label set.",
     )
     parser.add_argument(
         "--max-frames",
@@ -180,7 +183,7 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(coco, indent=2))
     logger.info(
-        "Wrote %d negative images, 0 annotations → %s",
+        "Wrote %d candidate images, 0 annotations → %s",
         len(coco["images"]), args.output,
     )
 
