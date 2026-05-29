@@ -6,6 +6,7 @@ import json
 import logging
 import math
 import random
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,6 +18,13 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 logger = logging.getLogger(__name__)
+
+# Virtual tile path format shared with training/transforms.py and
+# scripts/build_tiled_frigate_json.py:
+#   <real_stem>__tx<x0>_ty<y0>_ts<size>.<ext>
+# The loader detects this pattern, loads the *parent* file, and crops the
+# requested tile before any further processing.
+_TILE_RE = re.compile(r"^(.+?)__tx(\d+)_ty(\d+)_ts(\d+)$")
 
 
 @dataclass(frozen=True)
@@ -134,19 +142,53 @@ class DINOv3OrientationCenterlineDataset(Dataset):
         }
 
     def _load_resized_crop(self, path: Path, sample: CenterlineSample) -> torch.Tensor:
-        """Load only the needed crop where possible, then resize to model input."""
+        """Load only the needed crop where possible, then resize to model input.
+
+        Handles *virtual tile paths* of the form::
+
+            <real_stem>__tx<x0>_ty<y0>_ts<size>.<ext>
+
+        These paths are not real files on disk.  The tile suffix encodes the
+        (x0, y0, tile_size) crop into the filename so that a single parent
+        image can be shared across many tiles without pre-slicing it.  When
+        detected, the loader opens the *parent* file and offsets the crop box
+        by (x0, y0) before extracting the region needed for this sample.
+        """
+        # ── virtual tile detection ─────────────────────────────────────────
+        tile_offset: tuple[int, int] | None = None
+        m = _TILE_RE.match(path.stem)
+        if m:
+            real_stem = m.group(1)
+            x0, y0, ts = int(m.group(2)), int(m.group(3)), int(m.group(4))
+            path = path.parent / (real_stem + path.suffix)
+            tile_offset = (x0, y0)
+
         suffix = path.suffix.lower()
+
+        # ── FITS branch ────────────────────────────────────────────────────
         if suffix in {".fits", ".fit", ".fts"}:
             array = self._load_image(path)
+            if tile_offset is not None:
+                ox, oy = tile_offset
+                h, w = array.shape[:2]
+                pad_h = max(0, oy + ts - h)
+                pad_w = max(0, ox + ts - w)
+                if pad_h > 0 or pad_w > 0:
+                    array = np.pad(array, ((0, pad_h), (0, pad_w), (0, 0)), mode="edge")
+                array = array[oy:oy + ts, ox:ox + ts].copy()
             crop = self._crop_with_padding(array, sample)
             return self._resize_to_tensor(crop)
+
+        # ── raster branch (PNG / TIFF / …) ────────────────────────────────
         try:
             with Image.open(path) as im:
+                # Offset the sample's crop into the parent image coordinate space.
+                ox, oy = tile_offset if tile_offset is not None else (0, 0)
                 box = (
-                    int(sample.crop_x),
-                    int(sample.crop_y),
-                    int(sample.crop_x + sample.crop_w),
-                    int(sample.crop_y + sample.crop_h),
+                    ox + int(sample.crop_x),
+                    oy + int(sample.crop_y),
+                    ox + int(sample.crop_x + sample.crop_w),
+                    oy + int(sample.crop_y + sample.crop_h),
                 )
                 if self.preserve_image_bit_depth and im.mode in {"I;16", "I;16B", "I", "F"}:
                     arr = np.asarray(im.crop(box), dtype=np.float32)
