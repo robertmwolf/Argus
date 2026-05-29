@@ -290,7 +290,7 @@ def run_benchmark(
 # Display order (unified always first, then ML methods, then classical).
 _METHOD_ORDER = [
     "unified", "dinov3_heatmap_centerline", "dinov3_vitb", "dinov3_vitl", "tiny", "large",
-    "streakmind_yolo", "yolo_full", "yolo", "astride", "opencv", "classical", "ml",
+    "streakmind_yolo", "astride", "opencv", "classical", "ml",
 ]
 
 _METHOD_LABELS = {

@@ -9,35 +9,23 @@
  */
 
 const METHOD_LABELS = {
-  unified:                 'Unified Confidence',
-  astride:                 'ASTRiDE',
-  opencv:                  'OpenCV',
-  dinov3_vitb:             'DINOv3 ViT-Base - SatStreaks+GTImages',
-  dinov3_vitl:             'DINOv3 ViT-Large - SatStreaks+GTImages',
+  unified:                   'Unified Confidence',
+  astride:                   'ASTRiDE',
+  opencv:                    'OpenCV Morphological',
+  dinov3_vitb:               'DINOv3 ViT-Base',
   dinov3_heatmap_centerline: 'DINOv3 Heatmap Centerline',
-  streakmind_yolo:         'YOLO-OBB - GTImages',
-  yolo:                    'YOLO-OBB - SatStreaks (dev)',
-  yolo_full:               'YOLO-OBB - SatStreaks',
-  tiny:                    'DINO Swin-Tiny - SatStreaks',
-  large:                   'DINO Swin-Large - SatStreaks',
-  classical:               'Classical',
-  ml:                      'ML',
+  streakmind_yolo:           'YOLO-OBB - GTImages',
+  ml:                        'ML',
 }
 
 const METHOD_ACCENT = {
-  unified:                 'accent-emerald-400',
-  astride:                 'accent-amber-400',
-  opencv:                  'accent-orange-400',
-  dinov3_vitb:             'accent-cyan-400',
-  dinov3_vitl:             'accent-cyan-400',
+  unified:                   'accent-emerald-400',
+  astride:                   'accent-amber-400',
+  opencv:                    'accent-orange-400',
+  dinov3_vitb:               'accent-cyan-400',
   dinov3_heatmap_centerline: 'accent-lime-400',
-  streakmind_yolo:         'accent-fuchsia-400',
-  yolo:                    'accent-violet-400',
-  yolo_full:               'accent-purple-400',
-  tiny:                    'accent-cyan-400',
-  large:                   'accent-cyan-400',
-  classical:               'accent-amber-400',
-  ml:                      'accent-cyan-400',
+  streakmind_yolo:           'accent-fuchsia-400',
+  ml:                        'accent-cyan-400',
 }
 
 export default function FilterPanel({
