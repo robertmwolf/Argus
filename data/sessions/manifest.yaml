@@ -129,7 +129,9 @@ sources:
     notes: >
       Night 1.  Fully annotated with .strk pixel coords + ASTAP plate solutions.
       Use gtimages.json directly (not train.json, which is a mixed SatStreaks+Atwood
-      file from the old merge workflow).  Paths in gtimages.json are absolute.
+      file from the old merge workflow).  Paths in gtimages.json and
+      gtimages_negatives.json are absolute (/Volumes/External/…) — no runtime
+      raw_dir resolution needed.
       This is the canonical source for Atwood Night 1 training data.
 
   - session_id: atwood_20260515
@@ -150,8 +152,8 @@ sources:
     filter: "Lum"
     norad_ids: 39
     notes: >
-      Night 2.  Annotated without ASTAP plate solutions.  Bare filenames in
-      annotation_file are resolved to absolute paths using raw_dir at build time.
+      Night 2.  Annotated without ASTAP plate solutions.  Paths in
+      brentimages_20260515.json are absolute (/Volumes/External/…).
       Long + medium streaks; mean length 725px. Old negative candidates were
       archived under annotations/archive/legacy_cleanup_20260528 pending review.
 
@@ -172,8 +174,8 @@ sources:
     filter: "Lum"
     norad_ids: 0
     notes: >
-      Geostationary streak session.  Small set; bare filenames resolved
-      at build time via raw_dir.
+      Geostationary streak session.  Small set; paths in geo_20260520.json
+      are absolute (/Volumes/External/…).
 
   # =========================================================================
   # Frigate — ExoAnalytic Solutions QHY600M (public dataset)

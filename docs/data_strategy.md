@@ -408,19 +408,39 @@ recover it.
 - [x] Run 3 complete — mAP=0.782, P=94.9%, R=83.8%, best checkpoint epoch 13
 
 ### To be built (in priority order)
-- [ ] **`scripts/extract_streak_features.py`** — per-annotation feature table
-      (length, aspect_ratio, angle, SNR from FITS).  SNR computation requires
-      external drive access.
-- [ ] **`scripts/build_stratified_splits.py`** — geometry-balanced
+- [x] **`scripts/extract_streak_features.py`** — per-annotation feature table
+      (length, aspect_ratio, angle, SNR from FITS).  SNR computed consistently
+      from raw FITS pixels across all sessions; falls back to annotation
+      attributes when FITS unavailable.  Output: `data/features/atwood_streak_features.csv`.
+- [x] **`scripts/build_stratified_splits.py`** — geometry-balanced
       `atwood_train.json`, `val_atwood.json`, `test_atwood.json` from feature table.
-- [ ] **`scripts/sample_frigate_tiles.py`** — diversity-maximising subset of
-      ~150–200 Frigate tiles for short-band training coverage.
-- [ ] **`snr_scale` in `SyntheticStreakInject`** — faint streak augmentation to
-      target the 49 FN long-streak gap from Run 3.
-- [ ] **Scale jitter and PSF blur augmentation** in `training/augmentations.py`
-      for cross-scope generalisation (see §6.3).
+      Stratifies by band × snr_class; cells with < 3 images all go to training;
+      negatives split randomly at same ratio.
+- [x] **`scripts/sample_frigate_tiles.py`** — diversity-maximising subset of
+      ~150–200 Frigate tiles using Furthest-Point Sampling in
+      length × aspect × angle × tile-position feature space.
+      Output: `data/annotations/frigate_diversity_<N>.json`.
+- [x] **`snr_scale` in `SyntheticStreakInject`** — faint streak augmentation to
+      target the 49 FN long-streak gap from Run 3.  Use `snr_scale=0.1–0.3`
+      for near-threshold faint streak injection.
+- [x] **Scale jitter and PSF blur augmentation** in `training/augmentations.py`
+      `get_train_transforms()`: `RandomScale(±25%)` and
+      `GaussianBlur(σ 0.5–2.0 px)` added for cross-scope generalisation.
 - [ ] **Run 4** — first training run on geometry-stratified Atwood+Frigate data,
       no SatStreaks.  Evaluate against `test_atwood.json` once built.
+
+### Run 4 prerequisites (all now complete)
+1. Run `extract_streak_features.py` → `data/features/atwood_streak_features.csv`
+2. Run `build_stratified_splits.py` → `atwood_train.json`, `val_atwood.json`, `test_atwood.json`
+3. Run `sample_frigate_tiles.py` → `frigate_diversity_250.json`
+4. Build final training JSON:
+   ```bash
+   python scripts/build_training_json.py \
+       --include atwood_20260412 atwood_20260515 atwood_geo_20260520 \
+       --output data/annotations/all_train_run4.json
+   # Then manually merge with frigate_diversity_250.json if needed,
+   # or add frigate_diversity_250 as a manifest entry (split: train).
+   ```
 
 ---
 

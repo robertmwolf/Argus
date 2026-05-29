@@ -101,9 +101,21 @@ def get_train_transforms() -> A.Compose:
       2. VerticalFlip(p=0.5)
       3. RandomRotate90(p=0.5)
       4. ShiftScaleRotate(shift_limit=0.1, scale_limit=0.2, rotate_limit=180, p=0.8)
-      5. RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3, p=0.7)
-      6. GaussNoise(var_limit=(10, 50), p=0.5)
-      7. Blur(blur_limit=3, p=0.3)
+      5. RandomScale(scale_limit=(-0.25, 0.25), p=0.5)          [cross-scope pixel scale jitter]
+      6. RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3, p=0.7)
+      7. GaussNoise(std_range=(0.02, 0.1), p=0.5)
+      8. GaussianBlur(sigma_limit=(0.5, 2.0), p=0.5)             [PSF / seeing / focus variation]
+      9. Blur(blur_limit=3, p=0.3)
+
+    Cross-scope generalisation additions (items 5 and 8):
+
+    RandomScale ±25% simulates pixel scales from 0.95 to 1.6 arcsec/px around
+    Atwood's 1.27 arcsec/px baseline, making the model robust to instruments
+    with slightly different optics.  (Does not change the tile size — the tile
+    is resized and then re-cropped to the original dimensions by albumentations.)
+
+    GaussianBlur σ 0.5–2.0 px simulates variation in atmospheric seeing (0.5–3"),
+    PSF quality, and focus accuracy across different scopes and nights.
 
     Returns:
         An albumentations Compose pipeline with pascal_voc bbox_params.
@@ -119,12 +131,16 @@ def get_train_transforms() -> A.Compose:
                 rotate_limit=180,
                 p=0.8,
             ),
+            # Cross-scope pixel scale jitter: simulates 0.95–1.6 arcsec/px instruments
+            A.RandomScale(scale_limit=(-0.25, 0.25), p=0.5),
             A.RandomBrightnessContrast(
                 brightness_limit=0.3,
                 contrast_limit=0.3,
                 p=0.7,
             ),
             A.GaussNoise(std_range=(0.02, 0.1), p=0.5),
+            # PSF / seeing / focus blur: simulates different scopes and observing conditions
+            A.GaussianBlur(blur_limit=0, sigma_limit=(0.5, 2.0), p=0.5),
             A.Blur(blur_limit=3, p=0.3),
         ],
         bbox_params=A.BboxParams(format="pascal_voc", label_fields=["labels"]),
@@ -157,7 +173,7 @@ class SyntheticStreakInject(DualTransform):
     Per streak:
       - angle: uniform [0, 180)°
       - length: uniform [50px, image_diagonal]
-      - brightness: mean(image) + uniform(1, 5) * std(image)
+      - brightness: snr_scale × (mean(image) + uniform(1, 5) × std(image))
       - cross-section: Gaussian profile sigma=1.5px via cv2.GaussianBlur
       - start pos: random, ensuring full streak stays in-frame
 
@@ -168,6 +184,14 @@ class SyntheticStreakInject(DualTransform):
 
     Args:
         p: Probability of applying the transform.
+        min_length_px: Minimum streak length in pixels.
+        max_length_fraction: Maximum streak length as a fraction of image diagonal.
+        snr_scale: Brightness multiplier applied to injected streaks (0.0–1.0).
+            1.0 = full brightness (default, existing behaviour).
+            0.1–0.3 = near-threshold faint streaks that target the long-band
+            false-negative gap identified in Run 3 (49 missed long streaks).
+            Values below ~0.05 produce streaks that are invisible against noise
+            and should be avoided.
     """
 
     def __init__(
@@ -175,10 +199,17 @@ class SyntheticStreakInject(DualTransform):
         p: float = 0.5,
         min_length_px: float = 50.0,
         max_length_fraction: float = 1.0,
+        snr_scale: float = 1.0,
     ) -> None:
         super().__init__(p=p)
         self.min_length_px = min_length_px
         self.max_length_fraction = max_length_fraction
+        if not (0.0 < snr_scale <= 1.0):
+            raise ValueError(
+                f"snr_scale must be in (0, 1]; got {snr_scale}.  "
+                "Use values in 0.1–0.3 for faint-streak injection."
+            )
+        self.snr_scale = float(snr_scale)
 
     # ------------------------------------------------------------------
     # Public interface: direct injection (handles image + bboxes together)
@@ -305,7 +336,9 @@ class SyntheticStreakInject(DualTransform):
 
                 level = int(brightness_level if brightness_level is not None else rng.integers(1, 6))
                 level = max(1, min(5, level))
-                brightness = float(np.clip((0.65 + 0.55 * level) * img_std, 8.0, 255.0))
+                brightness = float(
+                    np.clip(self.snr_scale * (0.65 + 0.55 * level) * img_std, 8.0, 255.0)
+                )
                 geometries.append(
                     SyntheticStreakGeometry(
                         x0=float(x0),
@@ -361,7 +394,7 @@ class SyntheticStreakInject(DualTransform):
 
     def get_transform_init_args_names(self) -> tuple[str, ...]:
         """Return names of init args for serialisation."""
-        return ("p", "min_length_px", "max_length_fraction")
+        return ("p", "min_length_px", "max_length_fraction", "snr_scale")
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -397,7 +430,12 @@ class SyntheticStreakInject(DualTransform):
         for _ in range(n_streaks):
             angle_rad = np.deg2rad(float(rng.uniform(0, 180)))
             length = float(rng.uniform(min_length, max(min_length + 1.0, max_length)))
-            brightness = float(np.clip(img_mean + float(rng.uniform(1, 5)) * img_std, 0, 255))
+            brightness = float(
+                np.clip(
+                    self.snr_scale * (img_mean + float(rng.uniform(1, 5)) * img_std),
+                    0, 255,
+                )
+            )
             dx = np.cos(angle_rad) * length / 2.0
             dy = np.sin(angle_rad) * length / 2.0
             margin_x, margin_y = abs(dx) + 1, abs(dy) + 1
