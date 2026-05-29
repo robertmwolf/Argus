@@ -52,7 +52,6 @@ dependencies:
       - cryptography==47.0.0
       - cycler==0.12.1
       - dinov3==0.0.1
-      - diskcache==5.6.3
       - dnspython==2.8.0
       - email-validator==2.3.0
       - fastapi==0.111.0

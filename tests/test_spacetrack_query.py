@@ -3,6 +3,8 @@
 All tests run offline using mocks.  No live Space-Track API calls are made.
 """
 
+import json
+import time
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
@@ -12,6 +14,7 @@ from src.matching.spacetrack_query import (
     _GP_CURRENT_CACHE_KEY,
     _GP_CURRENT_TTL_S,
     _cache_key,
+    _cache_path,
     _cache_ttl,
     _gp_current_cache_key,
     _space_track_base_url,
@@ -160,8 +163,6 @@ class TestQueryGpHistory:
 
     def test_historical_result_cached_permanently(self, monkeypatch, tmp_path):
         """Results for historical obs_time must be stored with no expiry."""
-        import diskcache as dc
-
         monkeypatch.setenv("SPACETRACK_USER", "u@example.com")
         monkeypatch.setenv("SPACETRACK_PASS", "secret")
         cache_dir = tmp_path / "cache"
@@ -174,11 +175,10 @@ class TestQueryGpHistory:
         with patch("src.matching.spacetrack_query.SpaceTrackClient", return_value=mock_client):
             query_gp_history(_OBS_TIME, epoch_window_days=1)
 
-        cache = dc.Cache(str(cache_dir))
         key = _cache_key(_OBS_TIME, 1, 11.25)
-        # diskcache returns (value, expire_time); expire_time is None when permanent
-        _, expire = cache.get(key, expire_time=True)
-        assert expire is None, "Historical TLE cache entry must never expire"
+        with _cache_path(key).open("r", encoding="utf-8") as handle:
+            entry = json.load(handle)
+        assert entry["expire_at"] is None, "Historical TLE cache entry must never expire"
 
 
 class TestQueryGpCurrent:
@@ -214,8 +214,6 @@ class TestQueryGpCurrent:
 
     def test_gp_current_result_cached_with_correct_ttl(self, monkeypatch, tmp_path):
         """GP-current result must be cached with the 55-minute TTL."""
-        import diskcache as dc
-
         monkeypatch.setenv("SPACETRACK_USER", "u@example.com")
         monkeypatch.setenv("SPACETRACK_PASS", "secret")
         cache_dir = tmp_path / "cache"
@@ -228,10 +226,10 @@ class TestQueryGpCurrent:
         with patch("src.matching.spacetrack_query.SpaceTrackClient", return_value=mock_client):
             query_gp_current()
 
-        cache = dc.Cache(str(cache_dir))
-        _, expire = cache.get(_gp_current_cache_key(), expire_time=True)
+        with _cache_path(_gp_current_cache_key()).open("r", encoding="utf-8") as handle:
+            entry = json.load(handle)
+        expire = entry["expire_at"]
         assert expire is not None, "GP-current cache entry must have a finite TTL"
         # Expiry should be within a minute of now + 55 min
-        import time
         expected = time.time() + _GP_CURRENT_TTL_S
         assert abs(expire - expected) < 60, f"Unexpected TTL expire time: {expire}"

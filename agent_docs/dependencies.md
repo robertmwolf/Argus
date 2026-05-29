@@ -388,20 +388,10 @@ results = st.gp_history(
 **Rate limit:** Max 30 requests/minute. The client handles this automatically
 if you use `iter_lines=True` for large queries.
 
-### diskcache
-Use for caching Space-Track results. Much simpler than Redis/Memcached.
-
-```python
-import diskcache as dc
-
-cache = dc.Cache('data/cache')
-
-# Store with TTL:
-cache.set(cache_key, data, expire=48*3600)  # 48 hour TTL
-
-# Retrieve:
-data = cache.get(cache_key)  # Returns None if expired or missing
-```
+### Space-Track cache
+Space-Track query results are cached as local JSON files under `data/cache`.
+The cache is implemented in `src/matching/spacetrack_query.py` to avoid unsafe
+pickle deserialization in third-party cache backends.
 
 ---
 
@@ -520,7 +510,6 @@ check("skyfield",   lambda: __import__('skyfield'))
 check("spacetrack", lambda: __import__('spacetrack'))
 check("sep",        lambda: __import__('sep'))
 check("opencv",     lambda: __import__('cv2'))
-check("diskcache",  lambda: __import__('diskcache'))
 check("spacetrack_env", lambda: (
     __import__('os').environ['SPACETRACK_USER'],
     __import__('os').environ['SPACETRACK_PASS']

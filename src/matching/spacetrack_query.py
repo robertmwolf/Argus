@@ -1,4 +1,4 @@
-"""Space-Track API queries with disk caching.
+"""Space-Track API queries with JSON disk caching.
 
 API policy compliance (per Space-Track operator notice):
 
@@ -22,14 +22,16 @@ Rate limits: 30 req/min, 300 req/hr.  Always sleep ≥3 s between requests.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+import re
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
-import diskcache as dc
 import spacetrack.operators as op
 from spacetrack import SpaceTrackClient
 
@@ -50,6 +52,7 @@ _GP_CURRENT_CACHE_KEY = "gp_current_active_v1"
 # Cache TTL for GP-current results (55 min — slightly under the 1-hour floor so
 # that the next call always finds a slightly-stale entry and can re-fetch).
 _GP_CURRENT_TTL_S = 55 * 60
+_CACHE_VERSION = 1
 
 
 def _is_development_env() -> bool:
@@ -176,6 +179,56 @@ def _cache_key(obs_time: datetime, epoch_window_days: int, min_mean_motion: floa
     )
 
 
+def _cache_path(cache_key: str) -> Path:
+    """Return the JSON cache path for a cache key."""
+    safe_key = re.sub(r"[^A-Za-z0-9_.-]+", "_", cache_key).strip("._")
+    return _CACHE_DIR / f"{safe_key}.json"
+
+
+def _read_cache(cache_key: str) -> Any | None:
+    """Read a JSON cache entry, returning None when absent, expired, or invalid."""
+    path = _cache_path(cache_key)
+    if not path.exists():
+        return None
+
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            entry = json.load(handle)
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Ignoring unreadable Space-Track cache entry %s: %s", path, exc)
+        return None
+
+    if entry.get("version") != _CACHE_VERSION:
+        return None
+
+    expire_at = entry.get("expire_at")
+    if expire_at is not None and expire_at <= time.time():
+        try:
+            path.unlink()
+        except OSError as exc:
+            logger.debug("Could not remove expired Space-Track cache entry %s: %s", path, exc)
+        return None
+
+    return entry.get("value")
+
+
+def _write_cache(cache_key: str, value: list[dict], expire: int | None) -> None:
+    """Write a JSON cache entry atomically.
+
+    The cache stores only Space-Track JSON responses.  Keeping the cache in JSON
+    avoids pickle-based deserialization while preserving persistent TTL support.
+    """
+    _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    path = _cache_path(cache_key)
+    tmp_path = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    expire_at = None if expire is None else time.time() + expire
+    entry = {"version": _CACHE_VERSION, "expire_at": expire_at, "value": value}
+
+    with tmp_path.open("w", encoding="utf-8") as handle:
+        json.dump(entry, handle, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp_path, path)
+
+
 def _rate_limit() -> None:
     """Sleep if needed to stay under 1 request per _RATE_LIMIT_SECONDS."""
     global _last_request_time
@@ -210,11 +263,8 @@ def query_gp_current() -> list[dict]:
     Raises:
         ValueError: If SPACETRACK_USER or SPACETRACK_PASS are not set.
     """
-    _CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    cache = dc.Cache(str(_CACHE_DIR))
-
     cache_key = _gp_current_cache_key()
-    cached = cache.get(cache_key)
+    cached = _read_cache(cache_key)
     if cached is not None:
         logger.debug("GP current cache hit (%d TLEs)", len(cached))
         return cached
@@ -237,7 +287,7 @@ def query_gp_current() -> list[dict]:
     )
 
     logger.info("GP current: %d active TLEs returned", len(results))
-    cache.set(cache_key, results, expire=_GP_CURRENT_TTL_S)
+    _write_cache(cache_key, results, expire=_GP_CURRENT_TTL_S)
     return results
 
 
@@ -295,10 +345,7 @@ def query_gp_history(
     key = _cache_key(obs_time, epoch_window_days, min_mean_motion)
     ttl = _cache_ttl(obs_time)  # None = permanent for historical data
 
-    _CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    cache = dc.Cache(str(_CACHE_DIR))
-
-    cached = cache.get(key)
+    cached = _read_cache(key)
     if cached is not None:
         logger.debug("GP_History cache hit for key %s (%d TLEs)", key, len(cached))
         return cached
@@ -328,7 +375,7 @@ def query_gp_history(
     results = list(client.gp_history(**query_kwargs))
 
     logger.info("GP_History returned %d TLEs; caching permanently", len(results))
-    cache.set(key, results, expire=ttl)  # ttl=None → permanent
+    _write_cache(key, results, expire=ttl)  # ttl=None → permanent
     return results
 
 
