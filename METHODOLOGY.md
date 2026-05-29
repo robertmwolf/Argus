@@ -96,10 +96,10 @@ convention `Img_YYYYMMDD_Atwood/`; additional nights are expected as the series
 continues.
 
 **Current nights:**
-- **Night 1 (Apr 12 2026):** ~277 images; included in training via `all_train.json`. FITS files on external drive at
+- **Night 1 (Apr 12 2026):** ~277 images; included in training via `all_train_nodm.json`. FITS files on external drive at
   `/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/`.
 - **Night 2 (May 15 2026):** 204 annotated + 27 negative images; 204 streak annotations;
-  median streak 687 px native (p10 = 373, p90 = 1003). Added to training in `all_train.json`.
+  median streak 687 px native (p10 = 373, p90 = 1003). Added to training in `all_train_nodm.json`.
   FITS files on external drive at `/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/`.
 
 **Composition (combined):** ~481 labelled images across two nights; ~68 unique NORAD
@@ -116,7 +116,7 @@ classical detectors.
 
 ### 2.3 Training Data
 
-The current training corpus (`all_train.json`) consists of: the SatStreaks train
+The current training corpus (`all_train_nodm.json`) consists of: the SatStreaks train
 split (~2,460 JPEG/PNG images), BrentImages Night 1 (~277 images), BrentImages Night 2
 (204 annotated + 27 negative images), and tiled Frigate crops (558 positive tiles +
 159 negative tiles). Total: **3,971 images, 3,816 streak annotations**.
@@ -256,7 +256,7 @@ Direct comparison of P/R numbers is not valid (see §2.4).
 ### 3.4 DINOv3 ViT-B/16 + DINO-DETR (Primary ML Detector)
 
 **Config:** `models/dino/streak_dinov3_vitb_400px.py`
-**Checkpoint:** `weights/run_clean_vitb/best_coco_bbox_mAP_epoch_15.pth` (pending clean retrain)
+**Checkpoint:** `weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth` (pending clean retrain)
 **API model ID:** `dinov3_vitb_multisource` ("DINOv3 Base - Multi-source")
 **When active:** Always (primary detector)
 
@@ -335,9 +335,9 @@ DINO-DETR extends DETR with three key innovations:
 
 | Run | Config | Data | Epochs | Hardware | mAP@0.5 | Status |
 |-----|--------|------|--------|----------|---------|--------|
-| Run 3 (May 26–28) | `streak_dinov3_vitb_400px_run3.py` (400px) | `all_train.json` | 15 | Mac M3 CPU | 0.878 | ✅ Complete |
+| Run 3 (May 26–28) | `streak_dinov3_vitb_400px_run3.py` (400px) | `all_train_nodm.json` | 15 | Mac M3 CPU | 0.878 | ✅ Complete |
 | Run 4 (planned) | `streak_dinov3_vitb_400px_run3.py` (400px) | Geometry-stratified Atwood + Frigate | 15 | TBD | TBD | ⏳ Pending |
-| Phase D (pending) | ViT-L config | `all_train.json` | 50 | RTX 5070 Ti | TBD | ⏳ After clean retrain |
+| Phase D (pending) | ViT-L config | `all_train_nodm.json` | 50 | RTX 5070 Ti | TBD | ⏳ After clean retrain |
 
 Archived pilot runs and their associated artifacts have been removed from this repository.
 
@@ -1024,7 +1024,7 @@ The following steps reproduce the headline benchmark results recorded in
    ```
 
 4. Obtain the DINOv3 ViT-B checkpoint:
-   `weights/run_clean_vitb/best_coco_bbox_mAP_epoch_15.pth` (~330 MB).
+   `weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth` (~330 MB).
    This checkpoint is not distributed with the repository; it must be trained
    locally (see `docs/training_methods.md`) or obtained from the ARGUS authors.
 
@@ -1038,7 +1038,7 @@ The following steps reproduce the headline benchmark results recorded in
 
 6. Run the benchmark evaluation:
    ```bash
-   MODEL_WEIGHTS=weights/run_clean_vitb/best_coco_bbox_mAP_epoch_15.pth \
+   MODEL_WEIGHTS=weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth \
    MODEL_SIZE=dinov3_vitb_multisource USE_DEV_SUBSET=false \
    python -m eval.benchmark \
        --run-pipeline \

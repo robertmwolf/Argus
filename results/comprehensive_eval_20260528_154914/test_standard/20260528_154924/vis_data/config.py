@@ -28,7 +28,7 @@ env_cfg = dict(
     cudnn_benchmark=False,
     dist_cfg=dict(backend='gloo'),
     mp_cfg=dict(mp_start_method='spawn', opencv_num_threads=0))
-load_from = 'weights/run3_cold/best.pth'
+load_from = 'weights/run3_cold_nodm/best.pth'
 log_level = 'INFO'
 log_processor = dict(by_epoch=True, type='LogProcessor', window_size=10)
 max_epochs = 15

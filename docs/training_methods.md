@@ -103,11 +103,11 @@ The `magnification = model_input_size / native_tile_size` factor is applied by
 
 | Split | Images | Annotations | Notes |
 |-------|--------|-------------|-------|
-| `all_train_v3_external_abs.json` **v3 (2026-05-28)** | **1,134** | **1,044** | External-absolute Atwood + Frigate diversity; SatStreaks excluded |
-| `all_train_external_abs.json` v2 | 8,422 | 8,213 | Legacy Run 3 candidate; includes SatStreaks and should not be used for new policy-compliant training |
-| `all_train.json` v1 (active legacy filename) | 3,971 | 3,816 | Legacy compatibility; active jobs may still reference it |
+| `all_train_nodm_v3_external_abs.json` **v3 (2026-05-28)** | **1,134** | **1,044** | External-absolute Atwood + Frigate diversity; SatStreaks excluded |
+| `all_train_nodm_external_abs.json` v2 | 8,422 | 8,213 | Legacy Run 3 candidate; includes SatStreaks and should not be used for new policy-compliant training |
+| `all_train_nodm.json` v1 (active legacy filename) | 3,971 | 3,816 | Legacy compatibility; active jobs may still reference it |
 
-**v3 composition (`all_train_v3_external_abs.json`):**
+**v3 composition (`all_train_nodm_v3_external_abs.json`):**
 
 | Component | Tiles | Annotations | `native_tile_size` | Streak at model input |
 |-----------|-------|-------------|-------------------|----------------------|
@@ -131,7 +131,7 @@ so every `file_name` points at `/Volumes/External/TrainingData/raw/...`:
 
 ```bash
 USE_DEV_SUBSET=false \
-TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_v3_external_abs.json \
+TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_nodm_v3_external_abs.json \
 VAL_ANN_FILE=/Volumes/External/TrainingData/annotations/val_external_abs.json \
 python -m training.train_dino --config models/dino/streak_dinov3_vitb_400px_run3.py
 ```
@@ -148,12 +148,12 @@ training run.
 
 **✅ Run 3 — Clean cold-start paper model (complete 2026-05-28):**
 - Config: `models/dino/streak_dinov3_vitb_400px_run3.py` (400px + `randomness=dict(seed=42)`)
-- Data: `all_train.json` v2 — 8,422 images (SatStreaks + BrentImages N1+N2 tiled
+- Data: `all_train_nodm.json` v2 — 8,422 images (SatStreaks + BrentImages N1+N2 tiled
   at 400px + Frigate tiled at 110px/3.64×). See §2.4 for full breakdown.
 - Warm start: **None** (`load_from = None`) — detection head initialised from scratch
 - Hardware: Mac M3 CPU (`PYTORCH_ENABLE_MPS_FALLBACK=1`); multi-night session approach
 - Schedule: 15 epochs
-- Checkpoint destination: `weights/run3_cold/`
+- Checkpoint destination: `weights/run3_cold_nodm/`
 
 **Night 1 command (time-boxed, 3 epochs ~10–11h):**
 
@@ -161,13 +161,13 @@ training run.
 cd /path/to/Argus && conda activate satid
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
 USE_DEV_SUBSET=false \
-TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_external_abs.json \
+TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_nodm_external_abs.json \
 VAL_ANN_FILE=/Volumes/External/TrainingData/annotations/val_external_abs.json \
 ARGUS_NORM=autostretch \
 caffeinate -i \
 python -m training.train_dino \
     --config models/dino/streak_dinov3_vitb_400px_run3.py \
-    --work-dir weights/run3_cold \
+    --work-dir weights/run3_cold_nodm \
     --max-epochs 3 \
     --val-interval 1 \
     --checkpoint-interval 1
@@ -178,13 +178,13 @@ python -m training.train_dino \
 ```bash
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
 USE_DEV_SUBSET=false \
-TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_external_abs.json \
+TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_nodm_external_abs.json \
 VAL_ANN_FILE=/Volumes/External/TrainingData/annotations/val_external_abs.json \
 ARGUS_NORM=autostretch \
 caffeinate -i \
 python -m training.train_dino \
     --config models/dino/streak_dinov3_vitb_400px_run3.py \
-    --work-dir weights/run3_cold \
+    --work-dir weights/run3_cold_nodm \
     --resume \
     --val-interval 1 \
     --checkpoint-interval 1
@@ -195,7 +195,7 @@ python -m training.train_dino \
 ```bash
 USE_DEV_SUBSET=false ARGUS_NORM=autostretch python - <<'PY'
 import json, os, re, pathlib
-ann = pathlib.Path("/Volumes/External/TrainingData/annotations/all_train_external_abs.json")
+ann = pathlib.Path("/Volumes/External/TrainingData/annotations/all_train_nodm_external_abs.json")
 d   = json.loads(ann.read_text())
 missing = 0
 for img in d["images"]:
@@ -267,8 +267,8 @@ AR @[IoU=0.50:0.95 | area=medium             ] = 0.333
 AR @[IoU=0.50:0.95 | area=large              ] = 0.819
 ```
 
-**Best checkpoint:** `weights/run3_cold/best_coco_bbox_mAP_epoch_13.pth`
-Stable weights path: `weights/run3_cold/best.pth` (symlink)
+**Best checkpoint:** `weights/run3_cold_nodm/best_coco_bbox_mAP_epoch_13.pth`
+Stable weights path: `weights/run3_cold_nodm/best.pth` (symlink)
 
 **Observations:**
 - Cold-start convergence was fast: by epoch 3 (mAP=0.418, mAP@50=0.550) the model
@@ -320,8 +320,8 @@ drives the overall recall number.
 
 | Model | mAP@50 | Precision | Recall | F1 |
 |-------|--------|-----------|--------|----|
-| multisource (run_clean_vitb, ep15) | 0.550 | 71.2% | 72.4% | 71.8% |
-| **Run 3 (run3_cold, ep13)** | **0.878** | **94.9%** | **83.8%** | **89.0%** |
+| multisource (run_clean_vitb_nodm, ep15) | 0.550 | 71.2% | 72.4% | 71.8% |
+| **Run 3 (run3_cold_nodm, ep13)** | **0.878** | **94.9%** | **83.8%** | **89.0%** |
 | Δ | +0.328 | +23.7pp | +11.4pp | +17.2pp |
 
 Run 3 substantially outperforms the multisource model on every metric. The gain
@@ -419,13 +419,13 @@ evaluation output.
 ```python
 # Decisions made after Run 1 A/B + Run 2 results + Run 3 decision (2026-05-26):
 _img_scale     = (400, 400)                        # 400px: +0.066 mAP@50 vs 256px
-TRAIN_ANN_FILE = '/Volumes/External/TrainingData/annotations/all_train_external_abs.json'
+TRAIN_ANN_FILE = '/Volumes/External/TrainingData/annotations/all_train_nodm_external_abs.json'
 max_epochs     = 15                                # cosine schedule converges well by ep15
 randomness     = dict(seed=42, deterministic=True) # [TODO: add to final config]
 load_from      = None   # ✅ DECIDED: cold start (Option A) — no retired checkpoint
 ```
 
-Note: `all_train.json` v2 (2026-05-26) now includes tiled BrentImages Night 1 and Night 2
+Note: `all_train_nodm.json` v2 (2026-05-26) now includes tiled BrentImages Night 1 and Night 2
 crops at `native_tile_size=400` and Frigate crops at `native_tile_size=110`. See §2.4 for
 the full breakdown. ✅ Resolved.
 
@@ -494,7 +494,7 @@ Approximate training throughput on this hardware:
 3. **DINOv3 citation** — need the exact paper reference (not DINOv2)
 4. **Data hosting** — HuggingFace Datasets vs Zenodo; need DOI before paper submission
 5. ~~**Warm-start strategy**~~ — ✅ Resolved (2026-05-26): **Option A — cold start.**
-   Run 3 cold-starts the detection head from scratch on `all_train.json`. See §3.1.
+   Run 3 cold-starts the detection head from scratch on `all_train_nodm.json`. See §3.1.
 6. **400px vs 256px** — ✅ Resolved: 400px yields mAP@50=0.468 vs 0.402 at 256px (+0.066)
    from Run 1 A/B. Run 3 (cold-start, v2 dataset, 400px) achieved mAP=0.541/mAP@50=0.779
    — a further +0.118 mAP gain over Run 2, primarily from the improved v2 training set.
@@ -504,6 +504,6 @@ Approximate training throughput on this hardware:
    `data/BrentImages → /Volumes/External/TrainingData/raw/BrentImages` symlink. External
    drive must be mounted during training. For cloud runs, rsync the BrentImages directory
    to the instance before training.
-8. ~~**Adaptive tiling for training**~~ — ✅ Resolved (2026-05-26). `all_train.json`
+8. ~~**Adaptive tiling for training**~~ — ✅ Resolved (2026-05-26). `all_train_nodm.json`
    v2 includes BrentImages N1+N2 tiled at `native_tile_size=400` and Frigate tiled at
    `native_tile_size=110`. See §2.4 for full breakdown.

@@ -29,9 +29,9 @@ Progress:
 - ✅ Phase 8 (Evaluation): `eval/metrics.py`, `eval/benchmark.py`
 - ✅ DINOv3 ViT-B backbone integrated — `models/dino/dinov3_adapter.py`
 - ✅ Adaptive tiling — `inference/tiled_pipeline.py`
-- ✅ **Run 3 complete** — cold-start cold-start ViT-B, 15 epochs, `all_train.json` (8,422 images).
+- ✅ **Run 3 complete** — cold-start cold-start ViT-B, 15 epochs, `all_train_nodm.json` (8,422 images).
   Best checkpoint: epoch 13. Results: mAP=0.782, P=94.9%, R=83.8% on SatStreaks test set.
-  Weights: `weights/run3_cold/best.pth`. See `docs/training_methods.md §3.2`.
+  Weights: `weights/run3_cold_nodm/best.pth`. See `docs/training_methods.md §3.2`.
 - ✅ Data strategy formalised — `docs/data_strategy.md` (2026-05-28). SatStreaks excluded
   from training; geometry-based stratification adopted; multi-scope workflow implemented.
 - ⏳ **Run 4** — first run under the new data strategy (Atwood-only + Frigate, geometry-stratified).

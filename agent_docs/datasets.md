@@ -18,8 +18,8 @@ Additive external-absolute JSONs are available for new runs without disturbing
 legacy filenames that may be in use by active jobs:
 
 ```text
-/Volumes/External/TrainingData/annotations/all_train_external_abs.json
-/Volumes/External/TrainingData/annotations/all_train_v3_external_abs.json
+/Volumes/External/TrainingData/annotations/all_train_nodm_external_abs.json
+/Volumes/External/TrainingData/annotations/all_train_nodm_v3_external_abs.json
 /Volumes/External/TrainingData/annotations/train_external_abs.json
 /Volumes/External/TrainingData/annotations/val_external_abs.json
 /Volumes/External/TrainingData/annotations/test_external_abs.json
@@ -107,7 +107,7 @@ python scripts/convert_gtimages.py \
 
 # 5. Rebuild the canonical training JSON:
 python scripts/build_training_json.py \
-    --output data/annotations/all_train_vN.json
+    --output data/annotations/all_train_nodm_vN.json
 ```
 
 **Notes on `generate_brentimages_strk.py`:**
@@ -309,7 +309,7 @@ for improving long-band coverage.  Until then, consider running
 `scripts/augment_short_medium.py` to supplement medium-band coverage with synthetic
 injections into existing backgrounds.
 
-### Legacy training set — `all_train.json` (Run 3 and earlier)
+### Legacy training set — `all_train_nodm.json` (Run 3 and earlier)
 
 ### Archived or staged annotation files
 
@@ -319,7 +319,7 @@ injections into existing backgrounds.
 | Frigate (streaks) | `frigate_streaks.json` | 350 | 377 | Very short ~20–80 px streaks (only source) |
 | Archived Frigate negatives | `archive/legacy_cleanup_20260528/frigate_negatives.STALE_UNSAFE.json` | 300 | 0 | Stale/unsafe; overlaps labeled positives, do not use as-is |
 
-### Legacy training set — `all_train.json` (Run 3 and earlier)
+### Legacy training set — `all_train_nodm.json` (Run 3 and earlier)
 
 Used for Run 3.  Included SatStreaks (2,488 images) as training data — this
 predates the training data policy above.  Retained for reproducibility.  Do not
@@ -505,7 +505,7 @@ the training JSON for the next full retrain:
 ```bash
 # Edit data/sessions/manifest.yaml: set split: train for Night 2+
 python scripts/build_training_json.py \
-    --output data/annotations/all_train_vN.json
+    --output data/annotations/all_train_nodm_vN.json
 ```
 
 ### Step 3B — Fine-tune (recall 60–80%)

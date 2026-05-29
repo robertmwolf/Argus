@@ -24,7 +24,7 @@ python scripts/build_training_json.py \\
 # Exclude a source for ablation:
 python scripts/build_training_json.py \\
     --exclude frigate_train \\
-    --output data/annotations/all_train_no_frigate.json
+    --output data/annotations/all_train_nodm_no_frigate.json
 
 # Preview without writing:
 python scripts/build_training_json.py --dry-run
@@ -277,10 +277,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--output",
         type=Path,
-        default=_ANN_DIR / "all_train_v3_external_abs.json",
+        default=_ANN_DIR / "all_train_nodm_v3_external_abs.json",
         help="Output path for the merged COCO JSON "
              "(default: /Volumes/External/TrainingData/annotations/"
-             "all_train_v3_external_abs.json)",
+             "all_train_nodm_v3_external_abs.json)",
     )
     p.add_argument(
         "--include",

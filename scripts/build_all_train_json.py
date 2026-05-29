@@ -1,6 +1,6 @@
 """Build the canonical external-drive training annotation JSON.
 
-Produces ``all_train_external_abs.json`` under ``ARGUS_ANNOTATIONS_DIR``
+Produces ``all_train_nodm_external_abs.json`` under ``ARGUS_ANNOTATIONS_DIR``
 (default: ``/Volumes/External/TrainingData/annotations``).  The resulting COCO
 file is assembled from external annotation components and uses external-drive
 image paths, so training does not depend on repo-local annotation or image
@@ -146,7 +146,7 @@ def main() -> None:
     # Canonical training set (no     sources = [satstreaks, brent_n1_tiled, brent_n2_tiled, frigate_tiled]
     merged = merge(sources)
     out = Path(
-        os.environ.get("ARGUS_ALL_TRAIN_OUT", _ANN_DIR / "all_train_external_abs.json")
+        os.environ.get("ARGUS_ALL_TRAIN_OUT", _ANN_DIR / "all_train_nodm_external_abs.json")
     )
     with open(out, "w") as f:
         json.dump(merged, f)

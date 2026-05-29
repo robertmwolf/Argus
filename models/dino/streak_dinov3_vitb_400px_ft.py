@@ -292,7 +292,7 @@ log_level = 'INFO'
 # Update this path to point at whichever run you are fine-tuning from.
 # The stable ``best.pth`` symlink always points to the current best epoch
 # inside the work dir (managed by CheckpointHook during training).
-load_from = "weights/run3_cold/best.pth"
+load_from = "weights/run3_cold_nodm/best.pth"
 
 resume = False
 

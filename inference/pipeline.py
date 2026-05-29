@@ -149,7 +149,7 @@ def _model_registry() -> list[dict]:
             "size":      "dinov3_vitb_run3",
             "label":     "DINOv3 ViT-B Run 3 (cold-start)",
             "dataset":   "SatStreaks+BrentImages+Frigate",
-            "weights":   root / "weights" / "run3_cold" / "best.pth",
+            "weights":   root / "weights" / "run3_cold_nodm" / "best.pth",
             "config":    root / "models" / "dino" / "streak_dinov3_vitb_400px_run3.py",
             "norm_mode": "autostretch",
         },
@@ -997,7 +997,7 @@ def load_model(
                 "dinov3_vitb":             root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
                 "dinov3_vitl":             root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
                 # Run 3: best.pth is a symlink updated each night to the current best checkpoint.
-                "dinov3_vitb_run3":        root / "weights" / "run3_cold" / "best.pth",
+                "dinov3_vitb_run3":        root / "weights" / "run3_cold_nodm" / "best.pth",
             }
             if model_size in _dinov3_defaults:
                 weights_path = _dinov3_defaults[model_size]
@@ -1045,9 +1045,9 @@ def resolve_model_specs() -> list[dict]:
     _dinov3_defaults: dict[str, Path] = {
         "dinov3_vitb":             root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
         "dinov3_vitl":             root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
-        "dinov3_vitb_multisource": root / "weights" / "run3_cold" / "best.pth",
+        "dinov3_vitb_multisource": root / "weights" / "run3_cold_nodm" / "best.pth",
         # Run 3: best.pth symlink is updated each night to the current best checkpoint.
-        "dinov3_vitb_run3":        root / "weights" / "run3_cold" / "best.pth",
+        "dinov3_vitb_run3":        root / "weights" / "run3_cold_nodm" / "best.pth",
     }
     _meta: dict[str, tuple[str, str, str]] = {
         # (label, dataset, norm_mode)
@@ -1507,7 +1507,7 @@ def run_with_array(
             _dinov3_inline: dict[str, Path] = {
                 "dinov3_vitb":             root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
                 "dinov3_vitl":             root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
-                "dinov3_vitb_run3":        root / "weights" / "run3_cold" / "best.pth",
+                "dinov3_vitb_run3":        root / "weights" / "run3_cold_nodm" / "best.pth",
             }
             if model_size in _dinov3_inline:
                 weights_path = _dinov3_inline[model_size]

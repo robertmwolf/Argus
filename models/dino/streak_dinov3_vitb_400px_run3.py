@@ -16,13 +16,13 @@
 #   cd /path/to/Argus && conda activate satid
 #   PYTORCH_ENABLE_MPS_FALLBACK=1 \
 #   USE_DEV_SUBSET=false \
-#   TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_external_abs.json \
+#   TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_nodm_external_abs.json \
 #   VAL_ANN_FILE=/Volumes/External/TrainingData/annotations/val_external_abs.json \
 #   ARGUS_NORM=autostretch \
 #   caffeinate -i \
 #   python -m training.train_dino \
 #       --config models/dino/streak_dinov3_vitb_400px_run3.py \
-#       --work-dir weights/run3_cold \
+#       --work-dir weights/run3_cold_nodm \
 #       --max-epochs 3 \
 #       --val-interval 1 \
 #       --checkpoint-interval 1
@@ -31,25 +31,25 @@
 #
 #   PYTORCH_ENABLE_MPS_FALLBACK=1 \
 #   USE_DEV_SUBSET=false \
-#   TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_external_abs.json \
+#   TRAIN_ANN_FILE=/Volumes/External/TrainingData/annotations/all_train_nodm_external_abs.json \
 #   VAL_ANN_FILE=/Volumes/External/TrainingData/annotations/val_external_abs.json \
 #   ARGUS_NORM=autostretch \
 #   caffeinate -i \
 #   python -m training.train_dino \
 #       --config models/dino/streak_dinov3_vitb_400px_run3.py \
-#       --work-dir weights/run3_cold \
+#       --work-dir weights/run3_cold_nodm \
 #       --resume \
 #       --val-interval 1 \
 #       --checkpoint-interval 1
 #
-# Dataset: all_train.json v2 — 8,422 images, 8,213 annotations
+# Dataset: all_train_nodm.json v2 — 8,422 images, 8,213 annotations
 #   SatStreaks 2,488 + BrentImages N1 3,110 (tiled 400px) +
 #   BrentImages N2 1,309 (tiled 400px) + Frigate 1,515 (tiled 110px/3.64×)
 #   Requires /Volumes/External/TrainingData mounted. Canonical raw images live in
 #   /Volumes/External/TrainingData/raw and canonical annotations live in
 #   /Volumes/External/TrainingData/annotations. data/ paths are compatibility shims.
 #
-# Checkpoint destination: weights/run3_cold/
+# Checkpoint destination: weights/run3_cold_nodm/
 # Hardware: Mac M3 CPU (PYTORCH_ENABLE_MPS_FALLBACK=1)
 
 custom_imports = dict(
