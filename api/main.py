@@ -375,7 +375,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
             pipeline_kwargs["models"] = []
 
         pipeline_t0 = time.perf_counter()
-        detections, fits_array = await asyncio.to_thread(
+        detections, fits_array, heat_array = await asyncio.to_thread(
             pipeline_run,
             **pipeline_kwargs,
         )
@@ -388,6 +388,15 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
 
         png_bytes = await asyncio.to_thread(_render_png, tmp_path, detections, fits_array)
         await storage.save_image(job_id, png_bytes)
+
+        if heat_array is not None:
+            heatmap_png = await asyncio.to_thread(
+                _render_heatmap_png, heat_array,
+                fits_array.shape[1] if fits_array is not None else None,
+                fits_array.shape[0] if fits_array is not None else None,
+            )
+            if heatmap_png is not None:
+                await storage.save_heatmap(job_id, heatmap_png)
 
         db_t0 = time.perf_counter()
         async with session_factory() as session:
@@ -719,6 +728,51 @@ def _render_png(
         return buf.getvalue()
 
 
+def _render_heatmap_png(
+    heat_array: "np.ndarray",
+    target_width: int | None,
+    target_height: int | None,
+) -> bytes | None:
+    """Render a float32 heatmap as an RGBA PNG with a hot colormap.
+
+    The heatmap is colored orange→yellow (alpha proportional to intensity) so
+    the frontend can composite it over the auto-stretched image.
+
+    Args:
+        heat_array: Float32 array in [0, 1] at inference resolution.
+        target_width: Native image width to resize to (or None to keep original).
+        target_height: Native image height to resize to (or None to keep original).
+
+    Returns:
+        RGBA PNG bytes, or None on failure.
+    """
+    try:
+        import cv2
+        import numpy as np
+        from PIL import Image
+
+        h = heat_array.astype(np.float32)
+        h = np.clip(h, 0.0, 1.0)
+
+        if target_width and target_height:
+            h = cv2.resize(h, (target_width, target_height), interpolation=cv2.INTER_LINEAR)
+
+        r = np.full_like(h, 255, dtype=np.uint8)
+        g = (np.sqrt(h) * 210).astype(np.uint8)
+        b = np.zeros_like(g)
+        a = (h * 200).astype(np.uint8)
+
+        rgba = np.stack([r, g, b, a], axis=2)
+        img = Image.fromarray(rgba, mode="RGBA")
+
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return buf.getvalue()
+    except Exception:
+        logger.exception("Heatmap PNG render failed")
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -930,6 +984,8 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
         except Exception:
             logger.exception("Could not determine source image dimensions for job %s", job_id)
 
+        has_heatmap = await request.app.state.storage.load_heatmap(job_id) is not None
+
         return {
             "job_id": job_id,
             "status": obs.status,
@@ -938,6 +994,7 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
             "raw_mode": bool(obs.raw_mode),
             "image_width": image_shape[0] if image_shape else None,
             "image_height": image_shape[1] if image_shape else None,
+            "has_heatmap": has_heatmap,
             "detections": detections,
         }
 
@@ -996,6 +1053,39 @@ async def preview(job_id: str, request: Request) -> Response:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Preview not yet available",
+        )
+    return Response(content=png, media_type="image/png")
+
+
+@app.get("/api/heatmap/{job_id}")
+async def heatmap(job_id: str, request: Request) -> Response:
+    """Return the heatmap overlay PNG for a completed heatmap-detector job.
+
+    The PNG is RGBA: orange-to-yellow colormap with alpha proportional to
+    heatmap intensity.  The frontend composites it over the auto-stretched
+    preview to visualise where the model assigned activation.
+
+    Args:
+        job_id: UUID of the observation.
+        request: FastAPI Request (for app state access).
+
+    Returns:
+        RGBA PNG image bytes.
+
+    Raises:
+        HTTPException 404: Job not found or heatmap not available (job used a
+            different detector, or is still processing).
+    """
+    async with request.app.state.session_factory() as session:
+        obs = await session.get(Observation, job_id)
+        if obs is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+
+    png = await request.app.state.storage.load_heatmap(job_id)
+    if png is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Heatmap not available — job may not have used the heatmap detector",
         )
     return Response(content=png, media_type="image/png")
 

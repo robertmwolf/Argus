@@ -226,6 +226,7 @@ function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
  *   detections       — array of detection dicts from /api/result
  *   highlightIndex   — index of the detection to highlight (or null)
  *   onHover(index)   — called when mouse enters an OBB (null = leave)
+ *   showHeatmap      — when true, renders heatmap overlay if available
  */
 export default function ResultViewer({
   jobId,
@@ -235,10 +236,13 @@ export default function ResultViewer({
   imageHeight,
   highlightIndex,
   onHover,
+  showHeatmap = false,
 }) {
   const canvasRef = useRef(null)
   const imgRef = useRef(null)
+  const heatmapImgRef = useRef(null)
   const [imgLoaded, setImgLoaded] = useState(false)
+  const [heatmapLoaded, setHeatmapLoaded] = useState(false)
   const [tooltip, setTooltip] = useState(null)
 
   useEffect(() => {
@@ -250,6 +254,24 @@ export default function ResultViewer({
       setImgLoaded(true)
     }
   }, [jobId])
+
+  useEffect(() => {
+    if (!jobId || !showHeatmap) {
+      heatmapImgRef.current = null
+      setHeatmapLoaded(false)
+      return
+    }
+    const img = new Image()
+    img.src = `/api/heatmap/${jobId}`
+    img.onload = () => {
+      heatmapImgRef.current = img
+      setHeatmapLoaded(true)
+    }
+    img.onerror = () => {
+      heatmapImgRef.current = null
+      setHeatmapLoaded(false)
+    }
+  }, [jobId, showHeatmap])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -274,6 +296,13 @@ export default function ResultViewer({
 
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+    if (showHeatmap && heatmapImgRef.current) {
+      ctx.save()
+      ctx.globalAlpha = 0.65
+      ctx.drawImage(heatmapImgRef.current, 0, 0, canvas.width, canvas.height)
+      ctx.restore()
+    }
 
     const isVisible = (i) => !visibleSet || visibleSet.has(i)
 
@@ -306,7 +335,7 @@ export default function ResultViewer({
       const alpha = i === highlightIndex ? 1.0 : 0.4 + (det.confidence ?? 1) * 0.6
       drawLabel(ctx, det.obb, i, colour, alpha, scaleX, scaleY)
     })
-  }, [imgLoaded, detections, visibleSet, highlightIndex, imageWidth, imageHeight])
+  }, [imgLoaded, heatmapLoaded, showHeatmap, detections, visibleSet, highlightIndex, imageWidth, imageHeight])
 
   const onMouseMove = (e) => {
     if (!canvasRef.current || !imgRef.current) return

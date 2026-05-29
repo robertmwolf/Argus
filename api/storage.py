@@ -100,6 +100,26 @@ class StorageBackend(ABC):
             UTF-8 encoded JSON bytes, or None if not found.
         """
 
+    @abstractmethod
+    async def save_heatmap(self, job_id: str, data: bytes) -> None:
+        """Persist the heatmap overlay PNG for a job.
+
+        Args:
+            job_id: UUID string identifying the job.
+            data: RGBA PNG bytes.
+        """
+
+    @abstractmethod
+    async def load_heatmap(self, job_id: str) -> bytes | None:
+        """Load the heatmap overlay PNG, or None if not available.
+
+        Args:
+            job_id: UUID string identifying the job.
+
+        Returns:
+            RGBA PNG bytes, or None if not found.
+        """
+
 
 class LocalStorage(StorageBackend):
     """Stores files under a local base directory."""
@@ -143,6 +163,15 @@ class LocalStorage(StorageBackend):
         path = self._base / job_id / "header.json"
         return path.read_bytes() if path.exists() else None
 
+    async def save_heatmap(self, job_id: str, data: bytes) -> None:
+        path = self._base / job_id / "heatmap.png"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+
+    async def load_heatmap(self, job_id: str) -> bytes | None:
+        path = self._base / job_id / "heatmap.png"
+        return path.read_bytes() if path.exists() else None
+
 
 class S3Storage(StorageBackend):
     """AWS S3 storage backend — implemented in Phase 7."""
@@ -169,6 +198,12 @@ class S3Storage(StorageBackend):
         raise NotImplementedError("S3 storage not implemented until Phase 7")
 
     async def load_fits_header(self, job_id: str) -> bytes | None:
+        raise NotImplementedError("S3 storage not implemented until Phase 7")
+
+    async def save_heatmap(self, job_id: str, data: bytes) -> None:
+        raise NotImplementedError("S3 storage not implemented until Phase 7")
+
+    async def load_heatmap(self, job_id: str) -> bytes | None:
         raise NotImplementedError("S3 storage not implemented until Phase 7")
 
 

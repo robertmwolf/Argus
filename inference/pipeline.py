@@ -1326,6 +1326,8 @@ def _run_all_detectors(
             )
             tasks[f] = spec["id"]
 
+        _heatmap_sidecar: dict[str, "np.ndarray"] = {}
+
         # Secondary detectors
         if _enabled("classical"):
             tasks[pool.submit(_timed_detector, "classical", _run_classical_detector, array)] = "classical"
@@ -1353,7 +1355,14 @@ def _run_all_detectors(
             results["streakmind_yolo"] = []
 
         if _enabled("dinov3_heatmap_centerline"):
-            tasks[pool.submit(_timed_detector, "dinov3_heatmap_centerline", _run_heatmap_centerline_detector, array)] = "dinov3_heatmap_centerline"
+            def _heatmap_task_with_sidecar(arr: "np.ndarray") -> list[dict]:
+                from inference.heatmap_detector import run_heatmap_centerline_detector_and_heatmap
+                dets, heat = run_heatmap_centerline_detector_and_heatmap(arr)
+                if heat is not None:
+                    _heatmap_sidecar["heat"] = heat
+                return dets
+
+            tasks[pool.submit(_timed_detector, "dinov3_heatmap_centerline", _heatmap_task_with_sidecar, array)] = "dinov3_heatmap_centerline"
         else:
             results["dinov3_heatmap_centerline"] = []
 
@@ -1372,7 +1381,7 @@ def _run_all_detectors(
                 logger.exception("Detector %s failed", key)
                 results[key] = []
 
-    return results
+    return results, _heatmap_sidecar
 
 
 # ---------------------------------------------------------------------------
@@ -1387,7 +1396,7 @@ def run_with_array(
     models: list[tuple[Any, Any, dict]] | None = None,
     enabled_detectors: set[str] | None = None,
     raw_mode: bool = False,
-) -> tuple[list[dict], "np.ndarray"]:
+) -> tuple[list[dict], "np.ndarray", "np.ndarray | None"]:
     """Run the full ARGUS inference pipeline on a single FITS image.
 
     Args:
@@ -1523,7 +1532,7 @@ def run_with_array(
         _models_with_specs = [(model, inference_device, _meta)]
 
     # Run all detectors (DINO variants + classical + ASTRiDE) in parallel.
-    all_det_results = _run_all_detectors(
+    all_det_results, _heatmap_sidecar = _run_all_detectors(
         _models_with_specs, array, fits_path, image_size,
         confidence_threshold, tta_enabled, enabled_detectors,
         raw_array_f32=raw_array_f32,
@@ -1759,7 +1768,7 @@ def run_with_array(
         "[load=%.0fms  infer=%.0fms  post=%.0fms  crossid=%.0fms]",
         len(detections), fits_load_ms, inference_ms, postprocess_ms, crossid_ms,
     )
-    return detections, array
+    return detections, array, _heatmap_sidecar.get("heat")
 
 
 def run(
@@ -1774,7 +1783,7 @@ def run(
     Thin wrapper around ``run_with_array()`` for callers that only need the
     detection list.  See ``run_with_array()`` for full parameter documentation.
     """
-    detections, _ = run_with_array(
+    detections, *_ = run_with_array(
         fits_path, fast=fast, model=model, inference_device=inference_device,
         raw_mode=raw_mode,
     )

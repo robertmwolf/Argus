@@ -276,20 +276,24 @@ def get_heatmap_detector_status() -> dict[str, str]:
     }
 
 
-def run_heatmap_centerline_detector(array: np.ndarray) -> list[dict[str, Any]]:
-    """Run the no-OBB heatmap detector on an RGB image array.
+def _run_heatmap_centerline_detector_core(
+    array: np.ndarray,
+) -> tuple[list[dict[str, Any]], np.ndarray, int, int, int]:
+    """Internal core: run heatmap detector and return raw heat array too.
 
     Args:
         array: uint8 or float image array with shape ``(H, W, 3)``.
 
     Returns:
-        Pipeline-compatible detections.  Native geometry lives in
-        ``line_segment``; ``obb`` is a compatibility projection.
+        Tuple of (proposals, heat, h_native, w_native, image_size).
+        ``heat`` is float32 at inference resolution ``(image_size, image_size)``.
     """
     checkpoint = Path(os.environ.get("HEATMAP_CENTERLINE_CHECKPOINT", str(_default_checkpoint())))
     if not checkpoint.exists():
         logger.debug("Heatmap centerline checkpoint not found at %s; skipping", checkpoint)
-        return []
+        dummy = np.zeros((1, 1), dtype=np.float32)
+        h_n, w_n = array.shape[:2]
+        return [], dummy, h_n, w_n, 1
 
     weights_override = os.environ.get("HEATMAP_DINOV3_WEIGHTS") or None
     model, train_args, device = _load_heatmap_model(checkpoint, weights_override)
@@ -411,4 +415,42 @@ def run_heatmap_centerline_detector(array: np.ndarray) -> list[dict[str, Any]]:
 
     proposals.sort(key=lambda item: (item["confidence"], item["heatmap"]["area_px"]), reverse=True)
     logger.debug("Heatmap centerline: %d segment proposal(s)", len(proposals))
-    return proposals[:max_components]
+    return proposals[:max_components], heat, h_native, w_native, image_size
+
+
+def run_heatmap_centerline_detector(array: np.ndarray) -> list[dict[str, Any]]:
+    """Run the no-OBB heatmap detector; discard the heat array.
+
+    Args:
+        array: uint8 or float image array with shape ``(H, W, 3)``.
+
+    Returns:
+        Pipeline-compatible detections.  Native geometry lives in
+        ``line_segment``; ``obb`` is a compatibility projection.
+    """
+    proposals, _heat, _h, _w, _sz = _run_heatmap_centerline_detector_core(array)
+    return proposals
+
+
+def run_heatmap_centerline_detector_and_heatmap(
+    array: np.ndarray,
+) -> tuple[list[dict[str, Any]], np.ndarray | None]:
+    """Run the heatmap detector and also return the raw heat array.
+
+    Args:
+        array: uint8 or float image array with shape ``(H, W, 3)``.
+
+    Returns:
+        Tuple of (detections, heat_native) where ``heat_native`` is a float32
+        array of shape ``(H_native, W_native)`` with values in [0, 1], or None
+        if the checkpoint was not found.
+    """
+    checkpoint = Path(os.environ.get("HEATMAP_CENTERLINE_CHECKPOINT", str(_default_checkpoint())))
+    if not checkpoint.exists():
+        return [], None
+    proposals, heat, h_native, w_native, image_size = _run_heatmap_centerline_detector_core(array)
+    if h_native != image_size or w_native != image_size:
+        heat_native = cv2.resize(heat, (w_native, h_native), interpolation=cv2.INTER_LINEAR)
+    else:
+        heat_native = heat
+    return proposals, heat_native.astype(np.float32)

@@ -273,7 +273,7 @@ async def test_full_upload_poll_result_cycle(client, tmp_path):
 
     _fake_array = np.zeros((10, 10, 3), dtype=np.uint8)
     with patch("inference.pipeline.load_model", return_value=(object(), object())), \
-         patch("inference.pipeline.run_with_array", return_value=([fake_detection], _fake_array)):
+         patch("inference.pipeline.run_with_array", return_value=([fake_detection], _fake_array, None)):
         queued_id = await _app.state.queue.dequeue()
         await _process_job(queued_id, _app)
 
@@ -313,7 +313,7 @@ async def test_upload_detector_selection_is_passed_to_pipeline(client):
          patch("inference.pipeline.resolve_model_specs", return_value=[
              {"id": "dinov3_vitb", "size": "dinov3_vitb"},
          ]), \
-         patch("inference.pipeline.run_with_array", return_value=([], _fake_array)) as mock_run:
+         patch("inference.pipeline.run_with_array", return_value=([], _fake_array, None)) as mock_run:
         queued_id = await _app.state.queue.dequeue()
         await _process_job(queued_id, _app)
 
