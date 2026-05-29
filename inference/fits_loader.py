@@ -108,10 +108,17 @@ def _has_plate_solve_hints(header: fits.Header) -> bool:
 
 
 def _should_attempt_plate_solve(header: fits.Header) -> bool:
-    """Return True when missing WCS should fall through to ASTAP plate solving."""
-    if _truthy_env("ARGUS_ENABLE_PLATE_SOLVE"):
-        return True
-    return _has_plate_solve_hints(header)
+    """Return True when ASTAP plate solving is explicitly enabled.
+
+    Plate solving is opt-in only — set ARGUS_ENABLE_PLATE_SOLVE=true to
+    enable it.  Header hints (RA/DEC/FOCALLEN) never auto-trigger the solve
+    because ASTAP is an external subprocess that adds ~10–60 s per image,
+    which is unacceptable during training or batch evaluation.
+
+    Use _has_plate_solve_hints() separately to check whether a solve is
+    *possible* without committing to running it.
+    """
+    return _truthy_env("ARGUS_ENABLE_PLATE_SOLVE")
 
 
 def _normalise_zscore(arr: np.ndarray) -> np.ndarray:
@@ -301,22 +308,27 @@ class FITSLoader:
                 array_3ch = np.stack([arr_u8, arr_u8, arr_u8], axis=-1)
 
                 # --- WCS -----------------------------------------------------
+                # ARGUS_SKIP_WCS=1 bypasses sidecar lookup and plate solving
+                # entirely.  Set this during training/evaluation to avoid paying
+                # the cost of ASTAP on every image — WCS is not needed for
+                # detection training.  Embedded FITS WCS keywords are still
+                # parsed because they come for free from the already-loaded header.
+                _skip_wcs = _truthy_env("ARGUS_SKIP_WCS")
                 wcs = _valid_celestial_wcs(header)
                 wcs_source = "fits" if wcs is not None else None
-                if wcs is None:
-                    wcs = _load_sidecar_wcs(path)
-                    wcs_source = "sidecar" if wcs is not None else None
-                if wcs is None and _should_attempt_plate_solve(header):
-                    from inference.plate_solver import solve_from_header as _astap_solve
-                    wcs = _astap_solve(path, header)
-                    wcs_source = "astap" if wcs is not None else None
-                elif wcs is None:
-                    logger.info(
-                        "Skipping ASTAP plate solve for %s: set "
-                        "ARGUS_ENABLE_PLATE_SOLVE=true or provide RA/DEC and "
-                        "FOCALLEN/XPIXSZ/NAXIS1 header hints",
-                        path.name,
-                    )
+                if not _skip_wcs:
+                    if wcs is None:
+                        wcs = _load_sidecar_wcs(path)
+                        wcs_source = "sidecar" if wcs is not None else None
+                    if wcs is None and _should_attempt_plate_solve(header):
+                        from inference.plate_solver import solve_from_header as _astap_solve
+                        wcs = _astap_solve(path, header)
+                        wcs_source = "astap" if wcs is not None else None
+                    elif wcs is None:
+                        logger.debug(
+                            "No WCS for %s — set ARGUS_ENABLE_PLATE_SOLVE=true to attempt ASTAP",
+                            path.name,
+                        )
 
                 # --- Exposure time (accept common header spellings) ----------
                 exposure_time: float | None = None

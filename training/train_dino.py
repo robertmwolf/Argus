@@ -345,6 +345,35 @@ def train(
         checkpoint_interval: Optional checkpoint interval override, in epochs.
         load_from: Optional checkpoint to initialise training from.
     """
+    # ---------------------------------------------------------------------------
+    # Training guardrails — disable expensive inference-time stages
+    # ---------------------------------------------------------------------------
+    # Plate solving (ASTAP) and TLE cross-identification add 10–60 s per image
+    # and are irrelevant to detection training.  Enforce their absence here so
+    # dataloader workers (which inherit os.environ) cannot accidentally run them.
+    if os.environ.get("ARGUS_ENABLE_PLATE_SOLVE", "").strip().lower() in (
+        "1", "true", "yes", "on"
+    ):
+        logger.warning(
+            "ARGUS_ENABLE_PLATE_SOLVE is set — ASTAP will run on every training "
+            "image and will significantly slow training.  Unset this variable "
+            "unless you intentionally need WCS during training."
+        )
+    else:
+        os.environ["ARGUS_ENABLE_PLATE_SOLVE"] = "0"
+
+    # Skip sidecar WCS lookup and plate solving in FITSLoader during training.
+    # WCS is not needed for detection training; cross-ID is gated on WCS anyway.
+    os.environ.setdefault("ARGUS_SKIP_WCS", "1")
+
+    # Belt-and-suspenders: even if pipeline.run() were called during eval,
+    # CROSSID_MAX_DETECTIONS=0 prevents any TLE catalog queries.
+    os.environ.setdefault("CROSSID_MAX_DETECTIONS", "0")
+
+    logger.info(
+        "Training guardrails active: ARGUS_SKIP_WCS=1  CROSSID_MAX_DETECTIONS=0"
+    )
+
     try:
         from mmengine.config import Config
         from mmengine.runner import Runner
