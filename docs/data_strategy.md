@@ -330,26 +330,54 @@ When a new Atwood capture night is available:
 2. Add to the session manifest (`data/sessions/manifest.yaml`) with
    `split: holdout`.
 
-3. Run zero-shot evaluation **before** adding to training:
+3. Export reviewed usable frames into holdout COCO files.  The interactive
+   annotator's `brentimages_annotations.json` includes positives, blanks,
+   rejected frames, and pending frames; only positives and reviewed blanks
+   should enter zero-shot evaluation:
+   ```bash
+   python scripts/prepare_atwood_holdout.py \
+       --input /Volumes/External/TrainingData/raw/BrentImages/Img_YYYYMMDD_Atwood/brentimages_annotations.json \
+       --session-id atwood_YYYYMMDD \
+       --mirror-external
+   ```
+
+4. Run zero-shot evaluation **before** adding to training:
    ```bash
    python scripts/zero_shot_eval.py \
-       --annotation data/annotations/newnight_YYYYMMDD.json \
-       --raw-dir /path/to/night \
-       --scope atwood \
+       --annotation data/annotations/atwood_YYYYMMDD.json \
+       --negatives data/annotations/atwood_YYYYMMDD_negatives.json \
+       --raw-dir /Volumes/External/TrainingData/raw/BrentImages/Img_YYYYMMDD_Atwood \
+       --scope atwood_YYYYMMDD \
        --label "Atwood YYYYMMDD (zero-shot)"
    ```
 
-4. Assign NORAD IDs from the new night to splits.  NORAD IDs that already
+5. Assign NORAD IDs from the new night to splits.  NORAD IDs that already
    appear in `val_atwood.json` or `test_atwood.json` must go to training
    only.  New NORAD IDs not yet seen can go to any split — assign to training
    unless the val or test pools are significantly smaller than their target
    proportions.
 
-5. Change manifest `split` to `train`.  Rebuild the training JSON:
+6. Change manifest `split` to `train`.  Rebuild the training JSON:
    ```bash
    python scripts/build_training_json.py \
        --output data/annotations/all_train_nodm_v<N>.json
    ```
+
+### 7.1 Current Holdout Nights
+
+The following newly reviewed Atwood nights are intentionally held out for
+post-training zero-shot evaluation and must not be promoted to `train` until
+their reports are recorded:
+
+| Session | Raw directory | Positives | Annotations | Negatives | Excluded |
+|---|---|---:|---:|---:|---:|
+| `atwood_20260527` | `Img_20260527_Atwood` | 507 | 559 | 25 | 109 rejected, 168 pending |
+| `atwood_20260528` | `Img_20260528_Atwood` | 175 | 185 | 18 | 5 rejected, 301 pending |
+
+Prepared files live in both `data/annotations/` and
+`/Volumes/External/TrainingData/annotations/`:
+`atwood_20260527.json`, `atwood_20260527_negatives.json`,
+`atwood_20260528.json`, and `atwood_20260528_negatives.json`.
 
 ---
 

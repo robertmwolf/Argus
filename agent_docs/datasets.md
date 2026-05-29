@@ -53,6 +53,8 @@ solution sidecars.
 | `Img_20260412_Atwood/` | 2026-04-12 | 759 | 68 | In review cleanup: 596 labeled, 38 true negatives, 115 rejected unusable, 1 pending among existing FITS rows |
 | `Img_20260515_Atwood/` | 2026-05-15 | 300 | 39 | Partially annotated: 204 labeled, 27 current negatives, 69 pending `Reject=2` |
 | `Geo_20260520_Atwood/` | 2026-05-20 | 16 | 1 | Reviewed: 11 labeled, 5 rejected unusable |
+| `Img_20260527_Atwood/` | 2026-05-27 | 809 | 70 | Holdout prepared: 507 labeled, 25 true negatives, 109 rejected unusable, 168 pending |
+| `Img_20260528_Atwood/` | 2026-05-28 | 499 | 41 | Holdout prepared: 175 labeled, 18 true negatives, 5 rejected unusable, 301 pending |
 
 The `Img_20260412_Atwood/` night is the original GTImages dataset — it has
 ASTAP plate solutions and fully pixel-annotated `.strk` files from SkyTrack.
@@ -78,6 +80,20 @@ pixel coordinates are filled in via the manual annotation workflow.
 - Streak lengths: mean 725 px, median 687 px, min 215 px, max 1404 px (long + medium)
 - **Not yet merged into any training split** — available as a clean holdout for out-of-distribution evaluation or future training expansion
 
+**Key statistics (new holdout nights — reviewed status as of 2026-05-29):**
+- `Img_20260527_Atwood`: 507 positive images, 559 annotations, 25 reviewed
+  negatives, 109 rejected unusable, 168 still pending
+- `Img_20260528_Atwood`: 175 positive images, 185 annotations, 18 reviewed
+  negatives, 5 rejected unusable, 301 still pending
+- Prepared holdout files:
+  `data/annotations/atwood_20260527.json`,
+  `data/annotations/atwood_20260527_negatives.json`,
+  `data/annotations/atwood_20260528.json`, and
+  `data/annotations/atwood_20260528_negatives.json`
+- Both sessions are listed in `data/sessions/manifest.yaml` as
+  `split: holdout` and must stay out of training until zero-shot evaluation
+  reports are recorded.
+
 **Role in ARGUS:**
 - **Negative examples:** no-streak images fill the negative-example gap in SatStreaks
 - **Cross-ID benchmark:** every annotated image has a known NORAD ID
@@ -94,20 +110,26 @@ python scripts/generate_brentimages_strk.py \
 # 2. Manually annotate pixel coordinates using the annotation tool:
 #    Reject=0 for streak present, Reject=-1 for true no-streak negative,
 #    Reject=5 for rejected/unusable (do not train/evaluate).
+python scripts/annotate.py \
+    --night-dir /Volumes/External/TrainingData/raw/BrentImages/Img_YYYYMMDD_Atwood \
+    --hough-preset brentimages \
+    --no-suggestions
 
-# 3. Convert annotated night to COCO JSON:
-python scripts/convert_gtimages.py \
-    --strk-dir /Volumes/External/TrainingData/raw/BrentImages/Img_YYYYMMDD_Atwood \
-    --output /Volumes/External/TrainingData/annotations/brentimages_YYYYMMDD.json \
-    --negatives-output /Volumes/External/TrainingData/annotations/brentimages_YYYYMMDD_negatives.json
+# 3. Export reviewed usable frames to zero-shot holdout JSONs:
+python scripts/prepare_atwood_holdout.py \
+    --input /Volumes/External/TrainingData/raw/BrentImages/Img_YYYYMMDD_Atwood/brentimages_annotations.json \
+    --session-id atwood_YYYYMMDD \
+    --mirror-external
 
-# 4. Add the new session to the manifest:
-#    Edit data/sessions/manifest.yaml — add an entry with split: train
-#    (copy the atwood_20260515 entry as a template)
+# 4. Add the new session to the manifest as split: holdout.
 
-# 5. Rebuild the canonical training JSON:
-python scripts/build_training_json.py \
-    --output data/annotations/all_train_nodm_vN.json
+# 5. Run zero-shot evaluation before promoting the session to train:
+python scripts/zero_shot_eval.py \
+    --annotation data/annotations/atwood_YYYYMMDD.json \
+    --negatives data/annotations/atwood_YYYYMMDD_negatives.json \
+    --raw-dir /Volumes/External/TrainingData/raw/BrentImages/Img_YYYYMMDD_Atwood \
+    --scope atwood_YYYYMMDD \
+    --label "Atwood YYYYMMDD (zero-shot)"
 ```
 
 **Notes on `generate_brentimages_strk.py`:**

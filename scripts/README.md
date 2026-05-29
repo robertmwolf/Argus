@@ -41,6 +41,7 @@ path for older commands and active runs.
 | `convert_gtimages.py` | Active | Converts GTImages `.strk`/FITS metadata into COCO-style annotations. | Covered by tests. |
 | `merge_annotations.py` | Active | Builds current SatStreaks + GTImages train/val/test splits. | Main split builder in README. |
 | `merge_fits_annotations.py` | Provenance | Merges FITS-native annotation sources such as GTImages + Frigate. | Supports StreakMindYOLO comparison artifacts. |
+| `prepare_atwood_holdout.py` | Active | Exports reviewed Atwood annotator output into positive and negative COCO holdout files. | Use before `zero_shot_eval.py`; excludes rejected and still-pending frames. |
 | `augment_gtimages_synthetic.py` | Provenance | Builds real and synthetic GTImages tracks for StreakMind reproduction. | Keep with methodology/results provenance. |
 | `augment_short_medium.py` | Provenance | Generates short/medium synthetic augmentation data. | Experiment-specific; archive only after outputs and rationale are captured elsewhere. |
 
@@ -73,7 +74,7 @@ handling that will likely be useful for future labeling passes.
 
 | Script | Status | Purpose | Notes |
 |---|---:|---|---|
-| `annotate.py` | Manual | Unified Tkinter OBB streak annotation tool for FITS, PNG, and JPEG inputs. | Handles Frigate priority lists, generic image directories, and BrentImages `.strk` write-back via `--night-dir`. |
+| `annotate.py` | Manual | Unified Tkinter OBB streak annotation tool for FITS, PNG, and JPEG inputs. | Handles Frigate priority lists, generic image directories, BrentImages `.strk` write-back via `--night-dir`, pending-only filtering, and explicit Go-to navigation. |
 | `annotate_frigate.py` | Manual | Builds Frigate unreviewed background-candidate COCO files. | Output is not a true-negative label set unless reviewed. |
 | `screen_frigate.py` | Manual | Ranks Frigate frames by short-streak likelihood. | Produces priority JSON/contact sheet for annotation. |
 

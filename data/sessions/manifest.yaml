@@ -177,6 +177,52 @@ sources:
       Geostationary streak session.  Small set; paths in geo_20260520.json
       are absolute (/Volumes/External/…).
 
+  - session_id: atwood_20260527
+    scope_id: atwood
+    source_type: brentimages
+    date: "2026-05-27"
+    split: holdout
+    mix_weight: 1.0
+    annotation_file: "data/annotations/atwood_20260527.json"
+    negatives_file: "data/annotations/atwood_20260527_negatives.json"
+    raw_dir: "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood"
+    n_images: 507
+    n_negatives: 25
+    n_annotations: 559
+    camera: "ZWO ASI2600MM Pro @ 612mm f/l"
+    pixel_scale_arcsec: 1.27
+    focal_length_mm: 612
+    exposure_s: 0.5
+    filter: "Lum"
+    norad_ids: 70
+    notes: >
+      Newly reviewed Atwood night.  Prepared from the interactive annotator's
+      brentimages_annotations.json; rejected and still-pending frames are
+      excluded.  Keep as holdout until zero-shot evaluation is complete.
+
+  - session_id: atwood_20260528
+    scope_id: atwood
+    source_type: brentimages
+    date: "2026-05-28"
+    split: holdout
+    mix_weight: 1.0
+    annotation_file: "data/annotations/atwood_20260528.json"
+    negatives_file: "data/annotations/atwood_20260528_negatives.json"
+    raw_dir: "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood"
+    n_images: 175
+    n_negatives: 18
+    n_annotations: 185
+    camera: "ZWO ASI2600MM Pro @ 612mm f/l"
+    pixel_scale_arcsec: 1.27
+    focal_length_mm: 612
+    exposure_s: 0.5
+    filter: "Lum"
+    norad_ids: 41
+    notes: >
+      Newly reviewed Atwood night.  Prepared from the interactive annotator's
+      brentimages_annotations.json; rejected and still-pending frames are
+      excluded.  Keep as holdout until zero-shot evaluation is complete.
+
   # =========================================================================
   # Frigate — ExoAnalytic Solutions QHY600M (public dataset)
   # Very short streaks (~20–80 px) — only source of this morphology.

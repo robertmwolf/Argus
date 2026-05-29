@@ -661,6 +661,7 @@ class AnnotationApp(tk.Tk):
         self.configure(bg="#1a1a2e")
         self.resizable(True, True)
 
+        self.all_images = images
         self.images = images
         self.coco = coco
         self.output_path = output_path
@@ -669,6 +670,7 @@ class AnnotationApp(tk.Tk):
         self.demo_dir = demo_dir or pathlib.Path.home() / "Desktop" / "Demo Images"
         self.save_hook = save_hook
         self.idx = 0
+        self._pending_only: bool = False
 
         # zoom / pan
         self.zoom = 1.0
@@ -716,7 +718,11 @@ class AnnotationApp(tk.Tk):
             relief="flat", font=("Helvetica", 10),
         )
         goto_entry.pack(side="left")
-        goto_entry.bind("<Return>", lambda _: (self._goto_index(), self.focus_set()))
+        goto_entry.bind("<Return>", self._on_goto_return)
+        tk.Button(
+            top, text="Go", command=self._goto_index,
+            bg="#2a2a4a", fg="#ccccee", relief="flat", padx=7, pady=1,
+        ).pack(side="left", padx=(3, 0))
 
         self.lbl_hint = tk.Label(
             top, text="", fg="#88ffcc", bg="#1a1a2e", font=("Helvetica", 11, "italic")
@@ -776,6 +782,12 @@ class AnnotationApp(tk.Tk):
         )
         self.btn_hints.pack(side="left", padx=3)
 
+        self.btn_pending = tk.Button(
+            bot, text="Pending only  [P]", command=self._toggle_pending_only,
+            bg="#2a2a4a", fg="#ccccee", relief="flat", padx=7, pady=2,
+        )
+        self.btn_pending.pack(side="left", padx=3)
+
         tk.Button(
             bot, text="★ Demo  [I]", command=self._flag_demo,
             bg="#2a2a4a", fg="#ffdd55", relief="flat", padx=7, pady=2,
@@ -808,6 +820,7 @@ class AnnotationApp(tk.Tk):
         self.bind("<q>",         lambda _: self._quit())
         self.bind("<h>",         lambda _: self._toggle_suggestions())
         self.bind("<t>",         lambda _: self._toggle_suggestions())
+        self.bind("<p>",         lambda _: self._toggle_pending_only())
         self.bind("<i>",         lambda _: self._flag_demo())
 
         self.canvas.bind("<Button-1>",        self._on_click)
@@ -838,7 +851,82 @@ class AnnotationApp(tk.Tk):
 
     # ---- image loading -------------------------------------------------------
 
+    def _reviewed_file_names(self) -> set[str]:
+        """Return image file names that already have a final review decision."""
+        annotated_ids = {a["image_id"] for a in self.coco["annotations"]}
+        reviewed: set[str] = set()
+        for img in self.coco["images"]:
+            if img["id"] in annotated_ids or img.get("blank") or img.get("rejected"):
+                reviewed.add(img["file_name"])
+        return reviewed
+
+    def _is_file_reviewed(self, file_name: str | None) -> bool:
+        """Return whether one image file already has a final review decision."""
+        return bool(file_name) and file_name in self._reviewed_file_names()
+
+    def _current_file_name(self) -> str | None:
+        """Return the current image file name, if the queue is non-empty."""
+        if not self.images:
+            return None
+        return str(self.images[self.idx]["path"])
+
+    def _set_queue_for_filter(self, preferred_file: str | None = None) -> None:
+        """Rebuild the visible queue after changing the pending-only filter."""
+        if self._pending_only:
+            reviewed = self._reviewed_file_names()
+            self.images = [
+                entry for entry in self.all_images if str(entry["path"]) not in reviewed
+            ]
+        else:
+            self.images = self.all_images
+
+        if not self.images:
+            self.idx = 0
+            self._pil_img = Image.new("RGB", (1200, 800), (30, 30, 50))
+            self._photo = None
+            self._img_obbs = []
+            self._img_suggestions = []
+            self._pending_a = None
+            self._selected_obb_idx = None
+            self.canvas.delete("all")
+            self.canvas.create_text(
+                CANVAS_W // 2,
+                CANVAS_H // 2,
+                text="No pending images",
+                fill="#88ffcc",
+                font=("Helvetica", 18, "bold"),
+            )
+            self._update_labels()
+            return
+
+        if preferred_file:
+            for i, entry in enumerate(self.images):
+                if str(entry["path"]) == preferred_file:
+                    self._load_image(i)
+                    return
+
+        if preferred_file:
+            all_index = next(
+                (
+                    i for i, entry in enumerate(self.all_images)
+                    if str(entry["path"]) == preferred_file
+                ),
+                -1,
+            )
+            if all_index >= 0:
+                for i, entry in enumerate(self.images):
+                    try:
+                        if self.all_images.index(entry) > all_index:
+                            self._load_image(i)
+                            return
+                    except ValueError:
+                        continue
+
+        self._load_image(min(self.idx, len(self.images) - 1))
+
     def _load_image(self, idx: int) -> None:
+        if not self.images:
+            return
         self.idx = max(0, min(idx, len(self.images) - 1))
         entry = self.images[self.idx]
 
@@ -1014,6 +1102,19 @@ class AnnotationApp(tk.Tk):
             )
 
     def _update_labels(self) -> None:
+        if not self.images:
+            reviewed = len(self._reviewed_file_names())
+            total = len(self.all_images)
+            self.lbl_progress.config(text=f"No pending images  |  Reviewed: {reviewed} / {total}")
+            self.lbl_fname.config(text="")
+            self.lbl_score.config(text="")
+            self.lbl_count.config(text="DONE", fg="#66ff88")
+            self.lbl_zoom.config(text="")
+            self.btn_hints.config(text="Hints ✓ [H]" if self._show_suggestions else "Hints  [H]")
+            self.btn_pending.config(text="Pending ✓ [P]", fg="#88ffcc")
+            self.lbl_hint.config(text="All visible images are reviewed", fg="#88ffcc")
+            return
+
         n = len(self.images)
         annotated_ids = {a["image_id"] for a in self.coco["annotations"]}
         blank_ids = {img["id"] for img in self.coco["images"] if img.get("blank")}
@@ -1025,7 +1126,14 @@ class AnnotationApp(tk.Tk):
             if str(entry["path"]) in image_id_by_file
         }
         done = len((annotated_ids | blank_ids | rejected_ids) & queue_ids)
-        self.lbl_progress.config(text=f"Image {self.idx + 1} / {n}  |  Done: {done}")
+        total_done = len(self._reviewed_file_names())
+        filter_text = "pending" if self._pending_only else "all"
+        self.lbl_progress.config(
+            text=(
+                f"Image {self.idx + 1} / {n} ({filter_text})  |  "
+                f"Done: {done} visible, {total_done} / {len(self.all_images)} total"
+            )
+        )
         self.lbl_fname.config(text=self.images[self.idx]["path"].name[:70])
 
         score = self.images[self.idx].get("score", 0.0)
@@ -1045,6 +1153,9 @@ class AnnotationApp(tk.Tk):
 
         hints_label = "Hints ✓ [H]" if self._show_suggestions else "Hints  [H]"
         self.btn_hints.config(text=hints_label)
+        pending_label = "Pending ✓ [P]" if self._pending_only else "Pending only  [P]"
+        pending_color = "#88ffcc" if self._pending_only else "#ccccee"
+        self.btn_pending.config(text=pending_label, fg=pending_color)
 
         if cur_rejected:
             hint, color = "REJECTED — press R to undo", "#88aaff"
@@ -1063,12 +1174,20 @@ class AnnotationApp(tk.Tk):
     # ---- navigation ----------------------------------------------------------
 
     def _next(self) -> None:
+        current_file = self._current_file_name()
         self._autosave()
+        if self._pending_only and self._is_file_reviewed(current_file):
+            self._set_queue_for_filter(current_file)
+            return
         if self.idx < len(self.images) - 1:
             self._load_image(self.idx + 1)
 
     def _prev(self) -> None:
+        current_file = self._current_file_name()
         self._autosave()
+        if self._pending_only and self._is_file_reviewed(current_file):
+            self._set_queue_for_filter(current_file)
+            return
         if self.idx > 0:
             self._load_image(self.idx - 1)
 
@@ -1084,6 +1203,12 @@ class AnnotationApp(tk.Tk):
         self._autosave()
         self._load_image(n - 1)  # convert 1-based display to 0-based
         self._goto_var.set("")
+
+    def _on_goto_return(self, _: tk.Event) -> str:
+        """Handle Return in the Go-to field without accepting suggestions."""
+        self._goto_index()
+        self.focus_set()
+        return "break"
 
     # ---- annotation actions --------------------------------------------------
 
@@ -1166,6 +1291,13 @@ class AnnotationApp(tk.Tk):
         self._show_suggestions = not self._show_suggestions
         self._draw_overlays()
         self._update_labels()
+
+    def _toggle_pending_only(self) -> None:
+        """Toggle hiding images that already have a review decision."""
+        current_file = self._current_file_name()
+        self._autosave()
+        self._pending_only = not self._pending_only
+        self._set_queue_for_filter(current_file)
 
     def _flag_demo(self) -> None:
         """Copy the current image to the Demo Images folder."""
