@@ -739,10 +739,19 @@ Based on this analysis, in priority order:
    the Atwood training set (868 → ~1,550 images) with new NORAD IDs and geometry,
    directly addressing the medium-band data deficit.
 
-2. **Switch to tiled inference on Atwood** — The full-image 15.6× downscale is
-   the single largest source of suppressed recall. `tiled_pipeline.py` at
-   `tile_size=400` should recover most of the gap before any retraining.
-   Implement and benchmark this against the existing Run 4 checkpoint first.
+2. **Train on native-scale Atwood tiles AND run tiled inference** *(highest
+   priority architecture change)* — A 10.6-hour tiled eval of the Run 4 checkpoint
+   produced mAP@50=0.000 (2 TP, 19,269 FP). Root cause: the model was trained on
+   full-frame Atwood FITS resized to 400px; native-scale 400px Atwood tiles are
+   an entirely different distribution. The fix is straightforward and symmetric:
+   - Use `scripts/build_tiled_brentimages_json.py` to generate native-scale
+     400px virtual tile annotations from the Atwood FITS (same `__tx_ty_ts`
+     format as Frigate — no disk duplication)
+   - Replace full-frame Atwood entries in `all_train_run5.json` with these tiles
+   - Run tiled inference at 400px in production
+   Train and inference will then see the same pixel scale. Streaks at native
+   Atwood scale are longer and higher-contrast per pixel, which should
+   particularly improve medium-band recall.
 
 3. **Run ViT-B on the same Run 4 data split** — Train a ViT-B cold-start on
    `all_train_run4.json` + the holdout nights (once promoted) with the Run 4
@@ -758,9 +767,10 @@ Based on this analysis, in priority order:
    (F1=0.218). ViT-S image-level recall (97.5% vs ViT-B's 25.4%) strongly suggests
    ViT-S will exceed the ViT-B segment baseline once correctly extracted.
 
-5. **Lower OBB confidence threshold for medium band** — Run inference at
-   `conf=0.15–0.20` on `test_atwood.json` and check if medium-band recall
-   improves without catastrophic precision loss. No retraining required.
+5. ~~**Lower OBB confidence threshold for medium band**~~ ✅ **Done (commit 15d6330)**
+   — Threshold lowered to 0.20. Medium-band recall improved from 48.8% → 50.0%
+   on `test_atwood.json`. 45% of FNs at conf≥0.30 were underconfident detections
+   in [0.10, 0.30), not true misses. See commit 15d6330 for full root-cause analysis.
 
 ---
 
