@@ -387,23 +387,38 @@ def _gaussian_score(delta: float, sigma: float) -> float:
     return math.exp(-0.5 * (delta / sigma) ** 2)
 
 
-def _confidence_with_epoch_penalty(position_score: float, tle_age_hours: float) -> tuple[float, float]:
+_BROAD_EPOCH_PENALTY_SIGMA_HOURS = 168.0  # 7 days — broad-epoch TLEs expected to be stale
+
+
+def _confidence_with_epoch_penalty(
+    position_score: float,
+    tle_age_hours: float,
+    search_mode: str | None = None,
+) -> tuple[float, float]:
     """Apply the TLE date-drift penalty to positional match confidence.
 
-    The position-only cross-ID score can look deceptively strong when ARGUS is
-    forced to use a broad epoch window or current catalog against an old photo.
-    Reusing the established LEO TLE age penalty makes that date drift explicit:
-    24 h keeps about 61% of the positional confidence, 48 h about 14%, and
-    72 h about 1%.
+    Normal-mode TLEs (fresh catalog) use sigma=24h so staleness degrades
+    confidence quickly: 24h → 61%, 48h → 14%, 72h → 1%.
+
+    Broad-epoch TLEs are expected to be days old.  Using the same 24h sigma
+    would crush a geometrically correct match to near-zero.  For broad_epoch
+    and single_tip_endpoint modes a 168h (7-day) sigma is used instead:
+    72h → 96%, 168h → 61%, 360h → 5%.
 
     Args:
         position_score: Raw angular-position score in [0, 1].
         tle_age_hours: Hours between TLE epoch and photo time.
+        search_mode: TLE search mode string from the catalog entry
+            (e.g. "normal", "broad_epoch").  None treated as normal.
 
     Returns:
         ``(penalized_confidence, epoch_penalty)``.
     """
-    penalty = tle_age_penalty(abs(tle_age_hours))
+    if search_mode in ("broad_epoch", "single_tip_endpoint"):
+        sigma = _BROAD_EPOCH_PENALTY_SIGMA_HOURS
+    else:
+        sigma = 24.0
+    penalty = tle_age_penalty(abs(tle_age_hours), sigma_hours=sigma)
     return position_score * penalty, penalty
 
 
@@ -695,6 +710,7 @@ def cross_identify(
             confidence, epoch_penalty = _confidence_with_epoch_penalty(
                 pos_score,
                 result["tle_age_hours"],
+                search_mode=entry.get("tle_search_mode"),
             )
 
             candidates.append({
