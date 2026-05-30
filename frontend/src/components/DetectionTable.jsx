@@ -20,15 +20,35 @@ const METHOD_CONFIG = {
   ml:                        { label: 'ML',                        cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
 }
 
-function MethodBadge({ method, confidence }) {
-  const m = METHOD_CONFIG[method] ?? {
-    label: method ?? 'Unknown',
-    cls: 'border-slate-600/60 bg-slate-800/40 text-slate-400',
+const NORM_LABELS = {
+  autostretch: 'AutoSTF',
+  zscore:      'z-score',
+}
+
+// Resolve display config for a method ID, handling dual-norm suffixes like
+// "dinov3_vitb__autostretch" or "dinov3_vitb__zscore".
+function resolveMethod(method) {
+  if (!method) return { label: 'Unknown', cls: 'border-slate-600/60 bg-slate-800/40 text-slate-400', norm: null }
+  const sepIdx = method.indexOf('__')
+  if (sepIdx !== -1) {
+    const baseId = method.slice(0, sepIdx)
+    const norm   = method.slice(sepIdx + 2)
+    const base   = METHOD_CONFIG[baseId] ?? { label: baseId, cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' }
+    const normLabel = NORM_LABELS[norm] ?? norm
+    return { ...base, label: base.label, norm: normLabel }
   }
+  return { ...(METHOD_CONFIG[method] ?? { label: method, cls: 'border-slate-600/60 bg-slate-800/40 text-slate-400' }), norm: null }
+}
+
+function MethodBadge({ method, confidence }) {
+  const m = resolveMethod(method)
   return (
     <div className="flex items-center gap-1.5">
-      <span className={`inline-flex items-center rounded border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${m.cls}`}>
+      <span className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${m.cls}`}>
         {m.label}
+        {m.norm && (
+          <span className="opacity-70 normal-case tracking-normal font-normal">· {m.norm}</span>
+        )}
       </span>
       <span className={[
         'text-xs tabular-nums font-medium',
