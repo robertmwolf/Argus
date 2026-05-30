@@ -310,6 +310,23 @@ same physical streak. Each grouped streak then receives a fused OBB spanning the
 outer projected endpoints of its member fragments before WCS/cross-ID and API
 serialization.
 
+**8. Endpoint tracing — `extend_obb_to_streak_extent`** — called for every
+detection after Radon angle refinement. Traces the full image along the refined
+streak axis and finds where the signal (strip max across ±`sample_halfwidth` px)
+drops to background. The resulting run containing the OBB centre replaces the
+initial OBB width. Key parameters (set in `pipeline.py`):
+
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| `sample_halfwidth` | **15 px** | ±8 px caused false "no centre run" failures when the Radon angle seed was off by even 1°, causing the tracer to miss the streak axis at t=0 and fall back to the original short OBB. 15 px is wide enough to reliably straddle the streak. |
+| `threshold_sigma` | **3σ** above image median | 3σ keeps the centre-run boundary tight enough to exclude stars along the same azimuth. 2σ causes the centre run to absorb off-axis stars and overshoot to 2× the true length. |
+
+For heatmap `line_segment` detections the pipeline preserves the native
+`cx`/`cy` from `_line_to_obb` when calling `extend_obb_to_streak_extent`.
+Reconstructing from the axis-aligned bbox centroid would shift the anchor
+point to the edge of the partially-detected segment, changing the angle seed
+and causing drift at the far tips.
+
 ---
 
 ## Training — Two-Stage Fine-Tuning
