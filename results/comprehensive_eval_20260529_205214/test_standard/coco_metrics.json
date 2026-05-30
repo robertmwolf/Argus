@@ -1,0 +1,13 @@
+{
+  "checkpoint": "weights/run4_vits_mmdet/best_coco_bbox_mAP_epoch_15.pth",
+  "config": "models/dino/streak_dinov3_vits_400px_run3.py",
+  "metrics": {
+    "coco/bbox_mAP": 0.005,
+    "coco/bbox_mAP_50": 0.014,
+    "coco/bbox_mAP_75": 0.002,
+    "coco/bbox_mAP_l": 0.004,
+    "coco/bbox_mAP_m": 0.233,
+    "coco/bbox_mAP_s": -1.0
+  },
+  "split": "test"
+}
