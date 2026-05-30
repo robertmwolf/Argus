@@ -168,6 +168,8 @@ def main():
     parser.add_argument("--tile-size", type=int, default=400)
     parser.add_argument("--overlap",   type=float, default=0.5)
     parser.add_argument("--ann-file",  type=Path, default=ANN_FILE)
+    parser.add_argument("--model-size", type=str, default="dinov3_vitb_multisource",
+                        help="Model size key passed to _select_config (e.g. dinov3_vits_run4)")
     args = parser.parse_args()
 
     sys.path.insert(0, str(_REPO_ROOT))
@@ -188,7 +190,7 @@ def main():
 
     device = get_device()
     inf_device = torch.device("cpu") if device.type == "mps" else device
-    config_path = _select_config("dinov3_vitb_multisource")
+    config_path = _select_config(args.model_size)
     model = _load_model(config_path, args.checkpoint, inf_device)
 
     from inference.tiled_pipeline import tile_image, remap_predictions, nms_predictions, _clip_predictions_to_image, _pipeline_det_to_prediction

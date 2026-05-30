@@ -1,0 +1,62 @@
+{
+  "scope": "run4_mmdet_atwood_20260527",
+  "label": "Run 4 MMDet \u2014 Atwood 2026-05-27 zero-shot holdout (507 imgs)",
+  "checkpoint": "weights/run4_vits_mmdet/best_coco_bbox_mAP_epoch_15.pth",
+  "config": "models/dino/streak_dinov3_vits_400px_run3.py",
+  "annotation_file": "data/annotations/atwood_20260527.json",
+  "n_images": 532,
+  "n_annotations": 559,
+  "coco_metrics": {
+    "coco/bbox_mAP": 0.276,
+    "coco/bbox_mAP_50": 0.515,
+    "coco/bbox_mAP_75": 0.268,
+    "coco/bbox_mAP_s": 0.0,
+    "coco/bbox_mAP_m": 0.055,
+    "coco/bbox_mAP_l": 0.291
+  },
+  "pr": {
+    "conf_threshold": 0.3,
+    "iou_threshold": 0.5,
+    "precision": 0.7143,
+    "recall": 0.5188,
+    "f1": 0.601,
+    "tp": 290,
+    "fp": 116,
+    "fn": 269,
+    "n_gt": 559,
+    "n_pred_above_conf": 406
+  },
+  "per_band_recall": {
+    "short": {
+      "recall": 0.0,
+      "tp": 0,
+      "fn": 9,
+      "n_gt": 9
+    },
+    "medium": {
+      "recall": 0.0444,
+      "tp": 2,
+      "fn": 43,
+      "n_gt": 45
+    },
+    "long": {
+      "recall": 0.5703,
+      "tp": 288,
+      "fn": 217,
+      "n_gt": 505
+    }
+  },
+  "baseline": {
+    "precision": 0.9485,
+    "recall": 0.8377,
+    "f1": 0.8897,
+    "mAP": 0.782,
+    "mAP_50": 0.878,
+    "band_recall": {
+      "short": 1.0,
+      "medium": 0.909,
+      "long": 0.834
+    },
+    "source": "results/comprehensive_eval_20260528_154914/test_standard/metrics.json"
+  }
+}

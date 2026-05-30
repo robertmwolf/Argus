@@ -1,0 +1,13 @@
+{
+  "checkpoint": "weights/run4_vits_mmdet/best_coco_bbox_mAP_epoch_15.pth",
+  "config": "models/dino/streak_dinov3_vits_400px_run3.py",
+  "metrics": {
+    "coco/bbox_mAP": 0.276,
+    "coco/bbox_mAP_50": 0.515,
+    "coco/bbox_mAP_75": 0.268,
+    "coco/bbox_mAP_l": 0.291,
+    "coco/bbox_mAP_m": 0.055,
+    "coco/bbox_mAP_s": 0.0
+  },
+  "split": "_zs_eval_run4_mmdet_atwood_20260527"
+}

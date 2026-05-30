@@ -396,7 +396,24 @@ comparison. A proper A/B requires running the ViT-B checkpoint against
 The only apples-to-apples cross-run metric is the SatStreaks secondary benchmark
 (eval 4/6 — see below).
 
-**Zero-shot holdout results:** See `results/zero_shot_run4_mmdet_*/report.md`.
+**Zero-shot holdout results (full-frame inference — tiled results pending):**
+
+| Set | mAP | mAP@50 | P | R | Long recall | Med recall | Short recall |
+|-----|-----|--------|---|---|-------------|------------|--------------|
+| test_atwood (133 imgs, 119 anns) | 0.223 | 0.518 | 61.1% | 55.5% | 75.0% (n=36) | 48.8% (n=80) | 0% (n=3) |
+| atwood_20260527 (507 imgs, 559 anns) | 0.276 | 0.515 | 71.4% | 51.9% | 57.0% (n=505) | 4.4% (n=45) | 0% (n=9) |
+| atwood_20260528 (175 imgs, 185 anns) | *pending* | | | | | | |
+
+⚠ **All above numbers use full-frame 15.6× downscale inference.** The tiled inference
+eval at tile=400, overlap=0.50 (matching production settings) is running overnight.
+Those numbers will supersede these. The script's "domain shift" warning for
+atwood_20260527 reflects the full-frame resolution limit, not an actual instrument
+domain shift — both nights use the same Atwood Observatory camera.
+
+The atwood_20260527 distribution is 90% long streaks (505/559) vs test_atwood which
+is 30% long (36/119). The lower long recall (57% vs 75%) is partly a selection effect:
+longer native streaks compress further in a 400px frame and become harder to detect.
+Results: `results/zero_shot_run4_mmdet_*/`
 
 ---
 
