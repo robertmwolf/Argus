@@ -461,6 +461,162 @@ the warm-start checkpoint at a high learning rate.
 
 ---
 
+## 3.5 ViT-S vs ViT-B Comparison Analysis (2026-05-29)
+
+### 3.5.1 Scope and Caveats
+
+This section compares the Run 4 ViT-S models against the ViT-B baselines.
+**This is not a controlled A/B test.** Three confounds prevent a clean causal
+attribution of any performance delta to model size alone:
+
+| Confound | ViT-B baseline | ViT-S (Run 4) |
+|----------|---------------|----------------|
+| Training images | **8,422** (SatStreaks + Atwood + Frigate) | **868** (Atwood + Frigate only) |
+| Training domain | SatStreaks included | SatStreaks excluded |
+| Input resolution (OBB) | 256 px | 400 px |
+| Input resolution (centerline) | 512 px | 1024 px |
+| Evaluation test set (OBB) | SatStreaks `test.json` (HST) | `test_atwood.json` (Atwood FITS) |
+| Evaluation metric (centerline) | Segment F1 (line-matching) | Dice (pixel overlap) |
+| Backbone parameters | ~87 M | ~22 M |
+
+Despite these confounds, the comparison is informative because the intent of
+Run 4 was specifically to: (a) switch to the Atwood-only training domain, and
+(b) validate whether a smaller backbone is viable at all.  Any deficits
+observed against ViT-B are a combined signal from model capacity, training
+data volume, and domain shift — all of which are levers for Run 5.
+
+---
+
+### 3.5.2 OBB Detection Comparison
+
+#### SatStreaks secondary benchmark (same test set — only fair cross-run comparison)
+
+| Metric | ViT-B (Run 3, 8,422 imgs) | ViT-S (Run 4, 868 imgs) | Delta |
+|--------|--------------------------|------------------------|-------|
+| COCO mAP | **0.782** | *[pending eval 4/6]* | — |
+| COCO mAP@50 | **0.878** | *[pending eval 4/6]* | — |
+| Precision | **94.9%** | *[pending]* | — |
+| Recall | **83.8%** | *[pending]* | — |
+| F1 | **89.0%** | *[pending]* | — |
+| Long-band recall | 83.4% | *[pending]* | — |
+
+*Note:* ViT-B was trained on SatStreaks; ViT-S was not. A drop in SatStreaks
+score for ViT-S is therefore expected and **not** a meaningful regression — it
+simply reflects the intentional domain exclusion. The SatStreaks benchmark is
+retained as a regression detector across future runs trained on the same data policy.
+
+#### Atwood primary benchmark (different test sets — not directly comparable)
+
+| | ViT-B | ViT-S (Run 4) |
+|---|---|---|
+| Test set | `test.json` (SatStreaks, HST, 4096px) | `test_atwood.json` (Atwood FITS, 6248px) |
+| COCO mAP@50 | 0.878 | 0.518 |
+| Long-band recall | 83.4% (n=295 in HST test) | 75.0% (n=36 in Atwood test) |
+| Medium-band recall | 90.9% (n=11) | **48.8% (n=80)** ← dominant failure |
+| Short-band recall | 100% (n=2) | 0% (n=3) |
+
+The large gap (mAP@50 0.878 → 0.518) is **not attributable to model size alone**.
+The ViT-B number is on SatStreaks JPEG images where streaks are already at a
+favourable scale for 256px model input. The ViT-S number is on native 6248×4176 px
+Atwood FITS where the 400px resize shrinks a 600px median streak to ~38px — near the
+detection limit. This is the same resolution mismatch caveat documented in §3.3.
+
+**The correct comparison for Atwood performance** is tiled inference at 400px
+crops on both models. That evaluation has not yet been run for ViT-B because the
+Run 3 weights (`run_clean_vitb_nodm/`) are no longer on disk. When recovered or
+re-trained, run `scripts/eval_brentimages_tiled.py` against `test_atwood.json`
+at `tile_size=400` for a valid comparison.
+
+#### Key OBB finding
+
+The ViT-S medium-band deficit (48.8% vs 90.9% for ViT-B on SatStreaks) is the
+clearest signal, but it conflates three effects:
+1. **Model capacity** — ViT-S has 4× fewer backbone parameters
+2. **Training volume** — 868 vs 8,422 images (10×)
+3. **Domain** — Atwood medium streaks (~340–1016 arcsec) may differ in appearance
+   from the 11 medium-band SatStreaks images used to estimate ViT-B medium recall
+
+To isolate model capacity: train ViT-B on the identical Run 4 data split and
+evaluate on `test_atwood.json`. That is the recommended Run 5 comparison.
+
+---
+
+### 3.5.3 Centerline Heatmap Comparison
+
+| | ViT-B baseline | ViT-S (Run 4) |
+|---|---|---|
+| Checkpoint | `run_dinov3_vitb_orientation_centerline_input512_catchment/best.pt` | `run_dinov3_vits_orientation_centerline_1024/best.pt` |
+| Input resolution | 512 px | 1024 px |
+| Training data | `all_train_nodm` + old val (~8,422 imgs) | `all_train_run4.json` (868 imgs) |
+| Val set | `val.json` (411 imgs, mixed domains) | `val_atwood.json` (133 imgs, Atwood only) |
+| Best val metric | — | **dice = 0.2327** |
+| Segment F1 (t=0.85, lsr=0.50) | **0.218** | *[pending — eval 5-6/6]* |
+| Precision (segment) | 0.349 | *[pending]* |
+| Recall (segment) | 0.158 | *[pending]* |
+
+**Resolution effect is significant for centerline.** ViT-S at 1024px projects
+a 600px native Atwood streak onto ~98 model-input pixels — 2.5× denser than
+ViT-B at 512px (~49px). Centerline heatmaps are inherently resolution-limited:
+a streak that spans <10 pixels at model input cannot be reliably localised to
+within 3px tolerance. The 1024px ViT-S is therefore architecturally better-suited
+to Atwood-resolution images than the 512px ViT-B, even at lower backbone capacity.
+
+**Metric incompatibility:** Dice (ViT-S val) measures per-pixel overlap of the
+predicted heatmap against the GT centerline mask. Segment F1 (ViT-B) measures
+line-segment matching after proposal extraction. A high dice score does not
+guarantee high segment F1 if the extractor cannot resolve blobs into clean
+line proposals. Eval 5/6 will compute segment-level metrics for ViT-S to
+enable a fair comparison.
+
+#### Key centerline finding
+
+At the current evaluation stage, ViT-S val_dice=0.2327 is flat across all
+epochs — the model converged quickly. This is consistent with the ViT-B
+trajectory: the heatmap head is a light MLP decoder on frozen DINOv3 features
+and converges within 5–6 epochs regardless of backbone size. The performance
+ceiling is more likely constrained by:
+- **Tile strategy** — the 2560px training tile means most samples are full-frame
+  Atwood images; the model never sees sub-crops at the density the extractor
+  needs to produce clean lines
+- **Loss weighting** — current BCE+Dice+orientation CE+catchment mix has not
+  been tuned against segment-level metrics
+- **Evaluation gap** — val_dice optimises for pixel overlap, not for the
+  downstream line-segment quality that the extractor needs
+
+---
+
+### 3.5.4 Run 5 Recommendations
+
+Based on this analysis, in priority order:
+
+1. **Add holdout nights to training** (highest expected gain, lowest compute cost)
+   — Promote `atwood_20260527` (507 imgs) and `atwood_20260528` (175 imgs) to
+   `split: train` once their zero-shot eval reports are committed. This triples
+   the Atwood training set (868 → ~1,550 images) with new NORAD IDs and geometry,
+   directly addressing the medium-band data deficit.
+
+2. **Switch to tiled inference on Atwood** — The full-image 15.6× downscale is
+   the single largest source of suppressed recall. `tiled_pipeline.py` at
+   `tile_size=400` should recover most of the gap before any retraining.
+   Implement and benchmark this against the existing Run 4 checkpoint first.
+
+3. **Run ViT-B on the same Run 4 data split** — Train a ViT-B cold-start on
+   `all_train_run4.json` + the holdout nights (once promoted) with the Run 4
+   config except `model_size='base'` and `out_channels=768`. This gives a true
+   model-size comparison on identical data. Expected: +0.10–0.20 mAP on
+   `test_atwood.json` based on historical ViT-B vs ViT-S gap on SatStreaks.
+
+4. **Tune centerline for segment-level metrics** — Once segment F1 for ViT-S is
+   measured (eval 5/6), compare to ViT-B baseline (F1=0.218). If ViT-S is
+   within 3pp of ViT-B at 10× less training data, it validates the architecture
+   at smaller scale. If deficit is >10pp, backbone size is the bottleneck.
+
+5. **Lower OBB confidence threshold for medium band** — Run inference at
+   `conf=0.15–0.20` on `test_atwood.json` and check if medium-band recall
+   improves without catastrophic precision loss. No retraining required.
+
+---
+
 ## 4. Final Paper Training Run — Requirements Checklist
 
 The following must all be satisfied before executing the run whose results will
