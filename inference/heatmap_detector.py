@@ -269,9 +269,9 @@ def get_heatmap_detector_status() -> dict[str, str]:
     checkpoint = Path(os.environ.get("HEATMAP_CENTERLINE_CHECKPOINT", str(_default_checkpoint())))
     return {
         "id": "dinov3_heatmap_centerline",
-        "name": "DINOv3 Heatmap Centerline",
+        "name": "ViT-S HeatMap",
         "type": "ml",
-        "dataset": "SatStreaks centerline catchment",
+        "dataset": "BrentImages+Frigate",
         "status": "active" if checkpoint.exists() else "no_weights",
     }
 

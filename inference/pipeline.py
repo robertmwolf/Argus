@@ -144,6 +144,15 @@ def _model_registry() -> list[dict]:
             "config":    root / "models" / "dino" / "streak_dinov3_vitb.py",
             "norm_mode": "autostretch",
         },
+        {
+            "id":        "dinov3_vits_run4",
+            "size":      "dinov3_vits_run4",
+            "label":     "ViT-S OBB",
+            "dataset":   "BrentImages+Frigate",
+            "weights":   root / "weights" / "run4_vits_mmdet" / "best_coco_bbox_mAP_epoch_15.pth",
+            "config":    root / "models" / "dino" / "streak_dinov3_vits_400px_run3.py",
+            "norm_mode": "autostretch",
+        },
     ]
 
 
@@ -171,6 +180,7 @@ def _select_config(model_size: str) -> Path:
         "dinov3_vitb":             root / "models" / "dino" / "streak_dinov3_vitb.py",
         "dinov3_vitl":             root / "models" / "dino" / "streak_dinov3_vitl.py",
         "dinov3_vitb_multisource": root / "models" / "dino" / "streak_dinov3_vitb_400px.py",
+        "dinov3_vits_run4":        root / "models" / "dino" / "streak_dinov3_vits_400px_run3.py",
     }
     if model_size not in configs:
         raise ValueError(

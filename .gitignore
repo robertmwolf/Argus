@@ -42,6 +42,14 @@ data/GTImages/*.fts
 # Results — check in JSON metrics, not raw outputs
 results/*.png
 results/*.csv
+# Large raw prediction/proposal dumps (regenerable, too big for git)
+results/*/proposals*.json
+results/**/proposals*.json
+results/*/predictions.json
+results/**/*.bbox.json
+# External-drive symlinks (not portable)
+data/BrentImages
+data/BrentImages/
 
 # Credentials — never commit
 .env.local

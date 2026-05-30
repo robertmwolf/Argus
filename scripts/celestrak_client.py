@@ -135,7 +135,7 @@ def fetch_and_upsert(force: bool = False, engine=None) -> int:
     record_coverage(
         _COVERAGE_TAG,
         description=f"CelesTrak GP refresh — {total_records} records fetched",
-        record_count=total_inserted,
+        record_count=total_records,
         engine=eng,
     )
     logger.info(
