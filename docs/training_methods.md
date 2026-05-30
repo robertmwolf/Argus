@@ -333,6 +333,105 @@ updated with measured values: `precision=0.9485`, `recall=0.8377`,
 per-band recall ratios). All values sourced from
 `results/comprehensive_eval_20260528_154914/test_standard/metrics.json`.
 
+### 3.4 Run 4 — ViT-S Geometry-Stratified (complete 2026-05-29)
+
+**First training run under the new data strategy (no SatStreaks; geometry-stratified
+Atwood + Frigate diversity tiles).  Two models trained simultaneously.**
+
+#### 3.4.1 OBB Detection — MMDet DINO ViT-S
+
+- **Config:** `models/dino/streak_dinov3_vits_400px_run3.py` (400px, ViT-S backbone)
+- **Training data:** `all_train_run4.json` — 868 images
+  (618 Atwood geometry-stratified train split + 250 Frigate diversity tiles)
+- **Val:** `val_atwood.json` — 133 images, geometry-stratified Atwood val split
+- **Hardware:** Mac M3 CPU + MPS fallback, ~3.7 s/step
+- **Epochs:** 15 (12 clean; epoch 14 val corrupted by external drive EPERM event;
+  resumed from epoch 13 checkpoint; epochs 14–15 completed cleanly after remount)
+- **Checkpoint:** `weights/run4_vits_mmdet/best_coco_bbox_mAP_epoch_15.pth`
+- **Optimizer:** AdamW, lr=1e-6 (warmup), cosine schedule; seed=42
+
+**Per-epoch val results (mAP@IoU=0.50:0.95, on `val_atwood.json`):**
+
+| Epoch | mAP   | mAP@50 | mAP@75 | mAP_m | mAP_l | Best? |
+|-------|-------|--------|--------|-------|-------|-------|
+| 1     | 0.004 | 0.017  | 0.000  | 0.012 | 0.007 | |
+| 10    | 0.173 | 0.410  | 0.090  | 0.257 | 0.231 | |
+| 11    | 0.216 | 0.535  | 0.133  | 0.283 | 0.290 | |
+| 12    | 0.194 | 0.490  | 0.106  | 0.235 | 0.255 | |
+| 13    | 0.247 | 0.607  | 0.191  | 0.293 | 0.315 | |
+| 14    | 0.253 | 0.607  | 0.188  | 0.302 | 0.331 | |
+| **15** | **0.273** | **0.611** | **0.182** | **0.291** | **0.360** | ✅ best |
+
+**Test-set results (`test_atwood.json`, 133 imgs, 119 annotations):**
+
+| Metric | Value |
+|--------|-------|
+| COCO mAP | 0.223 |
+| COCO mAP@50 | **0.518** |
+| COCO mAP@75 | 0.139 |
+| Precision (conf≥0.30) | 61.1% |
+| Recall (conf≥0.30) | 55.5% |
+| F1 | 58.2% |
+
+**Per-band recall on `test_atwood.json` (conf≥0.30, IoU≥0.50):**
+
+| Band | Recall | TP | FN | GT |
+|------|--------|----|----|-----|
+| Short (<269px) | 0.0% | 0 | 3 | 3 |
+| **Medium (269–800px)** | **48.8%** | 39 | 41 | 80 |
+| Long (>800px) | 75.0% | 27 | 9 | 36 |
+
+Medium band (67% of annotations) is the primary failure mode. Long recall (75%)
+is below the 85% quality gate — the model is viable but not yet production-ready on
+Atwood native-resolution images at the full-image resize scale used here. Tiled
+inference (400px crops) is expected to improve recall substantially — see §3.3 caveat.
+Results: `results/zero_shot_run4_mmdet_test_atwood_*/`
+
+**⚠ Comparison caveat:** The auto-generated report compares Run 4 ViT-S
+(evaluated on Atwood FITS `test_atwood.json`) against the Run 3 ViT-B
+baseline (evaluated on SatStreaks HST `test.json`). These are different test
+sets from different sensor domains — the deltas are not a valid ViT-S vs ViT-B
+comparison. A proper A/B requires running the ViT-B checkpoint against
+`test_atwood.json`. That evaluation is not yet complete; schedule for Run 5 planning.
+The only apples-to-apples cross-run metric is the SatStreaks secondary benchmark
+(eval 4/6 — see below).
+
+**Zero-shot holdout results:** See `results/zero_shot_run4_mmdet_*/report.md`.
+
+---
+
+#### 3.4.2 Centerline Heatmap — ViT-S
+
+- **Architecture:** `DINOv3OrientationCenterline` (ViT-S, 18 orientation bins,
+  decoder_channels=192, last_layers=4, image_size=1024)
+- **Training data:** `all_train_run4.json` — 2,636 tiles/epoch
+  (1,236 positive + 1,400 negative tile samples from 868 images)
+- **Val:** `val_atwood.json` — 133 full-frame images
+- **Hardware:** Mac M3 MPS, ~4.6 s/batch (real PNG loading after Frigate tile fix)
+- **Epochs:** 10 effective (5 clean epochs → drive EPERM interruption → resumed
+  from epoch-5 best checkpoint for 5 additional epochs with fresh cosine schedule)
+- **Checkpoint:** `weights/run_dinov3_vits_orientation_centerline_1024/best.pt`
+  (best val_dice=0.2327, epoch 1 of resumed run = effective epoch 6)
+- **Loss:** BCE (w=0.10) + Dice (w=1.0) + orientation CE (w=0.20) +
+  catchment BCE (w=0.20) + catchment Dice (w=1.0); pos_weight=60
+
+**Val dice per epoch (resumed run from epoch-5 weights):**
+
+| Resumed epoch | val_dice | train_dice | lr |
+|--------------|----------|------------|----|
+| 1 | **0.2327** | 0.2197 | 4.62e-05 |
+| 2 | 0.2217 | 0.2259 | 3.62e-05 |
+| 3 | 0.2258 | 0.2318 | 2.38e-05 |
+| 4 | 0.2239 | 0.2363 | 1.38e-05 |
+| 5 | 0.2284 | 0.2395 | 1.00e-05 |
+
+Val dice plateaued at ~0.23 from epoch 1 of initial run onward; train dice continued
+improving (0.10 → 0.24), indicating mild overfitting or that the val metric ceiling
+is constrained by the spatial resolution mismatch at 1024px model input vs
+6248×4176px native images. Results: `results/run4_centerline_*/`.
+
+---
+
 ### 3.3 BrentImages Night 2 Evaluation Caveat
 
 The zero-shot mAP@50 of 0.296 on BrentImages Night 2 is **misleading low** due to a

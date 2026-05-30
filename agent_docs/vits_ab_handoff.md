@@ -1,15 +1,26 @@
 # DINOv3 ViT-S Training Handoff
 
 Date: 2026-05-28
+**Status: COMPLETE (2026-05-29) — both ViT-S models trained and evaluated.**
 
 ## Goal
 
 Train two new ViT-S models and compare each against its existing ViT-B baseline:
 
-| New model | Architecture | Baseline to beat |
-|-----------|-------------|-----------------|
-| `dinov3_vits_run3` | MMDetection DINO ViT-S, OBB output | `dinov3_vitb_run3` |
-| `dinov3_orientation_centerline_vits` | Orientation-centerline heatmap ViT-S, line-segment output | `dinov3_orientation_centerline_vitb` |
+| New model | Architecture | Status | Best checkpoint |
+|-----------|-------------|--------|----------------|
+| `dinov3_vits_run3` | MMDetection DINO ViT-S, OBB output | ✅ Complete | `weights/run4_vits_mmdet/best_coco_bbox_mAP_epoch_15.pth` |
+| `dinov3_orientation_centerline_vits` | Centerline heatmap ViT-S | ✅ Complete | `weights/run_dinov3_vits_orientation_centerline_1024/best.pt` |
+
+**Run 4 key results (see `docs/training_methods.md §3.4` for full details):**
+- OBB ViT-S: val_atwood mAP@50=0.611; test_atwood mAP@50=0.518, long-recall=75%
+- Centerline ViT-S: val_dice=0.2327 (plateau from epoch 1)
+
+**ViT-S vs ViT-B comparison:** A direct A/B on the same `test_atwood.json` set
+requires running the ViT-B checkpoint (`weights/dinov3_vitb_augmented/`) against
+the new geometry-stratified test set — this has not yet been run (Run 3 ViT-B was
+trained on SatStreaks-inclusive data; the comparison is apples-to-oranges on
+different training distributions). Schedule this for Run 5 planning.
 
 The two model families produce **different outputs** (OBB boxes vs line segments) and are
 evaluated separately. Do not compare them to each other using the same metric.

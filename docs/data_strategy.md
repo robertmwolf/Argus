@@ -454,8 +454,10 @@ recover it.
 - [x] **Scale jitter and PSF blur augmentation** in `training/augmentations.py`
       `get_train_transforms()`: `RandomScale(±25%)` and
       `GaussianBlur(σ 0.5–2.0 px)` added for cross-scope generalisation.
-- [ ] **Run 4** — first training run on geometry-stratified Atwood+Frigate data,
-      no SatStreaks.  Evaluate against `test_atwood.json` once built.
+- [x] **Run 4** — first training run on geometry-stratified Atwood+Frigate data,
+      no SatStreaks.  Two ViT-S models trained (2026-05-28 to 2026-05-29):
+      OBB (MMDet): mAP@50=0.611 val / 0.518 test; Centerline: val_dice=0.2327.
+      See `docs/training_methods.md §3.4`.
 
 ### Run 4 prerequisites (all now complete)
 1. Run `extract_streak_features.py` → `data/features/atwood_streak_features.csv`
@@ -482,3 +484,6 @@ recover it.
 | 2026-05-28 | Frigate retained for short-band training only | Only available source of short-streak morphology; diversity-sampled to prevent single-instrument dominance |
 | 2026-05-28 | SNR/faintness added as stratification dimension | Run 3's 49 FN long-streak misses are almost certainly faint; without this dimension, test sets overstate production recall |
 | 2026-05-28 | Augmentation (scale jitter, PSF blur) planned for cross-scope generalisation | More predictable than mixing data from instruments with large domain gaps |
+| 2026-05-29 | Run 4 OBB medium-band recall (49%) is primary failure mode on test_atwood | Medium band is 67% of Atwood annotations; Run 5 should add holdout nights + investigate FN |
+| 2026-05-29 | Holdout nights (atwood_20260527, atwood_20260528) kept out of training until zero-shot eval recorded | Policy: never promote a night to training before its holdout eval report is committed |
+| 2026-05-29 | Frigate virtual tile paths fixed in centerline loader | _TILE_RE added to dinov3_orientation_centerline_dataset.py; annotation JSONs path-normalised to canonical /Volumes/External/TrainingData/raw/ prefix |

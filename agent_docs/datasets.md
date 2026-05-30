@@ -93,6 +93,12 @@ pixel coordinates are filled in via the manual annotation workflow.
 - Both sessions are listed in `data/sessions/manifest.yaml` as
   `split: holdout` and must stay out of training until zero-shot evaluation
   reports are recorded.
+- **Run 4 zero-shot evaluation (2026-05-29):** OBB results available in
+  `results/zero_shot_run4_mmdet_atwood_20260527_*/` and
+  `results/zero_shot_run4_mmdet_atwood_20260528_*/`.
+  Centerline results in `results/run4_centerline_zeroshot_20260527/`.
+  Once the full results are reviewed, these sessions may be promoted to `split: train`
+  for Run 5.
 
 **Role in ARGUS:**
 - **Negative examples:** no-streak images fill the negative-example gap in SatStreaks

@@ -16,7 +16,7 @@ propagation and multi-factor confidence scoring. Results are served through a
 FastAPI backend and React frontend.
 
 ## Current Phase
-**Run 3 complete (2026-05-28). Data strategy overhaul in progress. Run 4 is next.**
+**Run 4 complete (2026-05-29). First geometry-stratified ViT-S run. Evaluations complete.**
 
 Progress:
 - ✅ Phase 0 (Classical baseline): `src/` — fits_parser, classical_detector, plate_solver, SGP4 matching
@@ -29,42 +29,44 @@ Progress:
 - ✅ Phase 8 (Evaluation): `eval/metrics.py`, `eval/benchmark.py`
 - ✅ DINOv3 ViT-B backbone integrated — `models/dino/dinov3_adapter.py`
 - ✅ Adaptive tiling — `inference/tiled_pipeline.py`
-- ✅ **Run 3 complete** — cold-start cold-start ViT-B, 15 epochs, `all_train_nodm.json` (8,422 images).
+- ✅ **Run 3 complete** — cold-start ViT-B, 15 epochs, `all_train_nodm.json` (8,422 images).
   Best checkpoint: epoch 13. Results: mAP=0.782, P=94.9%, R=83.8% on SatStreaks test set.
   Weights: `weights/run3_cold_nodm/best.pth`. See `docs/training_methods.md §3.2`.
 - ✅ Data strategy formalised — `docs/data_strategy.md` (2026-05-28). SatStreaks excluded
   from training; geometry-based stratification adopted; multi-scope workflow implemented.
-- ⏳ **Run 4** — first run under the new data strategy (Atwood-only + Frigate, geometry-stratified).
-  Blocked on: feature extraction script, stratified split script. See `docs/data_strategy.md §11`.
+- ✅ Geometry-stratified splits built — `atwood_train.json` (618), `val_atwood.json` (133),
+  `test_atwood.json` (133). Summary: `data/features/atwood_split_summary.json`.
+- ✅ **Run 4 complete** — two ViT-S models trained on geometry-stratified Atwood + Frigate data.
+  - **OBB MMDet ViT-S:** `weights/run4_vits_mmdet/best_coco_bbox_mAP_epoch_15.pth`
+    Val (atwood): mAP@50=0.611, mAP=0.273. Test (atwood): mAP@50=0.518, long-recall=75%.
+  - **Centerline ViT-S:** `weights/run_dinov3_vits_orientation_centerline_1024/best.pt`
+    Val dice=0.2327. See `docs/training_methods.md §3.4`.
+- ✅ Frigate tile virtual-path fix — `training/dinov3_orientation_centerline_dataset.py`
+  now correctly resolves `__tx{x}_ty{y}_ts{size}` paths to parent images at load time.
 
 ## Next Steps
 
-### Immediate: build the geometry-stratified splits (prerequisite for Run 4)
+### Run 5 planning (informed by Run 4 results)
 
-Three scripts need to be written in order (see `docs/data_strategy.md §11`):
+Run 4 primary failure mode: medium-band recall 49% on `test_atwood.json`
+(medium band = 80/119 annotations = 67% of the Atwood test set).
 
-1. **`scripts/extract_streak_features.py`** — compute per-annotation feature table
-   (length, aspect_ratio, angle, SNR).  SNR requires loading FITS from external drive.
+Recommended levers for Run 5:
+- **Add holdout nights to training** — atwood_20260527 (507 imgs) and atwood_20260528
+  (175 imgs) are ready once their zero-shot eval reports are committed. This adds ~682
+  more Atwood images covering new NORAD IDs and geometry.
+- **ViT-B backbone** — Run 4 used ViT-S as cost-efficient baseline; ViT-B has 3× more
+  parameters and historically shows +0.2–0.3 mAP on Atwood-scale sets.
+- **Lower confidence threshold** — medium streaks may be near the detection boundary;
+  try conf=0.2 at inference time before retraining.
+- **Diagnose medium-band FN** — load the 41 medium false-negatives and inspect visually;
+  determine if they are faint, blurry, partially cropped, or at unusual angles.
 
-2. **`scripts/build_stratified_splits.py`** — produce `atwood_train.json`,
-   `val_atwood.json`, `test_atwood.json` from the feature table using geometry bins.
+### Zero-shot holdout evaluation
 
-3. **`scripts/sample_frigate_tiles.py`** — diversity-maximising subset of ~150–200
-   Frigate tiles for short-band training coverage.
-
-### After splits are built: Run 4
-
-- Config: `models/dino/streak_dinov3_vitb_400px_run3.py` (same architecture as Run 3)
-- Training data: `atwood_train.json` + Frigate diversity subset (no SatStreaks)
-- Val: `val_atwood.json` (replaces `val.json`)
-- Expected: lower SatStreaks benchmark score than Run 3 (that is fine and expected);
-  primary quality gate is `test_atwood.json` long-band recall ≥ 85%.
-
-### Also needed before Run 4: augmentation additions
-
-- `snr_scale` parameter in `SyntheticStreakInject` — faint streak injection
-- Scale jitter (±25%) and Gaussian blur (σ 0.5–2.0 px) in training pipeline
-- See `docs/data_strategy.md §6.3`
+Results in `results/zero_shot_run4_*/`. Do not promote holdout nights
+(atwood_20260527, atwood_20260528) to `split: train` in the manifest until their
+zero-shot eval reports are committed to the repo.
 
 ## Hardware
 - **Dev / CI:** MacBook Air M3 — CPU or MPS. Use `MODEL_SIZE=tiny` (Swin-T).
