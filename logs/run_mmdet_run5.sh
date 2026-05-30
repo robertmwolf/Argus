@@ -32,7 +32,7 @@ VAL_ANN_FILE=/Volumes/External/TrainingData/annotations/val_atwood_tiled_400.jso
 ARGUS_NORM=zscore \
 ARGUS_ENABLE_PLATE_SOLVE=false \
 caffeinate -i "$PYTHON" -m training.train_dino \
-  --config models/dino/streak_dinov3_vits_400px_run3.py \
+  --config models/dino/streak_dinov3_vits_400px_run5.py \
   --work-dir weights/run5_vits_mmdet \
   --val-interval 1 \
   --checkpoint-interval 1
