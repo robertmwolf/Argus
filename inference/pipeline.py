@@ -1438,10 +1438,7 @@ def run_with_array(
         if _gray_f32.ndim == 3:
             _gray_f32 = _gray_f32.mean(axis=2)
         _bg = float(np.median(_gray_f32))
-        # Use 2σ instead of 3σ: autostretched FITS images have bimodal pixel
-        # distributions (dark background + bright stars) that inflate std,
-        # pushing a 3σ threshold so high that faint streak tips are cut off.
-        _extent_threshold = _bg + 2.0 * float(_gray_f32.std())
+        _extent_threshold = _bg + 3.0 * float(_gray_f32.std())
 
         angle_range = float(os.environ.get(
             "RADON_ANGLE_SEARCH_RANGE",
