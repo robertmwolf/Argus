@@ -418,6 +418,75 @@ def _run_heatmap_centerline_detector_core(
     return proposals[:max_components], heat, h_native, w_native, image_size
 
 
+def _remap_heatmap_proposal(prop: dict[str, Any], x0: int, y0: int) -> dict[str, Any]:
+    """Shift a tile-local heatmap proposal into full-image coordinates."""
+    prop = dict(prop)
+    b = prop["bbox"]
+    prop["bbox"] = [b[0] + x0, b[1] + y0, b[2] + x0, b[3] + y0]
+    ls = prop.get("line_segment")
+    if ls:
+        prop["line_segment"] = {
+            **ls,
+            "x1": ls["x1"] + x0, "y1": ls["y1"] + y0,
+            "x2": ls["x2"] + x0, "y2": ls["y2"] + y0,
+        }
+    obb = prop.get("obb")
+    if obb:
+        new_obb = {**obb, "cx": obb["cx"] + x0, "cy": obb["cy"] + y0}
+        prop["obb"] = new_obb
+        prop["obb_compat"] = new_obb
+    return prop
+
+
+def _run_tiled_heatmap_centerline(array: np.ndarray) -> list[dict[str, Any]]:
+    """Run heatmap centerline on overlapping tiles; deduplicate with NMS.
+
+    Reads HEATMAP_NATIVE_TILE_SIZE (default 2560) and HEATMAP_TILE_OVERLAP
+    (default 0.5) from env vars.  Falls back to single-shot when the image fits
+    in one tile.
+    """
+    from inference.tiled_pipeline import tile_image, _torchvision_nms, _numpy_nms
+
+    native_tile_size = int(os.environ.get("HEATMAP_NATIVE_TILE_SIZE", "2560"))
+    overlap = float(os.environ.get("HEATMAP_TILE_OVERLAP", "0.5"))
+
+    h, w = array.shape[:2]
+    if max(h, w) <= native_tile_size:
+        proposals, *_ = _run_heatmap_centerline_detector_core(array)
+        return proposals
+
+    all_proposals: list[dict[str, Any]] = []
+    for tile, x0, y0 in tile_image(array, native_tile_size, overlap):
+        proposals, *_ = _run_heatmap_centerline_detector_core(tile)
+        for prop in proposals:
+            all_proposals.append(_remap_heatmap_proposal(prop, x0, y0))
+
+    if len(all_proposals) <= 1:
+        return all_proposals
+
+    # Deduplicate overlapping proposals from adjacent tiles.
+    # Heatmap bbox is [x1,y1,x2,y2]; convert to [x,y,w,h] for NMS helper.
+    preds_xywh = [
+        {
+            "bbox": [p["bbox"][0], p["bbox"][1],
+                     p["bbox"][2] - p["bbox"][0], p["bbox"][3] - p["bbox"][1]],
+            "score": float(p["confidence"]),
+            "category_id": 1,
+        }
+        for p in all_proposals
+    ]
+    try:
+        kept_indices = _torchvision_nms(preds_xywh, iou_threshold=0.3)
+    except Exception:
+        kept_indices = _numpy_nms(preds_xywh, iou_threshold=0.3)
+
+    logger.debug(
+        "Tiled heatmap: %d raw proposals → %d after NMS",
+        len(all_proposals), len(kept_indices),
+    )
+    return [all_proposals[i] for i in kept_indices]
+
+
 def run_heatmap_centerline_detector(array: np.ndarray) -> list[dict[str, Any]]:
     """Run the no-OBB heatmap detector; discard the heat array.
 
@@ -428,8 +497,7 @@ def run_heatmap_centerline_detector(array: np.ndarray) -> list[dict[str, Any]]:
         Pipeline-compatible detections.  Native geometry lives in
         ``line_segment``; ``obb`` is a compatibility projection.
     """
-    proposals, _heat, _h, _w, _sz = _run_heatmap_centerline_detector_core(array)
-    return proposals
+    return _run_tiled_heatmap_centerline(array)
 
 
 def run_heatmap_centerline_detector_and_heatmap(
@@ -443,11 +511,19 @@ def run_heatmap_centerline_detector_and_heatmap(
     Returns:
         Tuple of (detections, heat_native) where ``heat_native`` is a float32
         array of shape ``(H_native, W_native)`` with values in [0, 1], or None
-        if the checkpoint was not found.
+        if the checkpoint was not found.  heat_native is None when tiling is
+        active (stitching not yet implemented).
     """
     checkpoint = Path(os.environ.get("HEATMAP_CENTERLINE_CHECKPOINT", str(_default_checkpoint())))
     if not checkpoint.exists():
         return [], None
+
+    native_tile_size = int(os.environ.get("HEATMAP_NATIVE_TILE_SIZE", "2560"))
+    h, w = array.shape[:2]
+    if max(h, w) > native_tile_size:
+        # Tiling active — heat stitching not implemented, return None for sidecar.
+        return _run_tiled_heatmap_centerline(array), None
+
     proposals, heat, h_native, w_native, image_size = _run_heatmap_centerline_detector_core(array)
     if h_native != image_size or w_native != image_size:
         heat_native = cv2.resize(heat, (w_native, h_native), interpolation=cv2.INTER_LINEAR)

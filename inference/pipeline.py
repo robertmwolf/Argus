@@ -440,6 +440,60 @@ def _run_tta_inference(
     return all_dets
 
 
+def _run_tiled_dino_inference(
+    model: Any,
+    array: "np.ndarray",
+    image_size: int,
+    confidence_threshold: float,
+    model_name: str,
+    tta_enabled: bool = False,
+) -> list[dict]:
+    """Run DINO inference over overlapping tiles and merge with cross-tile NMS.
+
+    Reads DINO_NATIVE_TILE_SIZE (default 400) and DINO_TILE_OVERLAP (default 0.5)
+    from env vars.  Falls back to single-shot inference when the image fits in
+    one tile.
+    """
+    from inference.tiled_pipeline import (
+        tile_image, remap_predictions, nms_predictions,
+        _pipeline_det_to_prediction,
+    )
+
+    native_tile_size = int(os.environ.get("DINO_NATIVE_TILE_SIZE", "400"))
+    overlap = float(os.environ.get("DINO_TILE_OVERLAP", "0.5"))
+
+    h, w = array.shape[:2]
+    fn = _run_tta_inference if tta_enabled else _run_inference
+    if max(h, w) <= native_tile_size:
+        return fn(model, array, image_size, confidence_threshold, model_name)
+
+    resize_to = image_size if image_size != native_tile_size else None
+    magnification = image_size / native_tile_size
+
+    all_preds: list[dict] = []
+    n_tiles = 0
+    for tile, x0, y0 in tile_image(array, native_tile_size, overlap, resize_to=resize_to):
+        n_tiles += 1
+        tile_dets = fn(model, tile, image_size, confidence_threshold, model_name)
+        tile_preds = [_pipeline_det_to_prediction(d) for d in tile_dets]
+        all_preds.extend(remap_predictions(tile_preds, x0, y0, magnification=magnification))
+
+    kept = nms_predictions(all_preds, iou_threshold=0.4)
+    result: list[dict] = []
+    for p in kept:
+        x, y, bw, bh = p["bbox"]
+        result.append({
+            "bbox": [x, y, x + bw, y + bh],
+            "confidence": float(p["score"]),
+            "method": model_name,
+        })
+    logger.debug(
+        "Tiled DINO (%s): %d tiles → %d detections after NMS",
+        model_name, n_tiles, len(result),
+    )
+    return result
+
+
 def _run_streakmind_yolo_detector(
     array: "np.ndarray",
     confidence_threshold: float = 0.25,
@@ -1145,16 +1199,16 @@ def _run_all_detectors(
             model_array = _get_model_array(
                 spec, array, raw_array_f32, default_norm_mode
             )
-            fn = _run_tta_inference if tta_enabled else _run_inference
             f = pool.submit(
                 _timed_detector,
                 spec["id"],
-                fn,
+                _run_tiled_dino_inference,
                 model,
                 model_array,
                 image_size,
                 confidence_threshold,
                 spec["id"],
+                tta_enabled,
             )
             tasks[f] = spec["id"]
 
