@@ -1102,7 +1102,7 @@ def _run_all_detectors(
     submitted in parallel.  Detectors whose ID is absent from
     *enabled_detectors* are skipped entirely (None = all enabled).
 
-    When ``DUAL_NORM_INFERENCE=1`` is set and raw FITS pixels are available,
+    When raw FITS pixels are available and a model spec declares a ``norm_mode``,
     each DINO model is also run with the *other* normalisation (autostretch ↔
     zscore).  The alt-norm pass uses method ID ``{model_id}__{norm}`` so
     detections can be traced back to which stretch produced them.  Both passes
@@ -1127,8 +1127,6 @@ def _run_all_detectors(
         ``dual_norm_ids`` lists the alt-norm method IDs that were submitted
         (empty when dual-norm is disabled or raw pixels are unavailable).
     """
-    dual_norm_enabled = os.environ.get("DUAL_NORM_INFERENCE", "").lower() in {"1", "true", "yes"}
-
     def _timed_detector(det_id: str, fn: Any, *args: Any) -> tuple[list[dict], float]:
         start = time.perf_counter()
         detections = fn(*args)
@@ -1154,9 +1152,9 @@ def _run_all_detectors(
         if enabled_detectors is None
         else ",".join(sorted(enabled_detectors)) or "none"
     )
-    logger.info("Enabled detectors: %s  dual_norm=%s", enabled_label, dual_norm_enabled)
+    logger.info("Enabled detectors: %s", enabled_label)
 
-    n_workers = len(models_with_specs) * (2 if dual_norm_enabled else 1) + 6
+    n_workers = len(models_with_specs) * 2 + 6
     with ThreadPoolExecutor(max_workers=max(1, n_workers)) as pool:
         # DINO models — each may need its own normalisation
         for model, _dev, spec in models_with_specs:
@@ -1183,8 +1181,8 @@ def _run_all_detectors(
             )
             tasks[f] = spec["id"]
 
-            # Dual-norm alt pass — same weights, other stretch
-            if dual_norm_enabled and raw_array_f32 is not None and spec_norm:
+            # Alt-norm pass — same weights, other stretch
+            if raw_array_f32 is not None and spec_norm:
                 from inference.fits_loader import apply_norm
                 alt = _alt_norm(spec_norm)
                 alt_id = f"{spec['id']}__{alt}"
