@@ -192,6 +192,66 @@ def _timescale():
     return _ts
 
 
+def _tle_epoch_and_age(
+    line1: str,
+    ref_time: datetime,
+) -> tuple[float, datetime | None]:
+    """Parse TLE epoch from line1 and return (age_hours, epoch_datetime).
+
+    Args:
+        line1: TLE line 1.
+        ref_time: UTC reference time (typically mid-exposure).
+
+    Returns:
+        (tle_age_hours, tle_epoch) — age_hours is 0.0 and epoch is None on
+        parse failure.
+    """
+    try:
+        epoch_str = line1[18:32].strip()
+        yr2 = int(epoch_str[:2])
+        year = 2000 + yr2 if yr2 < 57 else 1900 + yr2
+        day_frac = float(epoch_str[2:])
+        tle_epoch: datetime | None = (
+            datetime(year, 1, 1, tzinfo=timezone.utc) + timedelta(days=day_frac - 1)
+        )
+        tle_age_hours = (ref_time - tle_epoch).total_seconds() / 3600.0
+        return tle_age_hours, tle_epoch
+    except Exception:
+        return 0.0, None
+
+
+def _propagate_sat(
+    sat: Any,
+    observer: Any,
+    t_sky: Any,
+) -> tuple[float, float] | None:
+    """Propagate a pre-built EarthSatellite to topocentric RA/Dec.
+
+    This is the hot-path propagation used inside the scoring loop.  The
+    caller must supply pre-built skyfield observer and time objects so
+    neither is reconstructed per TLE (that overhead is the dominant cost
+    when propagating tens of thousands of candidates).
+
+    Args:
+        sat: skyfield EarthSatellite instance.
+        observer: skyfield GeographicPosition (wgs84.latlon).
+        t_sky: skyfield Time at the desired propagation epoch.
+
+    Returns:
+        (ra_deg, dec_deg) in degrees, or None on propagation failure.
+    """
+    try:
+        topo = (sat - observer).at(t_sky)
+        ra_angle, dec_angle, _ = topo.radec()
+        ra  = float(ra_angle._degrees) % 360.0
+        dec = float(dec_angle._degrees)
+        if not (math.isfinite(ra) and math.isfinite(dec)):
+            return None
+        return ra, dec
+    except Exception:
+        return None
+
+
 def _propagate_to_radec(
     name: str,
     line1: str,
@@ -202,6 +262,10 @@ def _propagate_to_radec(
     observer_alt_m: float,
 ) -> dict[str, Any] | None:
     """Propagate one TLE to obs_time and return topocentric RA/Dec.
+
+    Used for small numbers of propagations (top-1 direction disambiguation,
+    expected-length calculation).  For bulk catalog scoring use
+    :func:`_propagate_sat` with pre-built skyfield objects instead.
 
     Args:
         name: Satellite name (for logging).
@@ -236,29 +300,17 @@ def _propagate_to_radec(
     except ValueError:
         norad_id = 0
 
-    try:
-        epoch_str = line1[18:32].strip()
-        yr2 = int(epoch_str[:2])
-        year = 2000 + yr2 if yr2 < 57 else 1900 + yr2
-        day_frac = float(epoch_str[2:])
-        tle_epoch = datetime(year, 1, 1, tzinfo=timezone.utc)
-        tle_epoch += timedelta(days=day_frac - 1)
-        tle_age_hours = (obs_time - tle_epoch).total_seconds() / 3600.0
-    except Exception:
-        tle_age_hours = 0.0
-        tle_epoch = None
+    tle_age_hours, tle_epoch = _tle_epoch_and_age(line1, obs_time)
 
     try:
         ts = _timescale()
         observer = wgs84.latlon(observer_lat, observer_lon, elevation_m=observer_alt_m)
         t = ts.from_datetime(obs_time)
-        topocentric = (sat - observer).at(t)
-        ra_angle, dec_angle, _ = topocentric.radec()
-        predicted_ra  = float(ra_angle._degrees) % 360.0
-        predicted_dec = float(dec_angle._degrees)
-        if not (math.isfinite(predicted_ra) and math.isfinite(predicted_dec)):
+        pos = _propagate_sat(sat, observer, t)
+        if pos is None:
             logger.debug("Propagation returned NaN RA/Dec for %s — skipping", name)
             return None
+        predicted_ra, predicted_dec = pos
     except Exception as exc:
         logger.debug("Propagation failed for %s: %s", name, exc)
         return None
@@ -611,27 +663,145 @@ def cross_identify(
         start_time = obs_time
         end_time   = None
 
+    # --- Skyfield setup — built once for all detections and all TLEs ---------
+    # Creating wgs84.latlon and ts.from_datetime inside the per-TLE loop
+    # costs ~30 ms each and dominates runtime at catalog sizes > 1 K.
+    try:
+        from skyfield.api import EarthSatellite, wgs84  # type: ignore[import]
+    except ImportError:  # pragma: no cover
+        logger.error("skyfield not installed; cannot propagate TLEs")
+        for det in detections:
+            det.setdefault("identifications", [])
+        return detections
+
+    ts        = _timescale()
+    _observer = wgs84.latlon(observer_lat, observer_lon, elevation_m=observer_alt_m)
+    _t_mid    = ts.from_datetime(mid_time)
+    _t_start  = ts.from_datetime(start_time)
+    _t_end    = ts.from_datetime(end_time) if end_time is not None else None
+
     if _catalog_override is not None:
-        catalog = _catalog_override
+        raw_catalog = [_catalog_entry(e) for e in _catalog_override]
     else:
         try:
-            catalog = _fetch_tle_catalog(obs_time, epoch_window_days, min_mean_motion)
+            raw_catalog = [
+                _catalog_entry(e)
+                for e in _fetch_tle_catalog(obs_time, epoch_window_days, min_mean_motion)
+            ]
         except Exception:
             logger.warning(
                 "TLE catalog fetch failed — skipping cross-identification",
                 exc_info=True,
             )
-            catalog = []
+            raw_catalog = []
 
-    if not catalog:
+    if not raw_catalog:
         logger.warning("Empty TLE catalog — all identifications will be empty")
         for det in detections:
             det.setdefault("identifications", [])
         return detections
 
+    # Sort by |epoch_drift_hours| so the most epoch-accurate TLEs are
+    # processed first in the progressive window loop below.
+    raw_catalog.sort(key=lambda e: abs(e.get("epoch_drift_hours") or float("inf")))
+
+    # Pre-compute detection midpoints once so the progressive loop can check
+    # whether each new batch covers all detections.
+    _det_midpoints: list[tuple[float, float] | None] = [
+        _streak_mid_radec(d) for d in detections
+    ]
+    _valid_mid_indices: list[int] = [
+        i for i, m in enumerate(_det_midpoints) if m is not None
+    ]
+
+    # --- Progressive window: parse + propagate in epoch-proximity order ------
+    # Process TLEs in batches corresponding to increasing epoch-drift windows.
+    # After each batch, stop if every detection has at least one candidate whose
+    # propagated position is within _PROGRESSIVE_STOP_SCORE of its midpoint.
+    # Each NORAD ID is propagated at most once (seen_norads deduplication).
+    #
+    # Parsed entries: (entry, sat, norad_id, tle_age_hours, tle_epoch,
+    #                  pred_ra, pred_dec)
+    # pred_ra/pred_dec are cached from the t_mid propagation done here so the
+    # detection scoring loop below can reuse them without re-propagating.
+
+    _PROGRESSIVE_HOUR_THRESHOLDS = [24, 48, 96, 192, 384, float("inf")]
+    _PROGRESSIVE_STOP_SCORE      = 0.05  # Gaussian pos score ≈ sep < ~0.5°
+
+    parsed_catalog: list[tuple] = []
+    seen_norads: set[int] = set()
+    # Track which detections still need a viable candidate.
+    _unsatisfied: set[int] = set(_valid_mid_indices)
+
+    prev_hour_limit = 0.0
+    for hour_limit in _PROGRESSIVE_HOUR_THRESHOLDS:
+        batch = [
+            e for e in raw_catalog
+            if prev_hour_limit
+               < abs(e.get("epoch_drift_hours") or float("inf"))
+               <= hour_limit
+        ]
+        prev_hour_limit = hour_limit
+
+        new_count = 0
+        for entry in batch:
+            try:
+                norad_id = int(entry["line2"][2:7].strip())
+            except (KeyError, ValueError):
+                norad_id = 0
+            if norad_id in seen_norads:
+                continue
+            seen_norads.add(norad_id)
+
+            try:
+                sat = EarthSatellite(entry["line1"], entry["line2"], entry["name"], ts)
+            except Exception as exc:
+                logger.debug("TLE parse failed for %s: %s", entry.get("name"), exc)
+                continue
+
+            tle_age_hours, tle_epoch = _tle_epoch_and_age(entry["line1"], mid_time)
+            pos = _propagate_sat(sat, _observer, _t_mid)
+            pred_ra, pred_dec = pos if pos is not None else (None, None)
+
+            parsed_catalog.append(
+                (entry, sat, norad_id, tle_age_hours, tle_epoch, pred_ra, pred_dec)
+            )
+            new_count += 1
+
+            # Check whether this entry satisfies any still-unsatisfied detection.
+            if pred_ra is not None:
+                for i in list(_unsatisfied):
+                    mid_pt = _det_midpoints[i]
+                    if mid_pt is None:
+                        continue
+                    sep = _angular_separation_arcsec(
+                        mid_pt[0], mid_pt[1], pred_ra, pred_dec
+                    )
+                    if _gaussian_score(sep, _POSITION_SIGMA_ARCSEC) >= _PROGRESSIVE_STOP_SCORE:
+                        _unsatisfied.discard(i)
+
+        logger.debug(
+            "Progressive TLE window ≤%.0fh: +%d new → %d total  unsatisfied=%d",
+            hour_limit, new_count, len(parsed_catalog), len(_unsatisfied),
+        )
+
+        if not _unsatisfied:
+            logger.info(
+                "Progressive TLE: all detections covered after ≤%.0fh window "
+                "(%d/%d entries propagated)",
+                hour_limit, len(parsed_catalog), len(raw_catalog),
+            )
+            break
+
+    if not parsed_catalog:
+        logger.warning("No parseable TLE entries — all identifications will be empty")
+        for det in detections:
+            det.setdefault("identifications", [])
+        return detections
+
     logger.debug(
-        "Cross-identifying %d detections against %d TLEs",
-        len(detections), len(catalog),
+        "Cross-identifying %d detections against %d TLEs (of %d fetched)",
+        len(detections), len(parsed_catalog), len(raw_catalog),
     )
 
     for det in detections:
@@ -653,53 +823,36 @@ def cross_identify(
         plate_scale = _plate_scale_from_det(det)
 
         # --- Score every TLE against the midpoint at mid-exposure time -------
+        # pred_ra/pred_dec are already cached from the progressive build above.
         candidates: list[dict] = []
-        for raw_entry in catalog:
-            entry = _catalog_entry(raw_entry)
-            name = entry["name"]
-            line1 = entry["line1"]
-            line2 = entry["line2"]
-            result = _propagate_to_radec(
-                name, line1, line2, mid_time,
-                observer_lat, observer_lon, observer_alt_m,
-            )
-            if result is None:
+        for entry, sat, norad_id, tle_age_hours, tle_epoch, pred_ra, pred_dec in parsed_catalog:
+            if pred_ra is None:
                 continue
 
             midpoint_sep_arcsec = _angular_separation_arcsec(
-                mid_ra, mid_dec,
-                result["predicted_ra"], result["predicted_dec"],
+                mid_ra, mid_dec, pred_ra, pred_dec,
             )
             sep_arcsec = midpoint_sep_arcsec
             position_score_mode = "midpoint"
             if edge_clipped and has_both_tips:
                 sep_arcsec = _segment_separation_arcsec(
-                    result["predicted_ra"],
-                    result["predicted_dec"],
+                    pred_ra, pred_dec,
                     det["ra_tip1_deg"],
                     det["dec_tip1_deg"],
                     det["ra_tip2_deg"],
                     det["dec_tip2_deg"],
                 )
                 position_score_mode = "edge_visible_segment"
-            elif edge_clipped and not has_both_tips and end_time is not None:
+            elif edge_clipped and not has_both_tips and _t_end is not None:
                 # One tip is off-frame: mid_ra/mid_dec is the single visible tip
                 # (from _streak_mid_radec fallback). Score it against where the
                 # satellite actually was at exposure start and exposure end — the
                 # visible tip must be near one of those two positions.
-                start_r = _propagate_to_radec(
-                    name, line1, line2, start_time,
-                    observer_lat, observer_lon, observer_alt_m,
-                )
-                end_r = _propagate_to_radec(
-                    name, line1, line2, end_time,
-                    observer_lat, observer_lon, observer_alt_m,
-                )
+                pos_s = _propagate_sat(sat, _observer, _t_start)
+                pos_e = _propagate_sat(sat, _observer, _t_end)
                 endpoint_seps = [
-                    _angular_separation_arcsec(
-                        mid_ra, mid_dec, r["predicted_ra"], r["predicted_dec"]
-                    )
-                    for r in (start_r, end_r)
+                    _angular_separation_arcsec(mid_ra, mid_dec, r[0], r[1])
+                    for r in (pos_s, pos_e)
                     if r is not None
                 ]
                 if endpoint_seps:
@@ -709,21 +862,21 @@ def cross_identify(
             pos_score = _gaussian_score(sep_arcsec, sigma=_POSITION_SIGMA_ARCSEC)
             confidence, epoch_penalty = _confidence_with_epoch_penalty(
                 pos_score,
-                result["tle_age_hours"],
+                tle_age_hours,
                 search_mode=entry.get("tle_search_mode"),
             )
 
             candidates.append({
-                "satellite_name":    result["object_name"],
-                "norad_id":          result["norad_id"],
+                "satellite_name":    entry["name"],
+                "norad_id":          norad_id,
                 "confidence":        confidence,
                 "position_score":    round(pos_score, 4),
                 "position_score_mode": position_score_mode,
                 "epoch_penalty":     round(epoch_penalty, 4),
                 "separation_arcsec": sep_arcsec,
                 "midpoint_separation_arcsec": round(midpoint_sep_arcsec, 2),
-                "tle_age_hours":     result["tle_age_hours"],
-                "tle_epoch":         entry.get("tle_epoch") or _format_utc(result.get("tle_epoch")),
+                "tle_age_hours":     tle_age_hours,
+                "tle_epoch":         entry.get("tle_epoch") or _format_utc(tle_epoch),
                 "photo_taken_at":    _format_utc(obs_time),
                 "tle_data_fresh_at": entry.get("tle_data_fresh_at"),
                 "tle_source":        entry.get("source"),
@@ -731,12 +884,12 @@ def cross_identify(
                 "epoch_search_window_days": entry.get("epoch_search_window_days"),
                 "epoch_drift_hours": entry.get("epoch_drift_hours")
                     if entry.get("epoch_drift_hours") is not None
-                    else abs(result["tle_age_hours"]),
+                    else abs(tle_age_hours),
                 "rank":              0,
-                "_line1":            line1,
-                "_line2":            line2,
-                "_pred_ra":          result["predicted_ra"],
-                "_pred_dec":         result["predicted_dec"],
+                "_line1":            entry["line1"],
+                "_line2":            entry["line2"],
+                "_pred_ra":          pred_ra,
+                "_pred_dec":         pred_dec,
             })
 
         candidates.sort(key=lambda c: c["confidence"], reverse=True)
@@ -840,7 +993,7 @@ def cross_identify(
 
     if (
         _allow_current_retry
-        and _catalog_has_mode(catalog, "broad_epoch")
+        and _catalog_has_mode(raw_catalog, "broad_epoch")
         and _best_position_score(detections) < _MIN_VIABLE_POSITION_SCORE
     ):
         logger.info(
