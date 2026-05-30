@@ -115,6 +115,31 @@ def refine_angle(
         Refined angle in degrees (replaces obb['angle_deg']).
     """
 
+def extend_obb_to_streak_extent(
+    array: np.ndarray,
+    obb: dict,
+    sample_halfwidth: int = 8,      # pipeline overrides to 15
+    threshold_sigma: float = 3.0,
+) -> dict:
+    """Extend OBB w/cx/cy to cover the full streak, not just the detection bbox.
+
+    Traces the streak axis across the full image and finds where the strip max
+    (±sample_halfwidth px perpendicular to the axis) drops to bg + threshold_sigma*std.
+    Returns the run containing the OBB centre as the updated OBB.
+
+    Tuning notes (validated on TwoNormal.fits, 4176×6248 autostretched):
+    - sample_halfwidth=8 caused silent failures when the Radon angle seed was
+      off by ≥1°: the strip missed the streak at t=0, no centre run was found,
+      and the function returned the original short OBB unchanged.
+    - sample_halfwidth=15 (pipeline default since 2026-05-29) is wide enough
+      to reliably straddle the streak axis under typical angle estimation error.
+    - threshold_sigma=3.0 is correct for autostretched FITS; 2σ absorbs stars
+      along the same azimuth and overshoots the centre run to 2× true length.
+
+    For heatmap line_segment detections, the pipeline feeds the native cx/cy
+    from _line_to_obb rather than the bbox centroid, to avoid anchor-point drift.
+    """
+
 def nms_detections(
     detections: list[dict],
     iou_threshold: float = 0.5,
