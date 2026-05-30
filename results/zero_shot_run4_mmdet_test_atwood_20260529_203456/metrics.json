@@ -1,0 +1,62 @@
+{
+  "scope": "run4_mmdet_test_atwood",
+  "label": "Run 4 MMDet \u2014 Atwood geo-stratified test (133 imgs)",
+  "checkpoint": "weights/run4_vits_mmdet/best_coco_bbox_mAP_epoch_15.pth",
+  "config": "models/dino/streak_dinov3_vits_400px_run3.py",
+  "annotation_file": "data/annotations/test_atwood.json",
+  "n_images": 133,
+  "n_annotations": 119,
+  "coco_metrics": {
+    "coco/bbox_mAP": 0.223,
+    "coco/bbox_mAP_50": 0.518,
+    "coco/bbox_mAP_75": 0.139,
+    "coco/bbox_mAP_s": -1.0,
+    "coco/bbox_mAP_m": 0.284,
+    "coco/bbox_mAP_l": 0.297
+  },
+  "pr": {
+    "conf_threshold": 0.3,
+    "iou_threshold": 0.5,
+    "precision": 0.6111,
+    "recall": 0.5546,
+    "f1": 0.5815,
+    "tp": 66,
+    "fp": 42,
+    "fn": 53,
+    "n_gt": 119,
+    "n_pred_above_conf": 108
+  },
+  "per_band_recall": {
+    "short": {
+      "recall": 0.0,
+      "tp": 0,
+      "fn": 3,
+      "n_gt": 3
+    },
+    "medium": {
+      "recall": 0.4875,
+      "tp": 39,
+      "fn": 41,
+      "n_gt": 80
+    },
+    "long": {
+      "recall": 0.75,
+      "tp": 27,
+      "fn": 9,
+      "n_gt": 36
+    }
+  },
+  "baseline": {
+    "precision": 0.9485,
+    "recall": 0.8377,
+    "f1": 0.8897,
+    "mAP": 0.782,
+    "mAP_50": 0.878,
+    "band_recall": {
+      "short": 1.0,
+      "medium": 0.909,
+      "long": 0.834
+    },
+    "source": "results/comprehensive_eval_20260528_154914/test_standard/metrics.json"
+  }
+}

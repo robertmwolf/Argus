@@ -1,0 +1,321 @@
+_img_scale = (
+    400,
+    400,
+)
+backend_args = None
+custom_imports = dict(
+    allow_failed_imports=False,
+    imports=[
+        'training.transforms',
+        'models.dino.dinov3_adapter',
+    ])
+data_root = 'data/'
+dataset_type = 'CocoDataset'
+default_hooks = dict(
+    checkpoint=dict(
+        interval=5,
+        max_keep_ckpts=3,
+        rule='greater',
+        save_best='coco/bbox_mAP',
+        type='CheckpointHook'),
+    logger=dict(interval=10, type='LoggerHook'),
+    param_scheduler=dict(type='ParamSchedulerHook'),
+    sampler_seed=dict(type='DistSamplerSeedHook'),
+    timer=dict(type='IterTimerHook'),
+    visualization=dict(type='DetVisualizationHook'))
+default_scope = 'mmdet'
+env_cfg = dict(
+    cudnn_benchmark=False,
+    dist_cfg=dict(backend='gloo'),
+    mp_cfg=dict(mp_start_method='spawn', opencv_num_threads=0))
+load_from = 'weights/run4_vits_mmdet/best_coco_bbox_mAP_epoch_15.pth'
+log_level = 'INFO'
+log_processor = dict(by_epoch=True, type='LogProcessor', window_size=10)
+max_epochs = 15
+metainfo = dict(
+    classes=('streak', ), palette=[
+        (
+            220,
+            20,
+            60,
+        ),
+    ])
+model = dict(
+    as_two_stage=True,
+    backbone=dict(
+        frozen=True,
+        model_size='small',
+        out_channels=384,
+        type='DINOv3Backbone',
+        weights='weights/dinov3_vits16_lvd1689m.pth'),
+    bbox_head=dict(
+        loss_bbox=dict(loss_weight=5.0, type='L1Loss'),
+        loss_cls=dict(
+            alpha=0.25,
+            gamma=2.0,
+            loss_weight=1.0,
+            type='FocalLoss',
+            use_sigmoid=True),
+        loss_iou=dict(loss_weight=2.0, type='GIoULoss'),
+        num_classes=1,
+        sync_cls_avg_factor=True,
+        type='DINOHead'),
+    data_preprocessor=dict(
+        bgr_to_rgb=True,
+        mean=[
+            123.675,
+            116.28,
+            103.53,
+        ],
+        pad_size_divisor=16,
+        std=[
+            58.395,
+            57.12,
+            57.375,
+        ],
+        type='DetDataPreprocessor'),
+    decoder=dict(
+        layer_cfg=dict(
+            cross_attn_cfg=dict(dropout=0.0, embed_dims=256, num_levels=4),
+            ffn_cfg=dict(
+                embed_dims=256, feedforward_channels=2048, ffn_drop=0.0),
+            self_attn_cfg=dict(dropout=0.0, embed_dims=256, num_heads=8)),
+        num_layers=6,
+        post_norm_cfg=None,
+        return_intermediate=True),
+    dn_cfg=dict(
+        box_noise_scale=1.0,
+        group_cfg=dict(dynamic=True, num_dn_queries=100, num_groups=None),
+        label_noise_scale=0.5),
+    encoder=dict(
+        layer_cfg=dict(
+            ffn_cfg=dict(
+                embed_dims=256, feedforward_channels=2048, ffn_drop=0.0),
+            self_attn_cfg=dict(dropout=0.0, embed_dims=256, num_levels=4)),
+        num_layers=6),
+    neck=dict(
+        act_cfg=None,
+        in_channels=[
+            384,
+            384,
+            384,
+            384,
+        ],
+        kernel_size=1,
+        norm_cfg=dict(num_groups=32, type='GN'),
+        num_outs=4,
+        out_channels=256,
+        type='ChannelMapper'),
+    num_queries=300,
+    positional_encoding=dict(
+        normalize=True, num_feats=128, offset=0.0, temperature=20),
+    test_cfg=dict(max_per_img=100),
+    train_cfg=dict(
+        assigner=dict(
+            match_costs=[
+                dict(type='FocalLossCost', weight=2.0),
+                dict(box_format='xywh', type='BBoxL1Cost', weight=5.0),
+                dict(iou_mode='giou', type='IoUCost', weight=2.0),
+            ],
+            type='HungarianAssigner')),
+    type='DINO',
+    with_box_refine=True)
+num_levels = 4
+optim_wrapper = dict(
+    clip_grad=dict(max_norm=0.1, norm_type=2),
+    optimizer=dict(lr=0.0001, type='AdamW', weight_decay=0.0001),
+    paramwise_cfg=dict(
+        custom_keys=dict(
+            backbone=dict(lr_mult=0.0),
+            bbox_head=dict(lr_mult=1.0),
+            decoder=dict(lr_mult=1.0),
+            encoder=dict(lr_mult=1.0),
+            neck=dict(lr_mult=1.0))),
+    type='OptimWrapper')
+param_scheduler = [
+    dict(
+        begin=0,
+        by_epoch=True,
+        convert_to_iter_based=False,
+        end=2,
+        start_factor=0.01,
+        type='LinearLR'),
+    dict(
+        T_max=13,
+        begin=2,
+        by_epoch=True,
+        convert_to_iter_based=False,
+        end=15,
+        eta_min=1e-06,
+        type='CosineAnnealingLR'),
+]
+randomness = dict(deterministic=True, seed=42)
+resume = False
+test_cfg = dict(type='TestLoop')
+test_dataloader = dict(
+    batch_size=1,
+    dataset=dict(
+        ann_file='annotations/_zs_eval_run4_mmdet_atwood_20260528.json',
+        backend_args=None,
+        data_prefix=dict(img=''),
+        data_root='data/',
+        metainfo=dict(classes=('streak', ), palette=[
+            (
+                220,
+                20,
+                60,
+            ),
+        ]),
+        pipeline=[
+            dict(type='LoadFITSFromFile'),
+            dict(keep_ratio=True, scale=(
+                400,
+                400,
+            ), type='Resize'),
+            dict(type='LoadAnnotations', with_bbox=True),
+            dict(
+                meta_keys=(
+                    'img_id',
+                    'img_path',
+                    'ori_shape',
+                    'img_shape',
+                    'scale_factor',
+                ),
+                type='PackDetInputs'),
+        ],
+        test_mode=True,
+        type='CocoDataset'),
+    drop_last=False,
+    num_workers=0,
+    persistent_workers=False,
+    pin_memory=False,
+    sampler=dict(shuffle=False, type='DefaultSampler'))
+test_evaluator = dict(
+    ann_file='data/annotations/_zs_eval_run4_mmdet_atwood_20260528.json',
+    backend_args=None,
+    format_only=False,
+    metric='bbox',
+    outfile_prefix=
+    '/Users/robert/Argus/results/zero_shot_run4_mmdet_atwood_20260528_20260529_215749/best_coco_bbox_mAP_epoch_15__zs_eval_run4_mmdet_atwood_20260528',
+    type='CocoMetric')
+train_cfg = dict(max_epochs=15, type='EpochBasedTrainLoop', val_interval=5)
+train_dataloader = dict(
+    batch_sampler=dict(type='AspectRatioBatchSampler'),
+    batch_size=1,
+    dataset=dict(
+        ann_file='annotations/train.json',
+        backend_args=None,
+        data_prefix=dict(img=''),
+        data_root='data/',
+        filter_cfg=dict(filter_empty_gt=False),
+        metainfo=dict(classes=('streak', ), palette=[
+            (
+                220,
+                20,
+                60,
+            ),
+        ]),
+        pipeline=[
+            dict(type='LoadFITSFromFile'),
+            dict(type='LoadAnnotations', with_bbox=True),
+            dict(prob=0.5, type='RandomFlip'),
+            dict(
+                keep_ratio=True,
+                scales=[
+                    (
+                        400,
+                        400,
+                    ),
+                ],
+                type='RandomChoiceResize'),
+            dict(type='PackDetInputs'),
+        ],
+        type='CocoDataset'),
+    num_workers=0,
+    persistent_workers=False,
+    pin_memory=False,
+    sampler=dict(shuffle=True, type='DefaultSampler'))
+train_pipeline = [
+    dict(type='LoadFITSFromFile'),
+    dict(type='LoadAnnotations', with_bbox=True),
+    dict(prob=0.5, type='RandomFlip'),
+    dict(keep_ratio=True, scales=[
+        (
+            400,
+            400,
+        ),
+    ], type='RandomChoiceResize'),
+    dict(type='PackDetInputs'),
+]
+val_cfg = dict(type='ValLoop')
+val_dataloader = dict(
+    batch_size=1,
+    dataset=dict(
+        ann_file='annotations/val.json',
+        backend_args=None,
+        data_prefix=dict(img=''),
+        data_root='data/',
+        metainfo=dict(classes=('streak', ), palette=[
+            (
+                220,
+                20,
+                60,
+            ),
+        ]),
+        pipeline=[
+            dict(type='LoadFITSFromFile'),
+            dict(keep_ratio=True, scale=(
+                400,
+                400,
+            ), type='Resize'),
+            dict(type='LoadAnnotations', with_bbox=True),
+            dict(
+                meta_keys=(
+                    'img_id',
+                    'img_path',
+                    'ori_shape',
+                    'img_shape',
+                    'scale_factor',
+                ),
+                type='PackDetInputs'),
+        ],
+        test_mode=True,
+        type='CocoDataset'),
+    drop_last=False,
+    num_workers=0,
+    persistent_workers=False,
+    pin_memory=False,
+    sampler=dict(shuffle=False, type='DefaultSampler'))
+val_evaluator = dict(
+    ann_file='data/annotations/val.json',
+    backend_args=None,
+    format_only=False,
+    metric='bbox',
+    type='CocoMetric')
+val_pipeline = [
+    dict(type='LoadFITSFromFile'),
+    dict(keep_ratio=True, scale=(
+        400,
+        400,
+    ), type='Resize'),
+    dict(type='LoadAnnotations', with_bbox=True),
+    dict(
+        meta_keys=(
+            'img_id',
+            'img_path',
+            'ori_shape',
+            'img_shape',
+            'scale_factor',
+        ),
+        type='PackDetInputs'),
+]
+vis_backends = [
+    dict(type='LocalVisBackend'),
+]
+visualizer = dict(
+    name='visualizer',
+    type='DetLocalVisualizer',
+    vis_backends=[
+        dict(type='LocalVisBackend'),
+    ])
+work_dir = '/Users/robert/Argus/results/zero_shot_run4_mmdet_atwood_20260528_20260529_215749'
