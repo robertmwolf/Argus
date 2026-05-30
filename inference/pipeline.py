@@ -1144,6 +1144,11 @@ def _get_model_array(
 # Parallel detector runner
 # ---------------------------------------------------------------------------
 
+def _alt_norm(norm_mode: str) -> str:
+    """Return the other normalisation mode (autostretch ↔ zscore)."""
+    return "zscore" if norm_mode.lower() == "autostretch" else "autostretch"
+
+
 def _run_all_detectors(
     models_with_specs: list[tuple[Any, Any, dict]],
     array: "np.ndarray",
@@ -1154,12 +1159,19 @@ def _run_all_detectors(
     enabled_detectors: set[str] | None,
     raw_array_f32: "np.ndarray | None" = None,
     default_norm_mode: str = "",
-) -> dict[str, list[dict]]:
+) -> tuple[dict[str, list[dict]], dict, list[str]]:
     """Run all enabled detectors concurrently via a ThreadPoolExecutor.
 
     DINO models and secondary detectors (classical, ASTRiDE) are
     submitted in parallel.  Detectors whose ID is absent from
     *enabled_detectors* are skipped entirely (None = all enabled).
+
+    When ``DUAL_NORM_INFERENCE=1`` is set and raw FITS pixels are available,
+    each DINO model is also run with the *other* normalisation (autostretch ↔
+    zscore).  The alt-norm pass uses method ID ``{model_id}__{norm}`` so
+    detections can be traced back to which stretch produced them.  Both passes
+    enter the shared NMS + grouping pipeline, so a streak caught by only one
+    stretch still surfaces while one caught by both gets a corroboration boost.
 
     Args:
         models_with_specs: List of (model, device, spec) from load_models().
@@ -1174,8 +1186,13 @@ def _run_all_detectors(
         default_norm_mode: Normalisation applied to produce ``array``.
 
     Returns:
-        Dict mapping detector ID → raw detection list.
+        Tuple of (results, heatmap_sidecar, dual_norm_ids) where
+        ``results`` maps detector ID → detection list and
+        ``dual_norm_ids`` lists the alt-norm method IDs that were submitted
+        (empty when dual-norm is disabled or raw pixels are unavailable).
     """
+    dual_norm_enabled = os.environ.get("DUAL_NORM_INFERENCE", "").lower() in {"1", "true", "yes"}
+
     def _timed_detector(det_id: str, fn: Any, *args: Any) -> tuple[list[dict], float]:
         start = time.perf_counter()
         detections = fn(*args)
@@ -1192,20 +1209,28 @@ def _run_all_detectors(
 
     tasks: dict[Any, str] = {}
     results: dict[str, list[dict]] = {}
+    dual_norm_ids: list[str] = []
+    # norm_mode per method ID — populated below, used to tag detections.
+    _method_norm: dict[str, str] = {}
+
     enabled_label = (
         "all"
         if enabled_detectors is None
         else ",".join(sorted(enabled_detectors)) or "none"
     )
-    logger.info("Enabled detectors: %s", enabled_label)
+    logger.info("Enabled detectors: %s  dual_norm=%s", enabled_label, dual_norm_enabled)
 
-    n_workers = len(models_with_specs) + 6
+    n_workers = len(models_with_specs) * (2 if dual_norm_enabled else 1) + 6
     with ThreadPoolExecutor(max_workers=max(1, n_workers)) as pool:
         # DINO models — each may need its own normalisation
         for model, _dev, spec in models_with_specs:
             if not _enabled(spec["id"]):
                 results[spec["id"]] = []
                 continue
+
+            spec_norm = (spec.get("norm_mode") or default_norm_mode).lower()
+            _method_norm[spec["id"]] = spec_norm
+
             model_array = _get_model_array(
                 spec, array, raw_array_f32, default_norm_mode
             )
@@ -1221,6 +1246,30 @@ def _run_all_detectors(
                 tta_enabled,
             )
             tasks[f] = spec["id"]
+
+            # Dual-norm alt pass — same weights, other stretch
+            if dual_norm_enabled and raw_array_f32 is not None and spec_norm:
+                from inference.fits_loader import apply_norm
+                alt = _alt_norm(spec_norm)
+                alt_id = f"{spec['id']}__{alt}"
+                alt_array = apply_norm(raw_array_f32, alt)
+                _method_norm[alt_id] = alt
+                f2 = pool.submit(
+                    _timed_detector,
+                    alt_id,
+                    fn,
+                    model,
+                    alt_array,
+                    image_size,
+                    confidence_threshold,
+                    alt_id,
+                )
+                tasks[f2] = alt_id
+                dual_norm_ids.append(alt_id)
+                logger.info(
+                    "dual_norm_inference: queued alt pass model=%s primary_norm=%s alt_norm=%s",
+                    spec["id"], spec_norm, alt,
+                )
 
         _heatmap_sidecar: dict[str, "np.ndarray"] = {}
 
@@ -1256,18 +1305,21 @@ def _run_all_detectors(
             key = tasks[f]
             try:
                 dets, elapsed_ms = f.result()
+                norm = _method_norm.get(key, "")
                 for det in dets:
                     det.setdefault("method", key)
+                    if norm:
+                        det["norm_mode"] = norm
                 results[key] = dets
                 logger.info(
-                    "detector_timing detector=%s elapsed_ms=%.1f detections=%d",
-                    key, elapsed_ms, len(dets),
+                    "detector_timing detector=%s norm=%s elapsed_ms=%.1f detections=%d",
+                    key, norm or "n/a", elapsed_ms, len(dets),
                 )
             except Exception:
                 logger.exception("Detector %s failed", key)
                 results[key] = []
 
-    return results, _heatmap_sidecar
+    return results, _heatmap_sidecar, dual_norm_ids
 
 
 # ---------------------------------------------------------------------------
@@ -1416,7 +1468,7 @@ def run_with_array(
         _models_with_specs = [(model, inference_device, _meta)]
 
     # Run all detectors (DINO variants + classical + ASTRiDE) in parallel.
-    all_det_results, _heatmap_sidecar = _run_all_detectors(
+    all_det_results, _heatmap_sidecar, _dual_norm_ids = _run_all_detectors(
         _models_with_specs, array, fits_path, image_size,
         confidence_threshold, tta_enabled, enabled_detectors,
         raw_array_f32=raw_array_f32,
@@ -1424,9 +1476,12 @@ def run_with_array(
     )
 
     # Collect results — DINO detections from all models are merged before NMS.
+    # This includes any dual-norm alt passes (e.g. dinov3_vitb__zscore).
     raw_dets: list[dict] = []
     for _, _, _s in _models_with_specs:
         raw_dets.extend(all_det_results.get(_s["id"], []))
+    for _alt_id in _dual_norm_ids:
+        raw_dets.extend(all_det_results.get(_alt_id, []))
     max_dino_post = int(os.environ.get(
         "DINO_MAX_POSTPROCESS_DETECTIONS",
         str(_DEFAULT_DINO_MAX_POSTPROCESS_DETECTIONS),
