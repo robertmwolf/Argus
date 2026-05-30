@@ -33,27 +33,40 @@ def gaussian_score(delta: float, sigma: float) -> float:
     return math.exp(-0.5 * (delta / sigma) ** 2)
 
 
-def tle_age_penalty(age_hours: float, orbit_type: str = "LEO") -> float:
+def tle_age_penalty(
+    age_hours: float,
+    orbit_type: str = "LEO",
+    sigma_hours: float = 24.0,
+) -> float:
     """Gaussian decay penalty for stale TLEs.
 
     # Source: ARGUS architecture — TLE age penalty for position score
     # Ref: agent_docs/architecture.md
 
-    Uses sigma=24h so the penalty is:
+    Default sigma=24h (normal fresh TLE):
       < 6h  → > 0.96 (essentially full score)
       24h   → 0.61
       48h   → 0.14
       72h   → 0.01
 
+    For broad-epoch fallback TLEs pass sigma_hours=168 (7 days):
+      24h   → 1.00
+      72h   → 0.96
+      168h  → 0.61
+      360h  → 0.05
+
     Args:
         age_hours: Hours elapsed since TLE epoch to observation time.
         orbit_type: Reserved for future orbit-type-specific tuning.
+        sigma_hours: Gaussian sigma controlling how fast the penalty decays.
+            Use the default (24h) for normal-mode TLEs.  Pass a wider value
+            (e.g. 168h) for broad-epoch fallback TLEs where a stale epoch is
+            expected and positional geometry should still contribute confidence.
 
     Returns:
         Penalty multiplier in (0, 1].
     """
-    sigma = 24.0  # hours
-    return math.exp(-0.5 * (age_hours / sigma) ** 2)
+    return math.exp(-0.5 * (age_hours / sigma_hours) ** 2)
 
 
 def aggregate_score(
