@@ -367,7 +367,8 @@ export default function ResultViewer({
   if (!jobId) return null
 
   return (
-    <div className="relative">
+    <div className="flex gap-4 items-start">
+    <div className="relative flex-1 min-w-0">
       {!imgLoaded && (
         <div className="flex items-center justify-center h-48 bg-slate-900 rounded-xl text-slate-500 text-sm gap-2">
           <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -442,9 +443,12 @@ export default function ResultViewer({
         </div>
       )}
 
-      {/* Legend */}
+    </div>
+
+      {/* Legend — sits beside the image, not on top of it */}
       {imgLoaded && detections.length > 0 && (
-        <div className="absolute bottom-3 right-3 bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-400 flex flex-col gap-1.5">
+        <div className="shrink-0 bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-400 flex flex-col gap-1.5">
+          <p className="text-slate-300 font-semibold mb-0.5">Legend</p>
           <div className="flex items-center gap-2">
             <span className="inline-block w-6 border-t-2 border-dashed border-cyan-400" />
             <span className="text-cyan-300">DINOv3 ViT-Base</span>
