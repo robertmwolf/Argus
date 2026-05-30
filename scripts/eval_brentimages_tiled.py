@@ -164,7 +164,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoint", type=Path,
                         default=_REPO_ROOT / "weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth")
-    parser.add_argument("--conf",  type=float, default=0.3)
+    parser.add_argument("--conf",  type=float, default=0.2)
     parser.add_argument("--tile-size", type=int, default=400)
     parser.add_argument("--overlap",   type=float, default=0.5)
     parser.add_argument("--ann-file",  type=Path, default=ANN_FILE)

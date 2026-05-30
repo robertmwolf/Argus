@@ -347,14 +347,14 @@ def _fmt(v: Any, pct: bool = False) -> str:
     return f"{v:.3f}"
 
 
-def write_report(all_results: dict, out_dir: Path) -> None:
+def write_report(all_results: dict, out_dir: Path, conf_threshold: float = 0.2) -> None:
     lines = [
         "# Comprehensive Evaluation Report",
         f"",
         f"**Model:** DINOv3 ViT-B Multi-source (clean cold-start)  ",
         f"**Checkpoint:** `{CHECKPOINT}`  ",
         f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}  ",
-        f"**Confidence threshold (P/R/band):** 0.30 | IoU threshold: 0.50  ",
+        f"**Confidence threshold (P/R/band):** {conf_threshold:.2f} | IoU threshold: 0.50  ",
         "",
         "## Summary",
         "",
@@ -376,7 +376,7 @@ def write_report(all_results: dict, out_dir: Path) -> None:
 
     lines += [
         "",
-        "## Per-Band Recall (conf ≥ 0.30, IoU ≥ 0.50)",
+        f"## Per-Band Recall (conf ≥ {conf_threshold:.2f}, IoU ≥ 0.50)",
         "",
         "Bands: short < 269 px diagonal, medium 269–800 px, long > 800 px",
         "",
@@ -423,7 +423,7 @@ def write_report(all_results: dict, out_dir: Path) -> None:
         ]
         pr = res.get("pr", {})
         lines += [
-            f"**P/R @ conf≥0.30:**",
+            f"**P/R @ conf≥{conf_threshold:.2f}:**",
             f"- Precision: {_fmt(pr.get('precision'), pct=True)}",
             f"- Recall: {_fmt(pr.get('recall'), pct=True)}",
             f"- F1: {_fmt(pr.get('f1'), pct=True)}",
@@ -453,7 +453,7 @@ def write_report(all_results: dict, out_dir: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--conf", type=float, default=0.3, help="Confidence threshold for P/R")
+    parser.add_argument("--conf", type=float, default=0.2, help="Confidence threshold for P/R")
     parser.add_argument("--checkpoint", type=Path, default=CHECKPOINT)
     parser.add_argument("--config", type=Path, default=None,
                         help="Override MMDetection config path (default: hardcoded CONFIG)")
@@ -555,7 +555,7 @@ def main() -> None:
     # Write combined output
     combined_path = out_root / "all_results.json"
     combined_path.write_text(json.dumps(all_results, indent=2))
-    write_report(all_results, out_root)
+    write_report(all_results, out_root, conf_threshold=args.conf)
 
     logger.info("=" * 60)
     logger.info("All results saved to %s", out_root)

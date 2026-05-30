@@ -381,6 +381,7 @@ def write_report(
     checkpoint: Path,
     metrics: dict[str, Any],
     out_dir: Path,
+    conf_threshold: float = 0.2,
 ) -> None:
     pr = metrics.get("pr", {})
     coco = metrics.get("coco_metrics", {})
@@ -403,7 +404,7 @@ def write_report(
         f"**Label:** {label}  ",
         f"**Checkpoint:** `{checkpoint}`  ",
         f"**Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}  ",
-        f"**Confidence threshold:** 0.30 | IoU threshold: 0.50  ",
+        f"**Confidence threshold:** {conf_threshold:.2f} | IoU threshold: 0.50  ",
         "",
         "## Decision",
         "",
@@ -586,8 +587,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--conf",
         type=float,
-        default=0.3,
-        help="Confidence threshold for P/R calculation (default: 0.30)",
+        default=0.2,
+        help="Confidence threshold for P/R calculation (default: 0.20)",
     )
     return p.parse_args()
 
@@ -697,6 +698,7 @@ def main() -> None:
         checkpoint=args.checkpoint,
         metrics=results,
         out_dir=out_dir,
+        conf_threshold=args.conf,
     )
 
     # Print decision to stdout for easy reading

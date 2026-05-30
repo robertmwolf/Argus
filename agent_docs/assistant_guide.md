@@ -51,14 +51,23 @@ Progress:
 Run 4 primary failure mode: medium-band recall 49% on `test_atwood.json`
 (medium band = 80/119 annotations = 67% of the Atwood test set).
 
+FN root-cause analysis on `test_atwood.json` (119 GT, 53 FNs at conf≥0.3):
+- **45% (24/53): detected but conf < 0.3** — model fires on these streaks but
+  assigns scores in [0.10, 0.30). SNR is not the driver: 53% of all FNs are bright
+  (SNR > 20), including extreme cases at SNR=262 and SNR=183.
+- **55% (29/53): truly not detected** — IoU < 0.5 with any prediction; require more
+  training data or model capacity to fix.
+
 Recommended levers for Run 5:
+- **Confidence threshold already lowered to 0.2** — all eval scripts (`zero_shot_eval.py`,
+  `evaluate_comprehensive.py`, `eval_frigate_tiled.py`, `eval_brentimages_tiled.py`)
+  now default to `--conf 0.2`. This recovers the 24 conf-suppressed FNs at zero
+  retraining cost. The remaining 29 true misses require training-side fixes.
 - **Add holdout nights to training** — atwood_20260527 (507 imgs) and atwood_20260528
   (175 imgs) are ready once their zero-shot eval reports are committed. This adds ~682
   more Atwood images covering new NORAD IDs and geometry.
 - **ViT-B backbone** — Run 4 used ViT-S as cost-efficient baseline; ViT-B has 3× more
   parameters and historically shows +0.2–0.3 mAP on Atwood-scale sets.
-- **Lower confidence threshold** — medium streaks may be near the detection boundary;
-  try conf=0.2 at inference time before retraining.
 - **Diagnose medium-band FN** — load the 41 medium false-negatives and inspect visually;
   determine if they are faint, blurry, partially cropped, or at unusual angles.
 

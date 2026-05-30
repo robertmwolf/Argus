@@ -183,7 +183,9 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--checkpoint", type=Path,
                         default=_REPO_ROOT / "weights/run_best_400px_nodm/best_coco_bbox_mAP_epoch_15.pth")
-    parser.add_argument("--conf",  type=float, default=0.3)
+    parser.add_argument("--config", type=Path, default=None,
+                        help="MMDetection config override (default: auto-selected by _select_config)")
+    parser.add_argument("--conf",  type=float, default=0.2)
     parser.add_argument(
         "--native-tile-size",
         type=int,
@@ -213,6 +215,8 @@ def main():
         help="Max gap in native pixels for stitching (default 110 = one Frigate tile).",
     )
     parser.add_argument("--ann-file", type=Path, default=ANN_FILE)
+    parser.add_argument("--max-samples", type=int, default=None,
+                        help="Limit evaluation to first N images (for quick spot-checks).")
     args = parser.parse_args()
 
     sys.path.insert(0, str(_REPO_ROOT))
@@ -243,11 +247,15 @@ def main():
 
     gt_coco = json.loads(args.ann_file.read_text())
     images  = gt_coco["images"]
-    logger.info("Evaluating %d images", len(images))
+    if args.max_samples is not None:
+        images = images[:args.max_samples]
+        logger.info("Evaluating %d / %d images (--max-samples)", len(images), len(gt_coco["images"]))
+    else:
+        logger.info("Evaluating %d images", len(images))
 
     device = get_device()
     inf_device = torch.device("cpu") if device.type == "mps" else device
-    config_path = _select_config("dinov3_vitb_multisource")
+    config_path = args.config if args.config is not None else _select_config("dinov3_vitb_multisource")
     model = _load_model(config_path, args.checkpoint, inf_device)
 
     import astropy.io.fits as astrofits
