@@ -113,18 +113,34 @@ The `magnification = model_input_size / native_tile_size` factor is applied by
 
 | Split | Images | Annotations | Notes |
 |-------|--------|-------------|-------|
-| `all_train_run5.json` **(Run 5, 2026-05-30)** | **2,064** | **1,956** | All 5 Atwood nights + Frigate cluster-2 + synthetic short |
+| `all_train_run5_tiled.json` **(Run 5, 2026-05-30)** | **6,842** | **6,664** | Native-scale 400px Atwood tiles + Frigate cluster-2 + synthetic short |
+| `all_train_run5.json` (intermediate, 2026-05-30) | 2,064 | 1,956 | Full-frame Atwood — superseded by tiled version |
 | `all_train_run4.json` (Run 4, 2026-05-28) | 868 | 806 | 3 Atwood nights + Frigate diversity (superseded) |
 | `all_train_nodm_v3_external_abs.json` (Run 3, 2026-05-28) | 1,134 | 1,044 | Legacy; do not use for new runs |
 
-**Run 5 composition (`all_train_run5.json`):**
+**Run 5 tiled composition (`all_train_run5_tiled.json`):**
 
-| Component | Images | Annotations | Format | Streak appearance at model input |
-|-----------|--------|-------------|--------|----------------------------------|
-| Atwood Nights 1-4 + Geo | 1,609 | 1,537 | full-frame FITS → resized 400px | medium (26px) + long (51px) |
-| Frigate cluster-2 | 75 | 48 | 110px virtual tile → 400px | 127–240px (short-band equivalent) |
-| Synthetic short | 380 | 371 | 400px PNG crop | 3–17px (real Atwood short-band scale) |
-| **Total** | **2,064** | **1,956** | — | short=23%, medium=30%, long=47% |
+| Component | Tiles | Annotations | Format | Streak appearance at model input |
+|-----------|-------|-------------|--------|----------------------------------|
+| Atwood native-scale tiles | 6,387 | 6,245 | 400px virtual tile from full FITS | native px scale — medium/long streak fragments |
+| Frigate cluster-2 | 75 | 48 | 110px virtual tile → 400px (3.64×) | 127–240px (short-band equivalent) |
+| Synthetic short | 380 | 371 | 400px PNG | 3–17px (real Atwood short-band scale) |
+| **Total** | **6,842** | **6,664** | — | all bands at consistent 400px native scale |
+
+Val set: `val_atwood_tiled_400.json` — 1,384 tiles from 240 source images (same
+tiling scheme as training). Training and val signal are now consistent with inference.
+
+Built by:
+```bash
+python scripts/build_tiled_brentimages_json.py \
+  --src data/annotations/atwood_train.json \
+  --out /Volumes/External/TrainingData/annotations/atwood_train_tiled_400.json \
+  --native-tile-size 400 --overlap 0.5
+
+# Merged with Frigate cluster-2 + synthetic — see logs/run_mmdet_run5.sh
+```
+
+Run script: `logs/run_mmdet_run5.sh`
 
 **Band coverage rationale:** See §3.6 for the full gap analysis that motivated
 this composition. Short band improved from 1% (Run 4) to 23% by combining
@@ -739,19 +755,17 @@ Based on this analysis, in priority order:
    the Atwood training set (868 → ~1,550 images) with new NORAD IDs and geometry,
    directly addressing the medium-band data deficit.
 
-2. **Train on native-scale Atwood tiles AND run tiled inference** *(highest
-   priority architecture change)* — A 10.6-hour tiled eval of the Run 4 checkpoint
-   produced mAP@50=0.000 (2 TP, 19,269 FP). Root cause: the model was trained on
-   full-frame Atwood FITS resized to 400px; native-scale 400px Atwood tiles are
-   an entirely different distribution. The fix is straightforward and symmetric:
-   - Use `scripts/build_tiled_brentimages_json.py` to generate native-scale
-     400px virtual tile annotations from the Atwood FITS (same `__tx_ty_ts`
-     format as Frigate — no disk duplication)
-   - Replace full-frame Atwood entries in `all_train_run5.json` with these tiles
-   - Run tiled inference at 400px in production
-   Train and inference will then see the same pixel scale. Streaks at native
-   Atwood scale are longer and higher-contrast per pixel, which should
-   particularly improve medium-band recall.
+2. ✅ **Train on native-scale Atwood tiles AND run tiled inference** *(done, 2026-05-30)*
+   — A 10.6-hour tiled eval of the Run 4 checkpoint proved that full-frame-trained
+   models fail completely at native-scale tiled inference (mAP@50=0.000, 19,269 FP).
+   Fix implemented:
+   - `scripts/build_tiled_brentimages_json.py` applied to `atwood_train.json` →
+     `atwood_train_tiled_400.json` (6,387 tiles from 1,609 source images)
+   - Merged with Frigate cluster-2 (75) + synthetic (380) →
+     `all_train_run5_tiled.json` (6,842 tiles / 6,664 annotations)
+   - Val set tiled identically → `val_atwood_tiled_400.json` (1,384 tiles)
+   - Run script: `logs/run_mmdet_run5.sh`
+   - Production inference: `tiled_pipeline.py` at tile=400, overlap=0.50
 
 3. **Run ViT-B on the same Run 4 data split** — Train a ViT-B cold-start on
    `all_train_run4.json` + the holdout nights (once promoted) with the Run 4
