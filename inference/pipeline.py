@@ -1438,7 +1438,10 @@ def run_with_array(
         if _gray_f32.ndim == 3:
             _gray_f32 = _gray_f32.mean(axis=2)
         _bg = float(np.median(_gray_f32))
-        _extent_threshold = _bg + 3.0 * float(_gray_f32.std())
+        # Use 2σ instead of 3σ: autostretched FITS images have bimodal pixel
+        # distributions (dark background + bright stars) that inflate std,
+        # pushing a 3σ threshold so high that faint streak tips are cut off.
+        _extent_threshold = _bg + 2.0 * float(_gray_f32.std())
 
         angle_range = float(os.environ.get(
             "RADON_ANGLE_SEARCH_RANGE",
@@ -1463,8 +1466,20 @@ def run_with_array(
             )
             initial_obb = det["obb"] if det.get("obb") else bbox_to_obb(det["bbox"], seed_angle)
             angle = refine_angle(crop, initial_obb, angle_search_range=angle_range)
-            obb = bbox_to_obb(det["bbox"], angle)
-            obb = extend_obb_to_streak_extent(array, obb, _gray=_gray_f32, _threshold=_extent_threshold)
+            # For heatmap line-segment detections the native obb already has the
+            # correct cx/cy (midpoint of traced segment) and Radon-refined angle.
+            # Reconstructing from the axis-aligned bbox would move the centre to
+            # the bbox centroid of a fragment, causing angle drift at the far tips.
+            if det.get("geometry_type") == "line_segment" and det.get("obb"):
+                obb = {**det["obb"], "angle_deg": angle}
+            else:
+                obb = bbox_to_obb(det["bbox"], angle)
+            obb = extend_obb_to_streak_extent(
+                array, obb,
+                _gray=_gray_f32,
+                _threshold=_extent_threshold,
+                sample_halfwidth=15,
+            )
             det["obb"] = obb
             det["streak_length_px"] = float(obb["w"])
 
