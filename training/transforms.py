@@ -133,14 +133,19 @@ class LoadFITSFromFile(BaseTransform):
                         from inference.fits_loader import apply_norm
                         chosen = self._rng.choice(self._DUAL_NORM_CHOICES)
                         if chosen != loaded.get("norm_mode"):
-                            u8 = apply_norm(raw, chosen)        # (H, W) uint8
-                            arr = np.stack([u8, u8, u8], axis=2)  # (H, W, 3)
+                            # apply_norm returns (H, W, 3) already — do not re-stack
+                            arr = apply_norm(raw, chosen)       # (H, W, 3) uint8
 
             else:
                 import mmcv
                 arr = mmcv.imread(img_path, channel_order="bgr")
                 if arr is None:
                     raise FileNotFoundError(img_path)
+                # Force 3-channel BGR — grayscale PNGs come back as (H, W) or (H, W, 1)
+                if arr.ndim == 2:
+                    arr = np.stack([arr, arr, arr], axis=2)
+                elif arr.shape[2] == 1:
+                    arr = np.concatenate([arr, arr, arr], axis=2)
 
             if tile_crop is not None:
                 x0, y0, ts = tile_crop
