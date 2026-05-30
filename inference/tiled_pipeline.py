@@ -430,7 +430,7 @@ def run_tiled_inference(
     native_tile_size: int = 400,
     model_input_size: int = 400,
     overlap: float = 0.5,
-    conf_threshold: float = 0.3,
+    conf_threshold: float = 0.2,
     interp: str = "bilinear",
     stitch: bool = False,
     stitch_max_gap_px: float = 400.0,
@@ -834,7 +834,7 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--overlap", type=float, default=0.5, help="Fractional tile overlap")
     parser.add_argument(
-        "--conf-threshold", type=float, default=0.3, help="Minimum detection score"
+        "--conf-threshold", type=float, default=0.2, help="Minimum detection score"
     )
     parser.add_argument(
         "--interp",

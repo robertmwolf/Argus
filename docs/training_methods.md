@@ -369,22 +369,26 @@ Atwood + Frigate diversity tiles).  Two models trained simultaneously.**
 | COCO mAP | 0.223 |
 | COCO mAP@50 | **0.518** |
 | COCO mAP@75 | 0.139 |
-| Precision (conf≥0.30) | 61.1% |
-| Recall (conf≥0.30) | 55.5% |
-| F1 | 58.2% |
+| Precision (conf≥0.20) | 58.3% |
+| Recall (conf≥0.20) | 56.3% |
+| F1 | 57.3% |
 
-**Per-band recall on `test_atwood.json` (conf≥0.30, IoU≥0.50):**
+**Per-band recall on `test_atwood.json` (conf≥0.20, IoU≥0.50):**
 
 | Band | Recall | TP | FN | GT |
 |------|--------|----|----|-----|
 | Short (<269px) | 0.0% | 0 | 3 | 3 |
-| **Medium (269–800px)** | **48.8%** | 39 | 41 | 80 |
+| **Medium (269–800px)** | **50.0%** | 40 | 40 | 80 |
 | Long (>800px) | 75.0% | 27 | 9 | 36 |
 
-Medium band (67% of annotations) is the primary failure mode. Long recall (75%)
-is below the 85% quality gate — the model is viable but not yet production-ready on
-Atwood native-resolution images at the full-image resize scale used here. Tiled
-inference (400px crops) is expected to improve recall substantially — see §3.3 caveat.
+Confidence threshold lowered to 0.20 (from 0.30) following FN root-cause analysis:
+45% of false negatives at conf≥0.30 had model scores in [0.10, 0.30) — underconfident
+detections, not true misses. SNR is not the driver (53% of FNs are bright, SNR>20).
+See commit 15d6330 for full analysis. Medium band (67% of annotations) remains the
+primary failure mode. Long recall (75%) is below the 85% quality gate — the model is
+viable but not yet production-ready on Atwood native-resolution images at the full-image
+resize scale used here. Tiled inference (400px crops) is expected to improve recall
+substantially — see §3.3 caveat.
 Results: `results/zero_shot_run4_mmdet_test_atwood_*/`
 
 **⚠ Comparison caveat:** The auto-generated report compares Run 4 ViT-S
@@ -398,11 +402,14 @@ The only apples-to-apples cross-run metric is the SatStreaks secondary benchmark
 
 **Zero-shot holdout results (full-frame inference — tiled results pending):**
 
-| Set | mAP | mAP@50 | P | R | Long recall | Med recall | Short recall |
-|-----|-----|--------|---|---|-------------|------------|--------------|
-| test_atwood (133 imgs, 119 anns) | 0.223 | 0.518 | 61.1% | 55.5% | 75.0% (n=36) | 48.8% (n=80) | 0% (n=3) |
-| atwood_20260527 (507 imgs, 559 anns) | 0.276 | 0.515 | 71.4% | 51.9% | 57.0% (n=505) | 4.4% (n=45) | 0% (n=9) |
-| atwood_20260528 (175 imgs, 185 anns) | *pending* | | | | | | |
+All P/R/F1 figures at conf≥0.20, IoU≥0.50 (see commit 15d6330 for threshold rationale).
+COCO mAP is threshold-independent.
+
+| Set | mAP | mAP@50 | P | R | F1 | Long R | Med R | Short R |
+|-----|-----|--------|---|---|----|--------|-------|---------|
+| test_atwood (133 imgs, held-out) | 0.223 | 0.518 | 58.3% | 56.3% | 57.3% | 75.0% (n=36) | 50.0% (n=80) | 0% (n=3) |
+| atwood_20260527 (507 imgs, zero-shot) | 0.276 | 0.515 | 67.1% | 51.9% | 58.5% | 57.0% (n=505) | 4.4% (n=45) | 0% (n=9) |
+| atwood_20260528 (175 imgs, zero-shot) | 0.218 | 0.447 | 56.0% | 45.4% | 50.1% | 47.2% (n=178) | 0% (n=5) | 0% (n=2) |
 
 ⚠ **All above numbers use full-frame 15.6× downscale inference.** The tiled inference
 eval at tile=400, overlap=0.50 (matching production settings) is running overnight.
@@ -743,7 +750,7 @@ the full breakdown. ✅ Resolved.
 ### 5.1 Metrics
 
 - **Primary:** COCO mAP (IoU=0.50:0.95) and mAP@50
-- **Secondary:** Precision, Recall, F1 at conf≥0.30, IoU≥0.50
+- **Secondary:** Precision, Recall, F1 at conf≥0.20, IoU≥0.50
 - **Per-band recall:** Short (<269px diagonal), Medium (269–800px), Long (>800px)
   computed from `scripts/evaluate_comprehensive.py`
 

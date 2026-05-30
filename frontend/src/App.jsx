@@ -9,6 +9,7 @@ import ResultViewer from './components/ResultViewer'
 import UploadZone from './components/UploadZone'
 
 const POLL_INTERVAL_MS = 2000
+const DEFAULT_CONF_THRESHOLD = 0.2
 
 export default function App() {
   const [jobId, setJobId] = useState(null)
@@ -117,6 +118,24 @@ export default function App() {
       cancelled = true
     }
   }, [jobId, jobStatus])
+
+  // Seed each method's slider to DEFAULT_CONF_THRESHOLD when results first arrive.
+  // Only sets methods not yet explicitly configured so user adjustments survive re-polls.
+  useEffect(() => {
+    if (!result?.detections) return
+    const methods = [...new Set(
+      result.detections.flatMap(d =>
+        (d.sources ?? [{ method: d.method }]).map(s => s.method).filter(Boolean)
+      )
+    )]
+    setMethodThresholds(prev => {
+      const next = { ...prev }
+      for (const m of methods) {
+        if (!(m in next)) next[m] = DEFAULT_CONF_THRESHOLD
+      }
+      return next
+    })
+  }, [result])
 
   const handleThresholdChange = (method, value) => {
     setMethodThresholds(prev => ({ ...prev, [method]: value }))
