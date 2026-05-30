@@ -387,10 +387,25 @@ Confidence threshold lowered to 0.20 (from 0.30) following FN root-cause analysi
 detections, not true misses. SNR is not the driver (53% of FNs are bright, SNR>20).
 See commit 15d6330 for full analysis. Medium band (67% of annotations) remains the
 primary failure mode. Long recall (75%) is below the 85% quality gate — the model is
-viable but not yet production-ready on Atwood native-resolution images at the full-image
-resize scale used here. Tiled inference (400px crops) is expected to improve recall
-substantially — see §3.3 caveat.
+viable but not yet production-ready on Atwood native-resolution images.
 Results: `results/zero_shot_run4_mmdet_test_atwood_*/`
+
+**⚠ Tiled inference is NOT the correct inference mode for this model (Run 4).**
+A 10.6-hour tiled eval at tile=400, overlap=0.50 on `test_atwood.json` produced
+mAP@50=0.000 (2 TP, 19,269 FP, 117 FN). Root cause: the model was trained on
+*full-frame* Atwood FITS resized to 400px — at that scale a 6248×4176 image is
+compressed 15.6×, giving streaks their characteristic morphology. Native-scale
+400px Atwood tiles show a completely different distribution (streak spans full tile,
+background texture is at native pixel scale) that the model was not trained on.
+The Frigate 400px tiles used in training are from a different instrument at a
+different native scale and do not bridge this gap.
+
+**Production inference mode for Run 4:** full-frame resize to 400px.
+Full-frame numbers supersede the tiled results for all planning purposes.
+
+**Run 5 prerequisite:** To enable tiled inference on Atwood, the training data
+must include Atwood tiles at native resolution (tile_size ≈ 400–600px from the
+full-frame FITS). This is the most important architectural change for Run 5.
 
 **⚠ Comparison caveat:** The auto-generated report compares Run 4 ViT-S
 (evaluated on Atwood FITS `test_atwood.json`) against the Run 3 ViT-B
@@ -401,7 +416,7 @@ comparison. A proper A/B requires running the ViT-B checkpoint against
 The only apples-to-apples cross-run metric is the SatStreaks secondary benchmark
 (eval 4/6 — see below).
 
-**Zero-shot holdout results (full-frame inference — tiled results pending):**
+**Zero-shot holdout results (full-frame inference — canonical for Run 4):**
 
 All P/R/F1 figures at conf≥0.20, IoU≥0.50 (see commit 15d6330 for threshold rationale).
 COCO mAP is threshold-independent.
@@ -412,11 +427,10 @@ COCO mAP is threshold-independent.
 | atwood_20260527 (507 imgs, zero-shot) | 0.276 | 0.515 | 67.1% | 51.9% | 58.5% | 57.0% (n=505) | 4.4% (n=45) | 0% (n=9) |
 | atwood_20260528 (175 imgs, zero-shot) | 0.218 | 0.447 | 56.0% | 45.4% | 50.1% | 47.2% (n=178) | 0% (n=5) | 0% (n=2) |
 
-⚠ **All above numbers use full-frame 15.6× downscale inference.** The tiled inference
-eval at tile=400, overlap=0.50 (matching production settings) is running overnight.
-Those numbers will supersede these. The script's "domain shift" warning for
-atwood_20260527 reflects the full-frame resolution limit, not an actual instrument
-domain shift — both nights use the same Atwood Observatory camera.
+All numbers use full-frame 15.6× downscale inference, which is the correct and only
+viable inference mode for Run 4 (see tiled inference failure note above). The script's
+"domain shift" warning for atwood_20260527 reflects the full-frame resolution limit,
+not an actual instrument domain shift — both nights use the same Atwood Observatory camera.
 
 The atwood_20260527 distribution is 90% long streaks (505/559) vs test_atwood which
 is 30% long (36/119). The lower long recall (57% vs 75%) is partly a selection effect:
