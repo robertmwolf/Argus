@@ -74,37 +74,48 @@ Annotations are COCO-format bounding boxes in native pixel coordinates.
 
 | Session | Date | Streak images | Negatives | NORAD IDs | Streak range (native px) | Status |
 |---|---|---|---|---|---|---|
-| Night 1 (`Img_20260412_Atwood`) | 2026-04-12 | 578 | 91 | 68 | p10=373, median=624, p90=1003 | ✅ Annotated |
-| Night 2 (`Img_20260515_Atwood`) | 2026-05-15 | 204 | 27 | 39 | min=215, median=687, max=1404 | ✅ Annotated |
-| Geo session (`Geo_20260520_Atwood`) | 2026-05-20 | 11 | 0 | ~5 | short-ish (GEO slow motion) | ✅ Annotated |
-| **Total** | | **793** | **118** | **~107 unique** | | |
+| Night 1 (`Img_20260412_Atwood`) | 2026-04-12 | 578 | 91 | 68 | p10=373, median=624, p90=1003 | ✅ train |
+| Night 2 (`Img_20260515_Atwood`) | 2026-05-15 | 204 | 27 | 39 | min=215, median=687, max=1404 | ✅ train |
+| Geo session (`Geo_20260520_Atwood`) | 2026-05-20 | 11 | 0 | ~5 | short-ish (GEO slow motion) | ✅ train |
+| Night 3 (`Img_20260527_Atwood`) | 2026-05-27 | 507 | 25 | 70 | mostly long (p50~900px) | ✅ train |
+| Night 4 (`Img_20260528_Atwood`) | 2026-05-28 | 175 | 18 | ~40 | heavily long (96% long band) | ✅ train |
+| **Total** | | **1,475** | **161** | **~200 unique** | | |
 
-Annotation files: `data/annotations/gtimages.json`,
-`data/annotations/gtimages_negatives.json`,
-`data/annotations/brentimages_20260515.json`,
-`data/annotations/brentimages_20260515_negatives.json`,
-`data/annotations/geo_20260520.json`.
+Annotation files in `data/annotations/`:
+`gtimages.json`, `brentimages_20260515.json`, `geo_20260520.json`,
+`atwood_20260527.json`, `atwood_20260528.json` (plus corresponding `_negatives.json`).
 
 Raw images: `/Volumes/External/TrainingData/raw/BrentImages/`
 
-### 3.2 Supplemental training data — Frigate (short-band only)
+**Geometry-stratified splits** (rebuilt 2026-05-30 from all 5 nights):
+- `atwood_train.json` — 1,129 images, 1,081 annotations (70%)
+- `val_atwood.json` — 240 images, 228 annotations (15%)
+- `test_atwood.json` — 240 images, 228 annotations (15%)
+
+### 3.2 Supplemental training data — Frigate (cluster-2 only, Run 5+)
 
 | Property | Value |
 |---|---|
 | Source | ExoAnalytic Solutions QHY600M — public dataset |
-| Format | Processed PNG (2325×1555 px, tiled to 400 px crops) |
-| Streak length | 20–80 px in tile coordinates (~short-band only) |
-| Annotation status | 191 frames annotated (377 OBBs), 159 negatives |
-| Tiled training set | 717 tiles, 655 annotations |
-| Role | **Training only, short-band morphology coverage** |
+| Format | Processed PNG (2325×1555 px) |
+| Full corpus | 350 annotated frames, 377 OBBs (191 positive, 159 negative) |
+| Usable subset | **Cluster 2: 48 annotations from 9 frames** (≥35px native, AR≥2.0) |
+| Tiling | 110px crops → 400px model input (3.64× magnification) |
+| Streak at model input | 127–240px (overlaps Atwood short band) |
+| Role | **Short-band morphology supplement** |
 | Domain distance | Moderate — PNG not FITS, different camera/site |
 
-Frigate is included in training because it is the **only available source of
-short-band streak examples**.  It is excluded from validation and test sets
-because it is not in the production domain.  A diversity-sampled subset
-(~150–200 tiles, see §6.2) is preferred over the full 717 tiles to avoid
-the training distribution being dominated by a single-night, single-instrument
-source.
+**Corpus structure (analysed 2026-05-30):** The corpus has a bimodal
+length distribution with a natural break at ~25px:
+- **Cluster 1** (86%, 323 annotations): <25px, AR~1.0 — near-circular blobs.
+  Confirmed to provide no training value: model trained on these in Run 4 showed
+  0% short-band recall on Atwood, and 1.6% recall on frigate itself at the
+  matching training scale.
+- **Cluster 2** (13%, 48 annotations): ≥35px, AR≥2.0 — genuine linear streaks.
+  At 3.64× tiling, these appear as 127–240px at model input.
+
+Only cluster 2 is included in Run 5+. Built by `scripts/build_frigate_cluster2.py`.
+Annotation file: `data/annotations/frigate_cluster2_tiled_110.json`.
 
 ### 3.3 Secondary benchmark — SatStreaks
 
@@ -276,18 +287,19 @@ Frigate tiles are appended after the Atwood portion.  Their mix weight in
 the manifest can be adjusted with `--mix-ratio frigate:<N>` if the short
 band needs oversampling.
 
-### 6.2 Frigate Diversity Subset
+### 6.2 Frigate Cluster-2 Subset
 
-Rather than using all 717 Frigate tiles (which come from a single night, single
-instrument), select a diversity-maximising subset of ~150–200 tiles that covers:
+Rather than using all 717 tiles or the diversity-sampled set, Run 5+ uses only
+the **cluster-2 subset**: annotations with native diagonal ≥35px and aspect
+ratio ≥2.0. These are the only tiles that represent genuine linear streak
+morphology. The 110px tiling (3.64× magnification) brings them to 127–240px
+at model input — directly comparable to Atwood short-band detections.
 
-- Full range of short-streak orientations (0–180°)
-- Both thin and moderate aspect ratios
-- Both bright and medium SNR examples
-
-A Frigate geometry sampler (`scripts/sample_frigate_tiles.py` — **to be
-built**) computes bbox-level geometry features (no FITS loading needed — tiles
-are already at model input scale) and runs a greedy diversity selection.
+Key properties of the cluster-2 subset:
+- 48 positive annotations from 9 source frames
+- 27 negative tiles (blank regions from the same frames)
+- Orientation coverage: 30–90° and 150–180° dominant; 0–30° sparse
+- Built by `scripts/build_frigate_cluster2.py`
 
 ### 6.3 Augmentation for Cross-Scope Generalisation
 
@@ -407,19 +419,28 @@ figure.
 
 ## 10. Test and Benchmark Hierarchy
 
-| Set | File | Domain | Role | Quality gate? |
-|---|---|---|---|---|
-| **Atwood test** | `test_atwood.json` | Ground FITS, Atwood | Primary production benchmark | **Yes** |
-| SatStreaks benchmark | `test.json` | HST/mixed PNG | Cross-domain trend tracker | No |
-| Frigate eval | `frigate_streaks.json` | Ground PNG, QHY600M | Short-band spot-check | No |
+| Set | File | Images | Domain | Role | Quality gate? |
+|---|---|---|---|---|---|
+| **Atwood test** | `test_atwood.json` | 240 | Ground FITS, Atwood | Primary production benchmark | **Yes** |
+| SatStreaks benchmark | `test.json` | 308 | HST/mixed PNG | Cross-domain trend tracker | No |
+| Frigate eval | `frigate_streaks_eval.json` | 350 | Ground PNG, QHY600M | Short-band spot-check | No |
 
-A model version passes the quality gate if `test_atwood.json` long-band
-recall ≥ 85% at conf ≥ 0.30, IoU ≥ 0.50.  (Threshold to be updated as
-the test set grows and the model matures.)
+**Quality gate (updated for Run 5 test set):**
+A model version passes if `test_atwood.json` produces:
+- Long-band recall ≥ 85% at conf ≥ 0.20, IoU ≥ 0.50
+- Medium-band recall ≥ 65% at conf ≥ 0.20, IoU ≥ 0.50
+
+(Threshold updated from conf ≥ 0.30 following Run 4 FN analysis showing 45% of
+false negatives were detected at conf 0.10–0.29.)
 
 SatStreaks `test.json` is never a quality gate.  If the SatStreaks score drops
 between runs, investigate — but do not reintroduce SatStreaks into training to
 recover it.
+
+**Note on val/test set size change:** Run 5 val/test sets (240 images each) are
+larger than Run 4 (133 images each) because the stratified re-split incorporated
+all 5 Atwood nights. Run 4 and Run 5 test results are therefore **not directly
+comparable** — treat them as independent evaluations.
 
 ---
 
@@ -428,49 +449,26 @@ recover it.
 ### Done
 - [x] Session manifest (`data/sessions/manifest.yaml`) — all sources, split assignments, policy
 - [x] Manifest-driven training JSON builder (`scripts/build_training_json.py`) — mix ratios, include/exclude
-- [x] Fine-tune config (`models/dino/streak_dinov3_vitb_400px_ft.py`) — 10× lower LR, loads from run3 best
 - [x] Zero-shot evaluation script (`scripts/zero_shot_eval.py`) — per-band recall, decision recommendation
-- [x] Synthetic augmentation script (`scripts/augment_short_medium.py`) — medium-band injection
 - [x] SatStreaks excluded from training in manifest
 - [x] Band threshold documentation — px in original image space, not arcseconds (see §4)
 - [x] Run 3 complete — mAP=0.782, P=94.9%, R=83.8%, best checkpoint epoch 13
+- [x] `scripts/extract_streak_features.py` — per-annotation SNR/geometry feature table
+- [x] `scripts/build_stratified_splits.py` — geometry-balanced splits; `--sessions`/`--append` flags added
+- [x] `scripts/build_frigate_cluster2.py` — cluster-2 filtered 110px tiled annotation builder
+- [x] `scripts/build_synthetic_short.py` — synthetic short-band streak injection into Atwood backgrounds
+- [x] `snr_scale` range in `SyntheticStreakInject` — full brightness range via `--snr-scale-max`
+- [x] **Run 4 complete** — ViT-S OBB: mAP@50=0.611 val / 0.518 test; Centerline: val_dice=0.2327
+- [x] **Run 4 FN root-cause analysis** — 45% threshold issue, 55% truly missed; SNR not primary driver
+- [x] **Frigate corpus analysis** — bimodal distribution; cluster 1 (86% blobs) excluded from Run 5
+- [x] **Run 5 dataset built** — all 5 Atwood nights re-stratified; `all_train_run5.json` 2,064 imgs / 1,956 anns
+- [x] Holdout nights (atwood_20260527, atwood_20260528) promoted to `split: train` after zero-shot eval
 
-### To be built (in priority order)
-- [x] **`scripts/extract_streak_features.py`** — per-annotation feature table
-      (length, aspect_ratio, angle, SNR from FITS).  SNR computed consistently
-      from raw FITS pixels across all sessions; falls back to annotation
-      attributes when FITS unavailable.  Output: `data/features/atwood_streak_features.csv`.
-- [x] **`scripts/build_stratified_splits.py`** — geometry-balanced
-      `atwood_train.json`, `val_atwood.json`, `test_atwood.json` from feature table.
-      Stratifies by band × snr_class; cells with < 3 images all go to training;
-      negatives split randomly at same ratio.
-- [x] **`scripts/sample_frigate_tiles.py`** — diversity-maximising subset of
-      ~150–200 Frigate tiles using Furthest-Point Sampling in
-      length × aspect × angle × tile-position feature space.
-      Output: `data/annotations/frigate_diversity_<N>.json`.
-- [x] **`snr_scale` in `SyntheticStreakInject`** — faint streak augmentation to
-      target the 49 FN long-streak gap from Run 3.  Use `snr_scale=0.1–0.3`
-      for near-threshold faint streak injection.
-- [x] **Scale jitter and PSF blur augmentation** in `training/augmentations.py`
-      `get_train_transforms()`: `RandomScale(±25%)` and
-      `GaussianBlur(σ 0.5–2.0 px)` added for cross-scope generalisation.
-- [x] **Run 4** — first training run on geometry-stratified Atwood+Frigate data,
-      no SatStreaks.  Two ViT-S models trained (2026-05-28 to 2026-05-29):
-      OBB (MMDet): mAP@50=0.611 val / 0.518 test; Centerline: val_dice=0.2327.
-      See `docs/training_methods.md §3.4`.
-
-### Run 4 prerequisites (all now complete)
-1. Run `extract_streak_features.py` → `data/features/atwood_streak_features.csv`
-2. Run `build_stratified_splits.py` → `atwood_train.json`, `val_atwood.json`, `test_atwood.json`
-3. Run `sample_frigate_tiles.py` → `frigate_diversity_250.json`
-4. Build final training JSON:
-   ```bash
-   python scripts/build_training_json.py \
-       --include atwood_20260412 atwood_20260515 atwood_geo_20260520 \
-       --output data/annotations/all_train_run4.json
-   # Then manually merge with frigate_diversity_250.json if needed,
-   # or add frigate_diversity_250 as a manifest entry (split: train).
-   ```
+### To be done for Run 5
+- [ ] **Train Run 5** — ViT-B backbone on `all_train_run5.json` / `val_atwood.json` on RTX workstation
+- [ ] **Lower confidence threshold** — evaluate Run 5 at conf=0.20 (45% of Run 4 FNs recoverable)
+- [ ] **Evaluate on `test_atwood.json`** — primary benchmark; goal: medium recall ≥ 65%, long ≥ 85%
+- [ ] **Frigate cluster-2 eval** — run `eval_frigate_tiled.py` against Run 5 checkpoint to validate short-band learning
 
 ---
 
@@ -481,9 +479,13 @@ recover it.
 | 2026-05-28 | SatStreaks excluded from training | Domain gap (HST/mixed PNG) too large; risks teaching features that don't transfer to Atwood FITS |
 | 2026-05-28 | SatStreaks test.json retained as secondary benchmark | Useful for detecting cross-run regressions; not a production accuracy figure |
 | 2026-05-28 | Geometry-based stratification adopted | Visual morphology space is what the model generalises across; NORAD ID splitting controls the wrong variable |
-| 2026-05-28 | Frigate retained for short-band training only | Only available source of short-streak morphology; diversity-sampled to prevent single-instrument dominance |
-| 2026-05-28 | SNR/faintness added as stratification dimension | Run 3's 49 FN long-streak misses are almost certainly faint; without this dimension, test sets overstate production recall |
-| 2026-05-28 | Augmentation (scale jitter, PSF blur) planned for cross-scope generalisation | More predictable than mixing data from instruments with large domain gaps |
-| 2026-05-29 | Run 4 OBB medium-band recall (49%) is primary failure mode on test_atwood | Medium band is 67% of Atwood annotations; Run 5 should add holdout nights + investigate FN |
+| 2026-05-28 | Frigate retained for short-band training only | Only available source of short-streak morphology outside Atwood |
+| 2026-05-28 | SNR/faintness added as stratification dimension | Run 3's FN long-streak misses likely faint; without this dimension, test sets overstate production recall |
+| 2026-05-29 | Run 4 OBB medium-band recall (49%) is primary failure mode on test_atwood | Medium band is 67% of Atwood annotations; investigate FN root cause before retraining |
 | 2026-05-29 | Holdout nights (atwood_20260527, atwood_20260528) kept out of training until zero-shot eval recorded | Policy: never promote a night to training before its holdout eval report is committed |
-| 2026-05-29 | Frigate virtual tile paths fixed in centerline loader | _TILE_RE added to dinov3_orientation_centerline_dataset.py; annotation JSONs path-normalised to canonical /Volumes/External/TrainingData/raw/ prefix |
+| 2026-05-30 | Run 4 FN root-cause: 45% threshold issue, 55% truly missed; SNR not primary driver | 53% of FNs are bright (SNR>20); faint augmentation is low-priority; confidence calibration is key |
+| 2026-05-30 | Frigate cluster-1 (86% blobs, <25px, AR~1) excluded from Run 5 | Model trained on cluster-1 showed 0% Atwood short-band recall and 1.6% frigate recall at matching scale |
+| 2026-05-30 | Frigate cluster-2 (13%, ≥35px, AR≥2) tiled at 110px for 3.64× zoom | At model input, 35–66px streaks appear as 127–240px — comparable to Atwood short band |
+| 2026-05-30 | All 5 Atwood nights re-stratified together | Appending long-heavy holdout nights without re-stratification would skew distribution; val/test should also reflect new nights |
+| 2026-05-30 | Synthetic short-band injection added (380 images, snr_scale 0.2–1.0) | Only 21 real Atwood short annotations across 5 nights (1.4%); synthetic fill raises short band to 23% of training |
+| 2026-05-30 | conf threshold target lowered to 0.20 for Run 5 eval | 45% of Run 4 FNs had correct-location predictions at conf 0.10–0.29; threshold drop recovers them at no training cost |

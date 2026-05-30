@@ -181,7 +181,7 @@ sources:
     scope_id: atwood
     source_type: brentimages
     date: "2026-05-27"
-    split: holdout
+    split: train
     mix_weight: 1.0
     annotation_file: "data/annotations/atwood_20260527.json"
     negatives_file: "data/annotations/atwood_20260527_negatives.json"
@@ -204,7 +204,7 @@ sources:
     scope_id: atwood
     source_type: brentimages
     date: "2026-05-28"
-    split: holdout
+    split: train
     mix_weight: 1.0
     annotation_file: "data/annotations/atwood_20260528.json"
     negatives_file: "data/annotations/atwood_20260528_negatives.json"
@@ -248,21 +248,55 @@ sources:
   - session_id: frigate_diversity
     scope_id: frigate
     source_type: public_dataset
-    split: train
-    mix_weight: 1.0
+    split: excluded           # Superseded by frigate_cluster2 (Run 5+). 86% of tiles
+    mix_weight: 1.0           # were near-circular blobs (AR~1, <25px) providing no useful
     annotation_file: "data/annotations/frigate_diversity.json"
     raw_dir: "/Volumes/External/TrainingData/raw/frigate"
-    n_images: 250            # 200 positive + 50 negative (FPS-selected subset)
+    n_images: 250
     n_annotations: 251
     camera: "QHY600M (9600×6422, 3.76μm) — tiled 400px crops"
     pixel_scale_arcsec: null
     norad_ids: 0
     notes: >
-      Geometry-diversity subset of frigate_train, selected by Furthest-Point
-      Sampling across (length, aspect_ratio, angle, tile_position) feature space.
-      Built by scripts/sample_frigate_tiles.py --n-tiles 200 --seed 42.
-      250 tiles total: 200 positive (short streaks ~7-66px) + 50 negatives.
-      Critical source for short-band recall — do not exclude.
+      Superseded by frigate_cluster2 for Run 5. Analysis showed 86% of
+      annotations were near-circular blobs (<25px, AR~1) providing no useful
+      streak morphology. Only the top ~13% (>=35px, AR>=2.0) are linear
+      streak-like features. Use frigate_cluster2 instead.
+
+  - session_id: frigate_cluster2
+    scope_id: frigate
+    source_type: public_dataset
+    split: train
+    mix_weight: 1.0
+    annotation_file: "data/annotations/frigate_cluster2_tiled_110.json"
+    raw_dir: "/Volumes/External/frigate/processed"
+    n_images: 75               # 48 positive + 27 negative tiles
+    n_annotations: 48
+    camera: "QHY600M — 110px crops, 3.64x magnification"
+    pixel_scale_arcsec: null
+    norad_ids: 0
+    notes: >
+      Cluster-2 only subset of frigate corpus: annotations with diagonal>=35px
+      and aspect_ratio>=2.0 (48 annotations from 9 source frames).
+      Tiled at 110px native -> 400px model input (3.64x magnification) so
+      35-66px native streaks appear as 127-240px at model input — overlapping
+      the Atwood short-band range. Includes negative tiles from same frames.
+      Built by scripts/build_frigate_cluster2.py.
+
+  - session_id: synthetic_short
+    scope_id: atwood
+    source_type: synthetic
+    split: train
+    mix_weight: 1.0
+    annotation_file: "data/annotations/synthetic_short_atwood.json"
+    raw_dir: "data/augmented/synthetic_short"
+    n_images: 380             # 200 mid-brightness + 180 full-range (snr_scale 0.2-1.0)
+    n_annotations: 371
+    notes: >
+      Synthetic short-band streaks (50-269px at Atwood native scale) injected
+      into real Atwood background crops. Addresses the critical gap of only
+      ~21 real short-band Atwood annotations across all nights.
+      Built by scripts/augment_short_medium.py --band short --n-images 200.
 
   - session_id: frigate_eval
     scope_id: frigate

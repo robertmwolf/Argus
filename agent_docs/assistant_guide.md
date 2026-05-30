@@ -16,7 +16,7 @@ propagation and multi-factor confidence scoring. Results are served through a
 FastAPI backend and React frontend.
 
 ## Current Phase
-**Run 4 complete (2026-05-29). First geometry-stratified ViT-S run. Evaluations complete.**
+**Run 5 dataset ready (2026-05-30). Awaiting Run 5 training on RTX workstation.**
 
 Progress:
 - ✅ Phase 0 (Classical baseline): `src/` — fits_parser, classical_detector, plate_solver, SGP4 matching
@@ -29,53 +29,49 @@ Progress:
 - ✅ Phase 8 (Evaluation): `eval/metrics.py`, `eval/benchmark.py`
 - ✅ DINOv3 ViT-B backbone integrated — `models/dino/dinov3_adapter.py`
 - ✅ Adaptive tiling — `inference/tiled_pipeline.py`
-- ✅ **Run 3 complete** — cold-start ViT-B, 15 epochs, `all_train_nodm.json` (8,422 images).
-  Best checkpoint: epoch 13. Results: mAP=0.782, P=94.9%, R=83.8% on SatStreaks test set.
+- ✅ **Run 3 complete** — cold-start ViT-B, 15 epochs. mAP=0.782, P=94.9%, R=83.8%.
   Weights: `weights/run3_cold_nodm/best.pth`. See `docs/training_methods.md §3.2`.
-- ✅ Data strategy formalised — `docs/data_strategy.md` (2026-05-28). SatStreaks excluded
-  from training; geometry-based stratification adopted; multi-scope workflow implemented.
-- ✅ Geometry-stratified splits built — `atwood_train.json` (618), `val_atwood.json` (133),
-  `test_atwood.json` (133). Summary: `data/features/atwood_split_summary.json`.
-- ✅ **Run 4 complete** — two ViT-S models trained on geometry-stratified Atwood + Frigate data.
+- ✅ Data strategy formalised — `docs/data_strategy.md`. SatStreaks excluded from training;
+  geometry-based stratification adopted; multi-scope workflow implemented.
+- ✅ **Run 4 complete (2026-05-29)** — two ViT-S models on geometry-stratified Atwood + Frigate.
   - **OBB MMDet ViT-S:** `weights/run4_vits_mmdet/best_coco_bbox_mAP_epoch_15.pth`
-    Val (atwood): mAP@50=0.611, mAP=0.273. Test (atwood): mAP@50=0.518, long-recall=75%.
+    Val: mAP@50=0.611. Test: mAP@50=0.518, short-recall=0%, medium-recall=49%, long-recall=75%.
   - **Centerline ViT-S:** `weights/run_dinov3_vits_orientation_centerline_1024/best.pt`
     Val dice=0.2327. See `docs/training_methods.md §3.4`.
-- ✅ Frigate tile virtual-path fix — `training/dinov3_orientation_centerline_dataset.py`
-  now correctly resolves `__tx{x}_ty{y}_ts{size}` paths to parent images at load time.
+- ✅ **Run 4 FN root-cause analysis (2026-05-30)**:
+  - 45% of FNs: model detected but conf < 0.30 (confidence calibration, not visibility)
+  - 55% of FNs: truly not detected (data/capacity issue)
+  - SNR is NOT the primary driver — 53% of FNs are bright (SNR > 20)
+- ✅ **Frigate corpus analysis (2026-05-30)**:
+  - 86% of annotations are near-circular blobs (<25px, AR~1) — provide no useful training signal
+  - 13% (cluster-2, ≥35px, AR≥2) are genuine linear streaks — tiled at 110px for 3.64× zoom
+- ✅ **Run 5 dataset built (2026-05-30)**:
+  - All 5 Atwood nights re-stratified (1,475 images → 1,129 train / 240 val / 240 test)
+  - Frigate replaced with cluster-2 tiled at 110px (48 annotations, 9 frames)
+  - Synthetic short-band injection: 380 images, snr_scale 0.2–1.0
+  - **`all_train_run5.json`**: 2,064 images, 1,956 annotations (short=23%, medium=30%, long=47%)
 
 ## Next Steps
 
-### Run 5 planning (informed by Run 4 results)
+### Run 5 training
 
-Run 4 primary failure mode: medium-band recall 49% on `test_atwood.json`
-(medium band = 80/119 annotations = 67% of the Atwood test set).
+All data is ready. Train on RTX workstation with ViT-B backbone (3× parameters vs ViT-S):
 
-FN root-cause analysis on `test_atwood.json` (119 GT, 53 FNs at conf≥0.3):
-- **45% (24/53): detected but conf < 0.3** — model fires on these streaks but
-  assigns scores in [0.10, 0.30). SNR is not the driver: 53% of all FNs are bright
-  (SNR > 20), including extreme cases at SNR=262 and SNR=183.
-- **55% (29/53): truly not detected** — IoU < 0.5 with any prediction; require more
-  training data or model capacity to fix.
+```bash
+TRAIN_ANN_FILE=data/annotations/all_train_run5.json \
+VAL_ANN_FILE=data/annotations/val_atwood.json \
+python -m training.train_dino --config models/dino/streak_dinov3_vitb_400px_run3.py \
+    --work-dir weights/run5_vitb
+```
 
-Recommended levers for Run 5:
-- **Confidence threshold already lowered to 0.2** — all eval scripts (`zero_shot_eval.py`,
-  `evaluate_comprehensive.py`, `eval_frigate_tiled.py`, `eval_brentimages_tiled.py`)
-  now default to `--conf 0.2`. This recovers the 24 conf-suppressed FNs at zero
-  retraining cost. The remaining 29 true misses require training-side fixes.
-- **Add holdout nights to training** — atwood_20260527 (507 imgs) and atwood_20260528
-  (175 imgs) are ready once their zero-shot eval reports are committed. This adds ~682
-  more Atwood images covering new NORAD IDs and geometry.
-- **ViT-B backbone** — Run 4 used ViT-S as cost-efficient baseline; ViT-B has 3× more
-  parameters and historically shows +0.2–0.3 mAP on Atwood-scale sets.
-- **Diagnose medium-band FN** — load the 41 medium false-negatives and inspect visually;
-  determine if they are faint, blurry, partially cropped, or at unusual angles.
+### Post-Run 5 evaluation priorities
 
-### Zero-shot holdout evaluation
-
-Results in `results/zero_shot_run4_*/`. Do not promote holdout nights
-(atwood_20260527, atwood_20260528) to `split: train` in the manifest until their
-zero-shot eval reports are committed to the repo.
+1. **Evaluate on `test_atwood.json`** at conf=0.20 (not 0.30)
+   - 45% of Run 4 FNs had correct-location preds at conf 0.10–0.29
+   - Quality gates: medium recall ≥ 65%, long recall ≥ 85%
+2. **Run `eval_frigate_tiled.py`** against Run 5 checkpoint to verify short-band learning
+3. **Compare medium-band recall vs Run 4** — goal is to close the 29 truly-missed FNs
+   through more data and ViT-B capacity
 
 ## Hardware
 - **Dev / CI:** MacBook Air M3 — CPU or MPS. Use `MODEL_SIZE=tiny` (Swin-T).

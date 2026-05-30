@@ -457,6 +457,18 @@ def parse_args() -> argparse.Namespace:
         help="Manifest splits to include (default: train holdout).  "
              "Pass 'all' to include every split.",
     )
+    p.add_argument(
+        "--sessions",
+        nargs="+",
+        default=None,
+        help="Restrict to specific session_id(s).  Default: all sessions "
+             "matching --scope and --splits.",
+    )
+    p.add_argument(
+        "--append",
+        action="store_true",
+        help="Append rows to an existing CSV instead of overwriting it.",
+    )
     return p.parse_args()
 
 
@@ -482,6 +494,13 @@ def main() -> None:
         sources = [s for s in sources if s.get("split") in split_set]
     if not sources:
         raise SystemExit("No sources match the requested splits. Check --splits.")
+
+    # Filter by explicit session list
+    if args.sessions:
+        session_set = set(args.sessions)
+        sources = [s for s in sources if s.get("session_id") in session_set]
+        if not sources:
+            raise SystemExit(f"No sources found for sessions={args.sessions!r}.")
 
     logger.info(
         "Processing %d session(s) for scope=%s  use_fits=%s  workers=%d",
@@ -519,9 +538,12 @@ def main() -> None:
 
     # Write CSV
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    with open(args.output, "w", newline="") as fh:
+    write_mode = "a" if args.append and args.output.exists() else "w"
+    write_header = write_mode == "w"
+    with open(args.output, write_mode, newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=_CSV_FIELDS)
-        writer.writeheader()
+        if write_header:
+            writer.writeheader()
         writer.writerows(all_rows)
 
     logger.info("Written: %s  (%d rows)", args.output, len(all_rows))

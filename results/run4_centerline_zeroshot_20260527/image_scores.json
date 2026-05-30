@@ -1,0 +1,3044 @@
+[
+  {
+    "image_id": 1,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_14699_231900.fits",
+    "target_positive": true,
+    "max_score": 0.9966694712638855
+  },
+  {
+    "image_id": 2,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_14699_231914.fits",
+    "target_positive": true,
+    "max_score": 0.9983006119728088
+  },
+  {
+    "image_id": 3,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_14699_231941.fits",
+    "target_positive": true,
+    "max_score": 0.9980226755142212
+  },
+  {
+    "image_id": 4,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_14699_231954.fits",
+    "target_positive": true,
+    "max_score": 0.9981516003608704
+  },
+  {
+    "image_id": 5,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_14699_232007.fits",
+    "target_positive": true,
+    "max_score": 0.9969820380210876
+  },
+  {
+    "image_id": 6,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_14699_232021.fits",
+    "target_positive": true,
+    "max_score": 0.9976508021354675
+  },
+  {
+    "image_id": 7,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_14699_232034.fits",
+    "target_positive": true,
+    "max_score": 0.9976375102996826
+  },
+  {
+    "image_id": 8,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_14699_232048.fits",
+    "target_positive": true,
+    "max_score": 0.9975811243057251
+  },
+  {
+    "image_id": 9,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_14699_232101.fits",
+    "target_positive": true,
+    "max_score": 0.9979497790336609
+  },
+  {
+    "image_id": 10,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_14699_232115.fits",
+    "target_positive": true,
+    "max_score": 0.9986041188240051
+  },
+  {
+    "image_id": 11,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_17912_001534.fits",
+    "target_positive": true,
+    "max_score": 0.9878178834915161
+  },
+  {
+    "image_id": 12,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_17912_001548.fits",
+    "target_positive": true,
+    "max_score": 0.9993342757225037
+  },
+  {
+    "image_id": 13,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_17912_001604.fits",
+    "target_positive": true,
+    "max_score": 0.9997513890266418
+  },
+  {
+    "image_id": 14,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_17912_001621.fits",
+    "target_positive": true,
+    "max_score": 0.9991484880447388
+  },
+  {
+    "image_id": 15,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_17912_001634.fits",
+    "target_positive": true,
+    "max_score": 0.9991798996925354
+  },
+  {
+    "image_id": 16,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_20775_214129.fits",
+    "target_positive": true,
+    "max_score": 0.9998793601989746
+  },
+  {
+    "image_id": 17,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_20775_214156.fits",
+    "target_positive": true,
+    "max_score": 0.9990837574005127
+  },
+  {
+    "image_id": 18,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_26605_232601.fits",
+    "target_positive": true,
+    "max_score": 0.027735121548175812
+  },
+  {
+    "image_id": 19,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_26605_232641.fits",
+    "target_positive": true,
+    "max_score": 0.043508924543857574
+  },
+  {
+    "image_id": 20,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_28446_002237.fits",
+    "target_positive": true,
+    "max_score": 0.9918368458747864
+  },
+  {
+    "image_id": 21,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_28446_002347.fits",
+    "target_positive": true,
+    "max_score": 0.9918341636657715
+  },
+  {
+    "image_id": 22,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_28446_002457.fits",
+    "target_positive": true,
+    "max_score": 0.9873206615447998
+  },
+  {
+    "image_id": 23,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_28446_002607.fits",
+    "target_positive": true,
+    "max_score": 0.9877106547355652
+  },
+  {
+    "image_id": 24,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_28446_230028.fits",
+    "target_positive": true,
+    "max_score": 0.9716777801513672
+  },
+  {
+    "image_id": 25,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_28446_230137.fits",
+    "target_positive": true,
+    "max_score": 0.04519105702638626
+  },
+  {
+    "image_id": 26,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_28446_230247.fits",
+    "target_positive": true,
+    "max_score": 0.033681731671094894
+  },
+  {
+    "image_id": 27,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_000947.fits",
+    "target_positive": true,
+    "max_score": 0.9939873218536377
+  },
+  {
+    "image_id": 28,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001001.fits",
+    "target_positive": true,
+    "max_score": 0.9937248826026917
+  },
+  {
+    "image_id": 29,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001014.fits",
+    "target_positive": true,
+    "max_score": 0.9946605563163757
+  },
+  {
+    "image_id": 30,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001028.fits",
+    "target_positive": true,
+    "max_score": 0.9967668056488037
+  },
+  {
+    "image_id": 31,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001042.fits",
+    "target_positive": true,
+    "max_score": 0.9969062209129333
+  },
+  {
+    "image_id": 32,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001055.fits",
+    "target_positive": true,
+    "max_score": 0.9968404769897461
+  },
+  {
+    "image_id": 33,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001108.fits",
+    "target_positive": true,
+    "max_score": 0.9972845315933228
+  },
+  {
+    "image_id": 34,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001122.fits",
+    "target_positive": true,
+    "max_score": 0.9974163770675659
+  },
+  {
+    "image_id": 35,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001135.fits",
+    "target_positive": true,
+    "max_score": 0.9970959424972534
+  },
+  {
+    "image_id": 36,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001149.fits",
+    "target_positive": true,
+    "max_score": 0.9971520900726318
+  },
+  {
+    "image_id": 37,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001203.fits",
+    "target_positive": true,
+    "max_score": 0.9975684285163879
+  },
+  {
+    "image_id": 38,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001217.fits",
+    "target_positive": true,
+    "max_score": 0.9989921450614929
+  },
+  {
+    "image_id": 39,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001232.fits",
+    "target_positive": true,
+    "max_score": 0.9988514184951782
+  },
+  {
+    "image_id": 40,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001247.fits",
+    "target_positive": true,
+    "max_score": 0.9976022839546204
+  },
+  {
+    "image_id": 41,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001303.fits",
+    "target_positive": true,
+    "max_score": 0.9868165850639343
+  },
+  {
+    "image_id": 42,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001321.fits",
+    "target_positive": true,
+    "max_score": 0.9955765008926392
+  },
+  {
+    "image_id": 43,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001402.fits",
+    "target_positive": true,
+    "max_score": 0.9998769760131836
+  },
+  {
+    "image_id": 44,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001443.fits",
+    "target_positive": true,
+    "max_score": 0.9930965304374695
+  },
+  {
+    "image_id": 45,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001500.fits",
+    "target_positive": true,
+    "max_score": 0.9994194507598877
+  },
+  {
+    "image_id": 46,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001515.fits",
+    "target_positive": true,
+    "max_score": 0.9991781115531921
+  },
+  {
+    "image_id": 47,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001529.fits",
+    "target_positive": true,
+    "max_score": 0.9982137680053711
+  },
+  {
+    "image_id": 48,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001543.fits",
+    "target_positive": true,
+    "max_score": 0.9986922144889832
+  },
+  {
+    "image_id": 49,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001557.fits",
+    "target_positive": true,
+    "max_score": 0.9983704686164856
+  },
+  {
+    "image_id": 50,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001610.fits",
+    "target_positive": true,
+    "max_score": 0.9974258542060852
+  },
+  {
+    "image_id": 51,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001624.fits",
+    "target_positive": true,
+    "max_score": 0.9972848892211914
+  },
+  {
+    "image_id": 52,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001637.fits",
+    "target_positive": true,
+    "max_score": 0.9981433153152466
+  },
+  {
+    "image_id": 53,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001651.fits",
+    "target_positive": true,
+    "max_score": 0.993644118309021
+  },
+  {
+    "image_id": 54,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001706.fits",
+    "target_positive": true,
+    "max_score": 0.9987602233886719
+  },
+  {
+    "image_id": 55,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001719.fits",
+    "target_positive": true,
+    "max_score": 0.993922233581543
+  },
+  {
+    "image_id": 56,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_32265_002122.fits",
+    "target_positive": true,
+    "max_score": 0.02206580340862274
+  },
+  {
+    "image_id": 57,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_32729_002900.fits",
+    "target_positive": true,
+    "max_score": 0.09322160482406616
+  },
+  {
+    "image_id": 58,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233009.fits",
+    "target_positive": true,
+    "max_score": 0.995175838470459
+  },
+  {
+    "image_id": 59,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233023.fits",
+    "target_positive": true,
+    "max_score": 0.9970681071281433
+  },
+  {
+    "image_id": 60,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233036.fits",
+    "target_positive": true,
+    "max_score": 0.9960535764694214
+  },
+  {
+    "image_id": 61,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233049.fits",
+    "target_positive": true,
+    "max_score": 0.9943324327468872
+  },
+  {
+    "image_id": 62,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233136.fits",
+    "target_positive": true,
+    "max_score": 0.9973369240760803
+  },
+  {
+    "image_id": 63,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233222.fits",
+    "target_positive": true,
+    "max_score": 0.998607337474823
+  },
+  {
+    "image_id": 64,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233308.fits",
+    "target_positive": true,
+    "max_score": 0.9988910555839539
+  },
+  {
+    "image_id": 65,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233352.fits",
+    "target_positive": true,
+    "max_score": 0.9997064471244812
+  },
+  {
+    "image_id": 66,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233406.fits",
+    "target_positive": true,
+    "max_score": 0.999524712562561
+  },
+  {
+    "image_id": 67,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233420.fits",
+    "target_positive": true,
+    "max_score": 0.9985906481742859
+  },
+  {
+    "image_id": 68,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233434.fits",
+    "target_positive": true,
+    "max_score": 0.9986963868141174
+  },
+  {
+    "image_id": 69,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233447.fits",
+    "target_positive": true,
+    "max_score": 0.9985540509223938
+  },
+  {
+    "image_id": 70,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233500.fits",
+    "target_positive": true,
+    "max_score": 0.9981427192687988
+  },
+  {
+    "image_id": 71,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233514.fits",
+    "target_positive": true,
+    "max_score": 0.9987938404083252
+  },
+  {
+    "image_id": 72,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233527.fits",
+    "target_positive": true,
+    "max_score": 0.9979571104049683
+  },
+  {
+    "image_id": 73,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233540.fits",
+    "target_positive": true,
+    "max_score": 0.9984121322631836
+  },
+  {
+    "image_id": 74,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233553.fits",
+    "target_positive": true,
+    "max_score": 0.997719943523407
+  },
+  {
+    "image_id": 75,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233606.fits",
+    "target_positive": true,
+    "max_score": 0.9970704317092896
+  },
+  {
+    "image_id": 76,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233619.fits",
+    "target_positive": true,
+    "max_score": 0.9957734942436218
+  },
+  {
+    "image_id": 77,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233632.fits",
+    "target_positive": true,
+    "max_score": 0.0481029637157917
+  },
+  {
+    "image_id": 78,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233644.fits",
+    "target_positive": true,
+    "max_score": 0.9864742159843445
+  },
+  {
+    "image_id": 79,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37190_001129.fits",
+    "target_positive": true,
+    "max_score": 0.9977381229400635
+  },
+  {
+    "image_id": 80,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37190_001143.fits",
+    "target_positive": true,
+    "max_score": 0.9973081350326538
+  },
+  {
+    "image_id": 81,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37190_001156.fits",
+    "target_positive": true,
+    "max_score": 0.9954989552497864
+  },
+  {
+    "image_id": 82,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37190_001210.fits",
+    "target_positive": true,
+    "max_score": 0.9963263869285583
+  },
+  {
+    "image_id": 83,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37190_001256.fits",
+    "target_positive": true,
+    "max_score": 0.998611330986023
+  },
+  {
+    "image_id": 84,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37190_001340.fits",
+    "target_positive": true,
+    "max_score": 0.9994813799858093
+  },
+  {
+    "image_id": 85,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37190_001423.fits",
+    "target_positive": true,
+    "max_score": 0.9988216757774353
+  },
+  {
+    "image_id": 86,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37190_001439.fits",
+    "target_positive": true,
+    "max_score": 0.998883068561554
+  },
+  {
+    "image_id": 87,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37190_001454.fits",
+    "target_positive": true,
+    "max_score": 0.9981186985969543
+  },
+  {
+    "image_id": 88,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_38043_005537.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 89,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_38043_005622.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 90,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_38043_005705.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 91,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_38775_002943.fits",
+    "target_positive": true,
+    "max_score": 0.9817424416542053
+  },
+  {
+    "image_id": 92,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_38775_003032.fits",
+    "target_positive": true,
+    "max_score": 0.0372142530977726
+  },
+  {
+    "image_id": 93,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_38775_003207.fits",
+    "target_positive": true,
+    "max_score": 0.031945060938596725
+  },
+  {
+    "image_id": 94,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_38775_003255.fits",
+    "target_positive": true,
+    "max_score": 0.9976061582565308
+  },
+  {
+    "image_id": 95,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39008_234923.fits",
+    "target_positive": true,
+    "max_score": 0.9971178770065308
+  },
+  {
+    "image_id": 96,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39008_235033.fits",
+    "target_positive": true,
+    "max_score": 0.9973791837692261
+  },
+  {
+    "image_id": 97,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39008_235143.fits",
+    "target_positive": true,
+    "max_score": 0.9972233772277832
+  },
+  {
+    "image_id": 98,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39008_235254.fits",
+    "target_positive": true,
+    "max_score": 0.9953045845031738
+  },
+  {
+    "image_id": 99,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39008_235405.fits",
+    "target_positive": true,
+    "max_score": 0.9959897398948669
+  },
+  {
+    "image_id": 100,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39058_001748.fits",
+    "target_positive": true,
+    "max_score": 0.9983906745910645
+  },
+  {
+    "image_id": 101,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39058_001801.fits",
+    "target_positive": true,
+    "max_score": 0.9986087679862976
+  },
+  {
+    "image_id": 102,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39058_001814.fits",
+    "target_positive": true,
+    "max_score": 0.998040497303009
+  },
+  {
+    "image_id": 103,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39058_001827.fits",
+    "target_positive": true,
+    "max_score": 0.9985707998275757
+  },
+  {
+    "image_id": 104,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39058_001853.fits",
+    "target_positive": true,
+    "max_score": 0.9986454844474792
+  },
+  {
+    "image_id": 105,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39058_001906.fits",
+    "target_positive": true,
+    "max_score": 0.9979477524757385
+  },
+  {
+    "image_id": 106,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39058_001919.fits",
+    "target_positive": true,
+    "max_score": 0.9978899359703064
+  },
+  {
+    "image_id": 107,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39058_001933.fits",
+    "target_positive": true,
+    "max_score": 0.9968097805976868
+  },
+  {
+    "image_id": 108,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39058_001946.fits",
+    "target_positive": true,
+    "max_score": 0.9980620741844177
+  },
+  {
+    "image_id": 109,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39058_002020.fits",
+    "target_positive": true,
+    "max_score": 0.9978759288787842
+  },
+  {
+    "image_id": 110,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39058_002033.fits",
+    "target_positive": true,
+    "max_score": 0.9974802136421204
+  },
+  {
+    "image_id": 111,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_41592_230750.fits",
+    "target_positive": true,
+    "max_score": 0.9981244206428528
+  },
+  {
+    "image_id": 112,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43719_225452.fits",
+    "target_positive": true,
+    "max_score": 0.9988203644752502
+  },
+  {
+    "image_id": 113,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43719_225509.fits",
+    "target_positive": true,
+    "max_score": 0.9986660480499268
+  },
+  {
+    "image_id": 114,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43719_225523.fits",
+    "target_positive": true,
+    "max_score": 0.9976524710655212
+  },
+  {
+    "image_id": 115,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43719_225538.fits",
+    "target_positive": true,
+    "max_score": 0.9978858828544617
+  },
+  {
+    "image_id": 116,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43719_225554.fits",
+    "target_positive": true,
+    "max_score": 0.9960085153579712
+  },
+  {
+    "image_id": 117,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43719_225616.fits",
+    "target_positive": true,
+    "max_score": 0.9960228204727173
+  },
+  {
+    "image_id": 118,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43719_225638.fits",
+    "target_positive": true,
+    "max_score": 0.8961811661720276
+  },
+  {
+    "image_id": 119,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_224812.fits",
+    "target_positive": true,
+    "max_score": 0.03509117290377617
+  },
+  {
+    "image_id": 120,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_224825.fits",
+    "target_positive": true,
+    "max_score": 0.933569073677063
+  },
+  {
+    "image_id": 121,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_224838.fits",
+    "target_positive": true,
+    "max_score": 0.9965805411338806
+  },
+  {
+    "image_id": 122,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_224853.fits",
+    "target_positive": true,
+    "max_score": 0.9952505826950073
+  },
+  {
+    "image_id": 123,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_224908.fits",
+    "target_positive": true,
+    "max_score": 0.9952605366706848
+  },
+  {
+    "image_id": 124,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_224922.fits",
+    "target_positive": true,
+    "max_score": 0.9950627684593201
+  },
+  {
+    "image_id": 125,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_224935.fits",
+    "target_positive": true,
+    "max_score": 0.9985365867614746
+  },
+  {
+    "image_id": 126,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_224949.fits",
+    "target_positive": true,
+    "max_score": 0.9956514239311218
+  },
+  {
+    "image_id": 127,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_225001.fits",
+    "target_positive": true,
+    "max_score": 0.9949588179588318
+  },
+  {
+    "image_id": 128,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_225015.fits",
+    "target_positive": true,
+    "max_score": 0.9978463649749756
+  },
+  {
+    "image_id": 129,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_225028.fits",
+    "target_positive": true,
+    "max_score": 0.996229350566864
+  },
+  {
+    "image_id": 130,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_225041.fits",
+    "target_positive": true,
+    "max_score": 0.9948768019676208
+  },
+  {
+    "image_id": 131,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_225055.fits",
+    "target_positive": true,
+    "max_score": 0.9938856959342957
+  },
+  {
+    "image_id": 132,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_225144.fits",
+    "target_positive": true,
+    "max_score": 0.995991051197052
+  },
+  {
+    "image_id": 133,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_225158.fits",
+    "target_positive": true,
+    "max_score": 0.9927850961685181
+  },
+  {
+    "image_id": 134,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_225211.fits",
+    "target_positive": true,
+    "max_score": 0.995621383190155
+  },
+  {
+    "image_id": 135,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_225223.fits",
+    "target_positive": true,
+    "max_score": 0.9821043610572815
+  },
+  {
+    "image_id": 136,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_225235.fits",
+    "target_positive": true,
+    "max_score": 0.9951005578041077
+  },
+  {
+    "image_id": 137,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_225248.fits",
+    "target_positive": true,
+    "max_score": 0.9957563281059265
+  },
+  {
+    "image_id": 138,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_225300.fits",
+    "target_positive": true,
+    "max_score": 0.9952331185340881
+  },
+  {
+    "image_id": 139,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_225312.fits",
+    "target_positive": true,
+    "max_score": 0.995389461517334
+  },
+  {
+    "image_id": 140,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_225325.fits",
+    "target_positive": true,
+    "max_score": 0.9811766743659973
+  },
+  {
+    "image_id": 141,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43926_223245.fits",
+    "target_positive": true,
+    "max_score": 0.9997288584709167
+  },
+  {
+    "image_id": 142,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43926_223259.fits",
+    "target_positive": true,
+    "max_score": 0.9990717172622681
+  },
+  {
+    "image_id": 143,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43926_223315.fits",
+    "target_positive": true,
+    "max_score": 0.9935324192047119
+  },
+  {
+    "image_id": 144,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43926_223330.fits",
+    "target_positive": true,
+    "max_score": 0.9901633262634277
+  },
+  {
+    "image_id": 145,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43926_223343.fits",
+    "target_positive": true,
+    "max_score": 0.9909694790840149
+  },
+  {
+    "image_id": 146,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43926_223356.fits",
+    "target_positive": true,
+    "max_score": 0.9980796575546265
+  },
+  {
+    "image_id": 147,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43926_223411.fits",
+    "target_positive": true,
+    "max_score": 0.9992889165878296
+  },
+  {
+    "image_id": 148,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43926_223425.fits",
+    "target_positive": true,
+    "max_score": 0.998719334602356
+  },
+  {
+    "image_id": 149,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43926_223438.fits",
+    "target_positive": true,
+    "max_score": 0.9976962208747864
+  },
+  {
+    "image_id": 150,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43926_223452.fits",
+    "target_positive": true,
+    "max_score": 0.9976563453674316
+  },
+  {
+    "image_id": 151,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43926_223505.fits",
+    "target_positive": true,
+    "max_score": 0.9956896901130676
+  },
+  {
+    "image_id": 152,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43926_223518.fits",
+    "target_positive": true,
+    "max_score": 0.9979470372200012
+  },
+  {
+    "image_id": 153,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44314_225829.fits",
+    "target_positive": true,
+    "max_score": 0.9889302849769592
+  },
+  {
+    "image_id": 154,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44314_225845.fits",
+    "target_positive": true,
+    "max_score": 0.04652471840381622
+  },
+  {
+    "image_id": 155,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44314_225900.fits",
+    "target_positive": true,
+    "max_score": 0.9930328130722046
+  },
+  {
+    "image_id": 156,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44314_225917.fits",
+    "target_positive": true,
+    "max_score": 0.031147699803113937
+  },
+  {
+    "image_id": 157,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_235827.fits",
+    "target_positive": true,
+    "max_score": 0.989846408367157
+  },
+  {
+    "image_id": 158,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_235905.fits",
+    "target_positive": true,
+    "max_score": 0.975348174571991
+  },
+  {
+    "image_id": 159,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_235944.fits",
+    "target_positive": true,
+    "max_score": 0.9870167374610901
+  },
+  {
+    "image_id": 160,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000023.fits",
+    "target_positive": true,
+    "max_score": 0.9888318777084351
+  },
+  {
+    "image_id": 161,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000101.fits",
+    "target_positive": true,
+    "max_score": 0.9774758815765381
+  },
+  {
+    "image_id": 162,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000139.fits",
+    "target_positive": true,
+    "max_score": 0.9854792356491089
+  },
+  {
+    "image_id": 163,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000218.fits",
+    "target_positive": true,
+    "max_score": 0.9837222695350647
+  },
+  {
+    "image_id": 164,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000256.fits",
+    "target_positive": true,
+    "max_score": 0.9889012575149536
+  },
+  {
+    "image_id": 165,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000334.fits",
+    "target_positive": true,
+    "max_score": 0.9788349866867065
+  },
+  {
+    "image_id": 166,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000412.fits",
+    "target_positive": true,
+    "max_score": 0.9857683777809143
+  },
+  {
+    "image_id": 167,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000451.fits",
+    "target_positive": true,
+    "max_score": 0.9839314818382263
+  },
+  {
+    "image_id": 168,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000529.fits",
+    "target_positive": true,
+    "max_score": 0.9860746264457703
+  },
+  {
+    "image_id": 169,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000608.fits",
+    "target_positive": true,
+    "max_score": 0.9817730784416199
+  },
+  {
+    "image_id": 170,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000646.fits",
+    "target_positive": true,
+    "max_score": 0.9843947887420654
+  },
+  {
+    "image_id": 171,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000725.fits",
+    "target_positive": true,
+    "max_score": 0.9674001336097717
+  },
+  {
+    "image_id": 172,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000803.fits",
+    "target_positive": true,
+    "max_score": 0.9810008406639099
+  },
+  {
+    "image_id": 173,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000842.fits",
+    "target_positive": true,
+    "max_score": 0.9854696989059448
+  },
+  {
+    "image_id": 174,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000921.fits",
+    "target_positive": true,
+    "max_score": 0.9853453040122986
+  },
+  {
+    "image_id": 175,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_233848.fits",
+    "target_positive": true,
+    "max_score": 0.3545418679714203
+  },
+  {
+    "image_id": 176,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_233910.fits",
+    "target_positive": true,
+    "max_score": 0.04041695594787598
+  },
+  {
+    "image_id": 177,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_233941.fits",
+    "target_positive": true,
+    "max_score": 0.6949055790901184
+  },
+  {
+    "image_id": 178,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_233954.fits",
+    "target_positive": true,
+    "max_score": 0.9952176809310913
+  },
+  {
+    "image_id": 179,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234008.fits",
+    "target_positive": true,
+    "max_score": 0.9954891800880432
+  },
+  {
+    "image_id": 180,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234022.fits",
+    "target_positive": true,
+    "max_score": 0.9939879179000854
+  },
+  {
+    "image_id": 181,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234036.fits",
+    "target_positive": true,
+    "max_score": 0.9966285824775696
+  },
+  {
+    "image_id": 182,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234050.fits",
+    "target_positive": true,
+    "max_score": 0.9970476031303406
+  },
+  {
+    "image_id": 183,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234104.fits",
+    "target_positive": true,
+    "max_score": 0.9935604333877563
+  },
+  {
+    "image_id": 184,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234118.fits",
+    "target_positive": true,
+    "max_score": 0.9942436814308167
+  },
+  {
+    "image_id": 185,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234133.fits",
+    "target_positive": true,
+    "max_score": 0.99671471118927
+  },
+  {
+    "image_id": 186,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234147.fits",
+    "target_positive": true,
+    "max_score": 0.9943501353263855
+  },
+  {
+    "image_id": 187,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234201.fits",
+    "target_positive": true,
+    "max_score": 0.9956361651420593
+  },
+  {
+    "image_id": 188,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234214.fits",
+    "target_positive": true,
+    "max_score": 0.9945067763328552
+  },
+  {
+    "image_id": 189,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234228.fits",
+    "target_positive": true,
+    "max_score": 0.9948683977127075
+  },
+  {
+    "image_id": 190,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234242.fits",
+    "target_positive": true,
+    "max_score": 0.9952593445777893
+  },
+  {
+    "image_id": 191,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234255.fits",
+    "target_positive": true,
+    "max_score": 0.996697187423706
+  },
+  {
+    "image_id": 192,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234309.fits",
+    "target_positive": true,
+    "max_score": 0.9974769949913025
+  },
+  {
+    "image_id": 193,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234323.fits",
+    "target_positive": true,
+    "max_score": 0.9946750402450562
+  },
+  {
+    "image_id": 194,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234336.fits",
+    "target_positive": true,
+    "max_score": 0.9974964261054993
+  },
+  {
+    "image_id": 195,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234349.fits",
+    "target_positive": true,
+    "max_score": 0.993650496006012
+  },
+  {
+    "image_id": 196,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234402.fits",
+    "target_positive": true,
+    "max_score": 0.9947811961174011
+  },
+  {
+    "image_id": 197,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234415.fits",
+    "target_positive": true,
+    "max_score": 0.993513822555542
+  },
+  {
+    "image_id": 198,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234428.fits",
+    "target_positive": true,
+    "max_score": 0.9914939403533936
+  },
+  {
+    "image_id": 199,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234442.fits",
+    "target_positive": true,
+    "max_score": 0.9924457669258118
+  },
+  {
+    "image_id": 200,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234455.fits",
+    "target_positive": true,
+    "max_score": 0.9900902509689331
+  },
+  {
+    "image_id": 201,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_47346_002707.fits",
+    "target_positive": true,
+    "max_score": 0.05296659097075462
+  },
+  {
+    "image_id": 202,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_47346_002719.fits",
+    "target_positive": true,
+    "max_score": 0.04122677445411682
+  },
+  {
+    "image_id": 203,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_47346_002731.fits",
+    "target_positive": true,
+    "max_score": 0.05276041105389595
+  },
+  {
+    "image_id": 204,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_47346_002745.fits",
+    "target_positive": true,
+    "max_score": 0.05479969084262848
+  },
+  {
+    "image_id": 205,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_48294_224557.fits",
+    "target_positive": true,
+    "max_score": 0.9984853863716125
+  },
+  {
+    "image_id": 206,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_48294_224611.fits",
+    "target_positive": true,
+    "max_score": 0.9964939951896667
+  },
+  {
+    "image_id": 207,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_48294_224625.fits",
+    "target_positive": true,
+    "max_score": 0.9992434978485107
+  },
+  {
+    "image_id": 208,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_48294_224640.fits",
+    "target_positive": true,
+    "max_score": 0.9994912147521973
+  },
+  {
+    "image_id": 209,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_48294_224656.fits",
+    "target_positive": true,
+    "max_score": 0.9981009364128113
+  },
+  {
+    "image_id": 210,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_48294_224712.fits",
+    "target_positive": true,
+    "max_score": 0.9974759221076965
+  },
+  {
+    "image_id": 211,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_48294_224728.fits",
+    "target_positive": true,
+    "max_score": 0.9993120431900024
+  },
+  {
+    "image_id": 212,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_48992_002817.fits",
+    "target_positive": true,
+    "max_score": 0.9958475828170776
+  },
+  {
+    "image_id": 213,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_48992_002830.fits",
+    "target_positive": true,
+    "max_score": 0.9974787831306458
+  },
+  {
+    "image_id": 214,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_48992_002845.fits",
+    "target_positive": true,
+    "max_score": 0.9976436495780945
+  },
+  {
+    "image_id": 215,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_49748_225824.fits",
+    "target_positive": true,
+    "max_score": 0.9993764758110046
+  },
+  {
+    "image_id": 216,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_49748_225905.fits",
+    "target_positive": true,
+    "max_score": 0.99866783618927
+  },
+  {
+    "image_id": 217,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_49748_225941.fits",
+    "target_positive": true,
+    "max_score": 0.9991372227668762
+  },
+  {
+    "image_id": 218,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_49748_230000.fits",
+    "target_positive": true,
+    "max_score": 0.9984104633331299
+  },
+  {
+    "image_id": 219,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_49748_230016.fits",
+    "target_positive": true,
+    "max_score": 0.9967106580734253
+  },
+  {
+    "image_id": 220,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_49748_230030.fits",
+    "target_positive": true,
+    "max_score": 0.9969935417175293
+  },
+  {
+    "image_id": 221,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_49748_230044.fits",
+    "target_positive": true,
+    "max_score": 0.9976715445518494
+  },
+  {
+    "image_id": 222,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_49748_230057.fits",
+    "target_positive": true,
+    "max_score": 0.9978406429290771
+  },
+  {
+    "image_id": 223,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_49748_230109.fits",
+    "target_positive": true,
+    "max_score": 0.9942850470542908
+  },
+  {
+    "image_id": 224,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_49748_230122.fits",
+    "target_positive": true,
+    "max_score": 0.9906947612762451
+  },
+  {
+    "image_id": 225,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_51652_234109.fits",
+    "target_positive": true,
+    "max_score": 0.9997029900550842
+  },
+  {
+    "image_id": 226,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_51652_234156.fits",
+    "target_positive": true,
+    "max_score": 0.9997888207435608
+  },
+  {
+    "image_id": 227,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_52487_224021.fits",
+    "target_positive": true,
+    "max_score": 0.9616602063179016
+  },
+  {
+    "image_id": 228,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53228_223252.fits",
+    "target_positive": true,
+    "max_score": 0.9935696125030518
+  },
+  {
+    "image_id": 229,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53228_223307.fits",
+    "target_positive": true,
+    "max_score": 0.9846780300140381
+  },
+  {
+    "image_id": 230,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53228_223322.fits",
+    "target_positive": true,
+    "max_score": 0.9925228953361511
+  },
+  {
+    "image_id": 231,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53228_223338.fits",
+    "target_positive": true,
+    "max_score": 0.9922623634338379
+  },
+  {
+    "image_id": 232,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53228_223354.fits",
+    "target_positive": true,
+    "max_score": 0.9866752028465271
+  },
+  {
+    "image_id": 233,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53228_223410.fits",
+    "target_positive": true,
+    "max_score": 0.9985111355781555
+  },
+  {
+    "image_id": 234,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53228_223426.fits",
+    "target_positive": true,
+    "max_score": 0.9992043375968933
+  },
+  {
+    "image_id": 235,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53228_223443.fits",
+    "target_positive": true,
+    "max_score": 0.9985107779502869
+  },
+  {
+    "image_id": 236,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53228_223501.fits",
+    "target_positive": true,
+    "max_score": 0.9988709092140198
+  },
+  {
+    "image_id": 237,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53228_223519.fits",
+    "target_positive": true,
+    "max_score": 0.9999105930328369
+  },
+  {
+    "image_id": 238,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53228_223536.fits",
+    "target_positive": true,
+    "max_score": 0.9986616373062134
+  },
+  {
+    "image_id": 239,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53548_231137.fits",
+    "target_positive": true,
+    "max_score": 0.9998362064361572
+  },
+  {
+    "image_id": 240,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53548_231152.fits",
+    "target_positive": true,
+    "max_score": 0.9998157620429993
+  },
+  {
+    "image_id": 241,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53548_231207.fits",
+    "target_positive": true,
+    "max_score": 0.9994404911994934
+  },
+  {
+    "image_id": 242,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53548_231225.fits",
+    "target_positive": true,
+    "max_score": 0.9995952248573303
+  },
+  {
+    "image_id": 243,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53548_231303.fits",
+    "target_positive": true,
+    "max_score": 0.9981852173805237
+  },
+  {
+    "image_id": 244,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53548_231343.fits",
+    "target_positive": true,
+    "max_score": 0.9973970651626587
+  },
+  {
+    "image_id": 245,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53548_231357.fits",
+    "target_positive": true,
+    "max_score": 0.9971227049827576
+  },
+  {
+    "image_id": 246,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53548_231411.fits",
+    "target_positive": true,
+    "max_score": 0.9981203675270081
+  },
+  {
+    "image_id": 247,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_54647_010920.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 248,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_54647_011004.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 249,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_54647_011047.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 250,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_54647_011131.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 251,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_54647_011216.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 252,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_54647_011302.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 253,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_55162_232802.fits",
+    "target_positive": true,
+    "max_score": 0.556085467338562
+  },
+  {
+    "image_id": 254,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_55162_232815.fits",
+    "target_positive": true,
+    "max_score": 0.9959319233894348
+  },
+  {
+    "image_id": 255,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_55162_232828.fits",
+    "target_positive": true,
+    "max_score": 0.9743942618370056
+  },
+  {
+    "image_id": 256,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_55162_232841.fits",
+    "target_positive": true,
+    "max_score": 0.9889222383499146
+  },
+  {
+    "image_id": 257,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_55162_232854.fits",
+    "target_positive": true,
+    "max_score": 0.9955506324768066
+  },
+  {
+    "image_id": 258,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_55162_232907.fits",
+    "target_positive": true,
+    "max_score": 0.9873175024986267
+  },
+  {
+    "image_id": 259,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_55162_232920.fits",
+    "target_positive": true,
+    "max_score": 0.9855526089668274
+  },
+  {
+    "image_id": 260,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_55162_232934.fits",
+    "target_positive": true,
+    "max_score": 0.9731513261795044
+  },
+  {
+    "image_id": 261,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_55162_232946.fits",
+    "target_positive": true,
+    "max_score": 0.9828945398330688
+  },
+  {
+    "image_id": 262,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_56057_012903.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 263,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_56057_012949.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 264,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_56057_013035.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 265,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_56057_013255.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 266,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_56533_222850.fits",
+    "target_positive": true,
+    "max_score": 0.9992340803146362
+  },
+  {
+    "image_id": 267,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_56533_222903.fits",
+    "target_positive": true,
+    "max_score": 0.9996844530105591
+  },
+  {
+    "image_id": 268,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_56533_222916.fits",
+    "target_positive": true,
+    "max_score": 0.9997102618217468
+  },
+  {
+    "image_id": 269,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_56533_222945.fits",
+    "target_positive": true,
+    "max_score": 0.9991739392280579
+  },
+  {
+    "image_id": 270,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_56533_223025.fits",
+    "target_positive": true,
+    "max_score": 0.9994373917579651
+  },
+  {
+    "image_id": 271,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_56533_223102.fits",
+    "target_positive": true,
+    "max_score": 0.9992464780807495
+  },
+  {
+    "image_id": 272,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_56533_223118.fits",
+    "target_positive": true,
+    "max_score": 0.9981617331504822
+  },
+  {
+    "image_id": 273,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_56533_223132.fits",
+    "target_positive": true,
+    "max_score": 0.9979598522186279
+  },
+  {
+    "image_id": 274,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_56533_223145.fits",
+    "target_positive": true,
+    "max_score": 0.9961996674537659
+  },
+  {
+    "image_id": 275,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_5730_221943.fits",
+    "target_positive": true,
+    "max_score": 0.9993991851806641
+  },
+  {
+    "image_id": 276,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_5730_221956.fits",
+    "target_positive": true,
+    "max_score": 0.9976035952568054
+  },
+  {
+    "image_id": 277,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_5730_222010.fits",
+    "target_positive": true,
+    "max_score": 0.9981948733329773
+  },
+  {
+    "image_id": 278,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_5730_222025.fits",
+    "target_positive": true,
+    "max_score": 0.9988333582878113
+  },
+  {
+    "image_id": 279,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_5730_222038.fits",
+    "target_positive": true,
+    "max_score": 0.9986693859100342
+  },
+  {
+    "image_id": 280,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_5730_222051.fits",
+    "target_positive": true,
+    "max_score": 0.9984707236289978
+  },
+  {
+    "image_id": 281,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_5730_222104.fits",
+    "target_positive": true,
+    "max_score": 0.9992326498031616
+  },
+  {
+    "image_id": 282,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_5730_222117.fits",
+    "target_positive": true,
+    "max_score": 0.9992840886116028
+  },
+  {
+    "image_id": 283,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_5730_222143.fits",
+    "target_positive": true,
+    "max_score": 0.9994414448738098
+  },
+  {
+    "image_id": 284,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_5730_222156.fits",
+    "target_positive": true,
+    "max_score": 0.9994810223579407
+  },
+  {
+    "image_id": 285,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_5730_222222.fits",
+    "target_positive": true,
+    "max_score": 0.999092698097229
+  },
+  {
+    "image_id": 286,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_5730_222235.fits",
+    "target_positive": true,
+    "max_score": 0.9992218017578125
+  },
+  {
+    "image_id": 287,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_5730_222314.fits",
+    "target_positive": true,
+    "max_score": 0.998903751373291
+  },
+  {
+    "image_id": 288,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_58463_230305.fits",
+    "target_positive": true,
+    "max_score": 0.999208390712738
+  },
+  {
+    "image_id": 289,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_58463_230350.fits",
+    "target_positive": true,
+    "max_score": 0.9942786693572998
+  },
+  {
+    "image_id": 290,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_58463_230436.fits",
+    "target_positive": true,
+    "max_score": 0.9800088405609131
+  },
+  {
+    "image_id": 291,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_58463_230505.fits",
+    "target_positive": true,
+    "max_score": 0.9904313683509827
+  },
+  {
+    "image_id": 292,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_58463_230519.fits",
+    "target_positive": true,
+    "max_score": 0.04239566624164581
+  },
+  {
+    "image_id": 293,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_58463_230531.fits",
+    "target_positive": true,
+    "max_score": 0.03468341380357742
+  },
+  {
+    "image_id": 294,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_58463_230544.fits",
+    "target_positive": true,
+    "max_score": 0.06422826647758484
+  },
+  {
+    "image_id": 295,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_58958_002056.fits",
+    "target_positive": true,
+    "max_score": 0.7584545612335205
+  },
+  {
+    "image_id": 296,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_58958_002109.fits",
+    "target_positive": true,
+    "max_score": 0.9982612729072571
+  },
+  {
+    "image_id": 297,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_58958_002123.fits",
+    "target_positive": true,
+    "max_score": 0.9981841444969177
+  },
+  {
+    "image_id": 298,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_58958_002138.fits",
+    "target_positive": true,
+    "max_score": 0.9927226901054382
+  },
+  {
+    "image_id": 299,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_58958_002152.fits",
+    "target_positive": true,
+    "max_score": 0.9984570741653442
+  },
+  {
+    "image_id": 300,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_59321_225230.fits",
+    "target_positive": true,
+    "max_score": 0.9994692206382751
+  },
+  {
+    "image_id": 301,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_59321_225312.fits",
+    "target_positive": true,
+    "max_score": 0.9982873797416687
+  },
+  {
+    "image_id": 302,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_59321_225444.fits",
+    "target_positive": true,
+    "max_score": 0.9984172582626343
+  },
+  {
+    "image_id": 303,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_59321_225459.fits",
+    "target_positive": true,
+    "max_score": 0.9971363544464111
+  },
+  {
+    "image_id": 304,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_59321_225526.fits",
+    "target_positive": true,
+    "max_score": 0.9970712661743164
+  },
+  {
+    "image_id": 305,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_60330_230736.fits",
+    "target_positive": true,
+    "max_score": 0.9986512064933777
+  },
+  {
+    "image_id": 306,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_60330_230803.fits",
+    "target_positive": true,
+    "max_score": 0.9988356232643127
+  },
+  {
+    "image_id": 307,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_60330_230836.fits",
+    "target_positive": true,
+    "max_score": 0.9983479976654053
+  },
+  {
+    "image_id": 308,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_60330_230913.fits",
+    "target_positive": true,
+    "max_score": 0.9950911998748779
+  },
+  {
+    "image_id": 309,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_60330_230951.fits",
+    "target_positive": true,
+    "max_score": 0.9985917210578918
+  },
+  {
+    "image_id": 310,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_60330_231020.fits",
+    "target_positive": true,
+    "max_score": 0.9970384836196899
+  },
+  {
+    "image_id": 311,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_61006_224533.fits",
+    "target_positive": true,
+    "max_score": 0.9987344145774841
+  },
+  {
+    "image_id": 312,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_61006_224614.fits",
+    "target_positive": true,
+    "max_score": 0.9983150959014893
+  },
+  {
+    "image_id": 313,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_61006_224644.fits",
+    "target_positive": true,
+    "max_score": 0.9987357258796692
+  },
+  {
+    "image_id": 314,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_61006_224820.fits",
+    "target_positive": true,
+    "max_score": 0.9989851117134094
+  },
+  {
+    "image_id": 315,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_61006_224833.fits",
+    "target_positive": true,
+    "max_score": 0.998802900314331
+  },
+  {
+    "image_id": 316,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_61973_225613.fits",
+    "target_positive": true,
+    "max_score": 0.9993698000907898
+  },
+  {
+    "image_id": 317,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_62027_231506.fits",
+    "target_positive": true,
+    "max_score": 0.9948726296424866
+  },
+  {
+    "image_id": 318,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_62027_231603.fits",
+    "target_positive": true,
+    "max_score": 0.9981092214584351
+  },
+  {
+    "image_id": 319,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_62027_231641.fits",
+    "target_positive": true,
+    "max_score": 0.9685750007629395
+  },
+  {
+    "image_id": 320,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_62027_231658.fits",
+    "target_positive": true,
+    "max_score": 0.9981661438941956
+  },
+  {
+    "image_id": 321,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_62101_224925.fits",
+    "target_positive": true,
+    "max_score": 0.9992467164993286
+  },
+  {
+    "image_id": 322,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_62101_225008.fits",
+    "target_positive": true,
+    "max_score": 0.9986366629600525
+  },
+  {
+    "image_id": 323,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_62280_225941.fits",
+    "target_positive": true,
+    "max_score": 0.9956203103065491
+  },
+  {
+    "image_id": 324,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_62384_224156.fits",
+    "target_positive": true,
+    "max_score": 0.9837172031402588
+  },
+  {
+    "image_id": 325,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_62384_224238.fits",
+    "target_positive": true,
+    "max_score": 0.9956041574478149
+  },
+  {
+    "image_id": 326,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_62384_224347.fits",
+    "target_positive": true,
+    "max_score": 0.9976850748062134
+  },
+  {
+    "image_id": 327,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_62384_224434.fits",
+    "target_positive": true,
+    "max_score": 0.9971250891685486
+  },
+  {
+    "image_id": 328,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_63130_000612.fits",
+    "target_positive": true,
+    "max_score": 0.9970992803573608
+  },
+  {
+    "image_id": 329,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_63130_000742.fits",
+    "target_positive": true,
+    "max_score": 0.9967676401138306
+  },
+  {
+    "image_id": 330,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_63130_000826.fits",
+    "target_positive": true,
+    "max_score": 0.9949662089347839
+  },
+  {
+    "image_id": 331,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_63877_222515.fits",
+    "target_positive": true,
+    "max_score": 0.9958518743515015
+  },
+  {
+    "image_id": 332,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_63877_222529.fits",
+    "target_positive": true,
+    "max_score": 0.9972332119941711
+  },
+  {
+    "image_id": 333,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_63877_222542.fits",
+    "target_positive": true,
+    "max_score": 0.997342050075531
+  },
+  {
+    "image_id": 334,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_63901_222022.fits",
+    "target_positive": true,
+    "max_score": 0.9971494078636169
+  },
+  {
+    "image_id": 335,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_63901_222037.fits",
+    "target_positive": true,
+    "max_score": 0.9975574016571045
+  },
+  {
+    "image_id": 336,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_63901_222053.fits",
+    "target_positive": true,
+    "max_score": 0.9992358684539795
+  },
+  {
+    "image_id": 337,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_63901_222220.fits",
+    "target_positive": true,
+    "max_score": 0.9974488615989685
+  },
+  {
+    "image_id": 338,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_63913_221540.fits",
+    "target_positive": true,
+    "max_score": 0.9984844326972961
+  },
+  {
+    "image_id": 339,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_63913_221621.fits",
+    "target_positive": true,
+    "max_score": 0.9981085062026978
+  },
+  {
+    "image_id": 340,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_63913_221635.fits",
+    "target_positive": true,
+    "max_score": 0.9975759387016296
+  },
+  {
+    "image_id": 341,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_63913_221650.fits",
+    "target_positive": true,
+    "max_score": 0.9990229606628418
+  },
+  {
+    "image_id": 342,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_63913_221820.fits",
+    "target_positive": true,
+    "max_score": 0.8432672023773193
+  },
+  {
+    "image_id": 343,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_64948_220641.fits",
+    "target_positive": true,
+    "max_score": 0.9980185031890869
+  },
+  {
+    "image_id": 344,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_64948_220657.fits",
+    "target_positive": true,
+    "max_score": 0.9998310804367065
+  },
+  {
+    "image_id": 345,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_64948_220713.fits",
+    "target_positive": true,
+    "max_score": 0.9980382323265076
+  },
+  {
+    "image_id": 346,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_64948_220729.fits",
+    "target_positive": true,
+    "max_score": 0.9927312731742859
+  },
+  {
+    "image_id": 347,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_64948_220744.fits",
+    "target_positive": true,
+    "max_score": 0.9976145029067993
+  },
+  {
+    "image_id": 348,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_64948_220759.fits",
+    "target_positive": true,
+    "max_score": 0.998062789440155
+  },
+  {
+    "image_id": 349,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_64948_220816.fits",
+    "target_positive": true,
+    "max_score": 0.9970073103904724
+  },
+  {
+    "image_id": 350,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_64948_220833.fits",
+    "target_positive": true,
+    "max_score": 0.9974637031555176
+  },
+  {
+    "image_id": 351,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_64948_220848.fits",
+    "target_positive": true,
+    "max_score": 0.9975069165229797
+  },
+  {
+    "image_id": 352,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_64948_220903.fits",
+    "target_positive": true,
+    "max_score": 0.9974650144577026
+  },
+  {
+    "image_id": 353,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_64948_220916.fits",
+    "target_positive": true,
+    "max_score": 0.9965324401855469
+  },
+  {
+    "image_id": 354,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_64948_220930.fits",
+    "target_positive": true,
+    "max_score": 0.9976930022239685
+  },
+  {
+    "image_id": 355,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_64948_220943.fits",
+    "target_positive": true,
+    "max_score": 0.9939689636230469
+  },
+  {
+    "image_id": 356,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65150_001920.fits",
+    "target_positive": true,
+    "max_score": 0.9973496198654175
+  },
+  {
+    "image_id": 357,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65179_223627.fits",
+    "target_positive": true,
+    "max_score": 0.9983130693435669
+  },
+  {
+    "image_id": 358,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65179_223642.fits",
+    "target_positive": true,
+    "max_score": 0.9986538887023926
+  },
+  {
+    "image_id": 359,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65179_223657.fits",
+    "target_positive": true,
+    "max_score": 0.9991008043289185
+  },
+  {
+    "image_id": 360,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65179_223711.fits",
+    "target_positive": true,
+    "max_score": 0.9988961219787598
+  },
+  {
+    "image_id": 361,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65179_223726.fits",
+    "target_positive": true,
+    "max_score": 0.99726402759552
+  },
+  {
+    "image_id": 362,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65179_223739.fits",
+    "target_positive": true,
+    "max_score": 0.9985828399658203
+  },
+  {
+    "image_id": 363,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65179_223754.fits",
+    "target_positive": true,
+    "max_score": 0.9996458292007446
+  },
+  {
+    "image_id": 364,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65179_223809.fits",
+    "target_positive": true,
+    "max_score": 0.9995686411857605
+  },
+  {
+    "image_id": 365,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65179_223823.fits",
+    "target_positive": true,
+    "max_score": 0.9985182881355286
+  },
+  {
+    "image_id": 366,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65179_223907.fits",
+    "target_positive": true,
+    "max_score": 0.9993783235549927
+  },
+  {
+    "image_id": 367,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_223648.fits",
+    "target_positive": true,
+    "max_score": 0.9856889247894287
+  },
+  {
+    "image_id": 368,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_223702.fits",
+    "target_positive": true,
+    "max_score": 0.03772904351353645
+  },
+  {
+    "image_id": 369,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_223716.fits",
+    "target_positive": true,
+    "max_score": 0.9964401125907898
+  },
+  {
+    "image_id": 370,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_223732.fits",
+    "target_positive": true,
+    "max_score": 0.04107968881726265
+  },
+  {
+    "image_id": 371,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_223747.fits",
+    "target_positive": true,
+    "max_score": 0.031452927738428116
+  },
+  {
+    "image_id": 372,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_223802.fits",
+    "target_positive": true,
+    "max_score": 0.037824004888534546
+  },
+  {
+    "image_id": 373,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_223818.fits",
+    "target_positive": true,
+    "max_score": 0.03048597276210785
+  },
+  {
+    "image_id": 374,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_223831.fits",
+    "target_positive": true,
+    "max_score": 0.9836059808731079
+  },
+  {
+    "image_id": 375,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_223845.fits",
+    "target_positive": true,
+    "max_score": 0.993691086769104
+  },
+  {
+    "image_id": 376,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_223859.fits",
+    "target_positive": true,
+    "max_score": 0.9900408387184143
+  },
+  {
+    "image_id": 377,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_223913.fits",
+    "target_positive": true,
+    "max_score": 0.994051992893219
+  },
+  {
+    "image_id": 378,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_223927.fits",
+    "target_positive": true,
+    "max_score": 0.9943552017211914
+  },
+  {
+    "image_id": 379,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_223941.fits",
+    "target_positive": true,
+    "max_score": 0.996266782283783
+  },
+  {
+    "image_id": 380,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_223955.fits",
+    "target_positive": true,
+    "max_score": 0.9928145408630371
+  },
+  {
+    "image_id": 381,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_224009.fits",
+    "target_positive": true,
+    "max_score": 0.9978043437004089
+  },
+  {
+    "image_id": 382,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_224023.fits",
+    "target_positive": true,
+    "max_score": 0.9988793730735779
+  },
+  {
+    "image_id": 383,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_224037.fits",
+    "target_positive": true,
+    "max_score": 0.9988930821418762
+  },
+  {
+    "image_id": 384,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_224051.fits",
+    "target_positive": true,
+    "max_score": 0.9955397248268127
+  },
+  {
+    "image_id": 385,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65583_224105.fits",
+    "target_positive": true,
+    "max_score": 0.9977431297302246
+  },
+  {
+    "image_id": 386,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_231419.fits",
+    "target_positive": true,
+    "max_score": 0.9994398951530457
+  },
+  {
+    "image_id": 387,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_231432.fits",
+    "target_positive": true,
+    "max_score": 0.9989426732063293
+  },
+  {
+    "image_id": 388,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_231446.fits",
+    "target_positive": true,
+    "max_score": 0.9973089694976807
+  },
+  {
+    "image_id": 389,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_231459.fits",
+    "target_positive": true,
+    "max_score": 0.9986674785614014
+  },
+  {
+    "image_id": 390,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_231513.fits",
+    "target_positive": true,
+    "max_score": 0.999495267868042
+  },
+  {
+    "image_id": 391,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_231526.fits",
+    "target_positive": true,
+    "max_score": 0.9990901947021484
+  },
+  {
+    "image_id": 392,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_231540.fits",
+    "target_positive": true,
+    "max_score": 0.9992415904998779
+  },
+  {
+    "image_id": 393,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_231553.fits",
+    "target_positive": true,
+    "max_score": 0.9997286200523376
+  },
+  {
+    "image_id": 394,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_231607.fits",
+    "target_positive": true,
+    "max_score": 0.9995623230934143
+  },
+  {
+    "image_id": 395,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_231621.fits",
+    "target_positive": true,
+    "max_score": 0.9987443685531616
+  },
+  {
+    "image_id": 396,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_231635.fits",
+    "target_positive": true,
+    "max_score": 0.9973545074462891
+  },
+  {
+    "image_id": 397,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_231716.fits",
+    "target_positive": true,
+    "max_score": 0.9992879033088684
+  },
+  {
+    "image_id": 398,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_231730.fits",
+    "target_positive": true,
+    "max_score": 0.9991747736930847
+  },
+  {
+    "image_id": 399,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_231757.fits",
+    "target_positive": true,
+    "max_score": 0.9994385838508606
+  },
+  {
+    "image_id": 400,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_231825.fits",
+    "target_positive": true,
+    "max_score": 0.9993259906768799
+  },
+  {
+    "image_id": 401,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_231923.fits",
+    "target_positive": true,
+    "max_score": 0.9997205138206482
+  },
+  {
+    "image_id": 402,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_232011.fits",
+    "target_positive": true,
+    "max_score": 0.9997510313987732
+  },
+  {
+    "image_id": 403,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_232024.fits",
+    "target_positive": true,
+    "max_score": 0.9997714161872864
+  },
+  {
+    "image_id": 404,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_232103.fits",
+    "target_positive": true,
+    "max_score": 0.999818742275238
+  },
+  {
+    "image_id": 405,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_232129.fits",
+    "target_positive": true,
+    "max_score": 0.9994097948074341
+  },
+  {
+    "image_id": 406,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_232142.fits",
+    "target_positive": true,
+    "max_score": 0.05797624588012695
+  },
+  {
+    "image_id": 407,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65618_230935.fits",
+    "target_positive": true,
+    "max_score": 0.9994363188743591
+  },
+  {
+    "image_id": 408,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65618_230949.fits",
+    "target_positive": true,
+    "max_score": 0.999001681804657
+  },
+  {
+    "image_id": 409,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65618_231016.fits",
+    "target_positive": true,
+    "max_score": 0.9989174604415894
+  },
+  {
+    "image_id": 410,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65618_231029.fits",
+    "target_positive": true,
+    "max_score": 0.9985478520393372
+  },
+  {
+    "image_id": 411,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65618_231057.fits",
+    "target_positive": true,
+    "max_score": 0.9990863800048828
+  },
+  {
+    "image_id": 412,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65618_231124.fits",
+    "target_positive": true,
+    "max_score": 0.9996485710144043
+  },
+  {
+    "image_id": 413,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65618_231154.fits",
+    "target_positive": true,
+    "max_score": 0.9980473518371582
+  },
+  {
+    "image_id": 414,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65618_231237.fits",
+    "target_positive": true,
+    "max_score": 0.9992378950119019
+  },
+  {
+    "image_id": 415,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65618_231251.fits",
+    "target_positive": true,
+    "max_score": 0.9995042085647583
+  },
+  {
+    "image_id": 416,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65618_231305.fits",
+    "target_positive": true,
+    "max_score": 0.9995191097259521
+  },
+  {
+    "image_id": 417,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65618_231319.fits",
+    "target_positive": true,
+    "max_score": 0.9996771812438965
+  },
+  {
+    "image_id": 418,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65618_231346.fits",
+    "target_positive": true,
+    "max_score": 0.9993083477020264
+  },
+  {
+    "image_id": 419,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_66036_000135.fits",
+    "target_positive": true,
+    "max_score": 0.9984588623046875
+  },
+  {
+    "image_id": 420,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_66036_000149.fits",
+    "target_positive": true,
+    "max_score": 0.9987209439277649
+  },
+  {
+    "image_id": 421,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_66036_000231.fits",
+    "target_positive": true,
+    "max_score": 0.9979313611984253
+  },
+  {
+    "image_id": 422,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_66036_000245.fits",
+    "target_positive": true,
+    "max_score": 0.9978621602058411
+  },
+  {
+    "image_id": 423,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_66036_000326.fits",
+    "target_positive": true,
+    "max_score": 0.9976081848144531
+  },
+  {
+    "image_id": 424,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_66036_000340.fits",
+    "target_positive": true,
+    "max_score": 0.9986193180084229
+  },
+  {
+    "image_id": 425,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_66036_000421.fits",
+    "target_positive": true,
+    "max_score": 0.9959927201271057
+  },
+  {
+    "image_id": 426,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_66047_233642.fits",
+    "target_positive": true,
+    "max_score": 0.9999023675918579
+  },
+  {
+    "image_id": 427,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_66047_233711.fits",
+    "target_positive": true,
+    "max_score": 0.9930023550987244
+  },
+  {
+    "image_id": 428,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_66047_233751.fits",
+    "target_positive": true,
+    "max_score": 0.9983859062194824
+  },
+  {
+    "image_id": 429,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_66047_233804.fits",
+    "target_positive": true,
+    "max_score": 0.9986721277236938
+  },
+  {
+    "image_id": 430,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_66047_233817.fits",
+    "target_positive": true,
+    "max_score": 0.9985224604606628
+  },
+  {
+    "image_id": 431,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_66768_225723.fits",
+    "target_positive": true,
+    "max_score": 0.03593002259731293
+  },
+  {
+    "image_id": 432,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_66768_225735.fits",
+    "target_positive": true,
+    "max_score": 0.03467779606580734
+  },
+  {
+    "image_id": 433,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_66768_225747.fits",
+    "target_positive": true,
+    "max_score": 0.039768483489751816
+  },
+  {
+    "image_id": 434,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67059_233729.fits",
+    "target_positive": true,
+    "max_score": 0.9983739852905273
+  },
+  {
+    "image_id": 435,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67059_233745.fits",
+    "target_positive": true,
+    "max_score": 0.9988293051719666
+  },
+  {
+    "image_id": 436,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67059_233800.fits",
+    "target_positive": true,
+    "max_score": 0.9965354204177856
+  },
+  {
+    "image_id": 437,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67059_233828.fits",
+    "target_positive": true,
+    "max_score": 0.9983721375465393
+  },
+  {
+    "image_id": 438,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67059_233840.fits",
+    "target_positive": true,
+    "max_score": 0.9986918568611145
+  },
+  {
+    "image_id": 439,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67059_233854.fits",
+    "target_positive": true,
+    "max_score": 0.9993880987167358
+  },
+  {
+    "image_id": 440,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67059_233906.fits",
+    "target_positive": true,
+    "max_score": 0.9982805252075195
+  },
+  {
+    "image_id": 441,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67059_233919.fits",
+    "target_positive": true,
+    "max_score": 0.9982732534408569
+  },
+  {
+    "image_id": 442,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67059_233958.fits",
+    "target_positive": true,
+    "max_score": 0.9844328165054321
+  },
+  {
+    "image_id": 443,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67059_234010.fits",
+    "target_positive": true,
+    "max_score": 0.9914789795875549
+  },
+  {
+    "image_id": 444,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67081_221841.fits",
+    "target_positive": true,
+    "max_score": 0.9980985522270203
+  },
+  {
+    "image_id": 445,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67081_221855.fits",
+    "target_positive": true,
+    "max_score": 0.9906078577041626
+  },
+  {
+    "image_id": 446,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67081_221910.fits",
+    "target_positive": true,
+    "max_score": 0.9946573376655579
+  },
+  {
+    "image_id": 447,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67236_005110.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 448,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67236_005159.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 449,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67431_223616.fits",
+    "target_positive": true,
+    "max_score": 0.9999018907546997
+  },
+  {
+    "image_id": 450,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222436.fits",
+    "target_positive": true,
+    "max_score": 0.9955843091011047
+  },
+  {
+    "image_id": 451,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222449.fits",
+    "target_positive": true,
+    "max_score": 0.9941353797912598
+  },
+  {
+    "image_id": 452,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222503.fits",
+    "target_positive": true,
+    "max_score": 0.9964454770088196
+  },
+  {
+    "image_id": 453,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222543.fits",
+    "target_positive": true,
+    "max_score": 0.9966699481010437
+  },
+  {
+    "image_id": 454,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222622.fits",
+    "target_positive": true,
+    "max_score": 0.9967545866966248
+  },
+  {
+    "image_id": 455,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222701.fits",
+    "target_positive": true,
+    "max_score": 0.9960797429084778
+  },
+  {
+    "image_id": 456,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222714.fits",
+    "target_positive": true,
+    "max_score": 0.997323751449585
+  },
+  {
+    "image_id": 457,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222728.fits",
+    "target_positive": true,
+    "max_score": 0.9971075654029846
+  },
+  {
+    "image_id": 458,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222840.fits",
+    "target_positive": true,
+    "max_score": 0.9987607002258301
+  },
+  {
+    "image_id": 459,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222907.fits",
+    "target_positive": true,
+    "max_score": 0.9996084570884705
+  },
+  {
+    "image_id": 460,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222922.fits",
+    "target_positive": true,
+    "max_score": 0.9998568296432495
+  },
+  {
+    "image_id": 461,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222936.fits",
+    "target_positive": true,
+    "max_score": 0.999927282333374
+  },
+  {
+    "image_id": 462,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222950.fits",
+    "target_positive": true,
+    "max_score": 0.9998818635940552
+  },
+  {
+    "image_id": 463,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_223003.fits",
+    "target_positive": true,
+    "max_score": 0.9999483823776245
+  },
+  {
+    "image_id": 464,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_223017.fits",
+    "target_positive": true,
+    "max_score": 0.9998975992202759
+  },
+  {
+    "image_id": 465,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_223031.fits",
+    "target_positive": true,
+    "max_score": 0.9998598098754883
+  },
+  {
+    "image_id": 466,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_223058.fits",
+    "target_positive": true,
+    "max_score": 0.9995546936988831
+  },
+  {
+    "image_id": 467,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_223137.fits",
+    "target_positive": true,
+    "max_score": 0.9980296492576599
+  },
+  {
+    "image_id": 468,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_223150.fits",
+    "target_positive": true,
+    "max_score": 0.998645007610321
+  },
+  {
+    "image_id": 469,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67439_235406.fits",
+    "target_positive": true,
+    "max_score": 0.9986557960510254
+  },
+  {
+    "image_id": 470,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67439_235449.fits",
+    "target_positive": true,
+    "max_score": 0.9987471103668213
+  },
+  {
+    "image_id": 471,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67439_235504.fits",
+    "target_positive": true,
+    "max_score": 0.9987781643867493
+  },
+  {
+    "image_id": 472,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67439_235545.fits",
+    "target_positive": true,
+    "max_score": 0.9980995059013367
+  },
+  {
+    "image_id": 473,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67439_235625.fits",
+    "target_positive": true,
+    "max_score": 0.9992399215698242
+  },
+  {
+    "image_id": 474,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67439_235711.fits",
+    "target_positive": true,
+    "max_score": 0.991979718208313
+  },
+  {
+    "image_id": 475,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67439_235847.fits",
+    "target_positive": true,
+    "max_score": 0.9977557063102722
+  },
+  {
+    "image_id": 476,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67439_235957.fits",
+    "target_positive": true,
+    "max_score": 0.9991958737373352
+  },
+  {
+    "image_id": 477,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67439_000048.fits",
+    "target_positive": true,
+    "max_score": 0.9992886781692505
+  },
+  {
+    "image_id": 478,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67440_013908.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 479,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67443_010007.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 480,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67443_010120.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 481,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67443_010232.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 482,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67443_010315.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 483,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67443_010357.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 484,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67443_010439.fits",
+    "target_positive": true,
+    "max_score": 0.7325248718261719
+  },
+  {
+    "image_id": 485,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67522_234307.fits",
+    "target_positive": true,
+    "max_score": 0.997260570526123
+  },
+  {
+    "image_id": 486,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67522_234321.fits",
+    "target_positive": true,
+    "max_score": 0.9977548718452454
+  },
+  {
+    "image_id": 487,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67522_234335.fits",
+    "target_positive": true,
+    "max_score": 0.9985024929046631
+  },
+  {
+    "image_id": 488,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67522_234349.fits",
+    "target_positive": true,
+    "max_score": 0.9993804693222046
+  },
+  {
+    "image_id": 489,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67522_234402.fits",
+    "target_positive": true,
+    "max_score": 0.9968163371086121
+  },
+  {
+    "image_id": 490,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67522_234524.fits",
+    "target_positive": true,
+    "max_score": 0.9963183403015137
+  },
+  {
+    "image_id": 491,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67522_234619.fits",
+    "target_positive": true,
+    "max_score": 0.9978047013282776
+  },
+  {
+    "image_id": 492,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67522_234831.fits",
+    "target_positive": true,
+    "max_score": 0.9991666078567505
+  },
+  {
+    "image_id": 493,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67524_221126.fits",
+    "target_positive": true,
+    "max_score": 0.9997907280921936
+  },
+  {
+    "image_id": 494,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67524_221235.fits",
+    "target_positive": true,
+    "max_score": 0.999829888343811
+  },
+  {
+    "image_id": 495,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67524_221345.fits",
+    "target_positive": true,
+    "max_score": 0.9985287189483643
+  },
+  {
+    "image_id": 496,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67524_221446.fits",
+    "target_positive": true,
+    "max_score": 0.9933567643165588
+  },
+  {
+    "image_id": 497,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67524_221640.fits",
+    "target_positive": true,
+    "max_score": 0.998658299446106
+  },
+  {
+    "image_id": 498,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67524_221746.fits",
+    "target_positive": true,
+    "max_score": 0.9986618757247925
+  },
+  {
+    "image_id": 499,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_68131_234607.fits",
+    "target_positive": true,
+    "max_score": 0.9987056255340576
+  },
+  {
+    "image_id": 500,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_68131_234659.fits",
+    "target_positive": true,
+    "max_score": 0.9975824356079102
+  },
+  {
+    "image_id": 501,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_68131_234755.fits",
+    "target_positive": true,
+    "max_score": 0.9983078241348267
+  },
+  {
+    "image_id": 502,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_68131_234941.fits",
+    "target_positive": true,
+    "max_score": 0.9992519021034241
+  },
+  {
+    "image_id": 503,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_68131_235033.fits",
+    "target_positive": true,
+    "max_score": 0.9985559582710266
+  },
+  {
+    "image_id": 504,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_68131_235136.fits",
+    "target_positive": true,
+    "max_score": 0.9985175728797913
+  },
+  {
+    "image_id": 505,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_68131_235241.fits",
+    "target_positive": true,
+    "max_score": 0.9986531734466553
+  },
+  {
+    "image_id": 506,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_68131_235254.fits",
+    "target_positive": true,
+    "max_score": 0.998593270778656
+  },
+  {
+    "image_id": 507,
+    "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_68131_235307.fits",
+    "target_positive": true,
+    "max_score": 0.998654842376709
+  }
+]
