@@ -165,6 +165,46 @@ def _clip_bbox(
     return [x1 - x0, y1 - y0, x2 - x1, y2 - y1]
 
 
+def _transform_obb(
+    obb: dict | list | None,
+    x0: int,
+    y0: int,
+) -> dict | None:
+    """Translate an OBB's centre to tile-local coordinates.
+
+    Width, height, and angle are translation-invariant and are preserved
+    unchanged.  The centre is shifted by ``(x0, y0)`` — the tile's top-left
+    corner in the source image.
+
+    Args:
+        obb: Source OBB as a dict (``cx``, ``cy``, ``w``, ``h``,
+            ``angle_deg``) or a 5-element list, or None.
+        x0: Tile left edge in source-image pixels.
+        y0: Tile top edge in source-image pixels.
+
+    Returns:
+        Tile-local OBB dict, or None if ``obb`` is None.
+    """
+    if obb is None:
+        return None
+    if isinstance(obb, dict):
+        return {
+            "cx":        float(obb["cx"]) - x0,
+            "cy":        float(obb["cy"]) - y0,
+            "w":         float(obb["w"]),
+            "h":         float(obb["h"]),
+            "angle_deg": float(obb.get("angle_deg", 0.0)),
+        }
+    # list format: [cx, cy, w, h, angle_deg]
+    return {
+        "cx":        float(obb[0]) - x0,
+        "cy":        float(obb[1]) - y0,
+        "w":         float(obb[2]),
+        "h":         float(obb[3]),
+        "angle_deg": float(obb[4]) if len(obb) > 4 else 0.0,
+    }
+
+
 def _tile_file_name(original_path: str, x0: int, y0: int, tile_size: int) -> str:
     """Encode tile position and native crop size into the virtual filename."""
     stem = Path(original_path).stem
@@ -249,13 +289,13 @@ def build_tiled_brentimages_json(
             # unlike centre-only selection which misses the streak ends.
             for y0 in ys:
                 for x0 in xs:
-                    tile_anns: list[tuple[list[float], int]] = []
+                    tile_anns: list[tuple[list[float], int, dict]] = []
                     for ann in anns:
                         clipped = _clip_bbox(
                             ann["bbox"], x0, y0, native_tile_size, min_area_fraction
                         )
                         if clipped is not None:
-                            tile_anns.append((clipped, ann.get("category_id", 1)))
+                            tile_anns.append((clipped, ann.get("category_id", 1), ann))
 
                     if not tile_anns:
                         continue
@@ -269,15 +309,21 @@ def build_tiled_brentimages_json(
                         "width": native_tile_size,
                         "height": native_tile_size,
                     })
-                    for clipped_bbox, cat_id in tile_anns:
-                        out_annotations.append({
-                            "id": next_ann_id,
-                            "image_id": next_img_id,
+                    for clipped_bbox, cat_id, src_ann in tile_anns:
+                        out_ann: dict = {
+                            "id":          next_ann_id,
+                            "image_id":    next_img_id,
                             "category_id": cat_id,
-                            "bbox": clipped_bbox,
-                            "area": clipped_bbox[2] * clipped_bbox[3],
-                            "iscrowd": 0,
-                        })
+                            "bbox":        clipped_bbox,
+                            "area":        clipped_bbox[2] * clipped_bbox[3],
+                            "iscrowd":     0,
+                        }
+                        tile_obb = _transform_obb(src_ann.get("obb"), x0, y0)
+                        if tile_obb is not None:
+                            out_ann["obb"] = tile_obb
+                        if "attributes" in src_ann:
+                            out_ann["attributes"] = src_ann["attributes"]
+                        out_annotations.append(out_ann)
                         next_ann_id += 1
                     next_img_id += 1
                     positive_tile_count += 1

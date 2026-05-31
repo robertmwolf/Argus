@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 _MODEL_CACHE: dict[str, tuple[Any, int, torch.device]] = {}
 
-_DEFAULT_CHECKPOINT = Path(__file__).resolve().parent.parent / "weights" / "run5_convnext_small_s2_heatmap" / "best.pt"
+_DEFAULT_CHECKPOINT = Path(__file__).resolve().parent.parent / "weights" / "run5_convnext_small_s2_heatmap_pretiled" / "best.pt"
 
 
 def _default_checkpoint() -> Path:

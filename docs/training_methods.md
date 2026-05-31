@@ -916,7 +916,14 @@ Approximate training throughput on this hardware:
 
 ---
 
-## 3.7 Run 5 — ConvNeXt-S Stage-2 HeatMap (2026-05-30)
+## 3.7 Run 5 — ConvNeXt-S Stage-2 HeatMap (2026-05-31, tiled)
+
+> **Note:** An earlier full-frame run on 2026-05-30 cached features at 384 px
+> (full images letterboxed). Medium streaks spanned <2 feature patches at that
+> resolution — a training-scale mismatch. This section documents the corrected
+> run using the pre-tiled 400 px dataset (`all_train_run5_tiled.json`), which
+> is the canonical result. The full-frame run results are archived in
+> `results/run5_convnext_small_s2_heatmap/` for reference only.
 
 ### Motivation
 
@@ -939,25 +946,34 @@ detection quality vs the ViT-S transformer. ConvNeXt has local inductive biases
 
 ### Training Protocol
 
+**Dataset:** `all_train_run5_tiled.json` — 9,570 pre-tiled 400×400 px FITS crops,
+9,332 annotations, 8,913 with OBB. Medium streaks span ~18 feature patches at
+model input (vs <2 in the full-frame approach). Val: `val_atwood_tiled_400.json`
+(1,384 tiles, 1,350 annotations).
+
 **Two-stage cached training:**
 
-1. **Feature extraction** — frozen backbone forward pass on all images, features
-   saved as float16 `.pt` files:
+1. **Feature extraction** — frozen backbone forward pass on all tiles:
    ```
    python scripts/cache_dinov3_heatmap_features.py \
-     --annotations data/annotations/all_train_run5.json \
-     --output-dir  data/heatmap_cache/convnext_small_s2_train \
+     --annotations data/annotations/all_train_run5_tiled.json \
+     --output-dir  data/heatmap_cache/convnext_small_s2_pretiled_train \
+     --backbone convnext --model-size small --convnext-stage 2 \
+     --image-size 384
+
+   python scripts/cache_dinov3_heatmap_features.py \
+     --annotations data/annotations/val_atwood_tiled_400.json \
+     --output-dir  data/heatmap_cache/convnext_small_s2_pretiled_val \
      --backbone convnext --model-size small --convnext-stage 2 \
      --image-size 384
    ```
-   Cache timing: ~64 min (train, 2,064 images), ~4 min (val, 240 images) on Apple M3.
 
 2. **Head training** — head-only AdamW on cached features:
    ```
    python -m training.train_dinov3_heatmap_cached \
-     --train-cache data/heatmap_cache/convnext_small_s2_train \
-     --val-cache   data/heatmap_cache/convnext_small_s2_val \
-     --work-dir    weights/run5_convnext_small_s2_heatmap \
+     --train-cache data/heatmap_cache/convnext_small_s2_pretiled_train \
+     --val-cache   data/heatmap_cache/convnext_small_s2_pretiled_val \
+     --work-dir    weights/run5_convnext_small_s2_heatmap_pretiled \
      --epochs 50 --batch-size 32
    ```
 
@@ -971,69 +987,27 @@ detection quality vs the ViT-S transformer. ConvNeXt has local inductive biases
 | Hidden channels | 256 |
 | Epochs | 50 |
 | Batch size | 32 |
-| Input resolution | 384 × 384 px (letterboxed) |
-| Hardware | Apple M3 MPS (~37 s/epoch) |
+| Input resolution | 384 × 384 px (letterboxed from 400 px tiles) |
+| Hardware | Apple M3 MPS |
 
 ### Results
 
-**Validation (val_atwood.json, 240 images):**
-
-| Epoch | train_dice | val_dice |
-|---|---|---|
-| 1 | 0.467 | 0.653 |
-| 5 | 0.677 | 0.747 |
-| 13 | 0.758 | 0.788 |
-| 24 | 0.806 | 0.820 |
-| **45** | **0.882** | **0.842** ← best |
-| 50 | 0.889 | 0.841 |
-
-Best checkpoint: `weights/run5_convnext_small_s2_heatmap/best.pt` (epoch 45, val_dice=0.842)
-
-**Test (test_atwood.json, 240 images, 228 GT annotations):**
-
-> **Note on evaluation metric:** The standard IoU≥0.5 metric returns zero for heatmap
-> models because the predicted OBBs are patch-resolution blobs (~700×460 px) while GT
-> annotations are thin line OBBs (~467×16 px). IoU between a blob and a thin line is
-> structurally near zero regardless of localization quality. Center-distance and lenient
-> IoU metrics are used instead.
-
-| Metric | Value |
-|---|---|
-| Recall, center ≤ 100 px | **0.934** |
-| Recall, center ≤ 50 px | 0.614 |
-| Precision (conf ≥ 0.50, center ≤ 100 px) | 0.887 |
-| Recall, IoU ≥ 0.10 | 0.825 |
-| Recall, IoU ≥ 0.05 | 0.934 |
-
-**Per-band recall (IoU ≥ 0.10):**
-
-| Band | Recall |
-|---|---|
-| Short (< 150 px) | 0/1 (1 sample only) |
-| Medium (150–400 px) | 6/22 = 0.273 |
-| **Long (> 400 px)** | **182/205 = 0.888** |
-
-**Confidence threshold trade-off (precision/recall):**
-
-| Conf threshold | Recall | Precision | FP on neg. images |
-|---|---|---|---|
-| ≥ 0.50 | 0.934 | 0.887 | 14/20 |
-| ≥ 0.95 | 0.921 | 0.942 | 2/20 |
-| **≥ 0.99** | **0.873** | **0.952** | **0/20** |
-
-**Recommended inference threshold:** 0.99 (zero false alarms on negatives, 87% recall).
+> Results pending — training in progress (2026-05-31). This section will be
+> updated with val/test metrics once the run completes.
 
 ### API / Inference
 
 Registered as detector `convnext_heatmap` in `inference/pipeline.py`. Loaded via
-`inference/convnext_heatmap_detector.py`. Configurable via env vars:
+`inference/convnext_heatmap_detector.py`. Update `CONVNEXT_HEATMAP_CHECKPOINT`
+to point to the pretiled checkpoint once training completes.
 
 | Env var | Default | Effect |
 |---|---|---|
-| `CONVNEXT_HEATMAP_CHECKPOINT` | `weights/run5_convnext_small_s2_heatmap/best.pt` | Checkpoint path |
+| `CONVNEXT_HEATMAP_CHECKPOINT` | `weights/run5_convnext_small_s2_heatmap_pretiled/best.pt` | Checkpoint path |
 | `CONVNEXT_HEATMAP_THRESHOLD` | `0.5` | Heatmap binarisation threshold |
 | `CONVNEXT_HEATMAP_IMAGE_SIZE` | `384` | Input resolution |
 | `CONVNEXT_HEATMAP_MIN_PIXELS` | `2` | Min component size (feature patches) |
+| `CONVNEXT_HEATMAP_NATIVE_TILE_SIZE` | `1562` | Native tile size for inference tiling |
 
 ---
 
@@ -1060,7 +1034,26 @@ geometrically meaningful.
 The eval script (`scripts/evaluate_dinov3_heatmap.py`) emits a `WARNING` if
 `--tiled` is omitted for checkpoints cached at < 600 px.
 
-### 6.2 Consistency between training data and evaluation
+### 6.2 OBB must be present in tiled annotation files
+
+Both tiling scripts (`build_tiled_brentimages_json.py` and `build_tiled_frigate_json.py`)
+now output an `obb` field alongside `bbox` in every tile annotation. The OBB
+centre is shifted to tile-local coordinates (`cx -= x0`, `cy -= y0`); width,
+height, and angle are translation-invariant and are copied unchanged.
+
+**Why this matters:** The heatmap model's geometry head trains on `obb`, not
+`bbox`. Without the `obb` field the dataset falls back to axis-aligned bbox
+targets, producing incorrect angle and width predictions regardless of how
+well the model learns streak presence. **Always regenerate tiled annotation
+files after re-running a tiling script** — earlier files built before this fix
+(before 2026-05-31) are missing the `obb` field and must not be used for
+heatmap training.
+
+Annotation files with the fix applied:
+- `data/annotations/all_train_run5_tiled.json` — regenerated 2026-05-31
+- `data/annotations/val_atwood_tiled_400.json` — regenerated 2026-05-31
+
+### 6.3 Consistency between training data and evaluation
 
 If the training dataset was built from pre-tiled images (e.g. Atwood tiles at
 `native_tile_size=400`, Frigate tiles at 110 px), the evaluation must apply

@@ -45,11 +45,16 @@ Progress:
 - ✅ **Frigate corpus analysis (2026-05-30)**:
   - 86% of annotations are near-circular blobs (<25px, AR~1) — provide no useful training signal
   - 13% (cluster-2, ≥35px, AR≥2) are genuine linear streaks — tiled at 110px for 3.64× zoom
-- ✅ **Run 5 ConvNeXt-S Stage-2 HeatMap trained (2026-05-30)**:
+- 🔄 **Run 5 ConvNeXt-S Stage-2 HeatMap (retrain in progress, 2026-05-31)**:
   - Backbone: DINOv3 ConvNeXt-Small, stage 2, frozen (384ch at H/16, stride 16)
-  - Weights: `weights/run5_convnext_small_s2_heatmap/best.pt`
-  - Val dice=0.842 (epoch 45/50). Test: center-recall=0.934, long-recall=0.888
+  - Training data: `all_train_run5_tiled.json` (9,570 pre-tiled 400px crops, **with OBBs**)
+  - Previous full-frame run (2026-05-30) had medium-band scale mismatch; this run fixes it
+  - Weights (in progress): `weights/run5_convnext_small_s2_heatmap_pretiled/best.pt`
   - Registered as detector `convnext_heatmap` in pipeline. See `docs/training_methods.md §3.7`
+  - **TILING SCRIPTS FIXED (2026-05-31):** `build_tiled_brentimages_json.py` and
+    `build_tiled_frigate_json.py` now output tile-local `obb` fields. Old tiled
+    annotation files built before this date are missing OBBs and must not be used
+    for heatmap training. Regenerated: `all_train_run5_tiled.json`, `val_atwood_tiled_400.json`
 - ✅ **Run 5 dataset built (2026-05-30)**:
   - All 5 Atwood nights re-stratified (1,475 images → 1,129 train / 240 val / 240 test)
   - Frigate replaced with cluster-2 tiled at 110px (48 annotations, 9 frames)

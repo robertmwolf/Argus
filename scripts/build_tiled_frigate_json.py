@@ -142,6 +142,35 @@ def _tile_file_name(original_path: str, x0: int, y0: int, tile_size: int) -> str
     return f"{parent}/{stem}__tx{x0}_ty{y0}_ts{tile_size}{suffix}"
 
 
+def _transform_obb(
+    obb: dict | list | None,
+    x0: int,
+    y0: int,
+) -> dict | None:
+    """Translate an OBB's centre to tile-local coordinates.
+
+    Width, height, and angle are translation-invariant and are preserved
+    unchanged.  Only the centre is shifted by ``(x0, y0)``.
+    """
+    if obb is None:
+        return None
+    if isinstance(obb, dict):
+        return {
+            "cx":        float(obb["cx"]) - x0,
+            "cy":        float(obb["cy"]) - y0,
+            "w":         float(obb["w"]),
+            "h":         float(obb["h"]),
+            "angle_deg": float(obb.get("angle_deg", 0.0)),
+        }
+    return {
+        "cx":        float(obb[0]) - x0,
+        "cy":        float(obb[1]) - y0,
+        "w":         float(obb[2]),
+        "h":         float(obb[3]),
+        "angle_deg": float(obb[4]) if len(obb) > 4 else 0.0,
+    }
+
+
 def build_tiled_frigate_json(
     native_tile_size: int = _DEFAULT_TILE_SIZE,
     overlap: float = _DEFAULT_OVERLAP,
@@ -218,7 +247,7 @@ def build_tiled_frigate_json(
                                 y0 <= cy < y0 + native_tile_size):
                             clipped = _clip_bbox(ann["bbox"], x0, y0, native_tile_size)
                             if clipped is not None:
-                                tile_anns.append((clipped, ann.get("category_id", 1)))
+                                tile_anns.append((clipped, ann.get("category_id", 1), ann))
 
                     if not tile_anns:
                         continue
@@ -232,15 +261,21 @@ def build_tiled_frigate_json(
                         "width": native_tile_size,
                         "height": native_tile_size,
                     })
-                    for clipped_bbox, _ in tile_anns:
-                        out_annotations.append({
-                            "id": next_ann_id,
-                            "image_id": next_img_id,
-                            "category_id": 1,
-                            "bbox": clipped_bbox,
-                            "area": clipped_bbox[2] * clipped_bbox[3],
-                            "iscrowd": 0,
-                        })
+                    for clipped_bbox, cat_id, src_ann in tile_anns:
+                        out_ann: dict = {
+                            "id":          next_ann_id,
+                            "image_id":    next_img_id,
+                            "category_id": cat_id,
+                            "bbox":        clipped_bbox,
+                            "area":        clipped_bbox[2] * clipped_bbox[3],
+                            "iscrowd":     0,
+                        }
+                        tile_obb = _transform_obb(src_ann.get("obb"), x0, y0)
+                        if tile_obb is not None:
+                            out_ann["obb"] = tile_obb
+                        if "attributes" in src_ann:
+                            out_ann["attributes"] = src_ann["attributes"]
+                        out_annotations.append(out_ann)
                         next_ann_id += 1
                     next_img_id += 1
                     positive_count += 1
