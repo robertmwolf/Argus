@@ -16,7 +16,11 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from inference.device import get_device
-from models.plain_dinov3.streak_heatmap import DINOv3StreakHeatmap, imagenet_normalize
+from models.plain_dinov3.streak_heatmap import (
+    ConvNeXtStreakHeatmap,
+    DINOv3StreakHeatmap,
+    imagenet_normalize,
+)
 from training.dinov3_heatmap_dataset import StreakHeatmapDataset, collate_heatmap_batch
 
 logger = logging.getLogger(__name__)
@@ -26,8 +30,19 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--annotations", required=True)
     parser.add_argument("--output-dir", required=True)
-    parser.add_argument("--weights", default="weights/dinov3_vitb16_lvd1689m.pth")
-    parser.add_argument("--model-size", choices=["base", "large"], default="base")
+    parser.add_argument("--weights", default=None,
+                        help="Backbone checkpoint. Defaults to the canonical weight file "
+                             "for the selected backbone/model-size.")
+    parser.add_argument("--backbone", choices=["vit", "convnext"], default="vit",
+                        help="Feature encoder family (default: vit)")
+    parser.add_argument("--model-size", choices=["small", "base", "large"], default="small",
+                        help="Backbone size (default: small). "
+                             "For vit: small=ViT-S/16, base=ViT-B/16. "
+                             "For convnext: small=ConvNeXt-S.")
+    parser.add_argument("--convnext-stage", type=int, default=3, choices=[0, 1, 2, 3],
+                        help="ConvNeXt stage whose output is used as the feature map "
+                             "(0-3, default 3 = full backbone at stride 32, 768 ch). "
+                             "Stage 2 gives stride 16, 384 ch — same as ViT-S/16.")
     parser.add_argument("--image-size", type=int, default=384)
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--max-samples", type=int, default=None)
@@ -48,7 +63,27 @@ def main() -> int:
         num_workers=args.num_workers,
         collate_fn=collate_heatmap_batch,
     )
-    model = DINOv3StreakHeatmap(model_size=args.model_size, weights=args.weights).to(device)
+    _DEFAULT_WEIGHTS = {
+        ("vit", "small"): "weights/dinov3_vits16_lvd1689m.pth",
+        ("vit", "base"): "weights/dinov3_vitb16_lvd1689m.pth",
+        ("vit", "large"): "weights/dinov3_vitl16_lvd1689m.pth",
+        ("convnext", "small"): "weights/dinov3_convnext_small_pretrain_lvd1689m.pth",
+    }
+    weights = args.weights or _DEFAULT_WEIGHTS.get((args.backbone, args.model_size))
+    if weights is None:
+        raise ValueError(
+            f"No default weight path for backbone={args.backbone}, model_size={args.model_size}. "
+            "Pass --weights explicitly."
+        )
+
+    if args.backbone == "convnext":
+        model = ConvNeXtStreakHeatmap(
+            model_size=args.model_size,
+            weights=weights,
+            extract_stage=args.convnext_stage,
+        ).to(device)
+    else:
+        model = DINOv3StreakHeatmap(model_size=args.model_size, weights=weights).to(device)
     model.eval()
 
     manifest: list[dict] = []
@@ -92,8 +127,10 @@ def main() -> int:
 
     metadata = {
         "annotations": args.annotations,
-        "weights": args.weights,
+        "weights": weights,
+        "backbone": args.backbone,
         "model_size": args.model_size,
+        "convnext_stage": args.convnext_stage if args.backbone == "convnext" else None,
         "image_size": args.image_size,
         "n_samples": len(manifest),
         "manifest": manifest,

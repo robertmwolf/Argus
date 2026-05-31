@@ -23,7 +23,12 @@ if str(_REPO_ROOT) not in sys.path:
 from eval.metrics import evaluate
 from inference.device import get_device
 from inference.fits_loader import FITSLoader
-from models.plain_dinov3.streak_heatmap import DINOv3StreakHeatmap, decode_geometry, imagenet_normalize
+from models.plain_dinov3.streak_heatmap import (
+    ConvNeXtStreakHeatmap,
+    DINOv3StreakHeatmap,
+    decode_geometry,
+    imagenet_normalize,
+)
 from training.dinov3_heatmap_dataset import StreakHeatmapDataset, collate_heatmap_batch
 from training.train_dinov3_heatmap_cached import HeatmapHead
 
@@ -221,13 +226,27 @@ def main() -> int:
         weights = args.weights or train_meta.get("weights", "weights/dinov3_vitb16_lvd1689m.pth")
         model_size = train_meta.get("model_size", "base")
         image_size = int(train_meta.get("image_size", 512))
+        backbone = train_meta.get("backbone", "vit")
+        convnext_stage = int(train_meta.get("convnext_stage") or 3)
     else:
         weights = args.weights or train_args.get("weights", "weights/dinov3_vitb16_lvd1689m.pth")
         model_size = train_args.get("model_size", "base")
         image_size = int(train_args.get("image_size", 512))
-    patch_size = 16
+        backbone = "vit"
+        convnext_stage = 3
 
-    model = DINOv3StreakHeatmap(model_size=model_size, weights=weights).to(device)
+    # Spatial stride of the feature map: ViT patch-16 → 16, ConvNeXt stage≤2 → 16, stage3 → 32
+    if backbone == "convnext":
+        patch_size = 16 if convnext_stage <= 2 else 32
+    else:
+        patch_size = 16
+
+    if backbone == "convnext":
+        model = ConvNeXtStreakHeatmap(
+            model_size=model_size, weights=weights, extract_stage=convnext_stage
+        ).to(device)
+    else:
+        model = DINOv3StreakHeatmap(model_size=model_size, weights=weights).to(device)
     if is_cached_head:
         hidden = int(ckpt.get("args", {}).get("hidden_channels", 256))
         cached_head = HeatmapHead(int(ckpt["in_channels"]), hidden)

@@ -43,6 +43,14 @@ _MODEL_CONFIGS: dict[str, tuple[str, int, dict]] = {
     ),
 }
 
+# Per-stage output channels for DINOv3 ConvNeXt (4 stages, 0-indexed).
+# Stage 2 → stride 16 (same as ViT patch-16); stage 3 → stride 32 (full backbone).
+_CONVNEXT_STAGE_DIMS: dict[str, list[int]] = {
+    "small": [96, 192, 384, 768],
+    "base": [128, 256, 512, 1024],
+    "large": [192, 384, 768, 1536],
+}
+
 
 def load_dinov3_encoder(model_size: str, weights_path: Path) -> nn.Module:
     """Load a DINOv3 ViT encoder without OpenMMLab dependencies.
@@ -247,6 +255,141 @@ class DINOv3OrientationCenterline(nn.Module):
         """Predict centerline logits and an image-level streak logit."""
         features = self.extract_features(x)
         return self.decoder(features), self.image_classifier(features)
+
+
+def load_convnext_encoder(model_size: str, weights_path: Path) -> nn.Module:
+    """Load a DINOv3 ConvNeXt encoder without opening any classification head.
+
+    # Source: DINOv3 (Meta AI, 2025) — ConvNeXt feature extraction
+    # Ref: https://github.com/facebookresearch/dinov3
+
+    Args:
+        model_size: ``small``, ``base``, or ``large``.
+        weights_path: Local DINOv3 ConvNeXt checkpoint (plain state-dict).
+
+    Returns:
+        Frozen ConvNeXt module.
+    """
+    if model_size not in _CONVNEXT_STAGE_DIMS:
+        raise KeyError(f"model_size must be one of {sorted(_CONVNEXT_STAGE_DIMS)}, got {model_size!r}")
+    if not weights_path.exists():
+        raise FileNotFoundError(f"DINOv3 ConvNeXt weights not found: {weights_path}")
+
+    try:
+        from dinov3.models.convnext import get_convnext_arch  # type: ignore[import]
+    except ImportError as exc:
+        raise ImportError(
+            "dinov3 package not installed. Run: "
+            "pip install git+https://github.com/facebookresearch/dinov3.git"
+        ) from exc
+
+    # get_convnext_arch expects "convnext_<size>" and returns a partial constructor.
+    model = get_convnext_arch(f"convnext_{model_size}")()
+    state = torch.load(weights_path, map_location="cpu", weights_only=True)
+    missing, unexpected = model.load_state_dict(state, strict=False)
+    if missing:
+        logger.warning("ConvNeXt load: %d missing keys, first=%s", len(missing), missing[:3])
+    if unexpected:
+        logger.warning("ConvNeXt load: %d unexpected keys, first=%s", len(unexpected), unexpected[:3])
+    model.eval()
+    for param in model.parameters():
+        param.requires_grad_(False)
+    return model
+
+
+class ConvNeXtStreakHeatmap(nn.Module):
+    """Frozen DINOv3 ConvNeXt encoder plus trainable low-resolution streak heatmap head.
+
+    Mirrors the DINOv3StreakHeatmap interface so the two models are drop-in
+    comparable: same training loop, same caching script, same head architecture.
+
+    # Source: DINOv3 (Meta AI, 2025) — ConvNeXt feature extraction pattern
+    # Ref: https://github.com/facebookresearch/dinov3
+    """
+
+    def __init__(
+        self,
+        model_size: str = "small",
+        weights: str | Path = "weights/dinov3_convnext_small_pretrain_lvd1689m.pth",
+        extract_stage: int = 3,
+        hidden_channels: int = 256,
+        out_channels: int = 5,
+        freeze_backbone: bool = True,
+    ) -> None:
+        """Initialise the model.
+
+        Args:
+            model_size: ``small``, ``base``, or ``large``.
+            weights: Local DINOv3 ConvNeXt checkpoint.
+            extract_stage: Which ConvNeXt stage (0–3) to use as the feature map.
+                Stage 2 gives 384 ch at H/16 (same stride as ViT-S/16);
+                stage 3 gives 768 ch at H/32 (full backbone, default).
+            hidden_channels: Width of the trainable heatmap head.
+            out_channels: 1 heatmap channel plus 4 geometry channels by default.
+            freeze_backbone: Keep True for standard frozen-backbone training.
+        """
+        super().__init__()
+        if model_size not in _CONVNEXT_STAGE_DIMS:
+            raise KeyError(f"model_size must be one of {sorted(_CONVNEXT_STAGE_DIMS)}, got {model_size!r}")
+        if not (0 <= extract_stage <= 3):
+            raise ValueError(f"extract_stage must be 0–3, got {extract_stage}")
+
+        self.model_size = model_size
+        self.extract_stage = extract_stage
+        self.freeze_backbone = freeze_backbone
+        self.embed_dim = _CONVNEXT_STAGE_DIMS[model_size][extract_stage]
+
+        self.encoder = load_convnext_encoder(model_size, Path(weights))
+        if not freeze_backbone:
+            for param in self.encoder.parameters():
+                param.requires_grad_(True)
+
+        self.head = nn.Sequential(
+            nn.Conv2d(self.embed_dim, hidden_channels, kernel_size=1),
+            nn.GELU(),
+            nn.Conv2d(hidden_channels, hidden_channels // 2, kernel_size=3, padding=1),
+            nn.GELU(),
+            nn.Conv2d(hidden_channels // 2, out_channels, kernel_size=1),
+        )
+
+    def train(self, mode: bool = True) -> "ConvNeXtStreakHeatmap":
+        """Keep the encoder in eval mode when frozen."""
+        super().train(mode)
+        if self.freeze_backbone:
+            self.encoder.eval()
+        return self
+
+    def extract_features(self, x: torch.Tensor) -> torch.Tensor:
+        """Extract spatial feature map from the specified ConvNeXt stage.
+
+        Args:
+            x: Float tensor, shape ``(B, 3, H, W)``, already ImageNet-normalised.
+
+        Returns:
+            Feature map of shape ``(B, C, H', W')``, where C and the stride
+            depend on ``extract_stage``.
+        """
+        with torch.set_grad_enabled(not self.freeze_backbone):
+            for i in range(self.extract_stage + 1):
+                x = self.encoder.downsample_layers[i](x)
+                x = self.encoder.stages[i](x)
+        return x
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Predict patch-grid heatmap logits.
+
+        Args:
+            x: Float tensor, shape ``(B, 3, H, W)``, already ImageNet-normalised.
+
+        Returns:
+            Tensor, shape ``(B, out_channels, H', W')``. Channel 0 is the
+            heatmap logit; channels 1-4 are geometry predictions.
+        """
+        return self.head(self.extract_features(x))
+
+    def predict_from_features(self, features: torch.Tensor) -> torch.Tensor:
+        """Predict heatmap logits from cached ConvNeXt features."""
+        return self.head(features)
 
 
 def imagenet_normalize(batch: torch.Tensor) -> torch.Tensor:

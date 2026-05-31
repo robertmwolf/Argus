@@ -586,6 +586,13 @@ def _run_heatmap_centerline_detector(array: "np.ndarray") -> list[dict]:
     return run_heatmap_centerline_detector(array)
 
 
+def _run_convnext_heatmap_detector(array: "np.ndarray") -> list[dict]:
+    """Run the ConvNeXt-S stage-2 heatmap detector if its weights are available."""
+    from inference.convnext_heatmap_detector import run_convnext_heatmap_detector
+
+    return run_convnext_heatmap_detector(array)
+
+
 def _downsample_fits_image_for_astride(fits_image: Any, max_pixels: int) -> tuple[Any, float]:
     """Return a downsampled FITSImage-like object and its linear scale.
 
@@ -1059,6 +1066,19 @@ def get_detector_statuses() -> list[dict]:
             "status": "unavailable",
         })
 
+    # ConvNeXt-S Stage-2 heatmap detector
+    try:
+        from inference.convnext_heatmap_detector import get_convnext_heatmap_status
+        statuses.append(get_convnext_heatmap_status())
+    except ImportError:
+        statuses.append({
+            "id": "convnext_heatmap",
+            "name": "ConvNeXt-S HeatMap",
+            "type": "ml",
+            "dataset": "Atwood+Frigate Run5",
+            "status": "unavailable",
+        })
+
     # YOLO variants
     _yolo_entries = [
         {
@@ -1298,6 +1318,11 @@ def _run_all_detectors(
             tasks[pool.submit(_timed_detector, "dinov3_heatmap_centerline", _heatmap_task_with_sidecar, array)] = "dinov3_heatmap_centerline"
         else:
             results["dinov3_heatmap_centerline"] = []
+
+        if _enabled("convnext_heatmap"):
+            tasks[pool.submit(_timed_detector, "convnext_heatmap", _run_convnext_heatmap_detector, array)] = "convnext_heatmap"
+        else:
+            results["convnext_heatmap"] = []
 
         for f in as_completed(tasks):
             key = tasks[f]

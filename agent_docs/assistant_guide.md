@@ -45,6 +45,11 @@ Progress:
 - ✅ **Frigate corpus analysis (2026-05-30)**:
   - 86% of annotations are near-circular blobs (<25px, AR~1) — provide no useful training signal
   - 13% (cluster-2, ≥35px, AR≥2) are genuine linear streaks — tiled at 110px for 3.64× zoom
+- ✅ **Run 5 ConvNeXt-S Stage-2 HeatMap trained (2026-05-30)**:
+  - Backbone: DINOv3 ConvNeXt-Small, stage 2, frozen (384ch at H/16, stride 16)
+  - Weights: `weights/run5_convnext_small_s2_heatmap/best.pt`
+  - Val dice=0.842 (epoch 45/50). Test: center-recall=0.934, long-recall=0.888
+  - Registered as detector `convnext_heatmap` in pipeline. See `docs/training_methods.md §3.7`
 - ✅ **Run 5 dataset built (2026-05-30)**:
   - All 5 Atwood nights re-stratified (1,475 images → 1,129 train / 240 val / 240 test)
   - Frigate replaced with cluster-2 tiled at 110px (48 annotations, 9 frames)

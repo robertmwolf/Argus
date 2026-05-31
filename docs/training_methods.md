@@ -914,6 +914,129 @@ Approximate training throughput on this hardware:
 
 ---
 
+---
+
+## 3.7 Run 5 — ConvNeXt-S Stage-2 HeatMap (2026-05-30)
+
+### Motivation
+
+A third model variant was trained in parallel with the Run 5 ViT-S OBB model to
+explore whether a convolutional backbone (DINOv3 ConvNeXt-Small) offers competitive
+detection quality vs the ViT-S transformer. ConvNeXt has local inductive biases
+(depthwise conv, translation equivariance) that may suit elongated linear features.
+
+### Architecture
+
+| Component | Details |
+|---|---|
+| **Backbone** | DINOv3 ConvNeXt-Small, frozen, pretrained on LVD-1689M |
+| **Weights** | `weights/dinov3_convnext_small_pretrain_lvd1689m.pth` |
+| **Stage** | Stage 2 output (27 of 36 blocks), 384 channels at H/16 |
+| **Spatial stride** | 16 px — identical to ViT-S/16 patch stride |
+| **Head** | `HeatmapHead`: 1×1 Conv(384→256) → GELU → 3×3 Conv(256→128) → GELU → 1×1 Conv(128→5) |
+| **Outputs** | Ch 0: streak probability; Ch 1-4: geometry (cos2θ, sin2θ, length/W, width/W) |
+| **Backbone rationale** | Stage 2 contains 27/36 total ConvNeXt blocks; stage 3 only adds 3 blocks before halving spatial resolution to H/32 — diminishing returns at high resolution cost |
+
+### Training Protocol
+
+**Two-stage cached training:**
+
+1. **Feature extraction** — frozen backbone forward pass on all images, features
+   saved as float16 `.pt` files:
+   ```
+   python scripts/cache_dinov3_heatmap_features.py \
+     --annotations data/annotations/all_train_run5.json \
+     --output-dir  data/heatmap_cache/convnext_small_s2_train \
+     --backbone convnext --model-size small --convnext-stage 2 \
+     --image-size 384
+   ```
+   Cache timing: ~64 min (train, 2,064 images), ~4 min (val, 240 images) on Apple M3.
+
+2. **Head training** — head-only AdamW on cached features:
+   ```
+   python -m training.train_dinov3_heatmap_cached \
+     --train-cache data/heatmap_cache/convnext_small_s2_train \
+     --val-cache   data/heatmap_cache/convnext_small_s2_val \
+     --work-dir    weights/run5_convnext_small_s2_heatmap \
+     --epochs 50 --batch-size 32
+   ```
+
+| Hyperparameter | Value |
+|---|---|
+| Optimizer | AdamW |
+| Learning rate | 1e-3 |
+| Weight decay | 1e-4 |
+| Positive weight (BCE) | 20.0 |
+| Geometry weight | 0.25 |
+| Hidden channels | 256 |
+| Epochs | 50 |
+| Batch size | 32 |
+| Input resolution | 384 × 384 px (letterboxed) |
+| Hardware | Apple M3 MPS (~37 s/epoch) |
+
+### Results
+
+**Validation (val_atwood.json, 240 images):**
+
+| Epoch | train_dice | val_dice |
+|---|---|---|
+| 1 | 0.467 | 0.653 |
+| 5 | 0.677 | 0.747 |
+| 13 | 0.758 | 0.788 |
+| 24 | 0.806 | 0.820 |
+| **45** | **0.882** | **0.842** ← best |
+| 50 | 0.889 | 0.841 |
+
+Best checkpoint: `weights/run5_convnext_small_s2_heatmap/best.pt` (epoch 45, val_dice=0.842)
+
+**Test (test_atwood.json, 240 images, 228 GT annotations):**
+
+> **Note on evaluation metric:** The standard IoU≥0.5 metric returns zero for heatmap
+> models because the predicted OBBs are patch-resolution blobs (~700×460 px) while GT
+> annotations are thin line OBBs (~467×16 px). IoU between a blob and a thin line is
+> structurally near zero regardless of localization quality. Center-distance and lenient
+> IoU metrics are used instead.
+
+| Metric | Value |
+|---|---|
+| Recall, center ≤ 100 px | **0.934** |
+| Recall, center ≤ 50 px | 0.614 |
+| Precision (conf ≥ 0.50, center ≤ 100 px) | 0.887 |
+| Recall, IoU ≥ 0.10 | 0.825 |
+| Recall, IoU ≥ 0.05 | 0.934 |
+
+**Per-band recall (IoU ≥ 0.10):**
+
+| Band | Recall |
+|---|---|
+| Short (< 150 px) | 0/1 (1 sample only) |
+| Medium (150–400 px) | 6/22 = 0.273 |
+| **Long (> 400 px)** | **182/205 = 0.888** |
+
+**Confidence threshold trade-off (precision/recall):**
+
+| Conf threshold | Recall | Precision | FP on neg. images |
+|---|---|---|---|
+| ≥ 0.50 | 0.934 | 0.887 | 14/20 |
+| ≥ 0.95 | 0.921 | 0.942 | 2/20 |
+| **≥ 0.99** | **0.873** | **0.952** | **0/20** |
+
+**Recommended inference threshold:** 0.99 (zero false alarms on negatives, 87% recall).
+
+### API / Inference
+
+Registered as detector `convnext_heatmap` in `inference/pipeline.py`. Loaded via
+`inference/convnext_heatmap_detector.py`. Configurable via env vars:
+
+| Env var | Default | Effect |
+|---|---|---|
+| `CONVNEXT_HEATMAP_CHECKPOINT` | `weights/run5_convnext_small_s2_heatmap/best.pt` | Checkpoint path |
+| `CONVNEXT_HEATMAP_THRESHOLD` | `0.5` | Heatmap binarisation threshold |
+| `CONVNEXT_HEATMAP_IMAGE_SIZE` | `384` | Input resolution |
+| `CONVNEXT_HEATMAP_MIN_PIXELS` | `2` | Min component size (feature patches) |
+
+---
+
 ## 7. Open Questions
 
 1. **Frigate attribution** — blocks use of Frigate tiles in the published training set
