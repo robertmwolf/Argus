@@ -122,7 +122,20 @@ class LoadFITSFromFile(BaseTransform):
         loader = self._get_loader()
         try:
             suffix = Path(img_path).suffix.lower()
-            if suffix in {".fits", ".fit", ".fts"}:
+            if suffix == ".npy":
+                # Pre-converted raw float32 tile — apply norm and stack to 3ch.
+                # This path is ~10–50× faster than loading FITS from disk.
+                raw = np.load(img_path)  # (H, W) float32
+                if self.dual_norm:
+                    from inference.fits_loader import apply_norm
+                    chosen = self._rng.choice(self._DUAL_NORM_CHOICES)
+                else:
+                    from inference.fits_loader import apply_norm
+                    import os as _os
+                    chosen = _os.environ.get("ARGUS_NORM", "zscore").lower()
+                arr = apply_norm(raw, chosen)  # (H, W, 3) uint8
+
+            elif suffix in {".fits", ".fit", ".fts"}:
                 loaded = loader.load(img_path)
                 arr = loaded["array"]  # uint8 (H, W, 3) — normalised by ARGUS_NORM
 
@@ -147,6 +160,7 @@ class LoadFITSFromFile(BaseTransform):
                 elif arr.shape[2] == 1:
                     arr = np.concatenate([arr, arr, arr], axis=2)
 
+            # tile_crop is always None for .npy paths (tile already on disk)
             if tile_crop is not None:
                 x0, y0, ts = tile_crop
                 h, w = arr.shape[:2]
