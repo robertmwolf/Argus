@@ -113,19 +113,50 @@ The `magnification = model_input_size / native_tile_size` factor is applied by
 
 | Split | Images | Annotations | Notes |
 |-------|--------|-------------|-------|
-| `all_train_run5_tiled.json` **(Run 5, 2026-05-30)** | **6,842** | **6,664** | Native-scale 400px Atwood tiles + Frigate cluster-2 + synthetic short |
+| `all_train_run5_tiled.json` **(Run 5, 2026-05-31, patched)** | **9,495** | **9,284** | Native-scale 400px Atwood tiles + synthetic short (Frigate stripped — see below) |
 | `all_train_run5.json` (intermediate, 2026-05-30) | 2,064 | 1,956 | Full-frame Atwood — superseded by tiled version |
 | `all_train_run4.json` (Run 4, 2026-05-28) | 868 | 806 | 3 Atwood nights + Frigate diversity (superseded) |
 | `all_train_nodm_v3_external_abs.json` (Run 3, 2026-05-28) | 1,134 | 1,044 | Legacy; do not use for new runs |
 
-**Run 5 tiled composition (`all_train_run5_tiled.json`):**
+**Run 5 tiled composition (`all_train_run5_tiled.json`, patched 2026-05-31):**
 
 | Component | Tiles | Annotations | Format | Streak appearance at model input |
 |-----------|-------|-------------|--------|----------------------------------|
-| Atwood native-scale tiles | 6,387 | 6,245 | 400px virtual tile from full FITS | native px scale — medium/long streak fragments |
-| Frigate cluster-2 | 75 | 48 | 110px virtual tile → 400px (3.64×) | 127–240px (short-band equivalent) |
+| Atwood native-scale tiles | 9,115 | 8,913 | 400px virtual tile from full FITS | native px scale — medium/long streak fragments |
 | Synthetic short | 380 | 371 | 400px PNG | 3–17px (real Atwood short-band scale) |
-| **Total** | **6,842** | **6,664** | — | all bands at consistent 400px native scale |
+| Frigate cluster-2 | ~~75~~ **0** | ~~48~~ **0** | stripped — doubly-virtual path bug | see Run 6 fix below |
+| **Total** | **9,495** | **9,284** | — | — |
+
+> **⚠️ Frigate doubly-virtual path bug (2026-05-31)**
+>
+> When `all_train_run5_tiled.json` was built, the Frigate cluster-2 tiles were
+> added using their *virtual tile paths* (e.g.
+> `Capture_00921__tx1612_ty835_ts110.png`) as source images, then wrapped in a
+> second virtual tile suffix (`__tx0_ty0_ts400`), producing doubly-encoded paths
+> like `Capture_00921__tx1612_ty835_ts110__tx0_ty0_ts400.png`.
+>
+> `LoadFITSFromFile` strips only the outermost tile suffix, leaving
+> `Capture_00921__tx1612_ty835_ts110.png` as the "parent" — which is itself
+> virtual and does not exist on disk. `mmcv.imread` returns `None`, the
+> exception handler substitutes a **blank zero image**, and the model trains on
+> 75 black tiles with real streak annotations. This is actively harmful noise.
+>
+> **Fix applied:** The 75 broken Frigate tiles were stripped from
+> `all_train_run5_tiled.json` on 2026-05-31 (9,570 → 9,495 tiles).
+>
+> **Fix for Run 6:** Re-run `build_tiled_frigate_json.py` against the raw FITS
+> source files (`/Volumes/External/TrainingData/raw/frigate/raw/`) to produce
+> correct single-level virtual paths, then merge into the next training
+> annotation:
+> ```bash
+> python scripts/build_tiled_frigate_json.py \
+>   --images /Volumes/External/TrainingData/raw/frigate/raw \
+>   --annotations <frigate_obb_annotations.json> \
+>   --output /Volumes/External/TrainingData/annotations/frigate_tiled_run6.json \
+>   --tile-size 400 --overlap 0.5
+>
+> # Then merge with Atwood tiled + synthetic for all_train_run6_tiled.json
+> ```
 
 Val set: `val_atwood_tiled_400.json` — 1,384 tiles from 240 source images (same
 tiling scheme as training). Training and val signal are now consistent with inference.
