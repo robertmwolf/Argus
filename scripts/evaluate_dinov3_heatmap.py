@@ -214,6 +214,10 @@ def main() -> int:
     parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--max-samples", type=int, default=None)
     parser.add_argument("--no-refine-geometry", action="store_true")
+    parser.add_argument("--tiled", action="store_true",
+                        help="Use the pipeline detector (with tiling) instead of the "
+                             "full-image letterbox path. Required for accurate medium-band "
+                             "recall on large images. Only supported for convnext checkpoints.")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -228,6 +232,20 @@ def main() -> int:
         image_size = int(train_meta.get("image_size", 512))
         backbone = train_meta.get("backbone", "vit")
         convnext_stage = int(train_meta.get("convnext_stage") or 3)
+
+        # POLICY: heatmap models trained on cached full-image features at ≤512 px
+        # must be evaluated with --tiled when the target images are larger than the
+        # cache image_size.  Without tiling, medium streaks (150–400 px native) span
+        # <2 feature patches in the resized image, producing blob OBBs that fail all
+        # IoU thresholds.  This is a measurement error, not a model failure.
+        # The rule: if cache image_size < 600 px, always pass --tiled.
+        if not args.tiled and image_size < 600:
+            logger.warning(
+                "WARNING: evaluating a heatmap checkpoint cached at %d px without "
+                "--tiled. Medium-band recall will be artificially near zero because "
+                "medium streaks span <2 feature patches at full-image resize. "
+                "Re-run with --tiled for valid results.", image_size
+            )
     else:
         weights = args.weights or train_args.get("weights", "weights/dinov3_vitb16_lvd1689m.pth")
         model_size = train_args.get("model_size", "base")
@@ -255,6 +273,64 @@ def main() -> int:
     else:
         model.load_state_dict(ckpt["model"])
     model.eval()
+
+    # --- Tiled path: delegate to pipeline detector (handles tiling + NMS) ---
+    if args.tiled:
+        import os as _os
+        import numpy as _np
+        if backbone != "convnext":
+            logger.error("--tiled is only supported for convnext checkpoints")
+            return 1
+        _os.environ["CONVNEXT_HEATMAP_CHECKPOINT"] = args.checkpoint
+        _os.environ["CONVNEXT_HEATMAP_THRESHOLD"]  = str(args.threshold)
+        _os.environ["CONVNEXT_HEATMAP_MIN_PIXELS"] = str(args.min_pixels)
+        from inference.convnext_heatmap_detector import run_convnext_heatmap_detector
+        from inference.fits_loader import FITSLoader as _FITSLoader
+
+        _fits_loader = _FITSLoader()
+        coco_data = json.loads(Path(args.annotations).read_text())
+        images_meta = coco_data.get("images", [])
+        if args.max_samples:
+            images_meta = images_meta[:args.max_samples]
+
+        # Resolve image paths the same way StreakHeatmapDataset does
+        _ann_dir = Path(args.annotations).resolve().parent
+        def _resolve(fname: str) -> Path:
+            for base in [Path("."), _ann_dir, _ann_dir.parent]:
+                p = (base / fname).resolve()
+                if p.exists():
+                    return p
+            return Path(fname)
+
+        predictions: list[dict[str, Any]] = []
+        for meta in images_meta:
+            img_path = _resolve(meta["file_name"])
+            try:
+                arr = _load_eval_image(img_path, _fits_loader)
+                if arr is None:
+                    continue
+            except Exception as exc:
+                logger.warning("Could not load %s: %s", img_path, exc)
+                continue
+            dets = run_convnext_heatmap_detector(arr)
+            for det in dets:
+                det["image_id"] = int(meta["id"])
+            predictions.extend(dets)
+            logger.info("tiled eval img_id=%d  dets=%d", meta["id"], len(dets))
+
+        ground_truth = coco_ground_truth(Path(args.annotations))
+        if args.max_samples:
+            allowed = {int(m["id"]) for m in images_meta}
+            ground_truth = [g for g in ground_truth if int(g["image_id"]) in allowed]
+        metrics = evaluate(predictions, ground_truth)
+        out_path = Path(args.output)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {"metrics": metrics, "n_predictions": len(predictions), "tiled": True}
+        out_path.write_text(json.dumps(payload, indent=2))
+        (out_path.parent / "predictions.json").write_text(json.dumps(predictions, indent=2))
+        logger.info("wrote %s (%d predictions, tiled)", out_path, len(predictions))
+        return 0
+    # --- End tiled path ---
 
     ds = StreakHeatmapDataset(args.annotations, image_size=image_size, max_samples=args.max_samples)
     loader = DataLoader(ds, batch_size=args.batch_size, shuffle=False, collate_fn=collate_heatmap_batch)

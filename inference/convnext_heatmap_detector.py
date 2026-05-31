@@ -164,8 +164,73 @@ def _component_to_obb(
     }
 
 
+def _run_single_tile(
+    array: np.ndarray,
+    model: Any,
+    image_size: int,
+    device: torch.device,
+    threshold: float,
+    min_pixels: int,
+) -> list[dict[str, Any]]:
+    """Run detector on one tile; return detections in tile-local coordinates."""
+    if array.ndim == 2:
+        array = np.stack([array] * 3, axis=2)
+    canvas, scale, pad_x, pad_y = _letterbox(array, image_size)
+    img_tensor = torch.from_numpy(canvas.astype(np.float32) / 255.0).permute(2, 0, 1).unsqueeze(0).to(device)
+
+    with torch.no_grad():
+        output   = model(imagenet_normalize(img_tensor))
+        logits   = output[:, :1]
+        probs    = torch.sigmoid(logits)[0, 0].cpu().numpy().astype(np.float32)
+        geometry = decode_geometry(output[:, 1:5])[0].cpu().numpy() if output.shape[1] >= 5 else None
+
+    patch_size = 16  # ConvNeXt stage-2 stride equals ViT-S/16 patch stride
+    binary = probs >= threshold
+    labels, n_labels = ndimage.label(binary)
+    detections: list[dict[str, Any]] = []
+
+    for label_id in range(1, n_labels + 1):
+        mask = labels == label_id
+        if int(mask.sum()) < min_pixels:
+            continue
+        det = _component_to_obb(mask, probs, patch_size, geometry, image_size)
+        if det is None:
+            continue
+        obb = det["obb"]
+        obb["cx"]  = (obb["cx"] - pad_x) / scale
+        obb["cy"]  = (obb["cy"] - pad_y) / scale
+        obb["w"]  /= scale
+        obb["h"]  /= scale
+        det["streak_length_px"] = max(float(obb["w"]), float(obb["h"]))
+        cx, cy = obb["cx"], obb["cy"]
+        hw, hh = obb["w"] / 2, obb["h"] / 2
+        detections.append({
+            "bbox":             [cx - hw, cy - hh, cx + hw, cy + hh],
+            "confidence":       det["confidence"],
+            "method":           "convnext_heatmap",
+            "obb":              obb,
+            "streak_length_px": det["streak_length_px"],
+        })
+    return detections
+
+
+def _remap_detection(det: dict[str, Any], x0: int, y0: int) -> dict[str, Any]:
+    """Shift tile-local detection coordinates to full-image coordinates."""
+    det = dict(det)
+    b = det["bbox"]
+    det["bbox"] = [b[0] + x0, b[1] + y0, b[2] + x0, b[3] + y0]
+    obb = {**det["obb"], "cx": det["obb"]["cx"] + x0, "cy": det["obb"]["cy"] + y0}
+    det["obb"] = obb
+    return det
+
+
 def run_convnext_heatmap_detector(array: np.ndarray) -> list[dict[str, Any]]:
-    """Run the ConvNeXt heatmap detector on a single image.
+    """Run the ConvNeXt heatmap detector on a single image with tiling.
+
+    Tiles the image using ``CONVNEXT_HEATMAP_NATIVE_TILE_SIZE`` (default 1562 px)
+    so that medium streaks (~150–400 px native) span 3–8 feature patches rather
+    than <2 patches in a full-image 384 px resize.  Uses 50 % overlap between
+    tiles and NMS to deduplicate cross-tile detections.
 
     Args:
         array: uint8 RGB array, shape ``(H, W, 3)``.
@@ -179,8 +244,12 @@ def run_convnext_heatmap_detector(array: np.ndarray) -> list[dict[str, Any]]:
         logger.debug("ConvNeXt heatmap checkpoint not found at %s; skipping", checkpoint)
         return []
 
-    threshold  = float(os.environ.get("CONVNEXT_HEATMAP_THRESHOLD", "0.5"))
-    min_pixels = int(os.environ.get("CONVNEXT_HEATMAP_MIN_PIXELS", "2"))
+    threshold        = float(os.environ.get("CONVNEXT_HEATMAP_THRESHOLD", "0.5"))
+    min_pixels       = int(os.environ.get("CONVNEXT_HEATMAP_MIN_PIXELS", "2"))
+    # 1562 px tiles on 6248 px Atwood images → 4 tiles/row, giving a 300 px
+    # medium streak ~74 px at model input (4.6 patches vs 1.2 without tiling).
+    native_tile_size = int(os.environ.get("CONVNEXT_HEATMAP_NATIVE_TILE_SIZE", "1562"))
+    tile_overlap     = float(os.environ.get("CONVNEXT_HEATMAP_TILE_OVERLAP", "0.5"))
 
     try:
         model, image_size, device = _load_model(checkpoint)
@@ -193,51 +262,38 @@ def run_convnext_heatmap_detector(array: np.ndarray) -> list[dict[str, Any]]:
     if array.dtype != np.uint8:
         array = np.clip(array, 0, 255).astype(np.uint8)
 
-    canvas, scale, pad_x, pad_y = _letterbox(array, image_size)
-    h_orig, w_orig = array.shape[:2]
+    h, w = array.shape[:2]
 
-    img_tensor = torch.from_numpy(canvas.astype(np.float32) / 255.0).permute(2, 0, 1).unsqueeze(0).to(device)
+    if max(h, w) <= native_tile_size:
+        dets = _run_single_tile(array, model, image_size, device, threshold, min_pixels)
+        logger.debug("ConvNeXt heatmap (single shot): %d detection(s)", len(dets))
+        return dets
 
-    with torch.no_grad():
-        output   = model(imagenet_normalize(img_tensor))
-        logits   = output[:, :1]
-        probs    = torch.sigmoid(logits)[0, 0].cpu().numpy().astype(np.float32)
-        geometry = None
-        if output.shape[1] >= 5:
-            geometry = decode_geometry(output[:, 1:5])[0].cpu().numpy()
+    from inference.tiled_pipeline import tile_image, _torchvision_nms, _numpy_nms
 
-    # ConvNeXt stage-2 stride is 16 — same as ViT-S patch-16.
-    patch_size = 16
+    all_dets: list[dict[str, Any]] = []
+    for tile, x0, y0 in tile_image(array, native_tile_size, tile_overlap):
+        for det in _run_single_tile(tile, model, image_size, device, threshold, min_pixels):
+            all_dets.append(_remap_detection(det, x0, y0))
 
-    binary = probs >= threshold
-    labels, n_labels = ndimage.label(binary)
-    detections: list[dict[str, Any]] = []
+    if len(all_dets) <= 1:
+        logger.debug("ConvNeXt heatmap (tiled): %d detection(s)", len(all_dets))
+        return all_dets
 
-    for label_id in range(1, n_labels + 1):
-        mask = labels == label_id
-        if int(mask.sum()) < min_pixels:
-            continue
-        det = _component_to_obb(mask, probs, patch_size, geometry, image_size)
-        if det is None:
-            continue
+    preds_xywh = [
+        {
+            "bbox":        [d["bbox"][0], d["bbox"][1],
+                            d["bbox"][2] - d["bbox"][0], d["bbox"][3] - d["bbox"][1]],
+            "score":       float(d["confidence"]),
+            "category_id": 1,
+        }
+        for d in all_dets
+    ]
+    try:
+        kept = _torchvision_nms(preds_xywh, iou_threshold=0.3)
+    except Exception:
+        kept = _numpy_nms(preds_xywh, iou_threshold=0.3)
 
-        obb = det["obb"]
-        obb["cx"]   = (obb["cx"] - pad_x) / scale
-        obb["cy"]   = (obb["cy"] - pad_y) / scale
-        obb["w"]   /= scale
-        obb["h"]   /= scale
-        det["streak_length_px"] = max(float(obb["w"]), float(obb["h"]))
-
-        cx, cy = obb["cx"], obb["cy"]
-        hw, hh = obb["w"] / 2, obb["h"] / 2
-        detections.append({
-            "bbox":             [cx - hw, cy - hh, cx + hw, cy + hh],
-            "confidence":       det["confidence"],
-            "method":           "convnext_heatmap",
-            "obb":              obb,
-            "streak_length_px": det["streak_length_px"],
-        })
-
-    detections.sort(key=lambda d: d["confidence"], reverse=True)
-    logger.debug("ConvNeXt heatmap: %d detection(s)", len(detections))
-    return detections
+    result = [all_dets[i] for i in kept]
+    logger.debug("ConvNeXt heatmap (tiled): %d raw → %d after NMS", len(all_dets), len(result))
+    return result

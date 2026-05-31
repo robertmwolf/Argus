@@ -69,6 +69,17 @@ python -m training.train_dino --config models/dino/streak_dinov3_vitb_400px_run3
     --work-dir weights/run5_vitb
 ```
 
+### Evaluation rules (apply to every heatmap eval)
+
+**Always use `--tiled` when evaluating heatmap checkpoints on full-resolution
+Atwood images (6248×4176).** Without tiling, medium streaks (150–400 px native)
+span <2 feature patches at 384 px cache resolution, producing blob OBBs that
+fail all IoU thresholds. This is a measurement error, not a model failure.
+The eval script warns but does not abort — it is your responsibility to pass `--tiled`.
+
+Applies to: `scripts/evaluate_dinov3_heatmap.py` for any checkpoint with
+`cache image_size < 600 px`. See `docs/training_methods.md §6` for full policy.
+
 ### Post-Run 5 evaluation priorities
 
 1. **Evaluate on `test_atwood.json`** at conf=0.20 (not 0.30)

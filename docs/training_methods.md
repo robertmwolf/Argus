@@ -1037,6 +1037,60 @@ Registered as detector `convnext_heatmap` in `inference/pipeline.py`. Loaded via
 
 ---
 
+---
+
+## 6. Evaluation Policy
+
+### 6.1 Heatmap models must be evaluated with tiled inference
+
+**Rule: always pass `--tiled` when evaluating any heatmap checkpoint against
+full-resolution images (e.g. Atwood 6248×4176).**
+
+Without tiling, the full image is letterboxed to the cache `image_size`
+(typically 384–512 px). At that scale, a 300 px medium streak in a 6248 px
+image spans only **1–2 feature patches** at the 16 px stride. The model
+activates a blob covering several adjacent patches; the resulting OBB fails
+every IoU threshold against the thin ground-truth annotation. This looks like
+a recall failure but is a **measurement error** caused by sub-patch resolution.
+
+With `CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=1562` (the default for Atwood images),
+the same 300 px streak spans **~4.6 patches** — enough for the OBB to be
+geometrically meaningful.
+
+The eval script (`scripts/evaluate_dinov3_heatmap.py`) emits a `WARNING` if
+`--tiled` is omitted for checkpoints cached at < 600 px.
+
+### 6.2 Consistency between training data and evaluation
+
+If the training dataset was built from pre-tiled images (e.g. Atwood tiles at
+`native_tile_size=400`, Frigate tiles at 110 px), the evaluation must apply
+equivalent tiling so the model sees similar streak sizes at inference. A model
+trained on 400 px tiles of a 6248 px image expects streaks to appear as they
+would in a 400 px crop, not as they would when the full 6248 px frame is
+letterboxed to 384 px.
+
+**Summary table:**
+
+| Training path | Eval image size | Must use `--tiled`? |
+|---|---|---|
+| Full-image cached at ≥ 1024 px | Any | No |
+| Full-image cached at < 600 px | > 1000 px native | **Yes** |
+| Pre-tiled dataset (any tile size) | > tile_size native | **Yes** |
+| MMDet (native resolution inference) | Any | N/A — uses `--conf` |
+
+### 6.3 Confidence threshold consistency
+
+MMDet / OBB models: use `conf=0.20` (per Run 4 post-analysis; 45 % of FNs had
+correct-location predictions at conf 0.10–0.29 — lowering from 0.30 recovered
+these).
+
+Heatmap models: the binarisation `--threshold` is not equivalent to MMDet
+confidence. Default `--threshold 0.5` is the correct operating point for
+evaluating detection coverage. Use `CONVNEXT_HEATMAP_THRESHOLD=0.99` for
+precision-critical deployment (zero FP on negatives, ~87 % recall).
+
+---
+
 ## 7. Open Questions
 
 1. **Frigate attribution** — blocks use of Frigate tiles in the published training set

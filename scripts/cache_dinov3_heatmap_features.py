@@ -1,14 +1,39 @@
-"""Cache frozen DINOv3 features for the plain heatmap spike."""
+"""Cache frozen DINOv3 features for the plain heatmap spike.
+
+Supports two modes:
+
+Full-image mode (default, --native-tile-size 0):
+    Each image is letterboxed to ``--image-size`` and cached as one entry.
+    Suitable for whole-frame inference, but medium streaks in large images
+    (e.g. 6248 px Atwood) span <2 feature patches at 384 px — the model
+    learns blob detections and cannot produce tight OBBs.
+
+Tiled mode (--native-tile-size N):
+    Each image is partitioned into overlapping N×N px crops, each letterboxed
+    to ``--image-size``.  Annotations are transformed to tile-local coordinates
+    and filtered to tiles where the streak centre falls inside.  Use
+    ``--native-tile-size 1562`` for Atwood 6248 px images (4 tiles/row) —
+    a 300 px medium streak then spans ~4.6 feature patches rather than ~1.2.
+
+    IMPORTANT: a model trained in tiled mode must be evaluated with
+    ``--tiled`` in ``evaluate_dinov3_heatmap.py``.  Mixing training and
+    inference modes produces distribution mismatch and inflated false
+    positives (see docs/training_methods.md §6).
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
 import logging
+import math
 from pathlib import Path
 import sys
+from typing import Any
 
+import numpy as np
 import torch
+from PIL import Image
 from torch.utils.data import DataLoader
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -16,6 +41,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from inference.device import get_device
+from inference.fits_loader import FITSLoader
 from models.plain_dinov3.streak_heatmap import (
     ConvNeXtStreakHeatmap,
     DINOv3StreakHeatmap,
@@ -24,6 +50,224 @@ from models.plain_dinov3.streak_heatmap import (
 from training.dinov3_heatmap_dataset import StreakHeatmapDataset, collate_heatmap_batch
 
 logger = logging.getLogger(__name__)
+
+
+def _letterbox_array(array: np.ndarray, size: int) -> tuple[np.ndarray, float, float, float]:
+    """Letterbox ``array`` into a square ``size×size`` canvas.
+
+    Returns:
+        (canvas_uint8, scale, pad_x, pad_y)
+    """
+    h, w = array.shape[:2]
+    scale = min(size / w, size / h)
+    new_w = max(1, int(round(w * scale)))
+    new_h = max(1, int(round(h * scale)))
+    pad_x = (size - new_w) / 2.0
+    pad_y = (size - new_h) / 2.0
+    resized = np.array(Image.fromarray(array).resize((new_w, new_h), Image.BILINEAR))
+    canvas = np.zeros((size, size, 3), dtype=np.uint8)
+    canvas[round(pad_y):round(pad_y) + new_h, round(pad_x):round(pad_x) + new_w] = resized
+    return canvas, float(scale), float(pad_x), float(pad_y)
+
+
+def _build_tile_targets(
+    anns: list[dict[str, Any]],
+    tile_w: int,
+    tile_h: int,
+    image_size: int,
+    scale: float,
+    pad_x: float,
+    pad_y: float,
+    patch_size: int = 16,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Build heatmap + geometry targets for one tile.
+
+    Annotations are given in **full-image** coordinates; ``tile_x0`` /
+    ``tile_y0`` have already been subtracted before this call so all ``cx/cy``
+    values are in tile-local pixels.
+
+    Returns:
+        (heatmap, geometry) tensors matching StreakHeatmapDataset conventions.
+    """
+    grid = image_size // patch_size
+    target = np.zeros((grid, grid), dtype=np.float32)
+    geom   = np.zeros((4, grid, grid), dtype=np.float32)
+
+    yy, xx = np.mgrid[0:grid, 0:grid].astype(np.float32)
+    px = (xx + 0.5) * patch_size
+    py = (yy + 0.5) * patch_size
+
+    for ann in anns:
+        obb = ann.get("obb")
+        if not obb:
+            continue
+        if isinstance(obb, dict):
+            cx   = float(obb["cx"])   * scale + pad_x
+            cy   = float(obb["cy"])   * scale + pad_y
+            w    = float(obb["w"])    * scale
+            h    = float(obb["h"])    * scale
+            adeg = float(obb.get("angle_deg", 0.0))
+        else:
+            cx   = float(obb[0]) * scale + pad_x
+            cy   = float(obb[1]) * scale + pad_y
+            w    = float(obb[2]) * scale
+            h    = float(obb[3]) * scale
+            adeg = float(obb[4])
+
+        length = max(w, h)
+        width  = max(min(w, h), patch_size)
+        angle  = math.radians(adeg)
+        ux, uy = math.cos(angle), math.sin(angle)
+
+        dx = px - cx; dy = py - cy
+        along  = dx * ux + dy * uy
+        across = np.abs(-dx * uy + dy * ux)
+        mask   = (np.abs(along) <= length / 2 + 8.0) & (across <= width / 2 + 8.0)
+        target[mask] = 1.0
+        geom[0, mask] = math.cos(2.0 * angle)
+        geom[1, mask] = math.sin(2.0 * angle)
+        geom[2, mask] = min(length / image_size, 2.0)
+        geom[3, mask] = min(width  / image_size, 1.0)
+
+    geom[:, target <= 0] = 0.0
+    return torch.from_numpy(target).unsqueeze(0), torch.from_numpy(geom)
+
+
+def _load_image_array(path: Path, loader: FITSLoader) -> np.ndarray | None:
+    suffix = path.suffix.lower()
+    try:
+        if suffix in {".fits", ".fit", ".fts"}:
+            arr = np.asarray(loader.load(path)["array"], dtype=np.uint8)
+        else:
+            with Image.open(path) as im:
+                arr = np.asarray(im.convert("RGB"), dtype=np.uint8)
+        if arr.ndim == 2:
+            arr = np.stack([arr] * 3, axis=2)
+        return arr
+    except Exception as exc:
+        logger.warning("Could not load %s: %s", path, exc)
+        return None
+
+
+def _cache_tiled(
+    coco_data: dict[str, Any],
+    model: Any,
+    device: torch.device,
+    image_size: int,
+    feature_dir: Path,
+    native_tile_size: int,
+    tile_overlap: float,
+    max_samples: int | None,
+    ann_dir: Path,
+) -> list[dict]:
+    """Cache features by tiling each image. Returns the manifest entries."""
+    from inference.tiled_pipeline import tile_image
+
+    loader = FITSLoader()
+    images_meta = coco_data.get("images", [])
+    if max_samples:
+        images_meta = images_meta[:max_samples]
+
+    id_to_anns: dict[int, list] = {}
+    for ann in coco_data.get("annotations", []):
+        id_to_anns.setdefault(int(ann["image_id"]), []).append(ann)
+
+    def _resolve(fname: str) -> Path:
+        raw = Path(fname)
+        if raw.is_absolute():
+            return raw
+        for base in [ann_dir, ann_dir.parent, Path("data")]:
+            p = (base / raw).resolve()
+            if p.exists():
+                return p
+        return ann_dir / raw
+
+    manifest: list[dict] = []
+    for img_meta in images_meta:
+        img_id   = int(img_meta["id"])
+        img_path = _resolve(str(img_meta["file_name"]))
+        array    = _load_image_array(img_path, loader)
+        if array is None:
+            continue
+
+        orig_anns = id_to_anns.get(img_id, [])
+        tile_idx  = 0
+
+        for tile, x0, y0 in tile_image(array, native_tile_size, tile_overlap):
+            tw, th = tile.shape[1], tile.shape[0]
+
+            # Filter annotations whose centre falls inside this tile (with a
+            # half-tile margin so streaks that straddle edges are included).
+            margin = native_tile_size * 0.5
+            tile_anns = []
+            for ann in orig_anns:
+                obb = ann.get("obb")
+                if not obb:
+                    continue
+                cx_full = float(obb["cx"] if isinstance(obb, dict) else obb[0])
+                cy_full = float(obb["cy"] if isinstance(obb, dict) else obb[1])
+                if (x0 - margin <= cx_full < x0 + tw + margin and
+                        y0 - margin <= cy_full < y0 + th + margin):
+                    # Shift to tile-local coordinates
+                    local = dict(ann)
+                    raw_obb = local["obb"]
+                    if isinstance(raw_obb, dict):
+                        local["obb"] = {**raw_obb,
+                                        "cx": cx_full - x0,
+                                        "cy": cy_full - y0}
+                    else:
+                        lo = list(raw_obb)
+                        lo[0] -= x0; lo[1] -= y0
+                        local["obb"] = lo
+                    tile_anns.append(local)
+
+            canvas, scale, pad_x, pad_y = _letterbox_array(tile, image_size)
+            img_tensor = (torch.from_numpy(canvas.astype(np.float32) / 255.0)
+                          .permute(2, 0, 1).unsqueeze(0).to(device))
+
+            with torch.no_grad():
+                features = model.extract_features(
+                    imagenet_normalize(img_tensor)
+                ).cpu().to(torch.float16).squeeze(0)
+
+            heatmap, geometry = _build_tile_targets(
+                tile_anns, tw, th, image_size, scale, pad_x, pad_y
+            )
+
+            sample_id = img_id * 10000 + tile_idx
+            rel_path  = Path("features") / f"{sample_id}.pt"
+            torch.save(
+                {
+                    "features":      features,
+                    "heatmap":       heatmap.to(torch.float16),
+                    "center_heatmap": torch.zeros_like(heatmap, dtype=torch.float16),
+                    "box_target":    torch.zeros((6, features.shape[1], features.shape[2]),
+                                                 dtype=torch.float16),
+                    "box_mask":      torch.zeros((1, features.shape[1], features.shape[2]),
+                                                 dtype=torch.float16),
+                    "geometry":      geometry.to(torch.float16),
+                    "image_id":      sample_id,
+                    "orig_size":     [th, tw],
+                    "letterbox":     [scale, pad_x, pad_y],
+                    "file_name":     str(img_meta["file_name"]),
+                    "tile_origin":   [x0, y0],
+                    "orig_image_id": img_id,
+                },
+                feature_dir.parent / rel_path,
+            )
+            manifest.append({
+                "image_id":      sample_id,
+                "path":          str(rel_path),
+                "file_name":     str(img_meta["file_name"]),
+                "tile_origin":   [x0, y0],
+                "orig_image_id": img_id,
+            })
+            tile_idx += 1
+
+        logger.info("tiled img_id=%d  tiles=%d  anns=%d  total_cached=%d",
+                    img_id, tile_idx, len(orig_anns), len(manifest))
+
+    return manifest
 
 
 def main() -> int:
@@ -47,6 +291,14 @@ def main() -> int:
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--max-samples", type=int, default=None)
     parser.add_argument("--num-workers", type=int, default=0)
+    parser.add_argument("--native-tile-size", type=int, default=0,
+                        help="Tile the image into overlapping N×N px crops before "
+                             "caching (0 = full-image letterbox, the old default). "
+                             "Use 1562 for Atwood 6248 px images (4 tiles/row). "
+                             "Models trained on tiled caches MUST be evaluated with "
+                             "--tiled in evaluate_dinov3_heatmap.py.")
+    parser.add_argument("--tile-overlap", type=float, default=0.5,
+                        help="Fractional overlap between tiles (default 0.5).")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -85,6 +337,42 @@ def main() -> int:
     else:
         model = DINOv3StreakHeatmap(model_size=args.model_size, weights=weights).to(device)
     model.eval()
+
+    # --- Tiled path ---
+    if args.native_tile_size > 0:
+        logger.info(
+            "Tiled caching: native_tile_size=%d overlap=%.2f  "
+            "(models trained this way MUST be evaluated with --tiled)",
+            args.native_tile_size, args.tile_overlap,
+        )
+        coco_data = json.loads(Path(args.annotations).read_text())
+        manifest = _cache_tiled(
+            coco_data=coco_data,
+            model=model,
+            device=device,
+            image_size=args.image_size,
+            feature_dir=feature_dir,
+            native_tile_size=args.native_tile_size,
+            tile_overlap=args.tile_overlap,
+            max_samples=args.max_samples,
+            ann_dir=Path(args.annotations).resolve().parent,
+        )
+        metadata = {
+            "annotations":    args.annotations,
+            "weights":        weights,
+            "backbone":       args.backbone,
+            "model_size":     args.model_size,
+            "convnext_stage": args.convnext_stage if args.backbone == "convnext" else None,
+            "image_size":     args.image_size,
+            "native_tile_size": args.native_tile_size,
+            "tile_overlap":   args.tile_overlap,
+            "n_samples":      len(manifest),
+            "manifest":       manifest,
+        }
+        (out_dir / "manifest.json").write_text(json.dumps(metadata, indent=2))
+        logger.info("wrote tiled cache manifest: %s (%d tiles)", out_dir / "manifest.json", len(manifest))
+        return 0
+    # --- End tiled path ---
 
     manifest: list[dict] = []
     with torch.no_grad():
