@@ -76,14 +76,20 @@ python -m training.train_dino --config models/dino/streak_dinov3_vitb_400px_run3
 
 ### Evaluation rules (apply to every heatmap eval)
 
-**Always use `--tiled` when evaluating heatmap checkpoints on full-resolution
-Atwood images (6248×4176).** Without tiling, medium streaks (150–400 px native)
-span <2 feature patches at 384 px cache resolution, producing blob OBBs that
-fail all IoU thresholds. This is a measurement error, not a model failure.
-The eval script warns but does not abort — it is your responsibility to pass `--tiled`.
+**Standard heatmap training strategy (all future runs):**
+- Cache features with `--native-tile-size 400 --tile-overlap 0.5` on the full-frame
+  annotation file (e.g. `all_train_run5.json`). This tiles each 6248×4176 Atwood image
+  into ~4–6 annotation-covered 400px crops — same scale as the OBB training data.
+- Write cache to external drive: `/Volumes/External/TrainingData/heatmap_cache/<run>/`
+- Train with `train_dinov3_heatmap_cached.py` on the tiled cache.
+- Evaluate with `--tiled` in `evaluate_dinov3_heatmap.py`.
+
+**Full-image caching (no `--native-tile-size`) must not be used for Atwood-scale images.**
+Medium streaks span <2 feature patches at full-frame 384px — blob detections, not
+thin-line OBBs. The eval script warns but does not abort. See `docs/training_methods.md §6`.
 
 Applies to: `scripts/evaluate_dinov3_heatmap.py` for any checkpoint with
-`cache image_size < 600 px`. See `docs/training_methods.md §6` for full policy.
+`cache image_size < 600 px`.
 
 ### Post-Run 5 evaluation priorities
 

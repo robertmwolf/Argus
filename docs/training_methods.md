@@ -946,26 +946,27 @@ detection quality vs the ViT-S transformer. ConvNeXt has local inductive biases
 
 ### Training Protocol
 
-**Dataset:** `all_train_run5_tiled.json` — 9,570 pre-tiled 400×400 px FITS crops,
-9,332 annotations, 8,913 with OBB. Medium streaks span ~18 feature patches at
-model input (vs <2 in the full-frame approach). Val: `val_atwood_tiled_400.json`
-(1,384 tiles, 1,350 annotations).
+**Dataset:** `all_train_run5.json` (2,064 full-frame images), tiled on-the-fly
+during caching with `--native-tile-size 400`. Annotation-covered tiles only
+(≥25 % bbox area visible). Produces ~4–6 tiles per positive image ≈ ~10,000
+tiles total. Medium streaks span ~18 feature patches (vs <2 full-frame).
+Val: `val_atwood.json` (240 images), same tiling.
 
 **Two-stage cached training:**
 
-1. **Feature extraction** — frozen backbone forward pass on all tiles:
+1. **Feature extraction** — frozen backbone forward pass, tiling on-the-fly:
    ```
    python scripts/cache_dinov3_heatmap_features.py \
-     --annotations data/annotations/all_train_run5_tiled.json \
-     --output-dir  data/heatmap_cache/convnext_small_s2_pretiled_train \
+     --annotations data/annotations/all_train_run5.json \
+     --output-dir  /Volumes/External/TrainingData/heatmap_cache/convnext_small_s2_pretiled_train \
      --backbone convnext --model-size small --convnext-stage 2 \
-     --image-size 384
+     --image-size 384 --native-tile-size 400 --tile-overlap 0.5
 
    python scripts/cache_dinov3_heatmap_features.py \
-     --annotations data/annotations/val_atwood_tiled_400.json \
-     --output-dir  data/heatmap_cache/convnext_small_s2_pretiled_val \
+     --annotations data/annotations/val_atwood.json \
+     --output-dir  /Volumes/External/TrainingData/heatmap_cache/convnext_small_s2_pretiled_val \
      --backbone convnext --model-size small --convnext-stage 2 \
-     --image-size 384
+     --image-size 384 --native-tile-size 400 --tile-overlap 0.5
    ```
 
 2. **Head training** — head-only AdamW on cached features:
@@ -1034,7 +1035,34 @@ geometrically meaningful.
 The eval script (`scripts/evaluate_dinov3_heatmap.py`) emits a `WARNING` if
 `--tiled` is omitted for checkpoints cached at < 600 px.
 
-### 6.2 OBB must be present in tiled annotation files
+### 6.2 Standard tiling strategy for all future heatmap runs
+
+**All heatmap model training runs on Atwood-scale images (≥1000 px native)
+must use `--native-tile-size 400` when caching features.** This is the
+canonical scale: native 400 px crops letterboxed to 384 px model input give
+medium streaks (150–400 px) ~18 feature patches — enough for accurate OBB
+geometry. Full-frame caching at 384 px gives <2 patches for medium streaks.
+
+**Tile selection rule:** only tiles where ≥25 % of at least one annotation
+bbox is visible are cached (controlled by `--min-area-fraction 0.25`). This
+matches the tile selection in `build_tiled_brentimages_json.py` and keeps
+tile counts at ~4–6 per positive image (vs 620 without filtering).
+
+**Cache goes on the external drive:** heatmap caches are large enough (tens
+of GB for 9k+ tiles) that they should be written to the external drive:
+
+```bash
+python scripts/cache_dinov3_heatmap_features.py \
+  --annotations data/annotations/all_train_run5.json \
+  --output-dir  /Volumes/External/TrainingData/heatmap_cache/<run_name>_train \
+  --backbone convnext --model-size small --convnext-stage 2 \
+  --image-size 384 --native-tile-size 400 --tile-overlap 0.5
+```
+
+**Evaluation** of a model trained with `--native-tile-size 400` must use
+`--tiled` in `evaluate_dinov3_heatmap.py` (see §6.1).
+
+### 6.3 OBB must be present in tiled annotation files
 
 Both tiling scripts (`build_tiled_brentimages_json.py` and `build_tiled_frigate_json.py`)
 now output an `obb` field alongside `bbox` in every tile annotation. The OBB

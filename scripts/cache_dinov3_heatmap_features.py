@@ -159,10 +159,30 @@ def _cache_tiled(
     tile_overlap: float,
     max_samples: int | None,
     ann_dir: Path,
+    min_area_fraction: float = 0.25,
+    neg_tiles_per_image: int = 2,
+    random_seed: int = 42,
 ) -> list[dict]:
-    """Cache features by tiling each image. Returns the manifest entries."""
+    """Cache features by tiling each image, selecting only annotation-covered tiles.
+
+    Tile selection mirrors ``build_tiled_brentimages_json.py``:
+
+    * **Positive tiles** — included when ≥1 annotation bbox retains at least
+      ``min_area_fraction`` (default 25 %) of its original area after clipping
+      to the tile.  This is checked *before* running the backbone so we never
+      pay for tiles that carry no training signal.
+    * **Negative tiles** — ``neg_tiles_per_image`` random tiles per image that
+      has no annotations at all (domain adaptation; background appearance).
+    * **Background tiles inside positive images** are *not* added.  The heatmap
+      loss treats missing patches as negatives automatically.
+
+    This keeps tile counts at roughly 3–6 per positive image (vs 620 with the
+    old exhaustive approach), making the cache feasible on a single machine.
+    """
+    import random as _random
     from inference.tiled_pipeline import tile_image
 
+    rng = _random.Random(random_seed)
     loader = FITSLoader()
     images_meta = coco_data.get("images", [])
     if max_samples:
@@ -182,6 +202,21 @@ def _cache_tiled(
                 return p
         return ann_dir / raw
 
+    def _ann_area_in_tile(ann: dict, x0: int, y0: int, ts: int) -> float:
+        """Return fraction of annotation bbox visible inside the tile."""
+        bbox = ann.get("bbox")
+        if not bbox:
+            return 0.0
+        bx, by, bw, bh = float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])
+        orig_area = bw * bh
+        if orig_area <= 0:
+            return 0.0
+        x1 = max(bx, float(x0));  y1 = max(by, float(y0))
+        x2 = min(bx + bw, float(x0 + ts)); y2 = min(by + bh, float(y0 + ts))
+        if x2 <= x1 or y2 <= y1:
+            return 0.0
+        return (x2 - x1) * (y2 - y1) / orig_area
+
     manifest: list[dict] = []
     for img_meta in images_meta:
         img_id   = int(img_meta["id"])
@@ -191,35 +226,46 @@ def _cache_tiled(
             continue
 
         orig_anns = id_to_anns.get(img_id, [])
-        tile_idx  = 0
 
-        for tile, x0, y0 in tile_image(array, native_tile_size, tile_overlap):
+        # Collect all tiles first; decide which to keep without running backbone.
+        all_tiles = list(tile_image(array, native_tile_size, tile_overlap))
+
+        if orig_anns:
+            # Positive image: keep tiles with ≥min_area_fraction of any annotation.
+            selected = []
+            for tile, x0, y0 in all_tiles:
+                ts = native_tile_size
+                qualifying = [
+                    ann for ann in orig_anns
+                    if _ann_area_in_tile(ann, x0, y0, ts) >= min_area_fraction
+                ]
+                if qualifying:
+                    selected.append((tile, x0, y0, qualifying))
+        else:
+            # Negative image: a few random tiles for domain adaptation.
+            chosen = rng.sample(all_tiles, k=min(neg_tiles_per_image, len(all_tiles)))
+            selected = [(tile, x0, y0, []) for tile, x0, y0 in chosen]
+
+        tile_idx = 0
+        for tile, x0, y0, qualifying_anns in selected:
             tw, th = tile.shape[1], tile.shape[0]
 
-            # Filter annotations whose centre falls inside this tile (with a
-            # half-tile margin so streaks that straddle edges are included).
-            margin = native_tile_size * 0.5
+            # Shift qualifying annotation OBBs to tile-local coordinates.
             tile_anns = []
-            for ann in orig_anns:
+            for ann in qualifying_anns:
                 obb = ann.get("obb")
                 if not obb:
                     continue
                 cx_full = float(obb["cx"] if isinstance(obb, dict) else obb[0])
                 cy_full = float(obb["cy"] if isinstance(obb, dict) else obb[1])
-                if (x0 - margin <= cx_full < x0 + tw + margin and
-                        y0 - margin <= cy_full < y0 + th + margin):
-                    # Shift to tile-local coordinates
-                    local = dict(ann)
-                    raw_obb = local["obb"]
-                    if isinstance(raw_obb, dict):
-                        local["obb"] = {**raw_obb,
-                                        "cx": cx_full - x0,
-                                        "cy": cy_full - y0}
-                    else:
-                        lo = list(raw_obb)
-                        lo[0] -= x0; lo[1] -= y0
-                        local["obb"] = lo
-                    tile_anns.append(local)
+                local = dict(ann)
+                raw_obb = local["obb"]
+                if isinstance(raw_obb, dict):
+                    local["obb"] = {**raw_obb, "cx": cx_full - x0, "cy": cy_full - y0}
+                else:
+                    lo = list(raw_obb); lo[0] -= x0; lo[1] -= y0
+                    local["obb"] = lo
+                tile_anns.append(local)
 
             canvas, scale, pad_x, pad_y = _letterbox_array(tile, image_size)
             img_tensor = (torch.from_numpy(canvas.astype(np.float32) / 255.0)
@@ -294,11 +340,20 @@ def main() -> int:
     parser.add_argument("--native-tile-size", type=int, default=0,
                         help="Tile the image into overlapping N×N px crops before "
                              "caching (0 = full-image letterbox, the old default). "
-                             "Use 1562 for Atwood 6248 px images (4 tiles/row). "
+                             "For Atwood 6248 px images use 400 (matching the OBB "
+                             "training data scale). Only tiles with ≥25 %% of any "
+                             "annotation bbox visible are cached (same gate as "
+                             "build_tiled_brentimages_json.py). "
                              "Models trained on tiled caches MUST be evaluated with "
                              "--tiled in evaluate_dinov3_heatmap.py.")
     parser.add_argument("--tile-overlap", type=float, default=0.5,
                         help="Fractional overlap between tiles (default 0.5).")
+    parser.add_argument("--min-area-fraction", type=float, default=0.25,
+                        help="Min fraction of annotation bbox area that must be "
+                             "visible in a tile to include it (default 0.25).")
+    parser.add_argument("--neg-tiles-per-image", type=int, default=2,
+                        help="Random background tiles to cache per unannotated "
+                             "image for domain adaptation (default 2).")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -356,6 +411,8 @@ def main() -> int:
             tile_overlap=args.tile_overlap,
             max_samples=args.max_samples,
             ann_dir=Path(args.annotations).resolve().parent,
+            min_area_fraction=args.min_area_fraction,
+            neg_tiles_per_image=args.neg_tiles_per_image,
         )
         metadata = {
             "annotations":    args.annotations,
