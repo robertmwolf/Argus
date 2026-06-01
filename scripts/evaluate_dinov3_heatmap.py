@@ -277,16 +277,22 @@ def main() -> int:
     # --- Tiled path: delegate to pipeline detector (handles tiling + NMS) ---
     if args.tiled:
         import os as _os
-        import numpy as _np
-        if backbone != "convnext":
-            logger.error("--tiled is only supported for convnext checkpoints")
+        if backbone == "convnext":
+            _os.environ["CONVNEXT_HEATMAP_CHECKPOINT"] = args.checkpoint
+            _os.environ["CONVNEXT_HEATMAP_THRESHOLD"]  = str(args.threshold)
+            _os.environ["CONVNEXT_HEATMAP_MIN_PIXELS"] = str(args.min_pixels)
+            from inference.convnext_heatmap_detector import run_convnext_heatmap_detector as _run_tiled
+        elif backbone == "vit":
+            _os.environ["VITS_HEATMAP_THRESHOLD"]  = str(args.threshold)
+            _os.environ["VITS_HEATMAP_MIN_PIXELS"] = str(args.min_pixels)
+            from inference.vits_heatmap_detector import run_vits_heatmap_detector as _run_tiled_vit
+            def _run_tiled(arr):  # type: ignore[misc]
+                return _run_tiled_vit(arr, checkpoint=Path(args.checkpoint))
+        else:
+            logger.error("--tiled is only supported for convnext and vit checkpoints")
             return 1
-        _os.environ["CONVNEXT_HEATMAP_CHECKPOINT"] = args.checkpoint
-        _os.environ["CONVNEXT_HEATMAP_THRESHOLD"]  = str(args.threshold)
-        _os.environ["CONVNEXT_HEATMAP_MIN_PIXELS"] = str(args.min_pixels)
-        from inference.convnext_heatmap_detector import run_convnext_heatmap_detector
-        from inference.fits_loader import FITSLoader as _FITSLoader
 
+        from inference.fits_loader import FITSLoader as _FITSLoader
         _fits_loader = _FITSLoader()
         coco_data = json.loads(Path(args.annotations).read_text())
         images_meta = coco_data.get("images", [])
@@ -312,7 +318,7 @@ def main() -> int:
             except Exception as exc:
                 logger.warning("Could not load %s: %s", img_path, exc)
                 continue
-            dets = run_convnext_heatmap_detector(arr)
+            dets = _run_tiled(arr)
             for det in dets:
                 det["image_id"] = int(meta["id"])
             predictions.extend(dets)
