@@ -45,11 +45,12 @@ Progress:
 - ✅ **Frigate corpus analysis (2026-05-30)**:
   - 86% of annotations are near-circular blobs (<25px, AR~1) — provide no useful training signal
   - 13% (cluster-2, ≥35px, AR≥2) are genuine linear streaks — tiled at 110px for 3.64× zoom
-- 🔄 **Run 5 ConvNeXt-S Stage-2 HeatMap (retrain in progress, 2026-05-31)**:
+- ✅ **Run 5 ConvNeXt-S Stage-2 HeatMap — pretiled (2026-05-31)**:
   - Backbone: DINOv3 ConvNeXt-Small, stage 2, frozen (384ch at H/16, stride 16)
   - Training data: `all_train_run5_tiled.json` (9,570 pre-tiled 400px crops, **with OBBs**)
   - Previous full-frame run (2026-05-30) had medium-band scale mismatch; this run fixes it
-  - Weights (in progress): `weights/run5_convnext_small_s2_heatmap_pretiled/best.pt`
+  - Weights: `weights/run5_convnext_small_s2_heatmap_pretiled/best.pt`
+  - **val_dice=0.918** (epoch 50/50) vs 0.842 full-frame — +0.076 improvement
   - Registered as detector `convnext_heatmap` in pipeline. See `docs/training_methods.md §3.7`
   - **TILING SCRIPTS FIXED (2026-05-31):** `build_tiled_brentimages_json.py` and
     `build_tiled_frigate_json.py` now output tile-local `obb` fields. Old tiled

@@ -1024,8 +1024,22 @@ Val: `val_atwood.json` (240 images), same tiling.
 
 ### Results
 
-> Results pending — training in progress (2026-05-31). This section will be
-> updated with val/test metrics once the run completes.
+**Validation (`val_atwood.json`, 240 images tiled to 1,384 tiles):**
+
+| Epoch | train_dice | val_dice |
+|---|---|---|
+| 1 | 0.678 | 0.775 |
+| 9 | 0.800 | 0.854 |
+| 25 | 0.836 | 0.885 |
+| 36 | 0.856 | 0.903 |
+| 47 | 0.877 | 0.914 |
+| **50** | **0.882** | **0.918** ← best |
+
+Best checkpoint: `weights/run5_convnext_small_s2_heatmap_pretiled/best.pt` (epoch 50, val_dice=**0.918**)
+
+**vs full-frame run (2026-05-30):** 0.918 vs 0.842 — **+0.076 improvement** from using 400 px tiled training at the correct scale. The tiled run also converged faster: val_dice=0.854 at epoch 9 vs 0.653 at epoch 1 for the full-frame run.
+
+> **Note:** Test-set evaluation (`test_atwood.json`) with `--tiled` pending — to be run in the next session alongside ViT-S HeatMap for cross-model comparison.
 
 ### API / Inference
 
