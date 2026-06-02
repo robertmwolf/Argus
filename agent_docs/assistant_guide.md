@@ -16,7 +16,7 @@ propagation and multi-factor confidence scoring. Results are served through a
 FastAPI backend and React frontend.
 
 ## Current Phase
-**Run 5 dataset ready (2026-05-30). Awaiting Run 5 training on RTX workstation.**
+**Run 6 dataset prep (2026-06-01). Run 5 exposed precision catastrophe — hard-negative fix required before backbone comparison.**
 
 Progress:
 - ✅ Phase 0 (Classical baseline): `src/` — fits_parser, classical_detector, plate_solver, SGP4 matching
@@ -61,19 +61,54 @@ Progress:
   - Frigate replaced with cluster-2 tiled at 110px (48 annotations, 9 frames)
   - Synthetic short-band injection: 380 images, snr_scale 0.2–1.0
   - **`all_train_run5.json`**: 2,064 images, 1,956 annotations (short=23%, medium=30%, long=47%)
+- ✅ **Run 5 test-set eval (2026-06-01)** — precision catastrophe on both backbones:
+  - ConvNeXt-S: recall=76.3%, precision=0.05%, F1=0.001 (1,499 predictions/image)
+  - ViT-S: recall=67.5%, precision=0.05%, F1=0.001 (1,211 predictions/image)
+  - Root cause: only 281/9,495 tiles (3%) were negative in training; star fields trigger FP
+  - Fix: add hard-negative tiles via `--hard-neg-per-pos 5` and `--neg-tiles-per-image 50`
+  - See `docs/training_methods.md §3.8` for full Run 6 plan
 
 ## Next Steps
 
-### Run 5 training
+### Run 6 data prep (current priority)
 
-All data is ready. Train on RTX workstation with ViT-B backbone (3× parameters vs ViT-S):
+Run 5 revealed a precision catastrophe caused by insufficient hard negatives (only 3%
+of training tiles were negative). The fix is to rebuild the tiled dataset with:
+- `--hard-neg-per-pos 5`: 5 annotation-free tiles per positive image (the hardest negatives)
+- `--neg-tiles-per-image 50`: 50 tiles from pure-negative images (up from 2)
+- Frigate fixed: re-tile from raw source to eliminate doubly-virtual path bug
+
+Also: Frigate cluster-2 data must be included. The inclusion was already planned but the
+doubly-virtual path bug in Run 5 caused 75 Frigate tiles to be silently replaced with blank
+images. This is now documented in `docs/training_methods.md §3.8` (Run 6 fix).
 
 ```bash
-TRAIN_ANN_FILE=data/annotations/all_train_run5.json \
-VAL_ANN_FILE=data/annotations/val_atwood.json \
-python -m training.train_dino --config models/dino/streak_dinov3_vitb_400px_run3.py \
-    --work-dir weights/run5_vitb
+# Step 1: Rebuild Atwood tiled annotation with hard negatives
+python scripts/build_tiled_brentimages_json.py \
+  --src data/annotations/all_train_run5.json \
+  --out /Volumes/External/TrainingData/annotations/atwood_train_run6_tiled.json \
+  --native-tile-size 400 --overlap 0.5 \
+  --neg-tiles-per-image 50 \
+  --hard-neg-per-pos 5
+
+# Step 2: Fix Frigate — build from raw source (not virtual tile paths)
+python scripts/build_tiled_frigate_json.py \
+  --images /Volumes/External/TrainingData/raw/frigate/raw \
+  --annotations <frigate_cluster2_annotations.json> \
+  --output /Volumes/External/TrainingData/annotations/frigate_tiled_run6.json \
+  --tile-size 400 --overlap 0.5
+
+# Step 3: Merge + NPY convert → all_train_run6_tiled_npy.json
+# Step 4: Train both backbones identically (see docs/training_methods.md §3.8)
 ```
+
+### Run 6 backbone comparison
+
+Train ConvNeXt-S and ViT-S with **identical hyperparameters** on `all_train_run6_tiled_npy.json`.
+The backbone that achieves better precision at ≥60% recall on `test_atwood.json` is progressed
+to ViT-B / ViT-L for the paper run.
+
+Success gate: precision > 10% at recall ≥ 60%.
 
 ### Evaluation rules (apply to every heatmap eval)
 
@@ -91,15 +126,6 @@ thin-line OBBs. The eval script warns but does not abort. See `docs/training_met
 
 Applies to: `scripts/evaluate_dinov3_heatmap.py` for any checkpoint with
 `cache image_size < 600 px`.
-
-### Post-Run 5 evaluation priorities
-
-1. **Evaluate on `test_atwood.json`** at conf=0.20 (not 0.30)
-   - 45% of Run 4 FNs had correct-location preds at conf 0.10–0.29
-   - Quality gates: medium recall ≥ 65%, long recall ≥ 85%
-2. **Run `eval_frigate_tiled.py`** against Run 5 checkpoint to verify short-band learning
-3. **Compare medium-band recall vs Run 4** — goal is to close the 29 truly-missed FNs
-   through more data and ViT-B capacity
 
 ## Hardware
 - **Dev / CI:** MacBook Air M3 — CPU or MPS. Use `MODEL_SIZE=tiny` (Swin-T).

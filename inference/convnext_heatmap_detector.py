@@ -1,6 +1,6 @@
 """ConvNeXt-S Stage-2 heatmap detector for the ARGUS pipeline.
 
-Loads the Run 5 frozen ConvNeXt-Small backbone + trained HeatmapHead and
+Loads the Run 5/6 frozen ConvNeXt-Small backbone + trained HeatmapHead and
 converts the output probability map to pipeline-compatible OBB detections.
 
 Checkpoint format is the cached-head format produced by
@@ -17,6 +17,14 @@ CONVNEXT_HEATMAP_IMAGE_SIZE
     Square input size in pixels (int, default 384).
 CONVNEXT_HEATMAP_MIN_PIXELS
     Minimum component size in feature-map pixels (int, default 2).
+CONVNEXT_HEATMAP_NATIVE_TILE_SIZE
+    Inference tile size in source pixels (int, default 1562).
+    **Must match the tile size used when building the training cache.**
+    For Run 5/6 models trained on 400px pre-tiled NPY crops, set to 400.
+    The 1562px default is only appropriate for models cached with
+    ``--native-tile-size 1562``.
+CONVNEXT_HEATMAP_TILE_OVERLAP
+    Fractional tile overlap (float, default 0.5).
 """
 
 from __future__ import annotations
@@ -246,8 +254,12 @@ def run_convnext_heatmap_detector(array: np.ndarray) -> list[dict[str, Any]]:
 
     threshold        = float(os.environ.get("CONVNEXT_HEATMAP_THRESHOLD", "0.5"))
     min_pixels       = int(os.environ.get("CONVNEXT_HEATMAP_MIN_PIXELS", "2"))
-    # 1562 px tiles on 6248 px Atwood images → 4 tiles/row, giving a 300 px
-    # medium streak ~74 px at model input (4.6 patches vs 1.2 without tiling).
+    # WARNING: tile size at eval must match tile size used during training.
+    # Run 5 cache: native_tile_size=400 (pre-tiled 400px NPY crops).
+    # Run 6 cache: native_tile_size=400 (pre-tiled 400px NPY crops).
+    # The 1562px default below is only correct when the model was cached with
+    # --native-tile-size 1562 (not the case for Run 5/6 pretiled models).
+    # For Run 5/6 checkpoints always set CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=400.
     native_tile_size = int(os.environ.get("CONVNEXT_HEATMAP_NATIVE_TILE_SIZE", "1562"))
     tile_overlap     = float(os.environ.get("CONVNEXT_HEATMAP_TILE_OVERLAP", "0.5"))
 

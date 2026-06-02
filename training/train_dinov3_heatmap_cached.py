@@ -135,6 +135,9 @@ def main() -> int:
     parser.add_argument("--pos-weight", type=float, default=20.0)
     parser.add_argument("--geometry-weight", type=float, default=0.25)
     parser.add_argument("--hidden-channels", type=int, default=256)
+    parser.add_argument("--num-workers", type=int, default=0,
+                        help="DataLoader workers.  0=synchronous (safe for MPS). "
+                             "Set >0 only on CUDA where fork/spawn is stable.")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -148,8 +151,14 @@ def main() -> int:
     head = HeatmapHead(in_channels, args.hidden_channels).to(device)
     optimizer = torch.optim.AdamW(head.parameters(), lr=args.lr, weight_decay=1e-4)
 
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, collate_fn=_collate)
-    val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, collate_fn=_collate)
+    train_loader = DataLoader(
+        train_ds, batch_size=args.batch_size, shuffle=True,
+        num_workers=args.num_workers, collate_fn=_collate,
+    )
+    val_loader = DataLoader(
+        val_ds, batch_size=args.batch_size, shuffle=False,
+        num_workers=args.num_workers, collate_fn=_collate,
+    )
 
     best_dice = -1.0
     history: list[dict[str, float | int]] = []

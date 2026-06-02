@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Pre-convert FITS virtual tile annotations to raw float32 .npy files on disk.
+"""Pre-convert FITS/PNG virtual tile annotations to raw float32 .npy files on disk.
 
-Groups tiles by parent FITS so each FITS is opened exactly once.
+Groups tiles by parent image so each source file is opened exactly once.
 Saves each tile as a float32 .npy (shape H×W, before normalisation)
 so training can skip expensive FITS I/O on every step.
+
+Supports both FITS parent files (BrentImages) and PNG parent files (Frigate).
 
 After conversion, a new annotation JSON is written with file_name
 pointing to the .npy tile rather than the virtual FITS tile path.
@@ -33,6 +35,7 @@ from pathlib import Path
 
 import numpy as np
 from astropy.io import fits
+from PIL import Image
 
 logging.basicConfig(
     level=logging.INFO,
@@ -54,13 +57,22 @@ def _parse_virtual(file_name: str):
     return real, int(m.group(2)), int(m.group(3)), int(m.group(4))
 
 
-def _load_fits_raw(fits_path: str) -> np.ndarray:
-    """Load primary HDU as float32, return (H, W) array."""
-    with fits.open(fits_path) as hdul:
-        data = hdul[0].data
-        if data is None:
-            raise ValueError(f"No data in {fits_path}")
-        return data.astype(np.float32)
+def _load_source_raw(source_path: str) -> np.ndarray:
+    """Load a source image (FITS or PNG/JPEG) as float32 (H, W) array.
+
+    FITS: returns the raw primary HDU data (e.g. 16-bit counts).
+    PNG/JPEG: converts to grayscale luminance as float32 [0, 255].
+    """
+    suffix = Path(source_path).suffix.lower()
+    if suffix in {".fits", ".fit", ".fts"}:
+        with fits.open(source_path) as hdul:
+            data = hdul[0].data
+            if data is None:
+                raise ValueError(f"No data in {source_path}")
+            return data.astype(np.float32)
+    else:
+        with Image.open(source_path) as im:
+            return np.asarray(im.convert("L"), dtype=np.float32)
 
 
 def main():
@@ -110,13 +122,13 @@ def main():
     errors = 0
 
     logger.info(
-        "Converting %d tiles from %d parent FITS files...",
+        "Converting %d tiles from %d parent source files (FITS+PNG)...",
         total, len(groups)
     )
 
     for fits_idx, (fits_path, tile_list) in enumerate(groups.items()):
         try:
-            raw = _load_fits_raw(fits_path)
+            raw = _load_source_raw(fits_path)
         except Exception as exc:
             logger.warning("Failed to load %s: %s — skipping %d tiles",
                            fits_path, exc, len(tile_list))
@@ -145,7 +157,7 @@ def main():
 
         if (fits_idx + 1) % 100 == 0 or fits_idx == len(groups) - 1:
             logger.info(
-                "FITS %d/%d  tiles %d/%d  errors=%d",
+                "Source %d/%d  tiles %d/%d  errors=%d",
                 fits_idx + 1, len(groups), done, total, errors
             )
 

@@ -69,6 +69,10 @@ _DEFAULT_OVERLAP = 0.5
 MIN_AREA_FRACTION = 0.25
 # Number of random negative tiles emitted per negative (unannotated) image.
 NEGATIVE_TILES_PER_IMAGE = 2
+# Hard-negative tiles emitted per positive image (annotation-free tiles from
+# images that DO contain streaks — the hardest negatives because they share
+# the same star-field background as the positive tiles).
+HARD_NEG_PER_POS = 0
 RANDOM_SEED = 42
 
 
@@ -122,6 +126,18 @@ def _parse_args() -> argparse.Namespace:
         type=int,
         default=NEGATIVE_TILES_PER_IMAGE,
         help="Number of random negative tiles emitted per unannotated image.",
+    )
+    parser.add_argument(
+        "--hard-neg-per-pos",
+        type=int,
+        default=HARD_NEG_PER_POS,
+        help=(
+            "Hard-negative tiles emitted per positive (annotated) image.  "
+            "These are annotation-free tiles drawn from images that contain "
+            "at least one streak — the hardest negatives because they share "
+            "the same star-field background as the positive tiles.  "
+            "Recommended: 5 for Run 6+ to reach ~50%% negative ratio."
+        ),
     )
     return parser.parse_args()
 
@@ -220,6 +236,7 @@ def build_tiled_brentimages_json(
     overlap: float = _DEFAULT_OVERLAP,
     min_area_fraction: float = MIN_AREA_FRACTION,
     neg_tiles_per_image: int = NEGATIVE_TILES_PER_IMAGE,
+    hard_neg_per_pos: int = HARD_NEG_PER_POS,
 ) -> Path:
     """Generate a tiled BrentImages COCO training JSON.
 
@@ -236,6 +253,10 @@ def build_tiled_brentimages_json(
         min_area_fraction: Minimum fraction of bbox area required after
             clipping to include a tile (area-based selection for long streaks).
         neg_tiles_per_image: Random tiles emitted per unannotated image.
+        hard_neg_per_pos: Hard-negative tiles emitted per positive image.
+            These are annotation-free tiles from images that contain streaks —
+            the hardest negatives because they share the same star-field context
+            as the positive tiles.  Set to ≥5 for Run 6+ builds.
 
     Returns:
         Path to the written JSON.
@@ -267,6 +288,7 @@ def build_tiled_brentimages_json(
 
     positive_tile_count = 0
     negative_tile_count = 0
+    hard_neg_tile_count = 0
     skipped_images = 0
 
     for img in src["images"]:
@@ -328,6 +350,36 @@ def build_tiled_brentimages_json(
                     next_img_id += 1
                     positive_tile_count += 1
 
+            # Hard negatives: annotation-free tiles from this positive image.
+            # These share the star-field background of the positive tiles and
+            # are the hardest negatives to suppress without explicit examples.
+            if hard_neg_per_pos > 0:
+                all_positions = [(x0, y0) for y0 in ys for x0 in xs]
+                # Exclude positions that contributed at least one positive tile.
+                hard_neg_candidates = []
+                for x0, y0 in all_positions:
+                    tile_has_ann = any(
+                        _clip_bbox(ann["bbox"], x0, y0, native_tile_size, min_area_fraction)
+                        is not None
+                        for ann in anns
+                    )
+                    if not tile_has_ann:
+                        hard_neg_candidates.append((x0, y0))
+                chosen_hn = rng.sample(
+                    hard_neg_candidates,
+                    k=min(hard_neg_per_pos, len(hard_neg_candidates)),
+                )
+                for x0, y0 in chosen_hn:
+                    fname = _tile_file_name(orig_path, x0, y0, native_tile_size)
+                    out_images.append({
+                        "id": next_img_id,
+                        "file_name": fname,
+                        "width": native_tile_size,
+                        "height": native_tile_size,
+                    })
+                    next_img_id += 1
+                    hard_neg_tile_count += 1
+
         else:
             # Negative image: emit a small number of random tiles for domain
             # adaptation (teaches the model what BrentImages background looks like).
@@ -365,13 +417,14 @@ def build_tiled_brentimages_json(
         json.dump(result, f)
 
     logger.info(
-        "%s: %d positive tiles (%d annotations) + %d negative tiles = %d total  "
-        "[%d source images skipped]",
+        "%s: %d positive + %d hard-neg + %d negative = %d total tiles  "
+        "(%d annotations, %d source images skipped)",
         out_path.name,
         positive_tile_count,
-        len(out_annotations),
+        hard_neg_tile_count,
         negative_tile_count,
         len(out_images),
+        len(out_annotations),
         skipped_images,
     )
     return out_path
@@ -389,4 +442,5 @@ if __name__ == "__main__":
         overlap=args.overlap,
         min_area_fraction=args.min_area_fraction,
         neg_tiles_per_image=args.neg_tiles_per_image,
+        hard_neg_per_pos=args.hard_neg_per_pos,
     )

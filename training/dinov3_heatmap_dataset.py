@@ -121,9 +121,21 @@ class StreakHeatmapDataset(Dataset):
         suffix = path.suffix.lower()
         try:
             if suffix in {".fits", ".fit", ".fts"}:
-                return np.asarray(self.loader.load(path)["array"], dtype=np.uint8)
-            with Image.open(path) as im:
-                return np.asarray(im.convert("RGB"), dtype=np.uint8)
+                arr = np.asarray(self.loader.load(path)["array"], dtype=np.float32)
+            elif suffix == ".npy":
+                arr = np.load(str(path)).astype(np.float32)
+            else:
+                with Image.open(path) as im:
+                    return np.asarray(im.convert("RGB"), dtype=np.uint8)
+            # Normalise single-channel float array to uint8 [0, 255]
+            lo, hi = arr.min(), arr.max()
+            if hi > lo:
+                arr = ((arr - lo) / (hi - lo) * 255).astype(np.uint8)
+            else:
+                arr = np.zeros_like(arr, dtype=np.uint8)
+            if arr.ndim == 2:
+                arr = np.stack([arr] * 3, axis=2)
+            return arr
         except Exception as exc:
             logger.warning("Failed to load %s: %s; using blank image", path, exc)
             return np.zeros((self.image_size, self.image_size, 3), dtype=np.uint8)

@@ -138,6 +138,14 @@ def _load_image_array(path: Path, loader: FITSLoader) -> np.ndarray | None:
     try:
         if suffix in {".fits", ".fit", ".fts"}:
             arr = np.asarray(loader.load(path)["array"], dtype=np.uint8)
+        elif suffix == ".npy":
+            raw = np.load(str(path)).astype(np.float32)
+            # Normalise to uint8 for downstream letterboxing (same as FITS path).
+            lo, hi = raw.min(), raw.max()
+            if hi > lo:
+                arr = ((raw - lo) / (hi - lo) * 255).astype(np.uint8)
+            else:
+                arr = np.zeros_like(raw, dtype=np.uint8)
         else:
             with Image.open(path) as im:
                 arr = np.asarray(im.convert("RGB"), dtype=np.uint8)

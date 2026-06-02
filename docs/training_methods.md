@@ -1057,6 +1057,165 @@ to point to the pretiled checkpoint once training completes.
 
 ---
 
+### 3.8 Run 6 — Hard-Negative Injection + Frigate Fix + Backbone Comparison (planned 2026-06-01)
+
+**Root cause identified from Run 5 test-set eval:**
+- ConvNeXt-S: 359,760 predictions / 240 images = 1,499/image = ~2.4 predictions/tile
+- ViT-S: ~1,211/image = ~2 predictions/tile
+- Recall is real (ConvNeXt 76%, ViT-S 68%) but precision is unusable (0.05%)
+- The star field is triggering heatmap activations that pass threshold
+- **Root cause: only 281/9,495 tiles (3%) were negative** — `NEGATIVE_TILES_PER_IMAGE=2` on 174
+  negative images yielded only 348 negative tiles from pure-negative images, and **zero
+  annotation-free tiles from positive images** were ever included
+
+**Two classes of missing negatives:**
+1. **Pure negative images**: Atwood images with no streak at all — only 2 random tiles each were used
+2. **Hard negatives**: Annotation-free tiles from images that contain a streak — the star field
+   immediately adjacent to a streak. These are the hardest negatives and were entirely absent.
+
+**Run 6 dataset targets:**
+
+| Component | Tiles | Change from Run 5 |
+|-----------|-------|-------------------|
+| Atwood positive tiles | ~9,214 | same |
+| Hard negatives (from positive images) | ~9,450 | NEW — `--hard-neg-per-pos 5` on 1,890 pos images |
+| Negatives from pure-neg images | ~8,700 | `--neg-tiles-per-image 50` on 174 neg images (was 2) |
+| Frigate cluster-2 tiles | ~75 | fixed from Run 5 (doubly-virtual path bug) |
+| Synthetic short | 380 | same |
+| **Total** | **~27,800** | **~66% negative ratio** (vs 3% in Run 5) |
+
+The 66% negative ratio is intentionally aggressive given 0.05% precision in Run 5. If precision
+overshoots at the expense of recall, back off to `--hard-neg-per-pos 2 --neg-tiles-per-image 20`
+for a ~50% negative ratio on the follow-up run.
+
+**Build commands:**
+
+```bash
+# Step 1: Rebuild Atwood tiled with hard negatives
+python scripts/build_tiled_brentimages_json.py \
+  --src data/annotations/all_train_run5.json \
+  --out /Volumes/External/TrainingData/annotations/atwood_train_run6_tiled.json \
+  --native-tile-size 400 --overlap 0.5 \
+  --neg-tiles-per-image 50 \
+  --hard-neg-per-pos 5
+
+# Step 2: Fix Frigate — build from raw FITS (cluster-2 only, 9 frames)
+# Note: frigate_streaks.json uses processed PNG paths; remap to FITS first.
+# Cluster-2 stems identified from frigate_cluster2_tiled_110.json (9 parent frames).
+python3 -c "
+import json, re
+from pathlib import Path
+FITS_DIR = Path('/Volumes/External/TrainingData/raw/frigate/raw')
+tile_re = re.compile(r'^(.+?)__tx\d+_ty\d+_ts\d+(\.\w+)$')
+with open('/Users/robert/Argus/data/annotations/frigate_cluster2_tiled_110.json') as f:
+    c2 = json.load(f)
+cluster2_stems = {tile_re.match(Path(i['file_name']).name).group(1) for i in c2['images']}
+with open('/Volumes/External/TrainingData/annotations/frigate_streaks.json') as f:
+    full = json.load(f)
+kept = [dict(i, file_name=str(FITS_DIR / (Path(i['file_name']).stem + '.fits')))
+        for i in full['images'] if Path(i['file_name']).stem in cluster2_stems]
+kept_ids = {i['id'] for i in kept}
+out = dict(full, images=kept, annotations=[a for a in full['annotations'] if a['image_id'] in kept_ids])
+json.dump(out, open('/Volumes/External/TrainingData/annotations/frigate_cluster2_fullframe_fits.json','w'))
+print(f'{len(kept)} frames, {len(out[\"annotations\"])} annotations')
+"
+python scripts/build_tiled_frigate_json.py \
+  --src /Volumes/External/TrainingData/annotations/frigate_cluster2_fullframe_fits.json \
+  --out /Volumes/External/TrainingData/annotations/frigate_cluster2_run6_ts110.json \
+  --native-tile-size 110 --overlap 0.5
+# Result: 129 positive tiles (262 annotations) vs 75 in Run 5
+
+# Step 3: Merge → all_train_run6_tiled.json
+# Note: atwood tiled already includes synthetic short tiles — do NOT add synthetic_short_atwood.json
+# separately or they will be duplicated. Merge is: atwood + frigate only.
+python3 -c "
+import json
+from pathlib import Path
+ANN_DIR = Path('/Volumes/External/TrainingData/annotations')
+def load(p):
+    with open(p) as f: return json.load(f)
+def merge(sources):
+    imgs, anns, ni, na = [], [], 1, 1
+    for src in sources:
+        m = {}
+        for i in src['images']:
+            n = dict(i); m[i['id']] = ni; n['id'] = ni; imgs.append(n); ni += 1
+        for a in src.get('annotations',[]):
+            if a['image_id'] not in m: continue
+            n = dict(a); n['id'] = na; n['image_id'] = m[a['image_id']]; anns.append(n); na += 1
+    return {'info':{'description':'ARGUS Run 6'},'licenses':[],'categories':[{'id':1,'name':'streak','supercategory':'satellite'}],'images':imgs,'annotations':anns}
+merged = merge([load(ANN_DIR/'atwood_train_run6_tiled.json'), load(ANN_DIR/'frigate_cluster2_run6_ts110.json')])
+json.dump(merged, open(ANN_DIR/'all_train_run6_tiled.json','w'))
+print(f'{len(merged[\"images\"])} tiles, {len(merged[\"annotations\"])} annotations')
+"
+
+# Step 4: Convert to NPY (handles FITS + PNG sources)
+python scripts/convert_tiles_to_npy.py \
+  --annotations /Volumes/External/TrainingData/annotations/all_train_run6_tiled.json \
+  --output-dir  /Volumes/External/TrainingData/tiles_npy/run6_train \
+  --output-ann  /Volumes/External/TrainingData/annotations/all_train_run6_tiled_npy_raw.json
+# If converter processed a larger source JSON, filter to corrected IDs:
+python scripts/filter_npy_annotation.py \
+  --npy-ann /Volumes/External/TrainingData/annotations/all_train_run6_tiled_npy_raw.json \
+  --ref-ann /Volumes/External/TrainingData/annotations/all_train_run6_tiled.json \
+  --output  /Volumes/External/TrainingData/annotations/all_train_run6_tiled_npy.json
+```
+
+**Training: identical conditions for backbone comparison**
+
+Train ConvNeXt-S and ViT-S with **identical hyperparameters** — same annotation file,
+same epochs, same learning rate, same seeds. This is the controlled comparison needed
+to select a backbone to progress with.
+
+```bash
+# ConvNeXt-S
+python scripts/train_dinov3_heatmap_cached.py \
+  --annotations /Volumes/External/TrainingData/annotations/all_train_run6_tiled_npy.json \
+  --val-annotations data/annotations/val_atwood_tiled_400_npy.json \
+  --backbone convnext --convnext-stage 2 \
+  --epochs 50 --lr 1e-4 --seed 42 \
+  --work-dir weights/run6_convnext_heatmap
+
+# ViT-S (identical except backbone flag)
+python scripts/train_dinov3_heatmap_cached.py \
+  --annotations /Volumes/External/TrainingData/annotations/all_train_run6_tiled_npy.json \
+  --val-annotations data/annotations/val_atwood_tiled_400_npy.json \
+  --backbone vits \
+  --epochs 50 --lr 1e-4 --seed 42 \
+  --work-dir weights/run6_vits_heatmap
+```
+
+**Evaluation — tile size must match training (400px / overlap=0.5):**
+
+```bash
+# ConvNeXt-S — MUST set CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=400
+# (detector defaults to 1562, which mismatches training scale and inflates FPs)
+CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=400 CONVNEXT_HEATMAP_TILE_OVERLAP=0.5 \
+python scripts/evaluate_dinov3_heatmap.py \
+  --annotations data/annotations/test_atwood.json \
+  --checkpoint  weights/run6_convnext_heatmap/best.pt \
+  --output      results/run6_convnext_test_atwood/metrics.json \
+  --tiled --threshold 0.5
+
+# ViT-S — VITS_HEATMAP_NATIVE_TILE_SIZE defaults to 400 (already correct)
+python scripts/evaluate_dinov3_heatmap.py \
+  --annotations data/annotations/test_atwood.json \
+  --checkpoint  weights/run6_vits_heatmap/best.pt \
+  --output      results/run6_vits_test_atwood/metrics.json \
+  --tiled --threshold 0.5
+```
+
+> **Rule (applies to all future runs):** Eval tile size must match the tile size used
+> when building the training annotation / cache. For 400px training tiles, always set
+> `CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=400` explicitly — the ConvNeXt detector defaults
+> to 1562px which produces scale mismatch and meaningless metrics. ViT-S defaults to
+> 400px correctly. This asymmetry is a known footgun; see `inference/convnext_heatmap_detector.py`.
+
+**Success criteria:** precision > 10% at recall ≥ 60% on `test_atwood.json`. A model
+that passes this gate will be progressed to ViT-B / ViT-L for the paper run.
+
+---
+
 ---
 
 ## 6. Evaluation Policy
