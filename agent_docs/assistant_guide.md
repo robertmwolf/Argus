@@ -67,10 +67,48 @@ Progress:
   - Root cause: only 281/9,495 tiles (3%) were negative in training; star fields trigger FP
   - Fix: add hard-negative tiles via `--hard-neg-per-pos 5` and `--neg-tiles-per-image 50`
   - See `docs/training_methods.md §3.8` for full Run 6 plan
+- ✅ **Run 6 backbone comparison (2026-06-01/02)** — ConvNeXt-S vs ViT-S, 60% negative ratio:
+  - ConvNeXt-S best: val_dice=0.903 (ep 49). Test: recall=36.0%, precision=0.24%, 145 preds/img
+  - ViT-S best: val_dice=0.878 (ep 50). Test: recall=21.9%, precision=0.07%, 292 preds/img
+  - **ConvNeXt-S wins** backbone comparison on all metrics — proceed with ConvNeXt only
+  - Precision improved 5× vs Run 5 but recall collapsed: 60% negative ratio too aggressive
+  - Root cause: pos_weight=20 insufficient to counteract 60% negative tile dominance in loss
+  - See `docs/training_methods.md §3.9` for Run 7 fix
 
 ## Next Steps
 
-### Run 6 data prep (current priority)
+### Run 7 — ConvNeXt-S, moderate negatives, higher pos_weight (next priority)
+
+Run 6 showed ConvNeXt-S beats ViT-S. The 60% negative ratio suppressed recall too aggressively
+(medium recall=0%, long recall=39.5%). Run 7 uses ConvNeXt-S only with:
+- **35% negative ratio**: `--hard-neg-per-pos 1 --neg-tiles-per-image 15`
+- **Higher pos_weight**: `--pos-weight 50` (was 20; 60% negatives overwhelmed the loss)
+- Same 400px tiles, 50% overlap, 50 epochs, local SSD cache
+
+```bash
+# Step 1: Rebuild atwood tiled with moderate negatives
+python scripts/build_tiled_brentimages_json.py \
+  --src data/annotations/all_train_run5.json \
+  --out /Volumes/External/TrainingData/annotations/atwood_train_run7_tiled.json \
+  --native-tile-size 400 --overlap 0.5 \
+  --neg-tiles-per-image 15 \
+  --hard-neg-per-pos 1
+
+# Step 2: Merge with Frigate (reuse run6 Frigate, already correct)
+# Step 3: NPY convert → all_train_run7_tiled_npy.json
+# Step 4: Cache ConvNeXt-S features → heatmap_cache_local/convnext_run7_train/
+# Step 5: Train with pos_weight=50
+python -m training.train_dinov3_heatmap_cached \
+  --train-cache heatmap_cache_local/convnext_run7_train \
+  --val-cache   heatmap_cache_local/convnext_run7_val \
+  --work-dir    weights/run7_convnext_heatmap \
+  --epochs 50 --batch-size 32 --pos-weight 50
+# Step 6: Eval with CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=400
+```
+
+Success gate: recall ≥ 60% AND precision > 1% on test_atwood.json.
+
+### Run 6 data prep (complete)
 
 Run 5 revealed a precision catastrophe caused by insufficient hard negatives (only 3%
 of training tiles were negative). The fix is to rebuild the tiled dataset with:

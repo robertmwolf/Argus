@@ -1216,6 +1216,95 @@ that passes this gate will be progressed to ViT-B / ViT-L for the paper run.
 
 ---
 
+### 3.9 Run 7 — Moderate Negatives + Higher pos_weight (planned 2026-06-02)
+
+**Findings from Run 6:**
+
+| Model | val_dice | Test recall | Test precision | Preds/img |
+|-------|----------|-------------|----------------|-----------|
+| ConvNeXt-S (Run 6) | 0.903 | 36.0% | 0.24% | 145 |
+| ViT-S (Run 6) | 0.878 | 21.9% | 0.07% | 292 |
+| ConvNeXt-S (Run 5) | 0.918 | 76.3% | 0.05% | 1,499 |
+
+**ConvNeXt-S is the backbone winner** — beats ViT-S on every test metric. Run 7 uses ConvNeXt-S only.
+
+**Root cause of recall collapse:** 60% negative tile ratio overwhelmed the BCE loss even with
+`pos_weight=20`. The model converges to near-zero heatmap output (minimizes negative tile loss
+at the cost of all recall). The val_dice metric (0.903) was misleading — it rewarded conservative
+precision-oriented predictions while masking the recall collapse.
+
+**Two-lever fix for Run 7:**
+1. **Moderate negative ratio (~35%)** — reduce from `--hard-neg-per-pos 5 --neg-tiles-per-image 50`
+   to `--hard-neg-per-pos 1 --neg-tiles-per-image 15`. Projected: ~12,500 tiles, ~35% negative.
+2. **Higher pos_weight** — increase from 20 to 50 to compensate for residual negative imbalance.
+
+```bash
+# Step 1: Rebuild Atwood tiled with moderate negatives
+python scripts/build_tiled_brentimages_json.py \
+  --src data/annotations/all_train_run5.json \
+  --out /Volumes/External/TrainingData/annotations/atwood_train_run7_tiled.json \
+  --native-tile-size 400 --overlap 0.5 \
+  --neg-tiles-per-image 15 \
+  --hard-neg-per-pos 1
+
+# Step 2: Merge (reuse run6 Frigate — already correct FITS-based tiles)
+python3 -c "
+import json
+from pathlib import Path
+ANN_DIR = Path('/Volumes/External/TrainingData/annotations')
+def load(p):
+    with open(p) as f: return json.load(f)
+def merge(sources):
+    imgs, anns, ni, na = [], [], 1, 1
+    for src in sources:
+        m = {}
+        for i in src['images']:
+            n = dict(i); m[i['id']] = ni; n['id'] = ni; imgs.append(n); ni += 1
+        for a in src.get('annotations',[]):
+            if a['image_id'] not in m: continue
+            n = dict(a); n['id'] = na; n['image_id'] = m[a['image_id']]; anns.append(n); na += 1
+    return {'info':{'description':'ARGUS Run 7'},'licenses':[],'categories':[{'id':1,'name':'streak'}],'images':imgs,'annotations':anns}
+merged = merge([load(ANN_DIR/'atwood_train_run7_tiled.json'), load(ANN_DIR/'frigate_cluster2_run6_ts110.json')])
+json.dump(merged, open(ANN_DIR/'all_train_run7_tiled.json','w'))
+print(f'{len(merged[\"images\"])} tiles, {len(merged[\"annotations\"])} anns')
+"
+
+# Step 3: NPY convert
+python scripts/convert_tiles_to_npy.py \
+  --annotations /Volumes/External/TrainingData/annotations/all_train_run7_tiled.json \
+  --output-dir  /Volumes/External/TrainingData/tiles_npy/run7_train \
+  --output-ann  /Volumes/External/TrainingData/annotations/all_train_run7_tiled_npy.json
+
+# Step 4: Cache ConvNeXt-S features
+python scripts/cache_dinov3_heatmap_features.py \
+  --annotations  /Volumes/External/TrainingData/annotations/all_train_run7_tiled_npy.json \
+  --output-dir   /Volumes/External/TrainingData/heatmap_cache/convnext_run7_train \
+  --backbone convnext --model-size small --convnext-stage 2 \
+  --image-size 384 --batch-size 4
+# Then copy to local SSD for fast epoch I/O (saves ~20 min/epoch on external drive)
+
+# Step 5: Train with pos_weight=50
+PYTORCH_ENABLE_MPS_FALLBACK=1 \
+python -m training.train_dinov3_heatmap_cached \
+  --train-cache heatmap_cache_local/convnext_run7_train \
+  --val-cache   heatmap_cache_local/convnext_run7_val \
+  --work-dir    weights/run7_convnext_heatmap \
+  --epochs 50 --batch-size 32 --pos-weight 50
+
+# Step 6: Evaluate (tile size MUST match training: 400px)
+CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=400 CONVNEXT_HEATMAP_TILE_OVERLAP=0.5 \
+python scripts/evaluate_dinov3_heatmap.py \
+  --annotations data/annotations/test_atwood.json \
+  --checkpoint  weights/run7_convnext_heatmap/best.pt \
+  --output      results/run7_convnext_test_atwood/metrics.json \
+  --tiled --threshold 0.5
+```
+
+**Success gate:** recall ≥ 60% AND precision > 1% on `test_atwood.json`.
+If precision > 1% but recall still < 60%, try `--threshold 0.2` before retraining.
+
+---
+
 ---
 
 ## 6. Evaluation Policy
