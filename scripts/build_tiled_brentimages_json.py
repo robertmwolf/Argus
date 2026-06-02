@@ -291,15 +291,24 @@ def build_tiled_brentimages_json(
     hard_neg_tile_count = 0
     skipped_images = 0
 
+    virtual_paths = [img["file_name"] for img in src["images"] if "__tx" in img["file_name"]]
+    if virtual_paths:
+        raise ValueError(
+            f"{src_path.name} contains {len(virtual_paths)} pre-tiled virtual image path(s) "
+            f"(e.g. {virtual_paths[0]!r}). "
+            "build_tiled_brentimages_json requires full-frame source images only. "
+            "Strip virtual-tile entries from the source annotation before re-tiling."
+        )
+
     for img in src["images"]:
+        orig_path = img["file_name"]
+
         W = img.get("width")
         H = img.get("height")
         if not W or not H:
             logger.warning("Image %s missing width/height — skipping", img["file_name"])
             skipped_images += 1
             continue
-
-        orig_path = img["file_name"]
         anns = ann_by_image.get(img["id"], [])
 
         xs = _tile_starts(W, native_tile_size, stride)
