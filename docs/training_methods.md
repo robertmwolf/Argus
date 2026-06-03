@@ -1303,6 +1303,59 @@ python scripts/evaluate_dinov3_heatmap.py \
 **Success gate:** recall ≥ 60% AND precision > 1% on `test_atwood.json`.
 If precision > 1% but recall still < 60%, try `--threshold 0.2` before retraining.
 
+**Run 7 results (2026-06-02):**
+
+| Backbone   | val_dice | Recall | Precision | Preds/img |
+|------------|----------|--------|-----------|-----------|
+| ConvNeXt-S | 0.884    | 28.1%  | 0.03%     | 876       |
+| ViT-S      | 0.856    | 32.5%  | 0.05%     | 654       |
+
+Run 7 was **worse than Run 6** despite the intended fix. Root causes:
+- `pos_weight=50` with only 27% negative tiles caused diffuse activations — model
+  learned to predict positive over large tile regions rather than thin streak lines
+- `val_dice` is **blind to over-prediction**: val set is 97% positive tiles, so
+  a model that activates everywhere still scores well on val_dice
+- ViT-S beat ConvNeXt-S in this run (32.5% vs 28.1% recall) — backbone ranking
+  is not stable across configurations
+
+### 3.10 Run 8 — Fix val metric + rebalance (planned 2026-06-02)
+
+**Key insight from Runs 5–7:** val_dice on a 97%-positive val set is not a useful
+training signal for precision control. The model needs to see the cost of false
+positives during validation.
+
+**Three-part fix:**
+
+1. **Add negative tiles to val set** — include pure-negative Atwood tiles in
+   `val_atwood_tiled_400.json` so val_dice penalises over-prediction
+2. **Revert pos_weight to 20** — pos_weight=50 combined with 27% negatives was
+   too aggressive; revert to Run 6's pos_weight=20
+3. **Set negative ratio to 40–45%** — between Run 6 (60%, recall collapse) and
+   Run 7 (27%, precision collapse)
+
+```bash
+# Step 1: Rebuild val set with negative tiles included
+python scripts/build_tiled_brentimages_json.py \
+  --src data/annotations/val_atwood.json \
+  --out /Volumes/External/TrainingData/annotations/val_atwood_tiled_400_with_neg.json \
+  --native-tile-size 400 --overlap 0.5 \
+  --neg-tiles-per-image 5
+
+# Step 2: Rebuild train with 40-45% negatives
+python scripts/build_tiled_brentimages_json.py \
+  --src data/annotations/all_train_run5.json \
+  --out /Volumes/External/TrainingData/annotations/atwood_train_run8_tiled.json \
+  --native-tile-size 400 --overlap 0.5 \
+  --neg-tiles-per-image 25 \
+  --hard-neg-per-pos 1
+
+# Then: merge with frigate_cluster2_run6_ts110.json, NPY convert,
+# cache ConvNeXt-S features, copy to local SSD,
+# train with --pos-weight 20, eval with CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=400
+```
+
+**Success gate:** recall ≥ 60% AND precision > 1% on `test_atwood.json`.
+
 ---
 
 ---

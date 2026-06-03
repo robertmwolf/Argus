@@ -16,7 +16,7 @@ propagation and multi-factor confidence scoring. Results are served through a
 FastAPI backend and React frontend.
 
 ## Current Phase
-**Run 6 dataset prep (2026-06-01). Run 5 exposed precision catastrophe — hard-negative fix required before backbone comparison.**
+**Run 7 complete (2026-06-02). Precision catastrophe persists — val metric blind to over-prediction. Run 8 must fix val set and rebalance.**
 
 Progress:
 - ✅ Phase 0 (Classical baseline): `src/` — fits_parser, classical_detector, plate_solver, SGP4 matching
@@ -73,37 +73,47 @@ Progress:
   - **ConvNeXt-S wins** backbone comparison on all metrics — proceed with ConvNeXt only
   - Precision improved 5× vs Run 5 but recall collapsed: 60% negative ratio too aggressive
   - Root cause: pos_weight=20 insufficient to counteract 60% negative tile dominance in loss
-  - See `docs/training_methods.md §3.9` for Run 7 fix
+  - See `docs/training_methods.md §3.9` for Run 7 plan
+- ✅ **Run 7 backbone comparison (2026-06-02)** — both backbones, 27% negatives, pos_weight=50:
+  - ConvNeXt-S: val_dice=0.884, test recall=28.1%, precision=0.03%, 876 preds/img
+  - ViT-S: val_dice=0.856, test recall=32.5%, precision=0.05%, 654 preds/img
+  - **Worse than Run 6** — pos_weight=50 + 27% negatives caused diffuse activations
+  - Root cause: val_dice blind to over-prediction (val set is 97% positive tiles)
+  - ViT-S beat ConvNeXt-S in this config — backbone ranking is not stable
+  - See `docs/training_methods.md §3.10` for Run 8 fix
 
 ## Next Steps
 
-### Run 7 — ConvNeXt-S, moderate negatives, higher pos_weight (next priority)
+### Run 8 — Fix val metric + rebalance (top priority)
 
-Run 6 showed ConvNeXt-S beats ViT-S. The 60% negative ratio suppressed recall too aggressively
-(medium recall=0%, long recall=39.5%). Run 7 uses ConvNeXt-S only with:
-- **35% negative ratio**: `--hard-neg-per-pos 1 --neg-tiles-per-image 15`
-- **Higher pos_weight**: `--pos-weight 50` (was 20; 60% negatives overwhelmed the loss)
-- Same 400px tiles, 50% overlap, 50 epochs, local SSD cache
+The core problem: `val_dice` on a 97%-positive val set rewards any model that activates
+on streak tiles, and cannot detect over-prediction on pure star-field tiles. Every run
+since Run 5 has been optimising a blind metric.
+
+**Three-part fix:**
+1. **Add negative tiles to val set** so val_dice penalises star-field FPs during training
+2. **Negative ratio 40–45%** (between Run 6's 60% and Run 7's 27%)
+3. **pos_weight=20** (revert from Run 7's 50; Run 6's value was correct, ratio was wrong)
 
 ```bash
-# Step 1: Rebuild atwood tiled with moderate negatives
+# Step 1: Rebuild val with negative tiles
+python scripts/build_tiled_brentimages_json.py \
+  --src data/annotations/val_atwood.json \
+  --out /Volumes/External/TrainingData/annotations/val_atwood_tiled_400_with_neg.json \
+  --native-tile-size 400 --overlap 0.5 \
+  --neg-tiles-per-image 5
+
+# Step 2: Rebuild train at 40-45% negatives
 python scripts/build_tiled_brentimages_json.py \
   --src data/annotations/all_train_run5.json \
-  --out /Volumes/External/TrainingData/annotations/atwood_train_run7_tiled.json \
+  --out /Volumes/External/TrainingData/annotations/atwood_train_run8_tiled.json \
   --native-tile-size 400 --overlap 0.5 \
-  --neg-tiles-per-image 15 \
+  --neg-tiles-per-image 25 \
   --hard-neg-per-pos 1
 
-# Step 2: Merge with Frigate (reuse run6 Frigate, already correct)
-# Step 3: NPY convert → all_train_run7_tiled_npy.json
-# Step 4: Cache ConvNeXt-S features → heatmap_cache_local/convnext_run7_train/
-# Step 5: Train with pos_weight=50
-python -m training.train_dinov3_heatmap_cached \
-  --train-cache heatmap_cache_local/convnext_run7_train \
-  --val-cache   heatmap_cache_local/convnext_run7_val \
-  --work-dir    weights/run7_convnext_heatmap \
-  --epochs 50 --batch-size 32 --pos-weight 50
-# Step 6: Eval with CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=400
+# Step 3: Merge + NPY convert + cache ConvNeXt-S features + copy to local SSD
+# Step 4: Train with --pos-weight 20
+# Step 5: Eval with CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=400
 ```
 
 Success gate: recall ≥ 60% AND precision > 1% on test_atwood.json.
