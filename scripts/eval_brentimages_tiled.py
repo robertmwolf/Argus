@@ -170,6 +170,10 @@ def main():
     parser.add_argument("--ann-file",  type=Path, default=ANN_FILE)
     parser.add_argument("--model-size", type=str, default="dinov3_vitb_multisource",
                         help="Model size key passed to _select_config (e.g. dinov3_vits_run4)")
+    parser.add_argument("--pretiled-ann", type=Path, default=None,
+                        help="Pre-tiled annotation JSON with .npy tile paths. When provided, "
+                             "skips in-memory FITS tiling and loads tiles directly. The GT "
+                             "metrics still use --ann-file (full-image annotations).")
     args = parser.parse_args()
 
     sys.path.insert(0, str(_REPO_ROOT))
@@ -219,40 +223,136 @@ def main():
     all_preds = []
     t_start = time.perf_counter()
 
-    for i, img_info in enumerate(images, 1):
-        img_path = Path(img_info["file_name"])
-        iid = img_info["id"]
-        try:
-            arr = _load_fits_array(img_path)
-        except Exception as e:
-            logger.warning("Failed to load %s: %s — skipping", img_path.name, e)
-            continue
+    import re as _re
+    _TILE_RE = _re.compile(r"^(.+?)__tx(\d+)_ty(\d+)_ts(\d+)$")
 
-        tiles = list(tile_image(arr, tile_size=args.tile_size, overlap=args.overlap))
-        preds_this: list[dict] = []
-        for tile, x0, y0 in tiles:
-            dets = _run_inference(model, tile, image_size=args.tile_size,
-                                  confidence_threshold=0.05,
-                                  model_name="tiled_eval")
-            tile_preds = [_pipeline_det_to_prediction(d) for d in dets]
-            preds_this.extend(remap_predictions(tile_preds, x0, y0))
+    def _load_tile_arr(tile_path: Path) -> tuple[np.ndarray, int, int] | None:
+        """Load a pre-extracted tile (.npy or virtual FITS path) → (arr_uint8_3ch, x0, y0)."""
+        from inference.fits_loader import apply_norm
+        m = _TILE_RE.match(tile_path.stem)
+        if tile_path.suffix == ".npy":
+            raw = np.load(str(tile_path))  # (H, W) float32
+            arr = apply_norm(raw, "zscore")  # (H, W, 3) uint8
+            # origin encoded in filename: <id>.npy — origin comes from annotation
+            return arr, 0, 0  # caller handles origin from annotation
+        elif m:
+            # virtual tile path — load parent and crop
+            real_stem, x0, y0, ts = m.group(1), int(m.group(2)), int(m.group(3)), int(m.group(4))
+            parent = tile_path.parent / (real_stem + tile_path.suffix)
+            try:
+                raw_arr = _load_fits_array(parent)
+            except Exception as e:
+                logger.warning("Failed to load parent %s: %s", parent.name, e)
+                return None
+            return raw_arr[y0:y0+ts, x0:x0+ts], x0, y0
+        return None
 
-        final = _clip_predictions_to_image(
-            nms_predictions(preds_this, iou_threshold=0.4),
-            width=arr.shape[1], height=arr.shape[0],
-        )
-        for p in final:
-            all_preds.append({
-                "image_id":   iid,
-                "category_id": 1,
-                "bbox":        p["bbox"],
-                "score":       p["score"],
-            })
+    if args.pretiled_ann is not None:
+        # --- Pre-tiled path: one inference call per tile, no in-memory tiling ---
+        logger.info("Pre-tiled mode: loading tiles from %s", args.pretiled_ann)
+        tiled_coco = json.loads(args.pretiled_ann.read_text())
+        tile_images = tiled_coco["images"]
 
-        if i % 20 == 0 or i == len(images):
-            elapsed = time.perf_counter() - t_start
-            logger.info("  %d/%d  %.1fs elapsed  %.2fs/img",
-                        i, len(images), elapsed, elapsed / i)
+        # Group tiles by their orig_image_id (stored in annotation or derived from file_name)
+        # We need to remap tile-local predictions to full-image coords for NMS per source image.
+        # tile_origin is stored as "tile_origin" key if present, else parse from filename.
+        from collections import defaultdict as _defaultdict
+        tiles_by_orig: dict[int, list] = _defaultdict(list)
+        for ti in tile_images:
+            orig_id = ti.get("orig_image_id", ti["id"])
+            tiles_by_orig[orig_id].append(ti)
+
+        # Build orig_image_id → source image size map from gt_coco
+        img_size_map = {img["id"]: img for img in images}
+
+        done_orig = 0
+        for orig_iid, tile_list in tiles_by_orig.items():
+            preds_this: list[dict] = []
+            src_info = img_size_map.get(orig_iid)
+
+            for ti in tile_list:
+                tile_path = Path(ti["file_name"])
+                origin = ti.get("tile_origin", [0, 0])
+                x0, y0 = int(origin[0]), int(origin[1])
+
+                # Load tile
+                if tile_path.suffix == ".npy":
+                    from inference.fits_loader import apply_norm as _apply_norm
+                    raw = np.load(str(tile_path))
+                    arr_tile = _apply_norm(raw, "zscore")
+                else:
+                    result = _load_tile_arr(tile_path)
+                    if result is None:
+                        continue
+                    arr_tile, x0, y0 = result
+
+                try:
+                    dets = _run_inference(model, arr_tile, image_size=args.tile_size,
+                                          confidence_threshold=0.05,
+                                          model_name="tiled_eval")
+                    tile_preds = [_pipeline_det_to_prediction(d) for d in dets]
+                    preds_this.extend(remap_predictions(tile_preds, x0, y0))
+                except Exception as e:
+                    logger.warning("Inference failed on tile %s: %s", tile_path.name, e)
+
+            if src_info:
+                w, h = src_info.get("width", 99999), src_info.get("height", 99999)
+                final = _clip_predictions_to_image(
+                    nms_predictions(preds_this, iou_threshold=0.4), width=w, height=h
+                )
+            else:
+                final = nms_predictions(preds_this, iou_threshold=0.4)
+
+            for p in final:
+                all_preds.append({
+                    "image_id":    orig_iid,
+                    "category_id": 1,
+                    "bbox":        p["bbox"],
+                    "score":       p["score"],
+                })
+
+            done_orig += 1
+            if done_orig % 20 == 0 or done_orig == len(tiles_by_orig):
+                elapsed = time.perf_counter() - t_start
+                logger.info("  %d/%d source images  %.1fs elapsed  %.2fs/img",
+                            done_orig, len(tiles_by_orig), elapsed, elapsed / done_orig)
+
+    else:
+        # --- Original path: load full FITS and tile in memory ---
+        for i, img_info in enumerate(images, 1):
+            img_path = Path(img_info["file_name"])
+            iid = img_info["id"]
+            try:
+                arr = _load_fits_array(img_path)
+            except Exception as e:
+                logger.warning("Failed to load %s: %s — skipping", img_path.name, e)
+                continue
+
+            tiles = list(tile_image(arr, tile_size=args.tile_size, overlap=args.overlap))
+            preds_this: list[dict] = []
+            for tile, x0, y0 in tiles:
+                dets = _run_inference(model, tile, image_size=args.tile_size,
+                                      confidence_threshold=0.05,
+                                      model_name="tiled_eval")
+                tile_preds = [_pipeline_det_to_prediction(d) for d in dets]
+                preds_this.extend(remap_predictions(tile_preds, x0, y0))
+
+            final = _clip_predictions_to_image(
+                nms_predictions(preds_this, iou_threshold=0.4),
+                width=arr.shape[1], height=arr.shape[0],
+            )
+            for p in final:
+                all_preds.append({
+                    "image_id":   iid,
+                    "category_id": 1,
+                    "bbox":        p["bbox"],
+                    "score":       p["score"],
+                })
+
+            if i % 20 == 0 or i == len(images):
+                elapsed = time.perf_counter() - t_start
+                logger.info("  %d/%d  %.1fs elapsed  %.2fs/img",
+                            i, len(images), elapsed, elapsed / i)
 
     logger.info("Inference complete — %d total predictions on %d images",
                 len(all_preds), len(images))
