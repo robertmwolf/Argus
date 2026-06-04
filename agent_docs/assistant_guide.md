@@ -16,7 +16,7 @@ propagation and multi-factor confidence scoring. Results are served through a
 FastAPI backend and React frontend.
 
 ## Current Phase
-**Run 7 complete (2026-06-02). Precision catastrophe persists — val metric blind to over-prediction. Run 8 must fix val set and rebalance.**
+**Run 7 complete (2026-06-02). Run 8 pipeline ready — see `scripts/run8_pipeline.sh`.**
 
 Progress:
 - ✅ Phase 0 (Classical baseline): `src/` — fits_parser, classical_detector, plate_solver, SGP4 matching
@@ -81,40 +81,42 @@ Progress:
   - Root cause: val_dice blind to over-prediction (val set is 97% positive tiles)
   - ViT-S beat ConvNeXt-S in this config — backbone ranking is not stable
   - See `docs/training_methods.md §3.10` for Run 8 fix
+- ✅ **Run 8 in progress (2026-06-03)** — fixed val metric + rebalanced negatives:
+  - ConvNeXt-S: **best val_dice=0.861** (epoch 47, stopped early), weights: `weights/run8_convnext_s2/best.pt`
+  - ViT-S: training resumed from epoch 13 (best=0.805), completing to epoch 48, weights: `weights/run8_vits/best.pt`
+  - Val set now includes negative tiles (~7%); val_dice now penalises over-prediction
+  - Observation: constant LR causes staircase convergence — increments shrink to 0.002/best after ep30
+  - See `docs/training_methods.md §3.10` for full results
 
 ## Next Steps
 
-### Run 8 — Fix val metric + rebalance (top priority)
+### Run 9 — Cosine LR + fast-IO pipeline (queued)
 
-The core problem: `val_dice` on a 97%-positive val set rewards any model that activates
-on streak tiles, and cannot detect over-prediction on pure star-field tiles. Every run
-since Run 5 has been optimising a blind metric.
+Two improvements over Run 8:
 
-**Three-part fix:**
-1. **Add negative tiles to val set** so val_dice penalises star-field FPs during training
-2. **Negative ratio 40–45%** (between Run 6's 60% and Run 7's 27%)
-3. **pos_weight=20** (revert from Run 7's 50; Run 6's value was correct, ratio was wrong)
+1. **CosineAnnealingLR** — replaces constant LR. Eliminates staircase convergence.
+   Expected to match Run 8 quality in ~35 epochs instead of 48. Already implemented
+   in `train_dinov3_heatmap_cached.py` via `--lr-scheduler cosine`.
+
+2. **Fast-IO pipeline** — copies feature cache to local SSD before training, deletes
+   after. Internal disk returns to baseline after each run. Implemented in
+   `scripts/run9_pipeline.sh`.
 
 ```bash
-# Step 1: Rebuild val with negative tiles
-python scripts/build_tiled_brentimages_json.py \
-  --src data/annotations/val_atwood.json \
-  --out /Volumes/External/TrainingData/annotations/val_atwood_tiled_400_with_neg.json \
-  --native-tile-size 400 --overlap 0.5 \
-  --neg-tiles-per-image 5
-
-# Step 2: Rebuild train at 40-45% negatives
-python scripts/build_tiled_brentimages_json.py \
-  --src data/annotations/all_train_run5.json \
-  --out /Volumes/External/TrainingData/annotations/atwood_train_run8_tiled.json \
-  --native-tile-size 400 --overlap 0.5 \
-  --neg-tiles-per-image 25 \
-  --hard-neg-per-pos 1
-
-# Step 3: Merge + NPY convert + cache ConvNeXt-S features + copy to local SSD
-# Step 4: Train with --pos-weight 20
-# Step 5: Eval with CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=400
+bash scripts/run9_pipeline.sh 2>&1 | tee /tmp/run9_$(date +%Y%m%d_%H%M%S).log
 ```
+
+**Reuses Run 8 data** (same annotation files, same negative ratio ~37%, same val set)
+unless the data strategy changes. Only rebuild annotations if adding new nights or
+changing the negative ratio.
+
+**Key parameters:**
+- `--lr-scheduler cosine` — new for Run 9
+- `--epochs 40` — reduced from 48, cosine LR should converge faster
+- `--pos-weight 20` — unchanged from Run 8
+- Both ConvNeXt-S and ViT-S as before
+
+See `docs/training_methods.md §3.10` for full parameter rationale.
 
 Success gate: recall ≥ 60% AND precision > 1% on test_atwood.json.
 
