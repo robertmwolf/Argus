@@ -1318,7 +1318,7 @@ Run 7 was **worse than Run 6** despite the intended fix. Root causes:
 - ViT-S beat ConvNeXt-S in this run (32.5% vs 28.1% recall) — backbone ranking
   is not stable across configurations
 
-### 3.10 Run 8 — Fix val metric + rebalance (planned 2026-06-02)
+### 3.10 Run 8 — Fix val metric + rebalance (2026-06-02)
 
 **Key insight from Runs 5–7:** val_dice on a 97%-positive val set is not a useful
 training signal for precision control. The model needs to see the cost of false
@@ -1326,35 +1326,86 @@ positives during validation.
 
 **Three-part fix:**
 
-1. **Add negative tiles to val set** — include pure-negative Atwood tiles in
-   `val_atwood_tiled_400.json` so val_dice penalises over-prediction
-2. **Revert pos_weight to 20** — pos_weight=50 combined with 27% negatives was
-   too aggressive; revert to Run 6's pos_weight=20
-3. **Set negative ratio to 40–45%** — between Run 6 (60%, recall collapse) and
-   Run 7 (27%, precision collapse)
+1. **Add negative tiles to val set** — `--neg-tiles-per-image 5` adds ~100 star-field
+   tiles from the 20 unannotated val images. Over-predicting models get dice≈0 on these,
+   pulling val_dice down. Previously val had only 40 negatives (2.9%); new val has ~6.9%.
+2. **Revert pos_weight to 20** — pos_weight=50 combined with 27% negatives caused
+   diffuse activations; revert to Run 6's value which was correct, just over-suppressed
+3. **Set negative ratio to ~37–40%** — `--neg-tiles-per-image 25 --hard-neg-per-pos 1`
+   gives ~5517 negative tiles out of ~14908 total (37%), between Run 6's 60% and Run 7's 27%
+
+**Hyperparameters:**
+
+| Parameter | Run 6 | Run 7 | Run 8 |
+|-----------|-------|-------|-------|
+| neg ratio | 60% | 27% | ~37% |
+| pos_weight | 20 | 50 | 20 |
+| epochs | 50 | 50 | 60 |
+| val neg tiles | 40 (2.9%) | 40 (2.9%) | ~100 (6.9%) |
+
+**Backbones:** ConvNeXt-S (stage 2) and ViT-S/16, run independently.
+
+**Pipeline:** `scripts/run8_pipeline.sh` — runs all 11 steps sequentially (data prep,
+NPY conversion, feature caching ×4, training ×2).
 
 ```bash
-# Step 1: Rebuild val set with negative tiles included
-python scripts/build_tiled_brentimages_json.py \
-  --src data/annotations/val_atwood.json \
-  --out /Volumes/External/TrainingData/annotations/val_atwood_tiled_400_with_neg.json \
-  --native-tile-size 400 --overlap 0.5 \
-  --neg-tiles-per-image 5
-
-# Step 2: Rebuild train with 40-45% negatives
-python scripts/build_tiled_brentimages_json.py \
-  --src data/annotations/all_train_run5.json \
-  --out /Volumes/External/TrainingData/annotations/atwood_train_run8_tiled.json \
-  --native-tile-size 400 --overlap 0.5 \
-  --neg-tiles-per-image 25 \
-  --hard-neg-per-pos 1
-
-# Then: merge with frigate_cluster2_run6_ts110.json, NPY convert,
-# cache ConvNeXt-S features, copy to local SSD,
-# train with --pos-weight 20, eval with CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=400
+bash scripts/run8_pipeline.sh 2>&1 | tee /tmp/run8_$(date +%Y%m%d_%H%M%S).log
 ```
 
+**Annotation files produced:**
+- `val_atwood_tiled_400_with_neg.json` / `val_atwood_run8_tiled_npy.json`
+- `atwood_train_run8_tiled.json` / `all_train_run8_tiled.json` / `all_train_run8_tiled_npy.json`
+
+**Feature caches:**
+- `heatmap_cache/convnext_run8_{train,val}/`
+- `heatmap_cache/vits_run8_{train,val}/`
+
+**Weights:** `weights/run8_convnext_s2/best.pt`, `weights/run8_vits/best.pt`
+
 **Success gate:** recall ≥ 60% AND precision > 1% on `test_atwood.json`.
+
+**Run 8 observed results (2026-06-03):**
+- ConvNeXt-S: best val_dice=0.861 (epoch 47/49 run), stopped early
+- ViT-S: best val_dice=TBD (48 epochs)
+- Key observation: **constant LR causes staircase convergence** — large gains in
+  epochs 1–20, then increments of 0.002–0.007 per new best from ep20–47.
+  Final 12 epochs projected to add only ~0.005. 49 epochs were run for ConvNeXt-S
+  (best at ep47), 48 for ViT-S.
+
+**Run 9 recommendation — add LR scheduler:**
+
+The staircase pattern (long plateaus punctuated by small random improvements) is the
+signature of a constant learning rate near a local optimum.  Adding cosine annealing
+would give more directed convergence, likely matching ep47 quality by ep30–35:
+
+```python
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+# add inside the epoch loop, after optimizer.step():
+scheduler.step()
+```
+
+Add `--lr-scheduler cosine` flag to `train_dinov3_heatmap_cached.py` for Run 9.
+Expected benefit: same or better final val_dice in 35–40 epochs instead of 48–60,
+cutting training wall-time by ~30%.
+
+**Run 9 recommendation — fast-IO pipeline:**
+
+Training is bottlenecked by reading `.pt` feature files from the external drive.
+The new standard pipeline moves the feature cache to the internal SSD for training,
+then removes it after training completes (leaving the external copy intact).
+
+Stage order (see `scripts/run9_pipeline.sh`):
+1. Copy source FITS files referenced by the annotation JSON to a local temp dir
+2. Build NPY tiles from local FITS (fast reads)
+3. Build feature cache → write directly to external drive
+4. Delete local FITS + local NPY tiles (free space)
+5. Copy feature cache from external → local SSD
+6. Train from local SSD (fast IO)
+7. Delete local feature cache copy (external remains as archive)
+
+Result: internal disk returns to baseline; external holds raw FITS + feature cache archive.
+Eval still reads raw FITS from external (unavoidable — tiled inference on full images).
+Pipeline script: `scripts/run9_pipeline.sh`
 
 ---
 
@@ -1455,6 +1506,60 @@ Heatmap models: the binarisation `--threshold` is not equivalent to MMDet
 confidence. Default `--threshold 0.5` is the correct operating point for
 evaluating detection coverage. Use `CONVNEXT_HEATMAP_THRESHOLD=0.99` for
 precision-critical deployment (zero FP on negatives, ~87 % recall).
+
+### 6.4 .npy on-disk tile cache for fast OBB evaluation
+
+OBB tiled evaluation (`eval_brentimages_tiled.py`) is very slow in the default
+path: each full-frame FITS (50 MB) is read from the external drive, then ~620
+tiles are extracted in memory, then the model runs 620 forward passes. Wall-clock
+cost is **~286 s/image**, giving **~19 hrs for 240 test images**.
+
+The fix is identical to the training speedup: pre-extract tiles to `.npy` once,
+then run eval loading tiles directly. This eliminates the per-image FITS I/O
+and in-memory tiling overhead, leaving only the model forward passes as the
+bottleneck.
+
+**Standard eval workflow for OBB models:**
+
+```bash
+# 1. Build tiled annotation (annotation only — no image I/O, runs in seconds)
+python scripts/build_tiled_brentimages_json.py \
+  --src data/annotations/test_atwood.json \
+  --out /Volumes/External/TrainingData/annotations/test_atwood_tiled_400.json \
+  --native-tile-size 400 --overlap 0.5
+
+# 2. Convert FITS tiles to float32 .npy on disk (~25 min for 240 images)
+python scripts/convert_tiles_to_npy.py \
+  --annotations /Volumes/External/TrainingData/annotations/test_atwood_tiled_400.json \
+  --output-dir  /Volumes/External/TrainingData/tiles_npy/test \
+  --output-ann  /Volumes/External/TrainingData/annotations/test_atwood_tiled_400_npy.json
+
+# 3. Run eval using pre-extracted .npy tiles (--pretiled-ann skips FITS loading)
+PYTORCH_ENABLE_MPS_FALLBACK=1 ARGUS_NORM=zscore ARGUS_ENABLE_PLATE_SOLVE=false \
+python scripts/eval_brentimages_tiled.py \
+  --checkpoint weights/<run>/best_coco_bbox_mAP_epoch_15.pth \
+  --ann-file data/annotations/test_atwood.json \
+  --pretiled-ann /Volumes/External/TrainingData/annotations/test_atwood_tiled_400_npy.json \
+  --model-size dinov3_vits_run5 \
+  --tile-size 400 --overlap 0.5 --conf 0.20
+
+# 4. Clean up tile cache when done (tiles are reproducible, no need to keep)
+rm -rf /Volumes/External/TrainingData/tiles_npy/test
+```
+
+**Key points:**
+- The `.npy` cache is **ephemeral** — delete it after eval. It's fully reproducible
+  from the FITS source files and takes ~25 min to rebuild.
+- `--ann-file` (full-image annotations) is still used for GT metrics. `--pretiled-ann`
+  only controls how images are loaded for inference.
+- The `tile_origin` field in the tiled annotation maps each tile back to its
+  full-image origin `[x0, y0]` so predictions are correctly remapped before NMS.
+- The speedup is proportional to FITS I/O time. For Atwood (50 MB FITS), this
+  eliminates ~2 s/image overhead; the remaining ~284 s/image is model inference
+  on 620 tiles (unavoidable without batching).
+
+**Planned future improvement:** batch tile inference (4–8 tiles per forward pass)
+would reduce the ~284 s/image model cost proportionally.
 
 ---
 
