@@ -1364,13 +1364,26 @@ bash scripts/run8_pipeline.sh 2>&1 | tee /tmp/run8_$(date +%Y%m%d_%H%M%S).log
 
 **Success gate:** recall ≥ 60% AND precision > 1% on `test_atwood.json`.
 
-**Run 8 observed results (2026-06-03):**
-- ConvNeXt-S: best val_dice=0.861 (epoch 47/49 run), stopped early
-- ViT-S: best val_dice=TBD (48 epochs)
-- Key observation: **constant LR causes staircase convergence** — large gains in
+**Run 8 results (2026-06-03/04):**
+
+| Model | val_dice (best ep) | Precision | Recall | F1 | Short R | Medium R | Long R | Preds/img |
+|-------|--------------------|-----------|--------|----|---------|----------|--------|-----------|
+| ConvNeXt-S | 0.861 (ep47) | 0.15% | 34.2% | 0.003 | 0% | 4.6% | 36.1% | 218 |
+| ViT-S | 0.852 (ep43) | 0.24% | 28.1% | 0.005 | 0% | 18.2% | 28.8% | 111 |
+
+Weights: `weights/run8_convnext_s2/best.pt`, `weights/run8_vits/best.pt`
+Eval: `results/run8_convnext_s2/metrics.json`, `results/run8_vits/metrics.json`
+
+**Analysis vs prior runs:**
+- Val metric fix worked: preds/img down 5× vs Run 7 (ViT-S: 654→111, ConvNeXt-S: 876→218)
+- Medium recall appeared on ConvNeXt-S (4.6%, first time >0%); ViT-S medium recall 18.2% is best yet
+- Success gate NOT met: precision 0.15–0.24% vs target >1%; recall 28–34% vs target ≥60%
+- ViT-S wins on precision and preds/img; ConvNeXt-S wins on recall — ranking still run-dependent
+- Run 5 OBB baseline (precision=7.5%) still leads on precision
+
+**Key observation: constant LR causes staircase convergence** — large gains in
   epochs 1–20, then increments of 0.002–0.007 per new best from ep20–47.
-  Final 12 epochs projected to add only ~0.005. 49 epochs were run for ConvNeXt-S
-  (best at ep47), 48 for ViT-S.
+  49 epochs run for ConvNeXt-S (best at ep47), 48 for ViT-S (best at ep43).
 
 **Run 9 recommendation — add LR scheduler:**
 

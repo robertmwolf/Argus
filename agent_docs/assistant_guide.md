@@ -81,12 +81,13 @@ Progress:
   - Root cause: val_dice blind to over-prediction (val set is 97% positive tiles)
   - ViT-S beat ConvNeXt-S in this config — backbone ranking is not stable
   - See `docs/training_methods.md §3.10` for Run 8 fix
-- ✅ **Run 8 in progress (2026-06-03)** — fixed val metric + rebalanced negatives:
-  - ConvNeXt-S: **best val_dice=0.861** (epoch 47, stopped early), weights: `weights/run8_convnext_s2/best.pt`
-  - ViT-S: training resumed from epoch 13 (best=0.805), completing to epoch 48, weights: `weights/run8_vits/best.pt`
-  - Val set now includes negative tiles (~7%); val_dice now penalises over-prediction
-  - Observation: constant LR causes staircase convergence — increments shrink to 0.002/best after ep30
-  - See `docs/training_methods.md §3.10` for full results
+- ✅ **Run 8 complete (2026-06-03/04)** — fixed val metric + rebalanced negatives:
+  - ConvNeXt-S: val_dice=0.861 (ep47). Test: recall=34.2%, precision=0.15%, 218 preds/img. Medium recall=4.6% (first time >0%)
+  - ViT-S: val_dice=0.852 (ep43). Test: recall=28.1%, precision=0.24%, 111 preds/img. Medium recall=18.2% (best yet)
+  - Val metric fix worked: preds/img down 5× vs Run 7 for ViT-S; medium recall improved
+  - Success gate NOT met: need precision >1% at recall ≥60%; Run 5 OBB baseline still leads on precision (7.5%)
+  - Observation: constant LR causes staircase convergence — Run 9 adds CosineAnnealingLR
+  - See `docs/training_methods.md §3.10` for full results and comparison table
 
 ## Next Steps
 
