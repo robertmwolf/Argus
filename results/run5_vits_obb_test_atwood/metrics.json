@@ -1,0 +1,22 @@
+{
+  "checkpoint": "weights/run5_vits_mmdet/best_coco_bbox_mAP_epoch_15.pth",
+  "eval_mode": "pretiled_npy",
+  "ann_file": "data/annotations/test_atwood.json",
+  "tile_size": 400,
+  "overlap": 0.5,
+  "conf": 0.2,
+  "n_source_images": 220,
+  "coco_mAP": 0.016,
+  "coco_mAP50": 0.059,
+  "coco_mAP75": 0.004,
+  "coco_mAP_m": 0.244,
+  "coco_mAP_l": 0.001,
+  "precision": 0.075,
+  "recall": 0.311,
+  "f1": 0.121,
+  "band_recall": {
+    "medium": 0.782,
+    "long": 0.007
+  },
+  "notes": "Precision optimistic (only annotation-covered tiles evaluated, not exhaustive). Long recall structurally limited: model predicts 400px fragments but GT has full-streak OBBs; IoU<0.5 on all fragments."
+}
