@@ -85,11 +85,16 @@ def main():
                         help="Output COCO annotation JSON with .npy paths")
     parser.add_argument("--workers", type=int, default=0,
                         help="(unused, sequential for now)")
+    parser.add_argument("--local-fits-dir", default=None,
+                        help="Directory of locally-copied FITS files. When set, "
+                             "prefer <dir>/<basename> over the original path if "
+                             "the local copy exists (e.g. files staged to /tmp).")
     args = parser.parse_args()
 
     ann_path = Path(args.annotations)
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    local_fits_dir = Path(args.local_fits_dir) if args.local_fits_dir else None
 
     logger.info("Loading annotations from %s", ann_path)
     with open(ann_path) as f:
@@ -128,7 +133,12 @@ def main():
 
     for fits_idx, (fits_path, tile_list) in enumerate(groups.items()):
         try:
-            raw = _load_source_raw(fits_path)
+            load_path = fits_path
+            if local_fits_dir is not None:
+                candidate = local_fits_dir / Path(fits_path).name
+                if candidate.exists():
+                    load_path = str(candidate)
+            raw = _load_source_raw(load_path)
         except Exception as exc:
             logger.warning("Failed to load %s: %s — skipping %d tiles",
                            fits_path, exc, len(tile_list))

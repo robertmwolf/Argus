@@ -107,8 +107,8 @@ $PYTHON scripts/build_tiled_brentimages_json.py \
   --src data/annotations/all_train_run5.json \
   --out "$ANN_DIR/atwood_train_run9_tiled.json" \
   --native-tile-size 400 --overlap 0.5 \
-  --neg-tiles-per-image 25 \
-  --hard-neg-per-pos 1
+  --neg-tiles-per-image 30 \
+  --hard-neg-per-pos 3
 
 # Merge with Frigate
 $PYTHON - <<'PYEOF'
@@ -162,13 +162,21 @@ mkdir -p "$LOCAL_NPY_DIR/train" "$LOCAL_NPY_DIR/val"
 $PYTHON scripts/convert_tiles_to_npy.py \
   --annotations "$ANN_DIR/all_train_run9_tiled.json" \
   --output-dir  "$LOCAL_NPY_DIR/train" \
-  --output-ann  "$ANN_DIR/all_train_run9_tiled_npy.json"
+  --output-ann  "$ANN_DIR/all_train_run9_tiled_npy.json" \
+  --local-fits-dir /tmp/argus_run9_fits
 
-# Val set: reuse Run 8 val annotation, convert from local FITS
+# Val set: rebuild with more hard negatives (improves val_dice as FP signal)
+$PYTHON scripts/build_tiled_brentimages_json.py \
+  --src data/annotations/val_atwood.json \
+  --out "$ANN_DIR/val_atwood_run9_tiled.json" \
+  --native-tile-size 400 --overlap 0.5 \
+  --hard-neg-per-pos 2 \
+  --neg-tiles-per-image 10
 $PYTHON scripts/convert_tiles_to_npy.py \
-  --annotations "$ANN_DIR/val_atwood_tiled_400_with_neg.json" \
+  --annotations "$ANN_DIR/val_atwood_run9_tiled.json" \
   --output-dir  "$LOCAL_NPY_DIR/val" \
-  --output-ann  "$ANN_DIR/val_atwood_run9_tiled_npy.json"
+  --output-ann  "$ANN_DIR/val_atwood_run9_tiled_npy.json" \
+  --local-fits-dir /tmp/argus_run9_fits
 
 # ── Step 3: Build feature caches → external drive ────────────────────────────
 echo ""
@@ -252,11 +260,50 @@ rmdir "$LOCAL_CACHE_DIR" 2>/dev/null || true
 echo "Local ViT-S cache deleted."
 
 echo ""
+echo "── Step 8: Evaluate ConvNeXt-S (threshold=0.5, stitch) ──"
+CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=400 CONVNEXT_HEATMAP_TILE_OVERLAP=0.5 \
+PYTORCH_ENABLE_MPS_FALLBACK=1 \
+"$PYTHON" scripts/evaluate_dinov3_heatmap.py \
+  --annotations data/annotations/test_atwood.json \
+  --checkpoint  "$WEIGHTS_DIR/run9_convnext_s2/best.pt" \
+  --output      results/run9_convnext_s2/metrics.json \
+  --tiled --threshold 0.5 --stitch
+
+echo ""
+echo "── Step 8b: Threshold sweep (ConvNeXt-S) ──"
+"$PYTHON" scripts/run_posthoc_threshold_analysis.py \
+  --predictions results/run9_convnext_s2/predictions.json \
+  --annotations data/annotations/test_atwood.json \
+  --output-dir  results/run9_convnext_s2/threshold_sweep \
+  --stitch || true  # non-zero exit if no row meets gate; don't abort pipeline
+
+echo ""
+echo "── Step 9: Evaluate ViT-S (threshold=0.5, stitch) ──"
+PYTORCH_ENABLE_MPS_FALLBACK=1 \
+"$PYTHON" scripts/evaluate_dinov3_heatmap.py \
+  --annotations data/annotations/test_atwood.json \
+  --checkpoint  "$WEIGHTS_DIR/run9_vits/best.pt" \
+  --output      results/run9_vits/metrics.json \
+  --backbone vit \
+  --tiled --threshold 0.5 --stitch
+
+echo ""
+echo "── Step 9b: Threshold sweep (ViT-S) ──"
+"$PYTHON" scripts/run_posthoc_threshold_analysis.py \
+  --predictions results/run9_vits/predictions.json \
+  --annotations data/annotations/test_atwood.json \
+  --output-dir  results/run9_vits/threshold_sweep \
+  --stitch || true
+
+echo ""
 echo "================================================================"
 echo " Run 9 Complete  $(date)"
 echo " Weights: $WEIGHTS_DIR/run9_convnext_s2/best.pt"
 echo "          $WEIGHTS_DIR/run9_vits/best.pt"
+echo " Eval:    results/run9_convnext_s2/metrics.json"
+echo "          results/run9_vits/metrics.json"
+echo " Sweep:   results/run9_convnext_s2/threshold_sweep/threshold_sweep.json"
+echo "          results/run9_vits/threshold_sweep/threshold_sweep.json"
 echo " Internal SSD: fully freed (back to baseline)"
 echo " External: raw FITS + all feature caches preserved"
-echo " Eval: CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=400 --tiled"
 echo "================================================================"
