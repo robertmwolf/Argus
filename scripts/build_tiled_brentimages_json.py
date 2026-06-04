@@ -339,6 +339,9 @@ def build_tiled_brentimages_json(
                         # MMDetection resize handles upscaling to model_input_size.
                         "width": native_tile_size,
                         "height": native_tile_size,
+                        # Provenance fields used by pretiled eval mode
+                        "orig_image_id": img["id"],
+                        "tile_origin": [x0, y0],
                     })
                     for clipped_bbox, cat_id, src_ann in tile_anns:
                         out_ann: dict = {
