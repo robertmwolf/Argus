@@ -1508,6 +1508,69 @@ revisited it requires partial backbone unfreezing (last 5–9 blocks of stage 3)
 
 ---
 
+### 3.13 Run 10 Results (2026-06-05/06) — ConvNeXt eliminated; ViT-S 38% is best
+
+**Experiment:** 4 models trained — ViT-S and ConvNeXt-S × {38%, 42%} negative ratio.
+Pipeline: `scripts/run10_pipeline.sh` (NPY bug found mid-run) → `scripts/run10_recovery.sh`.
+Val cache reused from Run 9 (`convnext_run9_val`, `vits_run9_val`).
+Test set: `test_atwood.json` (240 images), tiled eval with stitch, threshold sweep
+0.30–0.95.
+
+| Model | Neg% | recall@t=0.3 | medium_recall@t=0.3 | best_t | precision | recall | F1 | gate |
+|-------|------|-------------|---------------------|--------|-----------|--------|----|------|
+| ConvNeXt-S 10a | 38% | 0.44% | **0%** | 0.95 | 0.35% | 0.44% | 0.39% | ✗ |
+| **ViT-S 10a** | **38%** | **1.75%** | **9.09%** | **0.90** | **1.37%** | **1.75%** | **1.54%** | **✗** |
+| ConvNeXt-S 10b | 42% | 0.88% | **0%** | 0.95 | 0.61% | 0.88% | 0.72% | ✗ |
+| ViT-S 10b | 42% | 1.32% | 4.55% | 0.90 | 0.97% | 1.32% | 1.12% | ✗ |
+
+**Key findings:**
+
+1. **ConvNeXt-S is definitively eliminated.** Zero medium-streak recall at both negative
+   ratios. Frozen local (stage-2) features cannot detect oriented linear signals at FITS
+   SNR levels regardless of negative ratio or LR schedule. Architectural fix required:
+   partial backbone unfreeze (GPU needed).
+
+2. **ViT-S 10a (38% neg) is the best configuration to date.** Highest overall recall
+   (1.75%) and the only configuration with non-trivial medium-streak recall (9.09%),
+   achievable at t=0.90 with precision >1%. The global self-attention of ViT-S encodes
+   some streak signal even with frozen weights.
+
+3. **42% negatives hurts ViT-S.** Medium recall drops from 9.09% to 4.55% from 10a→10b.
+   38% is confirmed as the better operating point; 42% over-suppresses the model's
+   positive activation.
+
+4. **No configuration meets the gate** (recall ≥ 60% AND precision > 1%). The recall
+   ceiling with a fully frozen ViT-S backbone on MPS is ~1–2%, well below the gate.
+
+**Root cause analysis:** The frozen backbone produces ImageNet-domain features. Satellite
+streaks in FITS data are faint (SNR 2–15), thin (2–5 px), and linear — geometric priors
+not present in DINOv3's ImageNet pretraining. The heatmap head (small MLP) cannot
+recover streak signal that the backbone did not encode. This is a domain mismatch
+problem, not a hyperparameter problem.
+
+**Run 10 pipeline incident:** `run10_pipeline.sh` had a bug where `LOCAL_NPY_DIR` was
+deleted (Step 3) before feature caching (Step 4), causing `cache_dinov3_heatmap_features.py`
+to fall back to blank images for all tiles. The bug was caught by log monitoring
+(21,066 "Failed to load … using blank image" warnings). Fix: delete FITS only in Step 3;
+delete NPY in a new Step 4e after all caches are built. Recovery: `scripts/run10_recovery.sh`.
+
+**Recommended next steps (in priority order):**
+
+1. **Synthetic streak augmentation** — generate synthetic streaks on negative FITS tiles
+   to give the frozen backbone many more positive examples across geometry/SNR space.
+   CPU-feasible. Script: `scripts/generate_synthetic_streaks.py`.
+   Expected impact: unknown but tractable without GPU.
+
+2. **Partial ViT-S backbone unfreeze** — unfreeze last 2 transformer blocks, train
+   end-to-end. Requires GPU (or slow MPS run ~12–24h). Addresses root cause directly.
+   Expected impact: likely large given that ViT-S already encodes 9% medium-streak
+   recall with frozen weights.
+
+3. **Cheap cloud GPU** — Vast.ai / RunPod A10 for ~$0.15/hr. A full unfreeze run
+   would cost <$5 and enable both (2) above and ViT-B experiments.
+
+---
+
 ---
 
 ## 6. Evaluation Policy

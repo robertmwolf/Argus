@@ -90,49 +90,70 @@ Progress:
   - See `docs/training_methods.md §3.10` for full results and comparison table
 - ✅ **Run 9 training complete (2026-06-04/05)** — cosine LR + ~48% negatives + rebuilt val set:
   - ConvNeXt-S: val_dice=0.635 (ep36). Test (t=0.5): recall=3.1%, 44 preds/img. Test (t=0.3): recall=0.0%. **Collapsed** — 48% negatives too aggressive for ConvNeXt frozen backbone.
-  - ViT-S: val_dice=0.681 (ep36). Test eval in progress (caffeinate restart after overnight sleep kill).
+  - ViT-S: val_dice=0.681 (ep36). Test eval: recall=0.0% at t=0.5.
   - Val set improved: 32% negative tiles (was 6.9%), giving honest val_dice
   - Cosine LR confirmed faster convergence: both backbones converged at ep36 vs ep47/43 in Run 8
   - **Key finding:** ConvNeXt's purely local features collapse under heavier negative supervision; ViT-S global attention is more robust. See `docs/training_methods.md §3.11`
   - **Eval rule change:** all future evals use `--threshold 0.3` as base (captures full activation distribution for post-hoc sweep). See `docs/training_methods.md §6.3`
 
+- ✅ **Run 10 complete (2026-06-05/06)** — 4-way comparison: ViT-S × ConvNeXt-S × {38%, 42%} neg.
+  See `docs/training_methods.md §3.13` for full results and incident log.
+
+  | Model | Neg% | recall@t=0.3 | medium_recall | best_t | precision | F1 | gate |
+  |-------|------|-------------|---------------|--------|-----------|-----|------|
+  | ConvNeXt-S 10a | 38% | 0.44% | 0% | 0.95 | 0.35% | 0.39% | ✗ |
+  | **ViT-S 10a** | **38%** | **1.75%** | **9.09%** | **0.90** | **1.37%** | **1.54%** | **✗** |
+  | ConvNeXt-S 10b | 42% | 0.88% | 0% | 0.95 | 0.61% | 0.72% | ✗ |
+  | ViT-S 10b | 42% | 1.32% | 4.55% | 0.90 | 0.97% | 1.12% | ✗ |
+
+  **Conclusions:**
+  - **ConvNeXt-S definitively eliminated** — zero medium-streak recall at both ratios. Frozen local features cannot encode streak signal regardless of training configuration.
+  - **ViT-S 10a (38% neg) is best to date** — only config with medium-streak recall (9.09%) and precision >1% at a usable threshold (t=0.90).
+  - **42% negatives hurts ViT-S** — medium recall drops from 9.09% → 4.55%. Use 38%.
+  - **Recall ceiling with frozen backbone: ~1–2%.** Root cause is ImageNet domain mismatch, not hyperparameters. Gate (≥60% recall) requires backbone adaptation.
+
 ## Next Steps
 
-### Run 10 — Sweep the 34–48% negative boundary (queued)
+### Run 11 — Synthetic streak augmentation (CPU-feasible)
 
-Run 9 collapsed both backbones at 48% negatives. Run 8 (34%) was the best operating point.
-Target: find the maximum negative ratio that preserves recall. See `docs/training_methods.md §3.12`.
+**Goal:** Break the frozen-backbone recall ceiling by giving the model many more positive
+examples with diverse geometry and SNR. Physically-motivated streaks (Gaussian PSF, random
+angle/length/SNR) are rendered onto real negative FITS tiles, then cached and merged with
+real positives for training.
 
-Two candidate runs (ViT-S only — ConvNeXt dropped):
+**Script:** `scripts/generate_synthetic_streaks.py`
 
 ```bash
-# Run 10a: ~38% negatives
-python scripts/build_tiled_brentimages_json.py \
-  --src data/annotations/all_train_run5.json \
-  --out /Volumes/External/TrainingData/annotations/atwood_train_run10a_tiled.json \
-  --native-tile-size 400 --overlap 0.5 \
-  --hard-neg-per-pos 2 --neg-tiles-per-image 28
+# 1. Build NPY tiles (need real negatives to augment)
+python scripts/convert_tiles_to_npy.py \
+  --annotations /Volumes/External/TrainingData/annotations/all_train_run10a_tiled.json \
+  --output-dir  /tmp/argus_synth_npy \
+  --output-ann  /Volumes/External/TrainingData/annotations/all_train_run10a_tiled_npy.json
 
-# Run 10b: ~42% negatives
-python scripts/build_tiled_brentimages_json.py \
-  --src data/annotations/all_train_run5.json \
-  --out /Volumes/External/TrainingData/annotations/atwood_train_run10b_tiled.json \
-  --native-tile-size 400 --overlap 0.5 \
-  --hard-neg-per-pos 2 --neg-tiles-per-image 35
+# 2. Generate synthetic positive tiles (2 per negative → ~13,400 synthetic positives)
+python scripts/generate_synthetic_streaks.py \
+  --neg-annotations /Volumes/External/TrainingData/annotations/all_train_run10a_tiled_npy.json \
+  --output-dir  /tmp/argus_synth_npy/synthetic \
+  --output-ann  /Volumes/External/TrainingData/annotations/synth_run11_npy.json \
+  --n-per-neg 2 --snr-min 3 --snr-max 12 --seed 42
+
+# 3. Cache + merge + train (merge synth JSON with real positives before caching)
 ```
 
-Then train each with cosine LR, pos_weight=20, 40 epochs (same as Run 9).
-Eval with `--threshold 0.3 --stitch` and run `run_posthoc_threshold_analysis.py`.
+Then train ViT-S 10a config (38% neg, cosine LR, pos_weight=20) on the augmented set.
 
-**ConvNeXt status:** Dropped. Frozen local features collapse faster than ViT-S under
-negative supervision. Requires partial backbone unfreezing (GPU) to revisit.
+**Success signal:** medium_recall > 9.09% (beating Run 10 ViT-S 10a without augmentation).
 
-**New tooling from Run 9:**
-- `scripts/run_posthoc_threshold_analysis.py` — instant threshold sweep from predictions.json
-- `scripts/screen_fits_files.py` — pre-screen FITS files for hangers before long evals
-- `scripts/run_threshold_sweep.sh` — multi-threshold full evals
-- Stitch + proper OBB merge in `inference/tiled_pipeline.py`
-- Eval policy: always use `--threshold 0.3` as base (§6.3 in training_methods.md)
+**Alternative if no GPU available:** Cheap cloud rental — Vast.ai / RunPod A10 at ~$0.15/hr
+enables partial ViT-S backbone unfreeze (last 2 blocks) which directly addresses the domain
+mismatch root cause. A full run costs ~$3–5.
+
+**ConvNeXt status:** Permanently dropped from MPS experiments. Requires GPU + partial unfreeze.
+
+**New tooling from Run 10:**
+- `scripts/generate_synthetic_streaks.py` — Gaussian PSF streak renderer for NPY tiles
+- `scripts/run10_pipeline.sh` — 4-backbone pipeline template (with NPY-delete bug fix documented)
+- `scripts/run10_recovery.sh` — recovery from corrupted feature cache incident
 
 Success gate: recall ≥ 60% AND precision > 1% on test_atwood.json.
 
