@@ -313,22 +313,87 @@ def stitch_collinear_fragments(
     angle_tol = math.radians(angle_tol_deg)
 
     def _center(pred: Prediction) -> tuple[float, float]:
+        obb = pred.get("obb")
+        if isinstance(obb, dict) and "cx" in obb and "cy" in obb:
+            return float(obb["cx"]), float(obb["cy"])
         x, y, w, h = pred["bbox"]
         return x + w / 2.0, y + h / 2.0
 
     def _angle(pred: Prediction) -> float:
-        """Streak angle from bbox aspect ratio, in [0, π/2]."""
+        """Streak angle in [0, π/2].
+
+        Prefers the ``obb.angle_deg`` field when present so that diagonal
+        streaks are correctly characterised.  The axis-aligned bbox fallback
+        returns atan2(h, w) which is valid for axis-aligned detections only.
+        """
+        obb = pred.get("obb")
+        if isinstance(obb, dict) and "angle_deg" in obb:
+            a = float(obb["angle_deg"]) % 180.0
+            return math.radians(min(a, 180.0 - a))  # fold to [0, π/2]
         _, _, w, h = pred["bbox"]
         return math.atan2(max(h, 1e-6), max(w, 1e-6))
 
     def _aspect(pred: Prediction) -> float:
+        """Axis-ratio of the detection.
+
+        Prefers the ``obb`` field (w/h) so that diagonal streaks with near-
+        square axis-aligned bboxes are not incorrectly filtered out.
+        """
+        obb = pred.get("obb")
+        if isinstance(obb, dict):
+            w_obb = float(obb.get("w", 0))
+            h_obb = float(obb.get("h", 0))
+            if w_obb > 0 and h_obb > 0:
+                return max(w_obb, h_obb) / max(min(w_obb, h_obb), 1e-6)
         _, _, w, h = pred["bbox"]
         lo = min(w, h)
         hi = max(w, h)
         return hi / max(lo, 1e-6)
 
+    def _merge_obb(
+        obb_a: dict[str, float],
+        obb_b: dict[str, float],
+    ) -> dict[str, float]:
+        """Return a proper oriented OBB spanning both collinear fragment OBBs.
+
+        Projects each fragment's extent onto the shared streak axis, takes
+        the full range along that axis, and uses a length-weighted average
+        for the perpendicular centre position.  Width (minor axis) is the
+        max of the two fragments — conservative, never narrows the detection.
+        """
+        angle = math.radians(
+            (obb_a["angle_deg"] + obb_b["angle_deg"]) / 2.0
+        )
+        cos_t = math.cos(angle)
+        sin_t = math.sin(angle)
+
+        proj_a = obb_a["cx"] * cos_t + obb_a["cy"] * sin_t
+        proj_b = obb_b["cx"] * cos_t + obb_b["cy"] * sin_t
+        half_a = obb_a["w"] / 2.0
+        half_b = obb_b["w"] / 2.0
+
+        start = min(proj_a - half_a, proj_b - half_b)
+        end   = max(proj_a + half_a, proj_b + half_b)
+        center_proj = (start + end) / 2.0
+
+        perp_a = -obb_a["cx"] * sin_t + obb_a["cy"] * cos_t
+        perp_b = -obb_b["cx"] * sin_t + obb_b["cy"] * cos_t
+        len_a, len_b = max(obb_a["w"], 1e-6), max(obb_b["w"], 1e-6)
+        center_perp = (perp_a * len_a + perp_b * len_b) / (len_a + len_b)
+
+        cx = center_proj * cos_t - center_perp * sin_t
+        cy = center_proj * sin_t + center_perp * cos_t
+
+        return {
+            "cx": cx,
+            "cy": cy,
+            "w": end - start,
+            "h": max(obb_a["h"], obb_b["h"]),
+            "angle_deg": (obb_a["angle_deg"] + obb_b["angle_deg"]) / 2.0,
+        }
+
     def _merge(pA: Prediction, pB: Prediction) -> Prediction:
-        """Return the union bounding box with the max score."""
+        """Return the union bounding box with the max score and merged OBB."""
         xA, yA, wA, hA = pA["bbox"]
         xB, yB, wB, hB = pB["bbox"]
         x1 = min(xA, xB)
@@ -341,6 +406,11 @@ def stitch_collinear_fragments(
             float(pA.get("score", 0.0)),
             float(pB.get("score", 0.0)),
         )
+        obb_a = pA.get("obb")
+        obb_b = pB.get("obb")
+        if isinstance(obb_a, dict) and isinstance(obb_b, dict):
+            merged["obb"] = _merge_obb(obb_a, obb_b)
+            merged["streak_length_px"] = merged["obb"]["w"]
         return merged
 
     angles = [_angle(p) for p in preds]

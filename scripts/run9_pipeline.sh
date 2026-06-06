@@ -221,8 +221,8 @@ echo "Local FITS and NPY deleted."
 echo ""
 echo "── Step 5: Copy ConvNeXt-S cache to local SSD ──"
 mkdir -p "$LOCAL_CACHE_DIR"
-rsync -a --info=progress2 "$EXT_CACHE_DIR/convnext_run9_train/" "$LOCAL_CACHE_DIR/convnext_run9_train/"
-rsync -a --info=progress2 "$EXT_CACHE_DIR/convnext_run9_val/"   "$LOCAL_CACHE_DIR/convnext_run9_val/"
+rsync -a "$EXT_CACHE_DIR/convnext_run9_train/" "$LOCAL_CACHE_DIR/convnext_run9_train/"
+rsync -a "$EXT_CACHE_DIR/convnext_run9_val/"   "$LOCAL_CACHE_DIR/convnext_run9_val/"
 
 echo ""
 echo "── Step 6: Train ConvNeXt-S from local SSD (cosine LR, 40 epochs) ──"
@@ -241,8 +241,8 @@ echo "Local ConvNeXt-S cache deleted."
 # ── Steps 5–7: ViT-S: copy cache → train → delete ────────────────────────────
 echo ""
 echo "── Step 5: Copy ViT-S cache to local SSD ──"
-rsync -a --info=progress2 "$EXT_CACHE_DIR/vits_run9_train/" "$LOCAL_CACHE_DIR/vits_run9_train/"
-rsync -a --info=progress2 "$EXT_CACHE_DIR/vits_run9_val/"   "$LOCAL_CACHE_DIR/vits_run9_val/"
+rsync -a "$EXT_CACHE_DIR/vits_run9_train/" "$LOCAL_CACHE_DIR/vits_run9_train/"
+rsync -a "$EXT_CACHE_DIR/vits_run9_val/"   "$LOCAL_CACHE_DIR/vits_run9_val/"
 
 echo ""
 echo "── Step 6: Train ViT-S from local SSD (cosine LR, 40 epochs) ──"
@@ -260,39 +260,43 @@ rmdir "$LOCAL_CACHE_DIR" 2>/dev/null || true
 echo "Local ViT-S cache deleted."
 
 echo ""
-echo "── Step 8: Evaluate ConvNeXt-S (threshold=0.5, stitch) ──"
+echo "── Step 8: Evaluate ConvNeXt-S (threshold=0.3, stitch) ──"
+# Use threshold=0.3 to capture the full activation distribution for post-hoc sweep.
+# Output to t0.3/ subdirectory to keep predictions.json distinct from any prior runs.
+# See docs/training_methods.md §6.3 for rationale.
 CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=400 CONVNEXT_HEATMAP_TILE_OVERLAP=0.5 \
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
 "$PYTHON" scripts/evaluate_dinov3_heatmap.py \
   --annotations data/annotations/test_atwood.json \
   --checkpoint  "$WEIGHTS_DIR/run9_convnext_s2/best.pt" \
-  --output      results/run9_convnext_s2/metrics.json \
-  --tiled --threshold 0.5 --stitch
+  --output      results/run9_convnext_s2/t0.3/metrics.json \
+  --tiled --threshold 0.3 --stitch
 
 echo ""
 echo "── Step 8b: Threshold sweep (ConvNeXt-S) ──"
 "$PYTHON" scripts/run_posthoc_threshold_analysis.py \
-  --predictions results/run9_convnext_s2/predictions.json \
+  --predictions results/run9_convnext_s2/t0.3/predictions.json \
   --annotations data/annotations/test_atwood.json \
   --output-dir  results/run9_convnext_s2/threshold_sweep \
+  --thresholds 0.30 0.40 0.50 0.60 0.70 0.80 0.85 0.90 0.95 \
   --stitch || true  # non-zero exit if no row meets gate; don't abort pipeline
 
 echo ""
-echo "── Step 9: Evaluate ViT-S (threshold=0.5, stitch) ──"
+echo "── Step 9: Evaluate ViT-S (threshold=0.3, stitch) ──"
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
 "$PYTHON" scripts/evaluate_dinov3_heatmap.py \
   --annotations data/annotations/test_atwood.json \
   --checkpoint  "$WEIGHTS_DIR/run9_vits/best.pt" \
-  --output      results/run9_vits/metrics.json \
-  --backbone vit \
-  --tiled --threshold 0.5 --stitch
+  --output      results/run9_vits/t0.3/metrics.json \
+  --tiled --threshold 0.3 --stitch
 
 echo ""
 echo "── Step 9b: Threshold sweep (ViT-S) ──"
 "$PYTHON" scripts/run_posthoc_threshold_analysis.py \
-  --predictions results/run9_vits/predictions.json \
+  --predictions results/run9_vits/t0.3/predictions.json \
   --annotations data/annotations/test_atwood.json \
   --output-dir  results/run9_vits/threshold_sweep \
+  --thresholds 0.30 0.40 0.50 0.60 0.70 0.80 0.85 0.90 0.95 \
   --stitch || true
 
 echo ""

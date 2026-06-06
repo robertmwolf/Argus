@@ -218,6 +218,12 @@ def main() -> int:
                         help="Use the pipeline detector (with tiling) instead of the "
                              "full-image letterbox path. Required for accurate medium-band "
                              "recall on large images. Only supported for convnext checkpoints.")
+    parser.add_argument("--stitch", action="store_true",
+                        help="Merge collinear tile fragments after per-image NMS "
+                             "(tiled mode only). Reconstructs OBB from merged bbox so "
+                             "IoU matching against full-extent GT annotations works.")
+    parser.add_argument("--stitch-max-gap", type=float, default=400.0,
+                        help="Max gap in px between collinear fragments to merge (default: 400).")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -292,6 +298,7 @@ def main() -> int:
             logger.error("--tiled is only supported for convnext and vit checkpoints")
             return 1
 
+        from inference.tiled_pipeline import stitch_collinear_fragments as _stitch_frags
         from inference.fits_loader import FITSLoader as _FITSLoader
         _fits_loader = _FITSLoader()
         coco_data = json.loads(Path(args.annotations).read_text())
@@ -319,6 +326,26 @@ def main() -> int:
                 logger.warning("Could not load %s: %s", img_path, exc)
                 continue
             dets = _run_tiled(arr)
+            if args.stitch and len(dets) > 1:
+                # stitch_collinear_fragments expects bbox=[x,y,w,h] and "score".
+                # Heatmap detectors return bbox=[x1,y1,x2,y2] with "confidence".
+                # OBB reconstruction for merged fragments is handled inside
+                # tiled_pipeline._merge() via _merge_obb().
+                n_before = len(dets)
+                stitch_in = []
+                for d in dets:
+                    x1, y1, x2, y2 = d["bbox"]
+                    stitch_in.append({**d,
+                                      "bbox": [x1, y1, x2 - x1, y2 - y1],
+                                      "score": d["confidence"]})
+                stitched = _stitch_frags(stitch_in, max_gap_px=args.stitch_max_gap)
+                dets = []
+                for s in stitched:
+                    x, y, w, h = s["bbox"]
+                    dets.append({**s,
+                                 "bbox": [x, y, x + w, y + h],
+                                 "confidence": s.get("confidence", s.get("score", 0.0))})
+                logger.debug("stitch img_id=%d  %d → %d", meta["id"], n_before, len(dets))
             for det in dets:
                 det["image_id"] = int(meta["id"])
             predictions.extend(dets)
@@ -331,7 +358,8 @@ def main() -> int:
         metrics = evaluate(predictions, ground_truth)
         out_path = Path(args.output)
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {"metrics": metrics, "n_predictions": len(predictions), "tiled": True}
+        payload = {"metrics": metrics, "n_predictions": len(predictions),
+                   "tiled": True, "stitch": args.stitch}
         out_path.write_text(json.dumps(payload, indent=2))
         (out_path.parent / "predictions.json").write_text(json.dumps(predictions, indent=2))
         logger.info("wrote %s (%d predictions, tiled)", out_path, len(predictions))

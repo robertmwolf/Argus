@@ -1422,6 +1422,92 @@ Pipeline script: `scripts/run9_pipeline.sh`
 
 ---
 
+### 3.11 Run 9 Results (2026-06-04/05) — Both backbones collapsed
+
+**Training summary:**
+
+| Model | Best val_dice | Best epoch | Training time |
+|-------|-------------|-----------|---------------|
+| ConvNeXt-S | 0.635 | ep36 | ~42 min (SSD cache) |
+| ViT-S | **0.681** | ep36 | ~48 min (SSD cache) |
+
+Val set: `val_atwood_run9_tiled.json` — 1,984 tiles, **32% negative** (was 6.9% in Run 8).
+The 32% negative val set gives a more honest val_dice (penalises FP activations), making
+Run 9 val_dice numbers incomparable to Run 8's (which used 93% positive val).
+
+Cosine LR confirmed: both backbones converged at epoch 36 vs 47/43 for Run 8, cutting
+training wall-time by ~30% as predicted.
+
+**Test results (`test_atwood.json`, 240 images, threshold=0.5, stitch):**
+
+| Model | Recall | Precision | F1 | Short R | Medium R | Long R | p/img |
+|-------|--------|-----------|-----|---------|----------|--------|-------|
+| ConvNeXt-S | 3.1% | 0.07% | 0.001 | 0% | 0% | 3.4% | 44 |
+| ViT-S | **1.3%** | 0.03% | 0.001 | 0% | 0% | 1.5% | 41 |
+
+**Both models collapsed.** Post-hoc sweep from threshold=0.10 to 0.95 shows flat 1.3%
+recall for ViT-S across all thresholds — the model did not activate on streaks at any
+confidence level. This is not a threshold calibration issue; the training collapsed.
+
+**Root cause: 48% negative tiles is too aggressive for both backbones with pos_weight=20.**
+
+Run 9 negative ratio breakdown: 9,343 positive + 8,458 negative = 17,801 tiles (47.5%).
+At this ratio, the BCE loss gradient is dominated by negative examples despite pos_weight=20,
+causing the head to converge to near-zero outputs everywhere.
+
+**Run history — negative ratio vs recall:**
+
+| Run | Neg ratio | ViT-S recall | ConvNeXt recall |
+|-----|-----------|-------------|-----------------|
+| 5 | 3% | 67.5% | 76.3% |
+| 6 | 60% | 21.9% | 36.0% |
+| 7 | 27% | 32.5% | 28.1% |
+| **8** | **34%** | **28.1%** | **34.2%** ← best |
+| 9 | 48% | **1.3%** | **3.1%** ← collapsed |
+
+Run 8 (34% negatives, pos_weight=20) remains the best operating point.
+
+**Run 9 also revealed: SIGALRM is unreliable for FITS timeout on macOS.**
+An attempt to add per-file FITS load timeout using `signal.SIGALRM` caused spurious
+process kills because astropy's C extension retries EINTR, leaving the Python exception
+queued but undelivered, then firing at an unexpected boundary. The SIGALRM code was
+reverted. Instead, `scripts/screen_fits_files.py` was added: it tests each FITS file
+using a subprocess with `subprocess.run(..., timeout=N)` to safely identify bad files
+before running eval.
+
+**Weights:** `weights/run9_convnext_s2/best.pt`, `weights/run9_vits/best.pt`
+**Results:** `results/run9_convnext_s2/`, `results/run9_vits/`
+
+---
+
+### 3.12 Run 10 Plan — Sweep the 34–48% boundary
+
+**Goal:** Find the maximum negative ratio that preserves recall for ViT-S without collapse.
+Run 8 (34%) works; Run 9 (48%) collapses. The sweet spot is likely 38–42%.
+
+**Parameters to sweep:** Train two runs with identical settings except negative ratio.
+All other parameters same as Run 8 (cosine LR from Run 9, same val set, same pos_weight=20).
+
+| Run | `--hard-neg-per-pos` | `--neg-tiles-per-image` | Expected neg% |
+|-----|---------------------|------------------------|---------------|
+| 10a | 2 | 28 | ~38% |
+| 10b | 2 | 35 | ~42% |
+
+Run the better of the two through full eval with the `--threshold 0.3` baseline eval
+policy (see §6.3) to get the complete precision-recall curve.
+
+**New tooling available for Run 10:**
+- `scripts/run_posthoc_threshold_analysis.py` — instant threshold sweep from predictions.json
+- `scripts/run_threshold_sweep.sh` — multi-threshold GPU evals (for when needed)
+- `scripts/screen_fits_files.py` — pre-screen FITS files before long eval runs
+- Stitch support in eval (`--stitch` flag) with proper OBB reconstruction in `_merge_obb()`
+
+**ViT-S as sole backbone.** ConvNeXt-S dropped: its purely local features are less
+robust than ViT-S global attention under heavier negative supervision. If ConvNeXt is
+revisited it requires partial backbone unfreezing (last 5–9 blocks of stage 3).
+
+---
+
 ---
 
 ## 6. Evaluation Policy
@@ -1515,10 +1601,53 @@ MMDet / OBB models: use `conf=0.20` (per Run 4 post-analysis; 45 % of FNs had
 correct-location predictions at conf 0.10–0.29 — lowering from 0.30 recovered
 these).
 
-Heatmap models: the binarisation `--threshold` is not equivalent to MMDet
-confidence. Default `--threshold 0.5` is the correct operating point for
-evaluating detection coverage. Use `CONVNEXT_HEATMAP_THRESHOLD=0.99` for
-precision-critical deployment (zero FP on negatives, ~87 % recall).
+Heatmap models: the binarisation `--threshold` controls which heatmap pixels
+form connected components. **Always run the primary eval at `--threshold 0.3`**,
+not the historical default of 0.5.
+
+**Why 0.3, not 0.5 (2026-06-05):** Run 9 revealed that with heavier negative
+training, the model's activations on real streaks can peak at confidence 0.30–0.50.
+Using `--threshold 0.5` as the base binarisation silently discards these
+activations before they can even appear in `predictions.json`, making the
+post-hoc threshold sweep blind to the full precision-recall curve.
+
+ConvNeXt-S Run 9 eval confirmed this:
+- `--threshold 0.5` → 10,531 preds, **3.1% recall** (model seems to partially work)
+- `--threshold 0.3` → 1,108 preds, **0.0% recall** (model is completely suppressed;
+  predictions at 0.3–0.5 confidence are still pure FPs, confirming total collapse)
+
+The key insight: running at `--threshold 0.3` exposes whether any genuine streak
+signal exists below 0.5. A model that shows recall > 0 at 0.3 but 0 at 0.5 would
+be a promising under-thresholded model. A model that shows 0 recall at both is
+truly collapsed. This distinction is invisible when using 0.5 as the base.
+
+**Standard eval command (all future runs):**
+```bash
+CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=400 CONVNEXT_HEATMAP_TILE_OVERLAP=0.5 \
+python scripts/evaluate_dinov3_heatmap.py \
+  --annotations data/annotations/test_atwood.json \
+  --checkpoint  weights/<run>/best.pt \
+  --output      results/<run>/t0.3/metrics.json \
+  --tiled --threshold 0.3 --stitch
+```
+
+Output goes to `results/<run>/t0.3/` so that `predictions.json` and
+`metrics.json` are distinct from any previous threshold=0.5 eval.
+
+**Post-hoc sweep should cover [0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.85, 0.90,
+0.95]** when eval was run at threshold=0.3:
+
+```bash
+python scripts/run_posthoc_threshold_analysis.py \
+  --predictions results/<run>/t0.3/predictions.json \
+  --annotations data/annotations/test_atwood.json \
+  --output-dir  results/<run>/threshold_sweep \
+  --thresholds 0.30 0.40 0.50 0.60 0.70 0.80 0.85 0.90 0.95 \
+  --stitch
+```
+
+The `run9_pipeline.sh` eval steps (8, 9) should be updated to use
+`--threshold 0.3` for all future runs.
 
 ### 6.4 .npy on-disk tile cache for fast OBB evaluation
 

@@ -88,36 +88,51 @@ Progress:
   - Success gate NOT met: need precision >1% at recall ≥60%; Run 5 OBB baseline still leads on precision (7.5%)
   - Observation: constant LR causes staircase convergence — Run 9 adds CosineAnnealingLR
   - See `docs/training_methods.md §3.10` for full results and comparison table
+- ✅ **Run 9 training complete (2026-06-04/05)** — cosine LR + ~48% negatives + rebuilt val set:
+  - ConvNeXt-S: val_dice=0.635 (ep36). Test (t=0.5): recall=3.1%, 44 preds/img. Test (t=0.3): recall=0.0%. **Collapsed** — 48% negatives too aggressive for ConvNeXt frozen backbone.
+  - ViT-S: val_dice=0.681 (ep36). Test eval in progress (caffeinate restart after overnight sleep kill).
+  - Val set improved: 32% negative tiles (was 6.9%), giving honest val_dice
+  - Cosine LR confirmed faster convergence: both backbones converged at ep36 vs ep47/43 in Run 8
+  - **Key finding:** ConvNeXt's purely local features collapse under heavier negative supervision; ViT-S global attention is more robust. See `docs/training_methods.md §3.11`
+  - **Eval rule change:** all future evals use `--threshold 0.3` as base (captures full activation distribution for post-hoc sweep). See `docs/training_methods.md §6.3`
 
 ## Next Steps
 
-### Run 9 — Cosine LR + fast-IO pipeline (queued)
+### Run 10 — Sweep the 34–48% negative boundary (queued)
 
-Two improvements over Run 8:
+Run 9 collapsed both backbones at 48% negatives. Run 8 (34%) was the best operating point.
+Target: find the maximum negative ratio that preserves recall. See `docs/training_methods.md §3.12`.
 
-1. **CosineAnnealingLR** — replaces constant LR. Eliminates staircase convergence.
-   Expected to match Run 8 quality in ~35 epochs instead of 48. Already implemented
-   in `train_dinov3_heatmap_cached.py` via `--lr-scheduler cosine`.
-
-2. **Fast-IO pipeline** — copies feature cache to local SSD before training, deletes
-   after. Internal disk returns to baseline after each run. Implemented in
-   `scripts/run9_pipeline.sh`.
+Two candidate runs (ViT-S only — ConvNeXt dropped):
 
 ```bash
-bash scripts/run9_pipeline.sh 2>&1 | tee /tmp/run9_$(date +%Y%m%d_%H%M%S).log
+# Run 10a: ~38% negatives
+python scripts/build_tiled_brentimages_json.py \
+  --src data/annotations/all_train_run5.json \
+  --out /Volumes/External/TrainingData/annotations/atwood_train_run10a_tiled.json \
+  --native-tile-size 400 --overlap 0.5 \
+  --hard-neg-per-pos 2 --neg-tiles-per-image 28
+
+# Run 10b: ~42% negatives
+python scripts/build_tiled_brentimages_json.py \
+  --src data/annotations/all_train_run5.json \
+  --out /Volumes/External/TrainingData/annotations/atwood_train_run10b_tiled.json \
+  --native-tile-size 400 --overlap 0.5 \
+  --hard-neg-per-pos 2 --neg-tiles-per-image 35
 ```
 
-**Reuses Run 8 data** (same annotation files, same negative ratio ~37%, same val set)
-unless the data strategy changes. Only rebuild annotations if adding new nights or
-changing the negative ratio.
+Then train each with cosine LR, pos_weight=20, 40 epochs (same as Run 9).
+Eval with `--threshold 0.3 --stitch` and run `run_posthoc_threshold_analysis.py`.
 
-**Key parameters:**
-- `--lr-scheduler cosine` — new for Run 9
-- `--epochs 40` — reduced from 48, cosine LR should converge faster
-- `--pos-weight 20` — unchanged from Run 8
-- Both ConvNeXt-S and ViT-S as before
+**ConvNeXt status:** Dropped. Frozen local features collapse faster than ViT-S under
+negative supervision. Requires partial backbone unfreezing (GPU) to revisit.
 
-See `docs/training_methods.md §3.10` for full parameter rationale.
+**New tooling from Run 9:**
+- `scripts/run_posthoc_threshold_analysis.py` — instant threshold sweep from predictions.json
+- `scripts/screen_fits_files.py` — pre-screen FITS files for hangers before long evals
+- `scripts/run_threshold_sweep.sh` — multi-threshold full evals
+- Stitch + proper OBB merge in `inference/tiled_pipeline.py`
+- Eval policy: always use `--threshold 0.3` as base (§6.3 in training_methods.md)
 
 Success gate: recall ≥ 60% AND precision > 1% on test_atwood.json.
 
