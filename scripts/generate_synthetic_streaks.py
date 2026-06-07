@@ -211,6 +211,12 @@ def main() -> None:
                         help="Gaussian cross-section sigma in pixels (default: 1.5)")
     parser.add_argument("--multi-streak-prob", type=float, default=0.15,
                         help="Probability of placing a second streak on the same tile (default: 0.15)")
+    parser.add_argument("--length-range", type=float, nargs=2, metavar=("LO", "HI"),
+                        default=None,
+                        help="Override length distribution with uniform [LO, HI] px in tile space. "
+                             "When omitted uses the default 40/40/20 short/medium/long bucketed mix. "
+                             "For tiles that will be resized to model input, set LO/HI in tile pixels: "
+                             "apparent_length = drawn_length * (model_input_size / tile_size).")
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
@@ -252,7 +258,10 @@ def main() -> None:
         h, w = base_tile.shape[:2]
 
         for _ in range(args.n_per_neg):
-            length = _sample_length(rng, tile_size=min(h, w))
+            if args.length_range is not None:
+                length = float(rng.uniform(args.length_range[0], args.length_range[1]))
+            else:
+                length = _sample_length(rng, tile_size=min(h, w))
             angle_deg = float(rng.uniform(0, 180))
 
             # keep streak centre far enough from edges that full length fits

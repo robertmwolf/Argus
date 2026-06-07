@@ -224,7 +224,14 @@ def main() -> int:
                              "IoU matching against full-extent GT annotations works.")
     parser.add_argument("--stitch-max-gap", type=float, default=400.0,
                         help="Max gap in px between collinear fragments to merge (default: 400).")
+    parser.add_argument("--scales", type=int, nargs="+", default=None, metavar="PX",
+                        help="Run multi-scale inference at these native tile sizes (px) and "
+                             "merge via NMS.  Implies --tiled.  Example: --scales 1800 518 110. "
+                             "When omitted, falls back to single-scale tiling controlled by "
+                             "VITS_HEATMAP_NATIVE_TILE_SIZE / CONVNEXT_HEATMAP_NATIVE_TILE_SIZE.")
     args = parser.parse_args()
+    if args.scales:
+        args.tiled = True  # --scales implies tiled
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     device = get_device()
@@ -283,7 +290,19 @@ def main() -> int:
     # --- Tiled path: delegate to pipeline detector (handles tiling + NMS) ---
     if args.tiled:
         import os as _os
-        if backbone == "convnext":
+        if args.scales:
+            # Multi-scale: run at each requested tile size, merge via NMS
+            from inference.multiscale_detector import run_multiscale_detector as _ms_det
+            def _run_tiled(arr):  # type: ignore[misc]
+                return _ms_det(
+                    arr,
+                    checkpoint=Path(args.checkpoint),
+                    backbone=backbone,
+                    scales=args.scales,
+                    threshold=args.threshold,
+                    min_pixels=args.min_pixels,
+                )
+        elif backbone == "convnext":
             _os.environ["CONVNEXT_HEATMAP_CHECKPOINT"] = args.checkpoint
             _os.environ["CONVNEXT_HEATMAP_THRESHOLD"]  = str(args.threshold)
             _os.environ["CONVNEXT_HEATMAP_MIN_PIXELS"] = str(args.min_pixels)
