@@ -250,10 +250,16 @@ def main() -> None:
             continue
 
         try:
-            base_tile = np.load(src_path)
+            raw = np.load(src_path)
         except Exception as e:
             logger.warning("Failed to load %s: %s", src_path, e)
             continue
+
+        if raw.dtype == np.uint8:
+            # Full-image normalisation was applied at convert_tiles_to_npy time.
+            base_tile = raw.astype(np.float32)
+        else:
+            base_tile = raw
 
         h, w = base_tile.shape[:2]
 
