@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""Pre-convert FITS/PNG virtual tile annotations to raw float32 .npy files on disk.
+"""Pre-convert FITS/PNG virtual tile annotations to .npy files on disk.
 
 Groups tiles by parent image so each source file is opened exactly once.
-Saves each tile as a float32 .npy (shape H×W, before normalisation)
-so training can skip expensive FITS I/O on every step.
+Default (--norm-mode none): saves each tile as a float32 .npy (shape H×W,
+before normalisation) so the cacher can apply per-tile or per-image norm later.
+
+With --norm-mode zscore: applies z-score normalisation to the *full parent
+image* before cropping tiles, saving uint8 (H×W) .npy.  This ensures training
+and inference use the same normalisation scope — inference applies zscore to
+the full image via FITSLoader (ARGUS_NORM=zscore), matching exactly.
 
 Supports both FITS parent files (BrentImages) and PNG parent files (Frigate).
 
@@ -89,6 +94,12 @@ def main():
                         help="Directory of locally-copied FITS files. When set, "
                              "prefer <dir>/<basename> over the original path if "
                              "the local copy exists (e.g. files staged to /tmp).")
+    parser.add_argument("--norm-mode", choices=["none", "zscore", "autostretch", "zscale"],
+                        default="none",
+                        help="Normalisation applied to the full parent image before tiling. "
+                             "'none' (default) saves raw float32; 'zscore' saves uint8 with "
+                             "full-image z-score stretch (use this for training/inference "
+                             "consistency). The norm_mode is stored in the output annotation.")
     args = parser.parse_args()
 
     ann_path = Path(args.annotations)
@@ -148,15 +159,27 @@ def main():
 
         h, w = raw.shape
 
+        # Apply full-image normalisation before tiling when requested.
+        # apply_norm returns (H, W, 3) uint8; take one channel for storage.
+        if args.norm_mode != "none":
+            from inference.fits_loader import apply_norm  # lazy: only needed when norming
+            normed_rgb = apply_norm(raw, args.norm_mode)  # (H, W, 3) uint8
+            normed = normed_rgb[:, :, 0]                  # (H, W) uint8
+        else:
+            normed = None  # use raw float32
+
         for img, x0, y0, ts in tile_list:
             # Pad if tile extends beyond image edge
+            src = normed if normed is not None else raw
             pad_h = max(0, y0 + ts - h)
             pad_w = max(0, x0 + ts - w)
-            arr = raw
+            arr = src
             if pad_h > 0 or pad_w > 0:
-                arr = np.pad(raw, ((0, pad_h), (0, pad_w)), mode="edge")
+                pad_value = int(src.mean()) if normed is not None else 0
+                arr = np.pad(src, ((0, pad_h), (0, pad_w)),
+                             mode="constant", constant_values=pad_value)
 
-            tile = arr[y0:y0 + ts, x0:x0 + ts]  # (ts, ts) float32
+            tile = arr[y0:y0 + ts, x0:x0 + ts]  # (ts, ts) float32 or uint8
 
             # Unique filename: image_id
             npy_name = f"{img['id']}.npy"
@@ -181,6 +204,7 @@ def main():
 
     new_coco = dict(coco)
     new_coco["images"] = new_images
+    new_coco["npy_norm_mode"] = args.norm_mode  # consumed by cacher/dataset
 
     out_ann = Path(args.output_ann)
     out_ann.parent.mkdir(parents=True, exist_ok=True)

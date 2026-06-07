@@ -143,8 +143,12 @@ def _load_image_array(path: Path, loader: FITSLoader, norm_mode: str = "autostre
                 return apply_norm(raw, norm_mode)  # (H, W, 3) uint8
             arr = np.asarray(loaded["array"], dtype=np.uint8)
         elif suffix == ".npy":
-            raw = np.load(str(path)).astype(np.float32)
-            return apply_norm(raw, norm_mode)  # (H, W, 3) uint8
+            raw = np.load(str(path))
+            if raw.dtype == np.uint8:
+                # Full-image normalisation was applied at convert_tiles_to_npy time;
+                # just replicate the grayscale channel to RGB.
+                return np.stack([raw, raw, raw], axis=-1)
+            return apply_norm(raw.astype(np.float32), norm_mode)  # (H, W, 3) uint8
         else:
             with Image.open(path) as im:
                 arr = np.asarray(im.convert("RGB"), dtype=np.uint8)
