@@ -323,6 +323,7 @@ def main() -> int:
 
         from inference.tiled_pipeline import stitch_collinear_fragments as _stitch_frags
         from inference.fits_loader import FITSLoader as _FITSLoader
+        _os.environ["ARGUS_NORM"] = args.norm_mode  # match training normalization
         _fits_loader = _FITSLoader()
         coco_data = json.loads(Path(args.annotations).read_text())
         images_meta = coco_data.get("images", [])

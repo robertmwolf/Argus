@@ -204,6 +204,7 @@ $PYTHON scripts/run_posthoc_threshold_analysis.py \
   --annotations data/annotations/test_atwood.json \
   --output-dir  results/run12_vits/threshold_sweep \
   --thresholds 0.05 0.10 0.20 0.30 0.40 0.50 0.60 0.70 0.80 0.85 0.90 0.95 \
+  --iou-threshold 0.10 \
   --stitch || true
 
 echo ""
@@ -213,7 +214,6 @@ CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=1800 \
 $PYTHON scripts/evaluate_dinov3_heatmap.py \
   --annotations data/annotations/test_atwood.json \
   --checkpoint  "$WEIGHTS_DIR/run12_convnext_s/best.pt" \
-  --backbone convnext \
   --output      results/run12_convnext_s/t0.05/metrics.json \
   --tiled --threshold 0.05 --stitch
 
@@ -222,6 +222,7 @@ $PYTHON scripts/run_posthoc_threshold_analysis.py \
   --annotations data/annotations/test_atwood.json \
   --output-dir  results/run12_convnext_s/threshold_sweep \
   --thresholds 0.05 0.10 0.20 0.30 0.40 0.50 0.60 0.70 0.80 0.85 0.90 0.95 \
+  --iou-threshold 0.10 \
   --stitch || true
 
 echo ""

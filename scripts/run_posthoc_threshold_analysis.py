@@ -62,6 +62,7 @@ def run_sweep(
     thresholds: list[float],
     run_stitch: bool,
     stitch_max_gap: float = 400.0,
+    iou_threshold: float = 0.1,
 ) -> list[dict]:
     """Return a list of result rows, one per (threshold, stitch) combination."""
     by_img: dict[int, list[dict]] = defaultdict(list)
@@ -78,7 +79,7 @@ def run_sweep(
                     img_dets = _apply_stitch(img_dets, stitch_max_gap)
                 filtered.extend(img_dets)
 
-            m = evaluate(filtered, ground_truth)
+            m = evaluate(filtered, ground_truth, iou_threshold=iou_threshold)
             pb = m.get("per_band", {})
             rows.append({
                 "threshold": thresh,
@@ -144,6 +145,9 @@ def main() -> int:
     ap.add_argument("--thresholds", type=float, nargs="+",
                     default=_DEFAULT_THRESHOLDS,
                     help="Confidence thresholds to sweep (default: 0.50 0.60 … 0.95)")
+    ap.add_argument("--iou-threshold", type=float, default=0.1,
+                    help="IoU threshold for TP matching (default: 0.10 — appropriate for "
+                         "thin-streak detections where min pred width ~55px vs GT ~16px)")
     args = ap.parse_args()
 
     pred_path = Path(args.predictions)
@@ -159,7 +163,7 @@ def main() -> int:
 
     print(f"\nPost-hoc threshold sweep: {pred_path.name}")
     print(f"  {len(predictions)} predictions  |  {len(ground_truth)} GT annotations  "
-          f"|  {n_images} images")
+          f"|  {n_images} images  |  IoU>={args.iou_threshold:.2f}")
     if args.stitch:
         print(f"  Stitch variants: no-stitch + stitch (max_gap={args.stitch_max_gap:.0f}px)")
     print()
@@ -169,6 +173,7 @@ def main() -> int:
         thresholds=sorted(args.thresholds),
         run_stitch=args.stitch,
         stitch_max_gap=args.stitch_max_gap,
+        iou_threshold=args.iou_threshold,
     )
 
     _print_table(rows, n_images)
@@ -184,6 +189,7 @@ def main() -> int:
         "n_images": n_images,
         "gate_precision": _GATE_PRECISION,
         "gate_recall": _GATE_RECALL,
+        "iou_threshold": args.iou_threshold,
         "rows": rows,
     }, indent=2))
     print(f"\nResults saved → {out_path}")
