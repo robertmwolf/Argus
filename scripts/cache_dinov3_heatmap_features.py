@@ -41,7 +41,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from inference.device import get_device
-from inference.fits_loader import FITSLoader
+from inference.fits_loader import FITSLoader, apply_norm
 from models.plain_dinov3.streak_heatmap import (
     ConvNeXtStreakHeatmap,
     DINOv3StreakHeatmap,
@@ -133,19 +133,18 @@ def _build_tile_targets(
     return torch.from_numpy(target).unsqueeze(0), torch.from_numpy(geom)
 
 
-def _load_image_array(path: Path, loader: FITSLoader) -> np.ndarray | None:
+def _load_image_array(path: Path, loader: FITSLoader, norm_mode: str = "autostretch") -> np.ndarray | None:
     suffix = path.suffix.lower()
     try:
         if suffix in {".fits", ".fit", ".fts"}:
-            arr = np.asarray(loader.load(path)["array"], dtype=np.uint8)
+            loaded = loader.load(path)
+            raw = loaded.get("raw_float32")
+            if raw is not None:
+                return apply_norm(raw, norm_mode)  # (H, W, 3) uint8
+            arr = np.asarray(loaded["array"], dtype=np.uint8)
         elif suffix == ".npy":
             raw = np.load(str(path)).astype(np.float32)
-            # Normalise to uint8 for downstream letterboxing (same as FITS path).
-            lo, hi = raw.min(), raw.max()
-            if hi > lo:
-                arr = ((raw - lo) / (hi - lo) * 255).astype(np.uint8)
-            else:
-                arr = np.zeros_like(raw, dtype=np.uint8)
+            return apply_norm(raw, norm_mode)  # (H, W, 3) uint8
         else:
             with Image.open(path) as im:
                 arr = np.asarray(im.convert("RGB"), dtype=np.uint8)
@@ -170,6 +169,7 @@ def _cache_tiled(
     min_area_fraction: float = 0.25,
     neg_tiles_per_image: int = 2,
     random_seed: int = 42,
+    norm_mode: str = "autostretch",
 ) -> list[dict]:
     """Cache features by tiling each image, selecting only annotation-covered tiles.
 
@@ -229,7 +229,7 @@ def _cache_tiled(
     for img_meta in images_meta:
         img_id   = int(img_meta["id"])
         img_path = _resolve(str(img_meta["file_name"]))
-        array    = _load_image_array(img_path, loader)
+        array    = _load_image_array(img_path, loader, norm_mode)
         if array is None:
             continue
 
@@ -362,6 +362,12 @@ def main() -> int:
     parser.add_argument("--neg-tiles-per-image", type=int, default=2,
                         help="Random background tiles to cache per unannotated "
                              "image for domain adaptation (default 2).")
+    parser.add_argument("--norm-mode", choices=["autostretch", "zscore", "zscale"],
+                        default="autostretch",
+                        help="Pixel normalisation for raw FITS/NPY tiles. "
+                             "'autostretch' (default) removes sky background so streak "
+                             "signal is consistent across tiles. 'zscore' clips at ±3σ. "
+                             "Must match the mode used during training.")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -370,7 +376,7 @@ def main() -> int:
     feature_dir = out_dir / "features"
     feature_dir.mkdir(parents=True, exist_ok=True)
 
-    ds = StreakHeatmapDataset(args.annotations, image_size=args.image_size, max_samples=args.max_samples)
+    ds = StreakHeatmapDataset(args.annotations, image_size=args.image_size, max_samples=args.max_samples, norm_mode=args.norm_mode)
     loader = DataLoader(
         ds,
         batch_size=args.batch_size,
@@ -421,6 +427,7 @@ def main() -> int:
             ann_dir=Path(args.annotations).resolve().parent,
             min_area_fraction=args.min_area_fraction,
             neg_tiles_per_image=args.neg_tiles_per_image,
+            norm_mode=args.norm_mode,
         )
         metadata = {
             "annotations":    args.annotations,
@@ -431,6 +438,7 @@ def main() -> int:
             "image_size":     args.image_size,
             "native_tile_size": args.native_tile_size,
             "tile_overlap":   args.tile_overlap,
+            "norm_mode":      args.norm_mode,
             "n_samples":      len(manifest),
             "manifest":       manifest,
         }
@@ -485,6 +493,7 @@ def main() -> int:
         "model_size": args.model_size,
         "convnext_stage": args.convnext_stage if args.backbone == "convnext" else None,
         "image_size": args.image_size,
+        "norm_mode": args.norm_mode,
         "n_samples": len(manifest),
         "manifest": manifest,
     }

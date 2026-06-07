@@ -14,7 +14,7 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
-from inference.fits_loader import FITSLoader
+from inference.fits_loader import FITSLoader, apply_norm
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,7 @@ class StreakHeatmapDataset(Dataset):
         image_size: int = 512,
         patch_size: int = 16,
         max_samples: int | None = None,
+        norm_mode: str = "autostretch",
     ) -> None:
         """Initialise the dataset.
 
@@ -36,10 +37,17 @@ class StreakHeatmapDataset(Dataset):
             image_size: Square letterbox canvas size used for the spike.
             patch_size: DINOv3 patch size; heatmaps are ``image_size / patch``.
             max_samples: Optional quick-run cap.
+            norm_mode: Normalisation applied to raw float32 FITS/NPY pixels before
+                feeding the backbone. One of ``'autostretch'`` (PixInsight AutoSTF,
+                background-subtracting), ``'zscore'`` (3-sigma clip), or
+                ``'zscale'`` (IRAF ZScale). Autostretch is the default because it
+                removes the sky background so streak signal is consistently visible
+                across tiles regardless of local star brightness.
         """
         self.annotation_file = Path(annotation_file)
         self.image_size = image_size
         self.patch_size = patch_size
+        self.norm_mode = norm_mode
         self.loader = FITSLoader()
 
         coco = json.loads(self.annotation_file.read_text())
@@ -121,21 +129,17 @@ class StreakHeatmapDataset(Dataset):
         suffix = path.suffix.lower()
         try:
             if suffix in {".fits", ".fit", ".fts"}:
-                arr = np.asarray(self.loader.load(path)["array"], dtype=np.float32)
+                loaded = self.loader.load(path)
+                raw = loaded.get("raw_float32")
+                if raw is not None:
+                    return apply_norm(raw, self.norm_mode)  # (H, W, 3) uint8
+                return np.asarray(loaded["array"], dtype=np.uint8)
             elif suffix == ".npy":
-                arr = np.load(str(path)).astype(np.float32)
+                raw = np.load(str(path)).astype(np.float32)
+                return apply_norm(raw, self.norm_mode)  # (H, W, 3) uint8
             else:
                 with Image.open(path) as im:
                     return np.asarray(im.convert("RGB"), dtype=np.uint8)
-            # Normalise single-channel float array to uint8 [0, 255]
-            lo, hi = arr.min(), arr.max()
-            if hi > lo:
-                arr = ((arr - lo) / (hi - lo) * 255).astype(np.uint8)
-            else:
-                arr = np.zeros_like(arr, dtype=np.uint8)
-            if arr.ndim == 2:
-                arr = np.stack([arr] * 3, axis=2)
-            return arr
         except Exception as exc:
             logger.warning("Failed to load %s: %s; using blank image", path, exc)
             return np.zeros((self.image_size, self.image_size, 3), dtype=np.uint8)

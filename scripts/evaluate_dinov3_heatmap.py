@@ -213,6 +213,10 @@ def main() -> int:
     parser.add_argument("--min-pixels", type=int, default=2)
     parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--max-samples", type=int, default=None)
+    parser.add_argument("--norm-mode", choices=["autostretch", "zscore", "zscale"],
+                        default="autostretch",
+                        help="Pixel normalisation for raw FITS/NPY tiles. Must match "
+                             "the mode used when the feature cache was built.")
     parser.add_argument("--no-refine-geometry", action="store_true")
     parser.add_argument("--tiled", action="store_true",
                         help="Use the pipeline detector (with tiling) instead of the "
@@ -385,7 +389,7 @@ def main() -> int:
         return 0
     # --- End tiled path ---
 
-    ds = StreakHeatmapDataset(args.annotations, image_size=image_size, max_samples=args.max_samples)
+    ds = StreakHeatmapDataset(args.annotations, image_size=image_size, max_samples=args.max_samples, norm_mode=args.norm_mode)
     loader = DataLoader(ds, batch_size=args.batch_size, shuffle=False, collate_fn=collate_heatmap_batch)
     image_loader = FITSLoader()
 

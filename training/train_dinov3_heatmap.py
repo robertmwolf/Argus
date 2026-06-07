@@ -94,6 +94,12 @@ def main() -> int:
     parser.add_argument("--max-samples", type=int, default=None)
     parser.add_argument("--num-workers", type=int, default=0)
     parser.add_argument("--smoke-test", action="store_true")
+    parser.add_argument("--norm-mode", choices=["autostretch", "zscore", "zscale"],
+                        default="autostretch",
+                        help="Pixel normalisation applied to raw FITS/NPY tiles. "
+                             "'autostretch' (default) removes sky background so streak "
+                             "signal is consistent across tiles. 'zscore' clips at ±3σ. "
+                             "'zscale' uses IRAF ZScale.")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -106,8 +112,8 @@ def main() -> int:
     work_dir = Path(args.work_dir)
     work_dir.mkdir(parents=True, exist_ok=True)
 
-    train_ds = StreakHeatmapDataset(args.train_annotations, args.image_size, max_samples=args.max_samples)
-    val_ds = StreakHeatmapDataset(args.val_annotations, args.image_size, max_samples=args.max_samples)
+    train_ds = StreakHeatmapDataset(args.train_annotations, args.image_size, max_samples=args.max_samples, norm_mode=args.norm_mode)
+    val_ds = StreakHeatmapDataset(args.val_annotations, args.image_size, max_samples=args.max_samples, norm_mode=args.norm_mode)
     train_loader = DataLoader(
         train_ds,
         batch_size=args.batch_size,

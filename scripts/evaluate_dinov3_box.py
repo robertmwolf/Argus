@@ -86,6 +86,10 @@ def main() -> int:
     parser.add_argument("--threshold", type=float, default=0.5)
     parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--max-samples", type=int, default=None)
+    parser.add_argument("--norm-mode", choices=["autostretch", "zscore", "zscale"],
+                        default="autostretch",
+                        help="Pixel normalisation for raw FITS/NPY tiles. Must match "
+                             "the mode used during training.")
     parser.add_argument("--max-detections", type=int, default=20)
     parser.add_argument("--nms-kernel", type=int, default=7)
     args = parser.parse_args()
@@ -109,7 +113,7 @@ def main() -> int:
     model.head = cached_head.to(device)
     model.eval()
 
-    ds = StreakHeatmapDataset(args.annotations, image_size=image_size, max_samples=args.max_samples)
+    ds = StreakHeatmapDataset(args.annotations, image_size=image_size, max_samples=args.max_samples, norm_mode=args.norm_mode)
     loader = DataLoader(ds, batch_size=args.batch_size, shuffle=False, collate_fn=collate_heatmap_batch)
 
     predictions: list[dict[str, Any]] = []
