@@ -598,6 +598,12 @@ def _run_heatmap_centerline_detector(array: "np.ndarray") -> list[dict]:
 
 def _run_convnext_heatmap_detector(array: "np.ndarray") -> list[dict]:
     """Run the ConvNeXt-S stage-2 heatmap detector if its weights are available."""
+    # TODO: replace with run_multiscale_detector (inference/multiscale_detector.py)
+    # once Run 12 checkpoint is validated.  Also add ViT-S alongside ConvNeXt-S here.
+    # Suggested replacement (configure via ARGUS_HEATMAP_SCALES env var):
+    #   from inference.multiscale_detector import run_multiscale_detector
+    #   scales = [int(s) for s in os.environ.get("ARGUS_HEATMAP_SCALES", "1800").split(",")]
+    #   return run_multiscale_detector(array, checkpoint=..., backbone="convnext", scales=scales)
     from inference.convnext_heatmap_detector import run_convnext_heatmap_detector
 
     return run_convnext_heatmap_detector(array)

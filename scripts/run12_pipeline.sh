@@ -428,38 +428,42 @@ rmdir "$LOCAL_CACHE_DIR" 2>/dev/null || true
 
 # ── Step 12: Evaluate both models ─────────────────────────────────────────────
 echo ""
-echo "── Step 12a: Evaluate ViT-S (t=0.3, tiled 1800px → 518px, stitch) ──"
+# Eval at t=0.05 so the post-hoc sweep has a full picture of the model's score
+# distribution.  Using t=0.3 as the base would hard-cap recall: any real streak
+# scored 0.05–0.29 would be invisible to every sweep point.  t=0.05 costs a
+# slightly larger predictions.json but gives an honest precision-recall curve.
+echo "── Step 12a: Evaluate ViT-S (t=0.05, tiled 1800px → 518px, stitch) ──"
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
 VITS_HEATMAP_NATIVE_TILE_SIZE=1800 \
 $PYTHON scripts/evaluate_dinov3_heatmap.py \
   --annotations data/annotations/test_atwood.json \
   --checkpoint  "$WEIGHTS_DIR/run12_vits/best.pt" \
-  --output      results/run12_vits/t0.3/metrics.json \
-  --tiled --threshold 0.3 --stitch
+  --output      results/run12_vits/t0.05/metrics.json \
+  --tiled --threshold 0.05 --stitch
 
 $PYTHON scripts/run_posthoc_threshold_analysis.py \
-  --predictions results/run12_vits/t0.3/predictions.json \
+  --predictions results/run12_vits/t0.05/predictions.json \
   --annotations data/annotations/test_atwood.json \
   --output-dir  results/run12_vits/threshold_sweep \
-  --thresholds 0.30 0.40 0.50 0.60 0.70 0.80 0.85 0.90 0.95 \
+  --thresholds 0.05 0.10 0.20 0.30 0.40 0.50 0.60 0.70 0.80 0.85 0.90 0.95 \
   --stitch || true
 
 echo ""
-echo "── Step 12b: Evaluate ConvNeXt-S (t=0.3, tiled 1800px → 518px, stitch) ──"
+echo "── Step 12b: Evaluate ConvNeXt-S (t=0.05, tiled 1800px → 518px, stitch) ──"
 PYTORCH_ENABLE_MPS_FALLBACK=1 \
 CONVNEXT_HEATMAP_NATIVE_TILE_SIZE=1800 \
 $PYTHON scripts/evaluate_dinov3_heatmap.py \
   --annotations data/annotations/test_atwood.json \
   --checkpoint  "$WEIGHTS_DIR/run12_convnext_s/best.pt" \
   --backbone convnext \
-  --output      results/run12_convnext_s/t0.3/metrics.json \
-  --tiled --threshold 0.3 --stitch
+  --output      results/run12_convnext_s/t0.05/metrics.json \
+  --tiled --threshold 0.05 --stitch
 
 $PYTHON scripts/run_posthoc_threshold_analysis.py \
-  --predictions results/run12_convnext_s/t0.3/predictions.json \
+  --predictions results/run12_convnext_s/t0.05/predictions.json \
   --annotations data/annotations/test_atwood.json \
   --output-dir  results/run12_convnext_s/threshold_sweep \
-  --thresholds 0.30 0.40 0.50 0.60 0.70 0.80 0.85 0.90 0.95 \
+  --thresholds 0.05 0.10 0.20 0.30 0.40 0.50 0.60 0.70 0.80 0.85 0.90 0.95 \
   --stitch || true
 
 echo ""
