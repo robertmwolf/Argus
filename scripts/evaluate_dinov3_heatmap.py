@@ -193,6 +193,14 @@ def coco_ground_truth(annotation_file: Path) -> list[dict[str, Any]]:
 def _load_eval_image(path: Path, loader: FITSLoader) -> np.ndarray | None:
     suffix = path.suffix.lower()
     try:
+        if suffix == ".npy":
+            import os as _os
+            from inference.fits_loader import apply_norm as _apply_norm
+            raw = np.load(str(path))
+            if raw.dtype == np.uint8:
+                return np.stack([raw, raw, raw], axis=-1)
+            norm = _os.environ.get("ARGUS_NORM", "zscore")
+            return _apply_norm(raw.astype(np.float32), norm)  # (H, W, 3) uint8
         if suffix in {".fits", ".fit", ".fts"}:
             return np.asarray(loader.load(path)["array"], dtype=np.uint8)
         from PIL import Image
