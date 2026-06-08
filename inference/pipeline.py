@@ -598,15 +598,42 @@ def _run_heatmap_centerline_detector(array: "np.ndarray") -> list[dict]:
 
 def _run_convnext_heatmap_detector(array: "np.ndarray") -> list[dict]:
     """Run the ConvNeXt-S stage-2 heatmap detector if its weights are available."""
-    # TODO: replace with run_multiscale_detector (inference/multiscale_detector.py)
-    # once Run 12 checkpoint is validated.  Also add ViT-S alongside ConvNeXt-S here.
-    # Suggested replacement (configure via ARGUS_HEATMAP_SCALES env var):
-    #   from inference.multiscale_detector import run_multiscale_detector
-    #   scales = [int(s) for s in os.environ.get("ARGUS_HEATMAP_SCALES", "1800").split(",")]
-    #   return run_multiscale_detector(array, checkpoint=..., backbone="convnext", scales=scales)
     from inference.convnext_heatmap_detector import run_convnext_heatmap_detector
 
     return run_convnext_heatmap_detector(array)
+
+
+def _run_vits_heatmap_detector(array: "np.ndarray") -> list[dict]:
+    """Run the ViT-S/16 heatmap detector (Run 15, 400px tiles, zscore norm).
+
+    Applies stitch_collinear_fragments with max_growth_ratio=3.0 after per-tile
+    NMS to reconstruct long streaks split across tile boundaries while preventing
+    short/medium detections from being absorbed into false-positive chains.
+    """
+    from inference.vits_heatmap_detector import run_vits_heatmap_detector
+    from inference.tiled_pipeline import stitch_collinear_fragments
+
+    dets = run_vits_heatmap_detector(array)
+    if len(dets) <= 1:
+        return dets
+
+    stitch_in = [
+        {**d, "bbox": [d["bbox"][0], d["bbox"][1],
+                       d["bbox"][2] - d["bbox"][0], d["bbox"][3] - d["bbox"][1]],
+         "score": float(d["confidence"])}
+        for d in dets
+    ]
+    max_gap = float(os.environ.get("VITS_HEATMAP_STITCH_MAX_GAP", "400"))
+    max_growth = float(os.environ.get("VITS_HEATMAP_STITCH_MAX_GROWTH_RATIO", "3.0"))
+    stitched = stitch_collinear_fragments(stitch_in, max_gap_px=max_gap,
+                                          max_growth_ratio=max_growth)
+    result = []
+    for s in stitched:
+        x, y, w, h = s["bbox"]
+        result.append({**s,
+                       "bbox": [x, y, x + w, y + h],
+                       "confidence": s.get("confidence", s.get("score", 0.0))})
+    return result
 
 
 def _downsample_fits_image_for_astride(fits_image: Any, max_pixels: int) -> tuple[Any, float]:
@@ -1095,6 +1122,19 @@ def get_detector_statuses() -> list[dict]:
             "status": "unavailable",
         })
 
+    # ViT-S/16 heatmap detector (Run 15)
+    try:
+        from inference.vits_heatmap_detector import get_vits_heatmap_status
+        statuses.append(get_vits_heatmap_status())
+    except ImportError:
+        statuses.append({
+            "id": "vits_heatmap",
+            "name": "ViT-S/16 HeatMap",
+            "type": "ml",
+            "dataset": "Atwood Run15 (400px zscore)",
+            "status": "unavailable",
+        })
+
     # YOLO variants
     _yolo_entries = [
         {
@@ -1340,6 +1380,11 @@ def _run_all_detectors(
         else:
             results["convnext_heatmap"] = []
 
+        if _enabled("vits_heatmap"):
+            tasks[pool.submit(_timed_detector, "vits_heatmap", _run_vits_heatmap_detector, array)] = "vits_heatmap"
+        else:
+            results["vits_heatmap"] = []
+
         for f in as_completed(tasks):
             key = tasks[f]
             try:
@@ -1562,8 +1607,10 @@ def run_with_array(
     h_img = array.shape[0]
     w_img = array.shape[1]
 
-    streakmind_yolo_dets = all_det_results.get("streakmind_yolo", [])
-    heatmap_dets         = all_det_results.get("dinov3_heatmap_centerline", [])
+    streakmind_yolo_dets  = all_det_results.get("streakmind_yolo", [])
+    heatmap_dets          = all_det_results.get("dinov3_heatmap_centerline", [])
+    convnext_heatmap_dets = all_det_results.get("convnext_heatmap", [])
+    vits_heatmap_dets     = all_det_results.get("vits_heatmap", [])
 
     if raw_mode:
         # Raw mode: no Radon, no extent tracing, no NMS, no grouping.
@@ -1584,7 +1631,7 @@ def run_with_array(
 
         detections = (
             raw_dets + classical_dets + astride_dets
-            + streakmind_yolo_dets + heatmap_dets
+            + streakmind_yolo_dets + heatmap_dets + convnext_heatmap_dets + vits_heatmap_dets
         )
         for idx, det in enumerate(detections):
             det["streak_id"] = idx + 1
@@ -1604,7 +1651,7 @@ def run_with_array(
         ))
         all_ml_dets = (
             raw_dets + classical_dets + astride_dets
-            + streakmind_yolo_dets + heatmap_dets
+            + streakmind_yolo_dets + heatmap_dets + convnext_heatmap_dets + vits_heatmap_dets
         )
         for det in all_ml_dets:
             x1, y1, x2, y2 = det["bbox"]
@@ -1641,12 +1688,14 @@ def run_with_array(
         raw_dets             = nms_detections(raw_dets,             iou_threshold=0.5)
         classical_dets       = nms_detections(classical_dets,       iou_threshold=0.5)
         astride_dets         = nms_detections(astride_dets,         iou_threshold=0.5)
-        streakmind_yolo_dets = nms_detections(streakmind_yolo_dets, iou_threshold=0.5)
-        heatmap_dets         = nms_detections(heatmap_dets,         iou_threshold=0.5)
+        streakmind_yolo_dets  = nms_detections(streakmind_yolo_dets,  iou_threshold=0.5)
+        heatmap_dets          = nms_detections(heatmap_dets,          iou_threshold=0.5)
+        convnext_heatmap_dets = nms_detections(convnext_heatmap_dets, iou_threshold=0.5)
+        vits_heatmap_dets     = nms_detections(vits_heatmap_dets,     iou_threshold=0.5)
 
         combined = (
             raw_dets + classical_dets + astride_dets
-            + streakmind_yolo_dets + heatmap_dets
+            + streakmind_yolo_dets + heatmap_dets + convnext_heatmap_dets + vits_heatmap_dets
         )
         detections = group_detections(combined, iou_threshold=0.5)
         detections = fuse_group_geometries(detections)

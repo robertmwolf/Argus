@@ -261,6 +261,7 @@ def stitch_collinear_fragments(
     max_perp_ratio: float = 0.8,
     angle_tol_deg: float = 20.0,
     min_aspect_ratio: float = 1.5,
+    max_growth_ratio: float = 3.0,
 ) -> list[Prediction]:
     """Merge non-overlapping collinear streak fragments from multi-tile inference.
 
@@ -276,6 +277,9 @@ def stitch_collinear_fragments(
        ≤ ``max_gap_px``.
     4. The perpendicular center offset is ≤ ``max_perp_ratio`` × the average
        transverse box width.
+    5. The merged span would be ≤ ``max_growth_ratio`` × the longer input
+       fragment.  This prevents short true-positive detections from being
+       absorbed into long false-positive chains through union-find transitivity.
 
     Boxes with an axis-aligned aspect ratio below ``min_aspect_ratio`` are
     excluded from stitching (near-square boxes have ambiguous angle).
@@ -297,6 +301,9 @@ def stitch_collinear_fragments(
         min_aspect_ratio: Minimum axis-aligned aspect ratio (longer / shorter
             side) to consider a box as a streak candidate.  Boxes below this
             threshold are returned unchanged without stitching.
+        max_growth_ratio: Maximum ratio of merged span to the longer input
+            fragment's span.  Default 3.0 blocks merges that would create a
+            detection more than 3× longer than either input.
 
     Returns:
         Predictions after merging collinear fragments, sorted by descending
@@ -476,6 +483,14 @@ def stitch_collinear_fragments(
                 half_i, half_j = half_j, half_i
             gap = (proj_j - half_j) - (proj_i + half_i)
             if gap > max_gap_px:
+                continue
+
+            # 5. Merged span must not grow more than max_growth_ratio × the
+            #    longer input fragment — prevents short detections from being
+            #    absorbed into long false-positive chains via union-find.
+            merged_span = (max(proj_i + half_i, proj_j + half_j)
+                           - min(proj_i - half_i, proj_j - half_j))
+            if merged_span > max_growth_ratio * max(2.0 * half_i, 2.0 * half_j):
                 continue
 
             edges.append((i, j))

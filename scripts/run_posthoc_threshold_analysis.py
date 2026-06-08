@@ -38,7 +38,8 @@ _GATE_PRECISION = 0.01   # >1%
 _GATE_RECALL    = 0.60   # ≥60%
 
 
-def _apply_stitch(dets: list[dict], max_gap: float = 400.0) -> list[dict]:
+def _apply_stitch(dets: list[dict], max_gap: float = 400.0,
+                  max_growth_ratio: float = 3.0) -> list[dict]:
     if len(dets) <= 1:
         return dets
     stitch_in = []
@@ -46,7 +47,8 @@ def _apply_stitch(dets: list[dict], max_gap: float = 400.0) -> list[dict]:
         x1, y1, x2, y2 = d["bbox"]
         stitch_in.append({**d, "bbox": [x1, y1, x2 - x1, y2 - y1],
                           "score": d["confidence"]})
-    stitched = stitch_collinear_fragments(stitch_in, max_gap_px=max_gap)
+    stitched = stitch_collinear_fragments(stitch_in, max_gap_px=max_gap,
+                                          max_growth_ratio=max_growth_ratio)
     out = []
     for s in stitched:
         x, y, w, h = s["bbox"]
@@ -62,6 +64,7 @@ def run_sweep(
     thresholds: list[float],
     run_stitch: bool,
     stitch_max_gap: float = 400.0,
+    stitch_max_growth_ratio: float = 3.0,
     iou_threshold: float = 0.1,
 ) -> list[dict]:
     """Return a list of result rows, one per (threshold, stitch) combination."""
@@ -76,7 +79,8 @@ def run_sweep(
             for dets in by_img.values():
                 img_dets = [d for d in dets if float(d.get("confidence", 0)) >= thresh]
                 if do_stitch and img_dets:
-                    img_dets = _apply_stitch(img_dets, stitch_max_gap)
+                    img_dets = _apply_stitch(img_dets, stitch_max_gap,
+                                             max_growth_ratio=stitch_max_growth_ratio)
                 filtered.extend(img_dets)
 
             m = evaluate(filtered, ground_truth, iou_threshold=iou_threshold)
@@ -142,6 +146,8 @@ def main() -> int:
                     help="Run both no-stitch and stitch variants (default: no-stitch only)")
     ap.add_argument("--stitch-max-gap", type=float, default=400.0,
                     help="Max gap in px for collinear stitching (default: 400)")
+    ap.add_argument("--stitch-max-growth-ratio", type=float, default=3.0,
+                    help="Max merged-span / longer-fragment ratio (default: 3.0)")
     ap.add_argument("--thresholds", type=float, nargs="+",
                     default=_DEFAULT_THRESHOLDS,
                     help="Confidence thresholds to sweep (default: 0.50 0.60 … 0.95)")
@@ -173,6 +179,7 @@ def main() -> int:
         thresholds=sorted(args.thresholds),
         run_stitch=args.stitch,
         stitch_max_gap=args.stitch_max_gap,
+        stitch_max_growth_ratio=args.stitch_max_growth_ratio,
         iou_threshold=args.iou_threshold,
     )
 

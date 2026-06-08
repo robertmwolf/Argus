@@ -179,6 +179,7 @@ def _run_single_tile(
     device: torch.device,
     threshold: float,
     min_pixels: int,
+    use_geometry: bool = True,
 ) -> list[dict[str, Any]]:
     """Run detector on one tile; return detections in tile-local coordinates."""
     if array.ndim == 2:
@@ -190,7 +191,11 @@ def _run_single_tile(
         output   = model(imagenet_normalize(img_tensor))
         logits   = output[:, :1]
         probs    = torch.sigmoid(logits)[0, 0].cpu().numpy().astype(np.float32)
-        geometry = decode_geometry(output[:, 1:5])[0].cpu().numpy() if output.shape[1] >= 5 else None
+        geometry = (
+            decode_geometry(output[:, 1:5])[0].cpu().numpy()
+            if use_geometry and output.shape[1] >= 5
+            else None
+        )
 
     patch_size = 16  # ConvNeXt stage-2 stride equals ViT-S/16 patch stride
     binary = probs >= threshold

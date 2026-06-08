@@ -236,6 +236,8 @@ def main() -> int:
                              "IoU matching against full-extent GT annotations works.")
     parser.add_argument("--stitch-max-gap", type=float, default=400.0,
                         help="Max gap in px between collinear fragments to merge (default: 400).")
+    parser.add_argument("--stitch-max-growth-ratio", type=float, default=3.0,
+                        help="Max merged-span / longer-input-span ratio for stitching (default: 3.0).")
     parser.add_argument("--scales", type=int, nargs="+", default=None, metavar="PX",
                         help="Run multi-scale inference at these native tile sizes (px) and "
                              "merge via NMS.  Implies --tiled.  Example: --scales 1800 518 110. "
@@ -370,7 +372,8 @@ def main() -> int:
                     stitch_in.append({**d,
                                       "bbox": [x1, y1, x2 - x1, y2 - y1],
                                       "score": d["confidence"]})
-                stitched = _stitch_frags(stitch_in, max_gap_px=args.stitch_max_gap)
+                stitched = _stitch_frags(stitch_in, max_gap_px=args.stitch_max_gap,
+                                         max_growth_ratio=args.stitch_max_growth_ratio)
                 dets = []
                 for s in stitched:
                     x, y, w, h = s["bbox"]
