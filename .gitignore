@@ -60,8 +60,11 @@ data/BrentImages/
 .envrc
 secrets.json
 
-# Claude Code local settings (machine-specific paths)
+# Claude Code local settings and worktree scratch space (machine-specific)
 .claude/settings.local.json
+.claude/worktrees/
+.claude/launch.json
+.claude/scheduled_tasks.lock
 
 # OS
 .DS_Store
