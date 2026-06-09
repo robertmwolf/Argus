@@ -114,6 +114,12 @@ class Detection(Base):
     dec_tip1_deg: Mapped[float | None] = mapped_column(Float)
     ra_tip2_deg: Mapped[float | None] = mapped_column(Float)
     dec_tip2_deg: Mapped[float | None] = mapped_column(Float)
+    # Segment endpoints (nullable for backward compat with legacy rows)
+    x1: Mapped[float | None] = mapped_column(Float)
+    y1: Mapped[float | None] = mapped_column(Float)
+    x2: Mapped[float | None] = mapped_column(Float)
+    y2: Mapped[float | None] = mapped_column(Float)
+    angle_deg: Mapped[float | None] = mapped_column(Float)
 
 
 class Identification(Base):
@@ -229,6 +235,10 @@ def _migrate_existing_tables(sync_conn) -> None:
         sync_conn.exec_driver_sql("ALTER TABLE detections ADD COLUMN method TEXT DEFAULT 'ml'")
     if "streak_id" not in columns:
         sync_conn.exec_driver_sql("ALTER TABLE detections ADD COLUMN streak_id INTEGER")
+    # Segment endpoint columns (additive migration)
+    for _col, _ddl in [("x1", "REAL"), ("y1", "REAL"), ("x2", "REAL"), ("y2", "REAL"), ("angle_deg", "REAL")]:
+        if _col not in columns:
+            sync_conn.exec_driver_sql(f"ALTER TABLE detections ADD COLUMN {_col} {_ddl}")
 
     sync_conn.exec_driver_sql(
         "CREATE INDEX IF NOT EXISTS idx_detections_observation_id "

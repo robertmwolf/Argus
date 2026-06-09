@@ -26,7 +26,13 @@ CREATE TABLE detections (
     ra_tip1_deg      REAL,
     dec_tip1_deg     REAL,
     ra_tip2_deg      REAL,
-    dec_tip2_deg     REAL
+    dec_tip2_deg     REAL,
+    -- Segment endpoints (additive — obb_* columns kept for backward compat)
+    x1 REAL,
+    y1 REAL,
+    x2 REAL,
+    y2 REAL,
+    angle_deg REAL
 );
 
 CREATE TABLE identifications (

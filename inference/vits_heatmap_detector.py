@@ -37,6 +37,7 @@ from inference.device import get_device
 # Re-use the backbone-agnostic helpers from the ConvNeXt detector
 from inference.convnext_heatmap_detector import (
     _run_single_tile,
+    _run_single_tile_probs,
     _remap_detection,
 )
 
@@ -92,6 +93,18 @@ def _load_model(checkpoint_path: Path) -> tuple[Any, int, torch.device]:
     result = (backbone, image_size, device)
     _MODEL_CACHE[cache_key] = result
     return result
+
+
+def get_vits_heatmap_status() -> dict[str, str]:
+    """Return availability metadata for the ViT-S heatmap detector."""
+    ckpt = _default_checkpoint()
+    return {
+        "id":      "vits_heatmap",
+        "name":    "DINOv3 ViT-S HeatMap",
+        "type":    "ml",
+        "dataset": "Atwood+Frigate Run15",
+        "status":  "active" if ckpt.exists() else "no_weights",
+    }
 
 
 def run_vits_heatmap_detector(
@@ -169,3 +182,82 @@ def run_vits_heatmap_detector(
         "ViT-S heatmap (tiled): %d raw → %d after NMS", len(all_dets), len(result)
     )
     return result
+
+
+def run_vits_heatmap_detector_and_heatmap(
+    array: np.ndarray,
+    checkpoint: Path | None = None,
+) -> tuple[list[dict[str, Any]], np.ndarray | None]:
+    """Run the ViT-S heatmap detector and return both detections and a stitched
+    full-image probability heatmap for the overlay.
+
+    Returns:
+        Tuple of (detections, heat) where ``heat`` is a float32 array shaped
+        ``(H, W)`` with values in [0, 1], or None on model-load failure.
+    """
+    ckpt_path = Path(checkpoint) if checkpoint else _default_checkpoint()
+    threshold        = float(os.environ.get("VITS_HEATMAP_THRESHOLD", "0.5"))
+    min_pixels       = int(os.environ.get("VITS_HEATMAP_MIN_PIXELS", "2"))
+    native_tile_size = int(os.environ.get("VITS_HEATMAP_NATIVE_TILE_SIZE", "400"))
+    tile_overlap     = float(os.environ.get("VITS_HEATMAP_TILE_OVERLAP", "0.5"))
+
+    try:
+        model, image_size, device = _load_model(ckpt_path)
+    except Exception as exc:
+        logger.warning("ViT-S heatmap model load failed (heatmap): %s", exc)
+        return [], None
+
+    if array.ndim == 2:
+        array = np.stack([array] * 3, axis=2)
+    if array.dtype != np.uint8:
+        array = np.clip(array, 0, 255).astype(np.uint8)
+
+    h_full, w_full = array.shape[:2]
+    heat_full = np.zeros((h_full, w_full), dtype=np.float32)
+
+    if max(h_full, w_full) <= native_tile_size:
+        dets = _run_single_tile(array, model, image_size, device, threshold, min_pixels)
+        for d in dets:
+            d["method"] = "vits_heatmap"
+        heat_tile, _, _, _ = _run_single_tile_probs(array, model, image_size, device)
+        heat_full = heat_tile
+        return dets, heat_full
+
+    from inference.tiled_pipeline import tile_image, _torchvision_nms, _numpy_nms
+
+    all_dets: list[dict[str, Any]] = []
+    for tile, x0, y0 in tile_image(array, native_tile_size, tile_overlap):
+        th, tw = tile.shape[:2]
+        # Detections
+        for det in _run_single_tile(tile, model, image_size, device, threshold, min_pixels):
+            d = _remap_detection(det, x0, y0)
+            d["method"] = "vits_heatmap"
+            all_dets.append(d)
+        # Heatmap tile — take per-pixel max for overlapping tiles
+        heat_tile, _, _, _ = _run_single_tile_probs(tile, model, image_size, device)
+        y1e, x1e = min(y0 + th, h_full), min(x0 + tw, w_full)
+        np.maximum(
+            heat_full[y0:y1e, x0:x1e],
+            heat_tile[:y1e - y0, :x1e - x0],
+            out=heat_full[y0:y1e, x0:x1e],
+        )
+
+    if len(all_dets) <= 1:
+        return all_dets, heat_full
+
+    preds_xywh = [
+        {
+            "bbox":        [d["bbox"][0], d["bbox"][1],
+                            d["bbox"][2] - d["bbox"][0],
+                            d["bbox"][3] - d["bbox"][1]],
+            "score":       float(d["confidence"]),
+            "category_id": 1,
+        }
+        for d in all_dets
+    ]
+    try:
+        kept = _torchvision_nms(preds_xywh, iou_threshold=0.3)
+    except Exception:
+        kept = _numpy_nms(preds_xywh, iou_threshold=0.3)
+
+    return [all_dets[i] for i in kept], heat_full
