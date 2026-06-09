@@ -58,18 +58,6 @@ def _default_checkpoint() -> Path:
     return Path(os.environ.get("VITS_HEATMAP_CHECKPOINT", str(_DEFAULT_CHECKPOINT)))
 
 
-def get_vits_heatmap_status() -> dict[str, str]:
-    """Return availability metadata for the ViT-S heatmap detector."""
-    ckpt = _default_checkpoint()
-    return {
-        "id":      "vits_heatmap",
-        "name":    "ViT-S/16 HeatMap",
-        "type":    "ml",
-        "dataset": "Atwood Run15 (400px zscore)",
-        "status":  "active" if ckpt.exists() else "no_weights",
-    }
-
-
 def _load_model(checkpoint_path: Path) -> tuple[Any, int, torch.device, bool]:
     """Load and cache the ViT-S heatmap model.
 
@@ -223,7 +211,7 @@ def run_vits_heatmap_detector_and_heatmap(
     tile_overlap     = float(os.environ.get("VITS_HEATMAP_TILE_OVERLAP", "0.5"))
 
     try:
-        model, image_size, device = _load_model(ckpt_path)
+        model, image_size, device, use_geometry = _load_model(ckpt_path)
     except Exception as exc:
         logger.warning("ViT-S heatmap model load failed (heatmap): %s", exc)
         return [], None
@@ -237,7 +225,8 @@ def run_vits_heatmap_detector_and_heatmap(
     heat_full = np.zeros((h_full, w_full), dtype=np.float32)
 
     if max(h_full, w_full) <= native_tile_size:
-        dets = _run_single_tile(array, model, image_size, device, threshold, min_pixels)
+        dets = _run_single_tile(array, model, image_size, device, threshold, min_pixels,
+                                use_geometry=use_geometry)
         for d in dets:
             d["method"] = "vits_heatmap"
         heat_tile, _, _, _ = _run_single_tile_probs(array, model, image_size, device)
@@ -250,7 +239,8 @@ def run_vits_heatmap_detector_and_heatmap(
     for tile, x0, y0 in tile_image(array, native_tile_size, tile_overlap):
         th, tw = tile.shape[:2]
         # Detections
-        for det in _run_single_tile(tile, model, image_size, device, threshold, min_pixels):
+        for det in _run_single_tile(tile, model, image_size, device, threshold, min_pixels,
+                                    use_geometry=use_geometry):
             d = _remap_detection(det, x0, y0)
             d["method"] = "vits_heatmap"
             all_dets.append(d)

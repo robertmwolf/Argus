@@ -572,13 +572,6 @@ def _run_streakmind_yolo_detector(
 
 
 def _run_vits_heatmap_detector(array: "np.ndarray") -> list[dict]:
-    """Run the ViT-S/16 heatmap detector (Run 15+) if its weights are available."""
-    from inference.vits_heatmap_detector import run_vits_heatmap_detector
-
-    return run_vits_heatmap_detector(array)
-
-
-def _run_vits_heatmap_detector(array: "np.ndarray") -> list[dict]:
     """Run the ViT-S/16 heatmap detector (Run 15, 400px tiles, zscore norm).
 
     Applies stitch_collinear_fragments with max_growth_ratio=3.0 after per-tile
@@ -1071,30 +1064,17 @@ def get_detector_statuses() -> list[dict]:
                 "status":  "active" if weight_ok else "no_weights",
             })
 
-    # ViT-S/16 heatmap detector (Run 15+)
+    # ViT-S/16 heatmap detector (Run 15, primary ML detector)
     try:
         from inference.vits_heatmap_detector import get_vits_heatmap_status
         statuses.append(get_vits_heatmap_status())
     except ImportError:
         statuses.append({
-            "id": "vits_heatmap",
-            "name": "DINOv3 ViT-S HeatMap",
-            "type": "ml",
-            "dataset": "Atwood+Frigate Run15",
-            "status": "unavailable",
-        })
-
-    # ViT-S/16 heatmap detector (Run 15)
-    try:
-        from inference.vits_heatmap_detector import get_vits_heatmap_status
-        statuses.append(get_vits_heatmap_status())
-    except ImportError:
-        statuses.append({
-            "id": "vits_heatmap",
-            "name": "ViT-S/16 HeatMap",
-            "type": "ml",
+            "id":      "vits_heatmap",
+            "name":    "ViT-S/16 HeatMap",
+            "type":    "ml",
             "dataset": "Atwood Run15 (400px zscore)",
-            "status": "unavailable",
+            "status":  "unavailable",
         })
 
     # YOLO variants
@@ -1329,17 +1309,33 @@ def _run_all_detectors(
 
             def _vits_heatmap_task_with_sidecar(arr: "np.ndarray") -> list[dict]:
                 from inference.vits_heatmap_detector import run_vits_heatmap_detector_and_heatmap
+                from inference.tiled_pipeline import stitch_collinear_fragments
                 dets, heat = run_vits_heatmap_detector_and_heatmap(arr)
                 if heat is not None:
                     _heatmap_sidecar["heat"] = heat
+                # Apply collinear stitch with growth guard (same as offline eval)
+                if len(dets) > 1:
+                    max_gap    = float(os.environ.get("VITS_HEATMAP_STITCH_MAX_GAP", "400"))
+                    max_growth = float(os.environ.get("VITS_HEATMAP_STITCH_MAX_GROWTH_RATIO", "3.0"))
+                    stitch_in = [
+                        {**d,
+                         "bbox":  [d["bbox"][0], d["bbox"][1],
+                                   d["bbox"][2] - d["bbox"][0],
+                                   d["bbox"][3] - d["bbox"][1]],
+                         "score": float(d["confidence"])}
+                        for d in dets
+                    ]
+                    stitched = stitch_collinear_fragments(stitch_in, max_gap_px=max_gap,
+                                                          max_growth_ratio=max_growth)
+                    dets = []
+                    for s in stitched:
+                        x, y, w, h = s["bbox"]
+                        dets.append({**s,
+                                     "bbox":       [x, y, x + w, y + h],
+                                     "confidence": s.get("confidence", s.get("score", 0.0))})
                 return dets
 
             tasks[pool.submit(_timed_detector, "vits_heatmap", _vits_heatmap_task_with_sidecar, _vits_array)] = "vits_heatmap"
-        else:
-            results["vits_heatmap"] = []
-
-        if _enabled("vits_heatmap"):
-            tasks[pool.submit(_timed_detector, "vits_heatmap", _run_vits_heatmap_detector, array)] = "vits_heatmap"
         else:
             results["vits_heatmap"] = []
 
