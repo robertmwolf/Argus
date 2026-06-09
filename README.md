@@ -2,20 +2,23 @@
 ### Automated Recognition and Grading of Unidentified Streaks
 
 ARGUS is a pipeline for automated satellite streak detection
-and identification in FITS telescope images.  It runs three parallel detectors —
-one ML-based (DINO-DETR with DINOv3 ViT-B backbone) and two classical
-(ASTRiDE-derived, OpenCV connected-components) —
-then merges their results by grouping overlapping or collinear detections and
-fusing them into a single streak-level geometry plus a
+and identification in FITS telescope images.  The primary detector is a
+**DINOv3 ViT-S/16 heatmap model** (Run 15 — trained on Atwood Observatory FITS
+at 400 px native tiles, z-score normalisation) that produces tiled probability
+maps which are stitched into line-segment detections.  ASTRiDE provides a
+classical corroboration signal on raw FITS input.  An optional YOLO-OBB detector
+(`streakmind_yolo`) is activated when its weights are present.
+
+Detections are merged across tiles and detectors by grouping overlapping or
+collinear segments and fusing them into a single streak-level line segment plus a
 **Unified Confidence Score** that preserves a lone detector's confidence and uses
 each detector's empirical precision and recall to boost corroborated detections.
 ASTRiDE is treated as corroboration-only: ASTRiDE-only streak groups are kept at
 a conservative display confidence, and corroborated ASTRiDE detections can only
 add a small confidence boost.
-Streak orientation is refined via the Radon transform, each streak is traced to its
-true endpoints across the full image, and detected objects are cross-identified
-against a local TLE catalog using SGP4 propagation and multi-factor confidence
-scoring.  Results are served through a FastAPI backend and React frontend.
+Each detected streak is cross-identified against a local TLE catalog using SGP4
+propagation and multi-factor confidence scoring.  Results are served through a
+FastAPI backend and React frontend.
 Detailed methodology and prior-work comparison: [METHODOLOGY.md](METHODOLOGY.md).
 
 > **Space-Track integration status:** Cross-identification reads exclusively from
@@ -47,13 +50,13 @@ Full design: [`agent_docs/architecture.md`](agent_docs/architecture.md)
 See [METHODOLOGY.md §§ 3–5](METHODOLOGY.md) for complete algorithmic documentation
 including exact parameters, design rationale, and reproducible algorithm descriptions.
 
-**Summary:** FITS → Z-score normalisation → 3 parallel detectors (DINOv3 ViT-B /
-DINO-DETR, ASTRiDE, OpenCV connected-components) → Radon angle
-refinement (default ±60° search) → streak extent tracing → per-detector NMS →
-cross-detector grouping (rotated-IoU ≥ 0.5, IoMin ≥ 0.3, or collinear-fragment
-match) → grouped-geometry fusion to outer endpoints → ASTRiDE-only confidence
-lowering → Unified Confidence Score → SGP4 cross-identification → FastAPI +
-React canvas.
+**Summary:** FITS → Z-score normalisation → tiled inference at 400 px (50 % overlap) →
+ViT-S/16 heatmap probabilities stitched into full-image map → line-segment extraction
+(threshold sweep, collinear stitch with growth-ratio guard) → optional ASTRiDE +
+YOLO-OBB passes → per-detector NMS → cross-detector grouping (rotated-IoU ≥ 0.5,
+IoMin ≥ 0.3, or collinear-fragment match) → grouped-geometry fusion to outer
+endpoints → ASTRiDE-only confidence lowering → Unified Confidence Score → SGP4
+cross-identification → FastAPI + React canvas.
 
 ---
 
@@ -82,9 +85,11 @@ Argus/
 │   ├── device.py              ← get_device() / get_device_config()
 │   ├── fits_loader.py         ← FITS → tensor, normalisation + FITS/sidecar WCS
 │   ├── pipeline.py            ← inference orchestrator
+│   ├── tiled_pipeline.py      ← adaptive tiling + collinear stitch
 │   ├── postprocess.py         ← Radon angle refinement + extent, NMS, grouping/fusion
 │   ├── crossid.py             ← satellite cross-matching
-│   └── confidence.py          ← Unified Confidence Score (single-detector floor + F-beta corroboration)
+│   ├── confidence.py          ← Unified Confidence Score (single-detector floor + F-beta corroboration)
+│   └── vits_heatmap_detector.py ← DINOv3 ViT-S/16 heatmap detector (Run 15, primary)
 ├── training/
 │   ├── convert_labels.py      ← OBB label format → COCO JSON
 │   ├── dataset.py             ← FITSStreakDataset
@@ -158,18 +163,27 @@ Create `.env` from this template (`.env` is gitignored; never commit credentials
 SPACETRACK_USER=your@email.com
 SPACETRACK_PASS=yourpassword
 
-# Multi-model ensemble — each entry is one DINO checkpoint.
-# Paths are relative to the project root (or absolute).
-ARGUS_MODEL_CONFIGS=[{"id":"dinov3_vitb","size":"dinov3_vitb","weights":"weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth","label":"DINOv3 Base","dataset":"SatStreaks+GTImages"},{"id":"dinov3_vitb_multisource","size":"dinov3_vitb_multisource","weights":"weights/run3_cold_nodm/best.pth","label":"DINOv3 Base - Multi-source (Run 3)","dataset":"SatStreaks+BrentImages+Frigate"}]
+# Multi-model DINO ensemble — set to [] to use ViT-S heatmap only (recommended).
+# Each entry: id, size, weights, label, dataset, norm_mode.
+ARGUS_MODEL_CONFIGS=[]
+
+# ViT-S/16 heatmap detector (Run 15 — 400 px native tiles, z-score norm).
+# Tile size MUST match the native_tile_size used when building the training cache.
+# Run 15 was cached at 400 px; changing this will break detections.
+VITS_HEATMAP_CHECKPOINT=weights/run15_vits/best.pt
+VITS_HEATMAP_NORM=zscore
+VITS_HEATMAP_NATIVE_TILE_SIZE=400
+VITS_HEATMAP_TILE_OVERLAP=0.5
+VITS_HEATMAP_THRESHOLD=0.85
 
 PYTORCH_ENABLE_MPS_FALLBACK=1           # required on Apple Silicon
 DATABASE_URL=sqlite+aiosqlite:///./argus.db
 CONFIDENCE_THRESHOLD=0.05
 
-# Fast mode: 256px inference, no Radon refinement, no cross-ID (~25x faster on CPU)
+# Fast mode: skips cross-ID (~25× faster on CPU).
 FAST_MODE=false
 
-# ASTRiDE classical detector — disabled by default (high FP rate on real FITS)
+# ASTRiDE classical detector — disabled by default.
 # ARGUS_ENABLE_ASTRIDE=1
 
 # ARGUS_ENV controls which Space-Track endpoint is used:
@@ -234,14 +248,21 @@ mmdet, ultralytics, and all ML packages installed.
 
 ### Detector inventory
 
-ARGUS runs up to four detectors in parallel. Each is activated differently:
+ARGUS runs detectors in parallel. Each is activated as described:
 
 | Detector | ID | How it activates | Weight path |
 |---|---|---|---|
-| DINOv3 ViT-B (SatStreaks+GTImages) | `dinov3_vitb` | `MODEL_SIZE` or `ARGUS_MODEL_CONFIGS` | `weights/dinov3_vitb_augmented/best_coco_bbox_mAP_epoch_10.pth` |
-| DINOv3 ViT-B (Multi-source, Run 3) | `dinov3_vitb_multisource` | `ARGUS_MODEL_CONFIGS` only | `weights/run3_cold_nodm/best.pth` (early ckpt — Run 3 still training) |
-| OpenCV morphological | `opencv` | always runs | — |
-| ASTRiDE | `astride` | **opt-in**: `ARGUS_ENABLE_ASTRIDE=1` | — (high false-positive rate on real FITS) |
+| DINOv3 ViT-S/16 HeatMap (Run 15) | `vits_heatmap` | always (primary ML detector) | `weights/run15_vits/best.pt` |
+| ASTRiDE classical | `astride` | **opt-in**: `ARGUS_ENABLE_ASTRIDE=1` | — |
+| YOLO-OBB GTImages | `streakmind_yolo` | when weights are present | `weights/streakmind_yolo_real/run/weights/best.pt` |
+| ViT-S OBB Run 5 | `dinov3_vits_run5` | `ARGUS_MODEL_CONFIGS` only | `weights/run5_vits_mmdet/best_coco_bbox_mAP_epoch_15.pth` |
+
+The `vits_heatmap` detector is the primary production path.  It was trained on
+Atwood Observatory FITS data (Runs 5–15, 400 px tile size, zscore normalisation)
+and achieves F1 = 21.9 % (long-streak recall = 20.9 %, medium-streak recall = 8.3 %)
+at threshold = 0.85 on the held-out Atwood validation set.  Using the
+line-segment geometry metric (angle < 5°, perpendicular offset < 5 px,
+length-IoU > 0.5), recall rises to 84.7 % before the collinear stitch step.
 
 ### Starting the dev servers
 
@@ -261,8 +282,9 @@ To switch between single-model and full-ensemble mode, edit `ARGUS_MODEL_CONFIGS
 Remove the variable entirely to fall back to the single model set by `MODEL_SIZE`.
 
 Open `http://localhost:5173`, upload a FITS file.  In the results canvas:
-- **Cyan** lines = DINOv3 ViT-B detections
-- **Amber** lines = ASTRiDE / OpenCV classical detections
+- **Cyan** lines = ViT-S heatmap detections (`vits_heatmap`)
+- **Amber** lines = ASTRiDE / YOLO classical detections
+- Toggle the **Heatmap** overlay button to view the raw probability sidecar
 
 Use the **Filters** panel to slide confidence thresholds per-method and isolate
 each detector's output independently.
@@ -309,43 +331,52 @@ MODEL_SIZE=large python scripts/download_weights.py
 
 ## Local Training (Mac M3, no GPU required)
 
-All phases 0–8 are code-complete with 325 passing tests.  To produce real
-detection results without a cloud GPU, train the Swin-T model on the 50-image
-dev subset:
+The active production model is a ViT-S/16 heatmap trained on Atwood FITS data.
+Training requires pre-built NPY tile caches.  Full training pipeline:
 
 ```bash
-# 1. Get annotated training data (~150 MB)
-git clone https://github.com/jijup/SatStreaks data/satstreaks
+# 1. Build tiled annotation file (Atwood nights, 400px tiles, 50% overlap)
+python scripts/build_tiled_brentimages_json.py \
+  --src data/annotations/all_train_run5.json \
+  --out /Volumes/External/TrainingData/annotations/atwood_train_tiled.json \
+  --native-tile-size 400 --overlap 0.5 \
+  --neg-tiles-per-image 50 --hard-neg-per-pos 5
 
-# 2. Build the 50-image dev subset
-python training/make_dev_subset.py
+# 2. Cache DINOv3 features → NPY (reads FITS, writes .npy files)
+python scripts/cache_dinov3_heatmap_features.py \
+  --annotations /Volumes/External/TrainingData/annotations/atwood_train_tiled.json \
+  --output-dir /tmp/argus_run_cache \
+  --backbone vits --image-size 400
 
-# 3. Smoke-test MPS training pipeline (~5 min)
+# 3. Train ViT-S heatmap (40 epochs, cosine LR)
+PYTORCH_ENABLE_MPS_FALLBACK=1 \
+python training/train_dinov3_heatmap_cached.py \
+  --annotations /tmp/argus_run_cache/train.json \
+  --val-annotations /tmp/argus_run_cache/val.json \
+  --output-dir weights/run_local_vits \
+  --backbone vits --epochs 40 \
+  --pos-weight 20 --neg-ratio 0.38 \
+  --lr 5e-4 --cosine-lr
+
+# 4. Evaluate
+python scripts/evaluate_dinov3_heatmap.py \
+  --weights weights/run_local_vits/best.pt \
+  --annotations data/annotations/val_atwood.json \
+  --backbone vits --native-tile-size 400 --tile-overlap 0.5 \
+  --threshold 0.85 --stitch --output results/run_local_vits/
+```
+
+See `docs/training_methods.md §3` for the full run history (Runs 1–15) and
+`docs/training_methods.md §6` for evaluation policy.
+
+### Historical OBB training (MMDetection DINO)
+
+The OBB DINO-DETR path (ViT-S/B, Swin-T/L) is retained for reference.
+To reproduce the Swin-T baseline:
+
+```bash
 PYTORCH_ENABLE_MPS_FALLBACK=1 MODEL_SIZE=tiny \
   python -m training.train_dino --smoke-test
-
-# 4. Train Swin-T DINO on dev subset (~1–2 hrs on MPS)
-PYTORCH_ENABLE_MPS_FALLBACK=1 MODEL_SIZE=tiny USE_DEV_SUBSET=true \
-  python -m training.train_dino --work-dir weights/local_run
-
-# Optional: resume from an existing checkpoint or run a short timeboxed retrain
-python -m training.train_dino \
-  --work-dir weights/local_run \
-  --load-from weights/local_run/best_coco_bbox_mAP_epoch_50.pth \
-  --max-epochs 10 \
-  --val-interval 2 \
-  --checkpoint-interval 2
-
-# 5. Run inference with trained weights
-MODEL_WEIGHTS=weights/local_run/best_coco_bbox_mAP_epoch_50.pth \
-  MODEL_SIZE=tiny PYTORCH_ENABLE_MPS_FALLBACK=1 \
-  python -m inference.pipeline --image data/sample/synth_streak_000.fits
-
-# 6. Evaluate (loads model once for all images)
-python -m eval.benchmark \
-  --run-pipeline \
-  --annotations data/annotations/dev_subset.json \
-  --output results/phase8_benchmark.json
 ```
 
 ## Updating Detector Profiles After Training
@@ -376,11 +407,11 @@ Find the entry for the detector key (e.g. `"dinov3_vitb"`, `"tiny"`, `"astride"`
 update `precision`, `recall`, and `notes`:
 
 ```python
-"dinov3_vitb": DetectorProfile(
-    name="DINOv3 ViT-B",
-    precision=0.94,      # ← replace with measured value
-    recall=0.97,         # ← replace with measured value
-    notes="Phase D results/<run>/phase8_benchmark.json",
+"vits_heatmap": DetectorProfile(
+    name="DINOv3 ViT-S HeatMap",
+    precision=0.228,     # ← measured at t=0.85, val_atwood, Run 15
+    recall=0.211,        # ← measured at t=0.85, val_atwood, Run 15
+    notes="Run 15 results/run15_vits/threshold_sweep/threshold_sweep.json",
 ),
 ```
 
@@ -430,9 +461,10 @@ bash scripts/fetch_weights.sh user@instance-ip
 
 | Machine | Use | Config |
 |---------|-----|--------|
-| MacBook Air M3 (16 GB) | Development, testing | `MODEL_SIZE=tiny` or `dinov3_vitb`, MPS |
-| RTX 5070 Ti 16 GB (workstation) | DINOv3 ViT-L training (Phase D) | `MODEL_SIZE=dinov3_vitl`, CUDA |
-| Lambda Labs A100 40 GB | Swin-L training or ViT-L Stage 2 unfreeze | `MODEL_SIZE=large`, CUDA |
+| MacBook Air M3 (16 GB) | Development, API/inference | MPS, `VITS_HEATMAP_CHECKPOINT=weights/run15_vits/best.pt` |
+| RTX 5070 Ti 16 GB (workstation) | ViT-S backbone unfreeze training (next step) | CUDA, partial unfreeze last 2–4 ViT blocks |
+| Vast.ai / RunPod A10 (~$0.15/hr) | Cloud GPU for unfreeze or ViT-B experiments | CUDA |
+| Lambda Labs A100 40 GB | ViT-L backbone unfreeze (if needed) | CUDA |
 
 Never hardcode `torch.device("cuda")` — always use `get_device()` from
 `inference/device.py`.

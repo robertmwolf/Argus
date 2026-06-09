@@ -297,37 +297,48 @@ weighted_score = (
 
 | Phase | Detector | Notes |
 |-------|----------|-------|
-| 0 — Classical baseline | ASTRiDE (Hough) | ✅ Complete. `src/` directory. Baseline metrics. |
-| 1 — Data pipeline | — | FITS loader, COCO conversion, augmentations (`training/`) |
-| 2 — DINO model | DINO + Swin-L backbone | MMDetection config + training script (adapts StreakMind architecture) |
-| 3 — Cross-identification | SGP4 ephemeris matching | Reuses Phase 0 matching logic, adapted for ARGUS inference |
-| 4 — Database | PostgreSQL/SQLite schema | SQLAlchemy async, normalized schema |
-| 5 — API | FastAPI | Upload / result / image endpoints |
-| 6 — Frontend | React + Vite + Tailwind | Canvas OBB renderer |
-| 8 — Evaluation | mAP, angle error | DINO vs YOLO head-to-head benchmark |
+| 0 — Classical baseline | ASTRiDE | ✅ Complete. `src/` directory. Baseline metrics. |
+| 1 — Data pipeline | — | ✅ FITS loader, COCO conversion, augmentations (`training/`) |
+| 2 — DINO model | DINO + ViT-S backbone | ✅ MMDetection configs + training script |
+| 3 — Cross-identification | SGP4 ephemeris matching | ✅ Reuses Phase 0 matching logic |
+| 4 — Database | SQLite schema | ✅ SQLAlchemy async, normalized schema |
+| 5 — API | FastAPI | ✅ Upload / result / image endpoints |
+| 6 — Frontend | React + Vite + Tailwind | ✅ Line-segment canvas renderer; heatmap overlay toggle |
+| 8 — Evaluation | F1, threshold sweep | ✅ `eval/benchmark.py`, `scripts/run_posthoc_threshold_analysis.py` |
+| ML R1–R15 | ViT-S/ConvNeXt heatmap | ✅ 15 training runs; Run 15 (400 px / zscore) is active |
+| ML R17 — Partial unfreeze | ViT-S last 2–4 blocks | ⏳ Next step; requires GPU |
 
-## ARGUS ML Pipeline (Phases 1–8)
+## ARGUS ML Pipeline (Phases 1–8, current state)
 
 ```
 [FITS or PNG Upload]
         ↓
 [inference/fits_loader.py — FITSLoader]
-   ARGUS_NORM-selected normalization → 3-channel uint8 array
+   Z-score normalisation (zscore, 3σ clip → uint8)
    Extract FITS-header or sidecar WCS metadata
         ↓
-[Co-DINO inference — inference/pipeline.py]
-   pipeline.load_model()  — load once for batch eval
-   pipeline.run(fits_path, model=model)  — reuse preloaded model
-   models/dino/streak_codino_swin_l.py  — MMDetection config
-   → axis-aligned bboxes + confidence scores
+[inference/tiled_pipeline.py — adaptive tiler]
+   400 px tiles, 50% overlap → ~650 tiles per 6248×4176 Atwood frame
         ↓
-[inference/postprocess.py — AngleRefinement + StreakGrouping]
-   Radon transform on each crop → refined angle (default ±60° search)
-   Reconstruct OBB (cx, cy, w, h, angle_deg)
-   Trace streak extent along the refined axis
-   Per-detector rotated-IoU NMS via Shapely
-   Cross-detector grouping by rotated-IoU, IoMin, or collinear fragment match
-   Fuse grouped fragment geometry to one OBB spanning the outer endpoints
+[inference/vits_heatmap_detector.py — primary ML detector]
+   DINOv3 ViT-S/16 (frozen) + MLP head → per-tile (25×25) probability map
+   Bilinear upsample → (400, 400) per tile
+   Stitch tiles → full-image heatmap (max-pool overlapping regions)
+   Threshold at VITS_HEATMAP_THRESHOLD (default 0.85)
+   Connected-component extraction → candidate line segments
+   stitch_collinear_fragments (max_growth_ratio=3.0) → merged segments
+   → list of {method: "vits_heatmap", seg: {x1,y1,x2,y2}, confidence} dicts
+        ↓
+[Optional parallel detectors — inference/pipeline.py]
+   ASTRiDE (ARGUS_ENABLE_ASTRIDE=1): classical σ-threshold contour detection on raw FITS
+   YOLO-OBB (streakmind_yolo): when weights/streakmind_yolo_real/ present
+        ↓
+[inference/postprocess.py — StreakGrouping + UCS]
+   Per-detector NMS (rotated-IoU)
+   Cross-detector grouping: rotated-IoU ≥ 0.5, IoMin ≥ 0.3, or collinear-fragment match
+   Fuse grouped geometry to outer endpoints → single line segment per physical streak
+   ASTRiDE-only confidence lowering
+   Unified Confidence Score (F-0.5 weighted corroboration)
         ↓
 [inference/crossid.py — SatelliteCrossIdentifier]
    WCS → RA/Dec for streak midpoints
@@ -340,7 +351,8 @@ weighted_score = (
    observations, detections, identifications tables
         ↓
 [API response / Frontend display]
-   Canvas OBB rendering, detection table
+   Line-segment canvas rendering; heatmap overlay toggle; detection table
+   Cyan = vits_heatmap; Amber = ASTRiDE / YOLO
 ```
 
 ## Service Deployment Roadmap

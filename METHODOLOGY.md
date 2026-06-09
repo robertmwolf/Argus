@@ -1,17 +1,26 @@
 # ARGUS Methodology
 ### Automated Recognition and Grading of Unidentified Streaks
 
-**Version:** 2026-05-16
-**Benchmark commit:** see `results/multi_method_benchmark.json`
+**Version:** 2026-06-09
+**Benchmark commit:** see `results/multi_method_benchmark.json`; Run 15 results in `results/run15_vits/`
 **Code:** `inference/`, `src/detection/`, `inference/confidence.py`, `inference/postprocess.py`
 **Cite as:** cite this repository per its `CITATION.cff`
 
-ARGUS detects satellite streak artifacts in astronomical FITS images using five
-independent detectors fused into a Unified Confidence Score (UCS). On a 308-image
-test set (SatStreaks JPEG exports), the ensemble achieves F1 = 42.3% (P = 29.9%,
-R = 72.1%), while the primary ML detector (DINOv3 ViT-B / DINO-DETR) achieves
-mAP@0.5 = 75.5% and recall = 89.3%. On long streaks (≥ 1,000 px), ensemble F1
-reaches 49.0%.
+ARGUS detects satellite streak artifacts in astronomical FITS images.  The current
+production pipeline uses a **DINOv3 ViT-S/16 heatmap detector** (Run 15, trained on
+raw Atwood Observatory FITS at 400 px native tiles) as the primary ML detector, with
+ASTRiDE as a classical corroboration signal.  On the Atwood validation set (1,160 GT
+streaks), the ViT-S heatmap achieves F1 = 21.9 % (long-streak recall = 20.9 %,
+medium-streak recall = 8.3 %, threshold = 0.85).  Using a looser geometry-match
+metric (segment angle < 5°, perpendicular offset < 5 px, length-IoU > 0.5), recall
+rises to 84.7 % before the collinear stitch step.
+
+An earlier SatStreaks JPEG benchmark (2026-05-16) tested the now-superseded
+DINOv3 ViT-B / DINO-DETR ensemble: F1 = 42.3 % (P = 29.9 %, R = 72.1 %).  Those
+results are preserved in §7 for historical reference but do not reflect the current
+production detector.  The ViT-S heatmap pipeline targets raw FITS data (Atwood
+Observatory, 400 px tiles) and is not directly comparable to the SatStreaks JPEG
+benchmark.
 
 ---
 
@@ -150,8 +159,18 @@ Absence of ASTRiDE results on the SatStreaks test set is expected, not a gap.
 
 ## 3. Detector Architectures
 
-ARGUS runs five detectors independently on every image and collects all outputs
-into a single pool before post-processing.
+### Active pipeline (2026-06-09)
+
+| Detector | ID | Status | Notes |
+|---|---|---|---|
+| DINOv3 ViT-S/16 HeatMap | `vits_heatmap` | **Primary (active)** | Run 15, 400 px tiles, zscore norm |
+| ASTRiDE | `astride` | Active (opt-in) | `ARGUS_ENABLE_ASTRIDE=1` |
+| YOLO-OBB GTImages | `streakmind_yolo` | Active when weights present | Optional |
+| DINOv3 ViT-B / DINO-DETR | `dinov3_vitb*` | **Superseded** | Still in registry for comparison; no active weights |
+| OpenCV connected-components | `opencv` | **Removed** | Code present but not wired; eliminated from pipeline |
+
+Sections §3.1–§3.4 below document the historical detectors.  Section §3.5 documents
+the current production detector.
 
 ### 3.1 ASTRiDE — Phase 0 Classical Baseline
 
@@ -190,7 +209,11 @@ and should be assessed on BrentImages raw FITS only.
 ### 3.2 OpenCV Connected-Components Detector
 
 **Implementation:** `_run_classical_detector()` in `inference/pipeline.py`
-**When active:** Always
+**Status:** ⚠️ Removed from active pipeline (2026-06-09).  Code remains in `pipeline.py`
+as dead code but is not wired into `_run_all_detectors()`.  Eliminated because
+it produces near-zero recall on JPEG test data and provides no meaningful signal
+alongside the ViT-S heatmap on raw FITS.
+**When active (historical):** Always ran in earlier pipeline versions.
 
 **Algorithm:**
 
@@ -368,6 +391,130 @@ When `TTA_ENABLED=true`, inference also runs on horizontal and vertical flips;
 bounding boxes are mapped back to original coordinates before postprocessing.
 TTA is enabled by default and contributes to the 2,969 raw predictions reported
 for DINOv3 ViT-B in §7.
+
+> **Note:** The ViT-B/DINO-DETR path has been superseded by the ViT-S heatmap
+> detector (§3.5) as the primary production detector.  The ViT-B weights remain
+> in the registry for comparison runs but are not loaded by default.
+
+---
+
+### 3.5 DINOv3 ViT-S/16 HeatMap Detector (Run 15 — Primary Production Detector)
+
+**Implementation:** `inference/vits_heatmap_detector.py`
+**Backbone:** `weights/dinov3_vits16_lvd1689m.pth` (frozen, LVD-1689M pretraining)
+**Checkpoint:** `weights/run15_vits/best.pt`  (40 epochs, cosine LR, val_dice=0.876)
+**API method ID:** `vits_heatmap`
+**When active:** Always (primary detector); activated via `VITS_HEATMAP_CHECKPOINT`
+
+#### 3.5.1 Architecture
+
+The detector is a single-channel binary segmentation head attached to a frozen
+DINOv3 ViT-S/16 backbone:
+
+```
+Raw FITS tile (400×400 px, zscore-normalised uint8)
+  ↓  DINOv3 ViT-S/16 (frozen, LVD-1689M)
+  →  (B, 768, 25, 25) patch features  [stride 16]
+  ↓  3-layer MLP heatmap head (768 → 256 → 64 → 1)
+  →  (B, 1, 25, 25) logits → sigmoid → probability map
+  ↓  bilinear upsample → (400, 400)
+  ↓  threshold at VITS_HEATMAP_THRESHOLD (default 0.85)
+  →  binary mask per tile
+```
+
+| Property | Value |
+|---|---|
+| Backbone | DINOv3 ViT-S/16, 22 M params |
+| Backbone state | Entirely frozen |
+| Trainable params | ~200 K (MLP head only) |
+| Patch size | 16 px |
+| Feature map | 25×25 per 400 px tile |
+| Normalization | Z-score (3σ clip → uint8) |
+| Training data | Atwood Observatory FITS (BrentImages Runs 5–15) |
+| Training epochs | 40, cosine LR (5e-4 → 1e-6) |
+| Negative ratio | 38 % (ViT-S 10a optimal) |
+
+#### 3.5.2 Tiled Inference Protocol
+
+Full Atwood images (6248×4176 px) are tiled at 400 px with 50 % overlap.
+Each tile is processed independently; probability maps are stitched into a
+full-image heatmap by max-pooling overlapping regions.
+
+```
+FITS image (6248×4176 px)
+  ↓  adaptive tiler (400 px, 50% overlap) → ~650 tiles
+  ↓  per-tile: ViT-S heatmap → (400, 400) probability map
+  ↓  stitch: max-pool overlapping regions → (6248, 4176) full-image heatmap
+  ↓  threshold at t → binary mask
+  ↓  connected-component extraction → candidate line segments
+  ↓  stitch_collinear_fragments (max_growth_ratio=3.0) → merged segments
+```
+
+#### 3.5.3 Collinear Stitch Guard
+
+`stitch_collinear_fragments` in `inference/tiled_pipeline.py` merges nearby
+collinear fragments from adjacent tiles.  Without a growth guard, union-find
+transitivity can absorb a 339 px short streak into an 8.5× longer false-positive
+chain.  The `max_growth_ratio=3.0` parameter limits each merge: the output span
+must be ≤ 3× the longer input fragment.
+
+#### 3.5.4 Training History and Run Progression
+
+Runs 5–15 all trained ViT-S (and some ConvNeXt-S) heatmap models.
+Key milestones:
+
+| Run | Config | Key result | Status |
+|---|---|---|---|
+| 5 | ConvNeXt/ViT-S, full-frame, no hard negatives | recall=76%, precision=0.05% (catastrophe) | Superseded |
+| 6 | Both, 60% negatives | recall collapsed | Superseded |
+| 7 | Both, 27% neg, pos_weight=50 | diffuse activations | Superseded |
+| 8 | Both, 34% neg, fixed val metric | ViT-S medium=18.2% (best then) | Superseded |
+| 9 | Both, 48% neg, cosine LR | recall=0% (collapsed) | Superseded |
+| 10a | ViT-S, **38% neg**, cosine LR | medium=9.09%, F1=1.54% | Best frozen |
+| 11 | ViT-S + synthetic augmentation | — | Superseded |
+| 12 | ViT-S, **1800 px tiles** | 0% short recall (scale mismatch) | Superseded |
+| 13, 14, 16 | AstroPT-89M backbone | 0% medium recall (16×16 grid limit) | Abandoned |
+| **15** | **ViT-S, 400 px tiles, zscore** | **F1=21.9%, long=20.9%, med=8.3%** | **Active** |
+
+Full details in `docs/training_methods.md §3.7–§3.13` and
+`docs/astropt_exploration_postmortem.md`.
+
+#### 3.5.5 Benchmark Results (Run 15, val_atwood, 2026-06-08)
+
+**Evaluation set:** 1,160 GT streaks, Atwood Observatory FITS (BrentImages), tiled
+at 400 px with collinear stitch and `max_growth_ratio=3.0`.
+
+**OBB IoU metric (threshold sweep):**
+
+| Threshold | Recall | Precision | F1 | Short | Medium | Long |
+|---|---|---|---|---|---|---|
+| 0.30 | 21.3% | 16.2% | 18.4% | 0% | 8.3% | 20.9% |
+| 0.50 | 21.3% | 19.8% | 20.5% | 0% | 8.3% | 20.9% |
+| 0.70 | 21.3% | 21.6% | 21.4% | 0% | 8.3% | 20.9% |
+| **0.85** | **21.1%** | **22.8%** | **21.9%** | **0%** | **6.2%** | **20.8%** |
+| 0.90 | 18.6% | 22.1% | 20.2% | 0% | 0% | 18.7% |
+
+**Streak-match metric (t=0.50, no stitch — angle < 5°, perp < 5 px, len-IoU > 0.5):**
+
+| Metric | Value |
+|---|---|
+| Recall | 84.7% |
+| Precision | 12.7% |
+| F1 | 22.1% |
+| Short recall | 25.0% |
+| Medium recall | 35.4% |
+| Long recall | 84.3% |
+| Mean angle error | 1.50° |
+| Mean perp offset | 1.49 px |
+
+The large gap between OBB IoU recall (21%) and streak-match recall (85%) indicates
+the model finds streak centres accurately but the OBB geometry prediction is still weak
+(bounding boxes too small or misaligned).  Partial backbone unfreeze (Run 17) is the
+primary path to closing this gap.
+
+**Known limitation:** Short-streak recall is 0% with OBB IoU metric because the collinear
+stitch absorbs short-streak detections into longer false-positive chains even with the
+3× growth guard.  Without stitch, short recall is 25% at streak-match metric.
 
 ---
 
@@ -764,7 +911,27 @@ area ground-truth polygons.
 
 ## 7. Results
 
-### 7.1 Per-Method Results
+### 7.0 Current Production Results (Run 15, Atwood FITS, 2026-06-08)
+
+**Evaluation:** 1,160 GT streaks across 1,160 Atwood Observatory FITS images (held-out
+validation set).  Tiled inference at 400 px, collinear stitch with `max_growth_ratio=3.0`.
+
+| Detector | Threshold | Recall | Precision | F1 | Short | Medium | Long |
+|---|---|---|---|---|---|---|---|
+| **ViT-S HeatMap (Run 15)** | 0.85 | 21.1% | 22.8% | 21.9% | 0% | 6.2% | 20.8% |
+| ViT-S HeatMap (streak-match, t=0.50) | — | 84.7% | 12.7% | 22.1% | 25.0% | 35.4% | 84.3% |
+
+> The streak-match metric uses a looser geometry criterion (angle < 5°, perpendicular offset
+> < 5 px, length-IoU > 0.5) and bypasses the collinear stitch step.  It measures how well
+> the model *finds* streaks geometrically, independent of OBB quality.  The 63 pp gap
+> between OBB recall and streak-match recall is the primary target for Run 17
+> (partial backbone unfreeze).
+
+### 7.1 Historical Per-Method Results (SatStreaks JPEG, 2026-05-16)
+
+> **Note:** These results are from the superseded ViT-B / DINO-DETR ensemble evaluated
+> on SatStreaks JPEG exports.  They are preserved for reference but the current production
+> detector (Run 15 ViT-S heatmap) targets raw FITS data and is not evaluated on this set.
 
 Benchmark: 308 images, 308 GT streaks, SatStreaks JPEG test set, 2026-05-16.
 
@@ -987,19 +1154,23 @@ local catalog lacks TLE coverage for the observation time window.
 
 ### 9.2 Future Work
 
-- **Phase D:** DINOv3 ViT-L/16 (300 M parameters, RTX 5070 Ti), 50 epochs frozen,
-  target mAP@0.5 ≥ 0.74. Update `DETECTOR_PROFILES` with measured P/R after
-  evaluation.
+- **Run 17 — Partial ViT-S backbone unfreeze:** Unfreeze last 2–4 ViT-S transformer
+  blocks and train end-to-end on Run 15 data.  Primary target: close the 63 pp gap
+  between streak-match recall (84.7 %) and OBB recall (21.1 %).  Requires GPU
+  (Vast.ai / RunPod A10 ~$0.15/hr).
+- **Stitch fix validation:** Complete the `max_growth_ratio=3.0` post-fix threshold
+  sweep (results queued at `results/run15_vits/threshold_sweep_stitchfix/`).
+- **Short-streak precision:** The stitch absorbs short-streak detections into long
+  false-positive chains.  More targeted fix: length-aware stitch eligibility gate
+  (only merge fragments whose individual lengths are similar, not just collinear).
 - **Multi-frame association:** Implement inter-frame linking to reject single-frame
-  detections without cross-frame confirmation (StreakMind Phase 8 equivalent).
-- **Raw FITS evaluation:** Run the full 5-detector ensemble on BrentImages raw FITS
-  to measure ASTRiDE and OpenCV contributions in their correct domain.
-- **YOLO full-image re-evaluation:** Re-evaluate YOLO11n-OBB on the shared COCO
-  full-image test set to enable fair head-to-head comparison with DINOv3.
-- **UCS calibration:** Apply Platt scaling or isotonic regression to the UCS score
-  distribution on a held-out calibration split.
-- **Short-streak benchmark:** Evaluate on a balanced test set with short-streak
-  representation.
+  detections without cross-frame confirmation (StreakMind approach).
+- **ASTRiDE evaluation on raw FITS:** Evaluate ASTRiDE on BrentImages raw FITS to
+  measure its contribution in the correct domain.
+- **UCS recalibration:** Update `DETECTOR_PROFILES` in `inference/confidence.py` with
+  Run 15 measured P/R values (currently estimated).  Apply Platt scaling to the UCS.
+- **ViT-B / ViT-L comparison:** After Run 17 unfreeze, compare ViT-S vs ViT-B vs ViT-L
+  at partial unfreeze to find the best accuracy/cost tradeoff.
 
 ---
 

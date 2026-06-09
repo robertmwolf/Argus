@@ -16,7 +16,7 @@ propagation and multi-factor confidence scoring. Results are served through a
 FastAPI backend and React frontend.
 
 ## Current Phase
-**Run 7 complete (2026-06-02). Run 8 pipeline ready — see `scripts/run8_pipeline.sh`.**
+**Run 15 active (2026-06-07/08). ViT-S heatmap is the production detector.**
 
 Progress:
 - ✅ Phase 0 (Classical baseline): `src/` — fits_parser, classical_detector, plate_solver, SGP4 matching
@@ -25,194 +25,121 @@ Progress:
 - ✅ Phase 3 (Inference pipeline): `inference/pipeline.py`, `inference/postprocess.py`, `inference/crossid.py`
 - ✅ Phase 4 (Database): `db/schema.sql`, `db/models.py` — SQLAlchemy async ORM
 - ✅ Phase 5 (API): `api/main.py`, `api/storage.py`, `api/queue.py`, `api/worker.py`
-- ✅ Phase 6 (Frontend): `frontend/` — React 18 + Vite + Tailwind
+- ✅ Phase 6 (Frontend): `frontend/` — React 18 + Vite + Tailwind; **line-segment rendering (not OBBs)**
 - ✅ Phase 8 (Evaluation): `eval/metrics.py`, `eval/benchmark.py`
 - ✅ DINOv3 ViT-B backbone integrated — `models/dino/dinov3_adapter.py`
 - ✅ Adaptive tiling — `inference/tiled_pipeline.py`
-- ✅ **Run 3 complete** — cold-start ViT-B, 15 epochs. mAP=0.782, P=94.9%, R=83.8%.
+- ✅ **Run 3 complete** — cold-start ViT-B OBB, 15 epochs. mAP=0.782, P=94.9%, R=83.8%.
   Weights: `weights/run3_cold_nodm/best.pth`. See `docs/training_methods.md §3.2`.
-- ✅ Data strategy formalised — `docs/data_strategy.md`. SatStreaks excluded from training;
-  geometry-based stratification adopted; multi-scope workflow implemented.
-- ✅ **Run 4 complete (2026-05-29)** — two ViT-S models on geometry-stratified Atwood + Frigate.
-  - **OBB MMDet ViT-S:** `weights/run4_vits_mmdet/best_coco_bbox_mAP_epoch_15.pth`
-    Val: mAP@50=0.611. Test: mAP@50=0.518, short-recall=0%, medium-recall=49%, long-recall=75%.
-  - **Centerline ViT-S:** `weights/run_dinov3_vits_orientation_centerline_1024/best.pt`
-    Val dice=0.2327. See `docs/training_methods.md §3.4`.
-- ✅ **Run 4 FN root-cause analysis (2026-05-30)**:
-  - 45% of FNs: model detected but conf < 0.30 (confidence calibration, not visibility)
-  - 55% of FNs: truly not detected (data/capacity issue)
-  - SNR is NOT the primary driver — 53% of FNs are bright (SNR > 20)
-- ✅ **Frigate corpus analysis (2026-05-30)**:
-  - 86% of annotations are near-circular blobs (<25px, AR~1) — provide no useful training signal
-  - 13% (cluster-2, ≥35px, AR≥2) are genuine linear streaks — tiled at 110px for 3.64× zoom
-- ✅ **Run 5 ConvNeXt-S Stage-2 HeatMap — pretiled (2026-05-31)**:
-  - Backbone: DINOv3 ConvNeXt-Small, stage 2, frozen (384ch at H/16, stride 16)
-  - Training data: `all_train_run5_tiled.json` (9,570 pre-tiled 400px crops, **with OBBs**)
-  - Previous full-frame run (2026-05-30) had medium-band scale mismatch; this run fixes it
-  - Weights: `weights/run5_convnext_small_s2_heatmap_pretiled/best.pt`
-  - **val_dice=0.918** (epoch 50/50) vs 0.842 full-frame — +0.076 improvement
-  - Registered as detector `convnext_heatmap` in pipeline. See `docs/training_methods.md §3.7`
-  - **TILING SCRIPTS FIXED (2026-05-31):** `build_tiled_brentimages_json.py` and
-    `build_tiled_frigate_json.py` now output tile-local `obb` fields. Old tiled
-    annotation files built before this date are missing OBBs and must not be used
-    for heatmap training. Regenerated: `all_train_run5_tiled.json`, `val_atwood_tiled_400.json`
-- ✅ **Run 5 dataset built (2026-05-30)**:
-  - All 5 Atwood nights re-stratified (1,475 images → 1,129 train / 240 val / 240 test)
-  - Frigate replaced with cluster-2 tiled at 110px (48 annotations, 9 frames)
-  - Synthetic short-band injection: 380 images, snr_scale 0.2–1.0
-  - **`all_train_run5.json`**: 2,064 images, 1,956 annotations (short=23%, medium=30%, long=47%)
-- ✅ **Run 5 test-set eval (2026-06-01)** — precision catastrophe on both backbones:
-  - ConvNeXt-S: recall=76.3%, precision=0.05%, F1=0.001 (1,499 predictions/image)
-  - ViT-S: recall=67.5%, precision=0.05%, F1=0.001 (1,211 predictions/image)
-  - Root cause: only 281/9,495 tiles (3%) were negative in training; star fields trigger FP
-  - Fix: add hard-negative tiles via `--hard-neg-per-pos 5` and `--neg-tiles-per-image 50`
-  - See `docs/training_methods.md §3.8` for full Run 6 plan
-- ✅ **Run 6 backbone comparison (2026-06-01/02)** — ConvNeXt-S vs ViT-S, 60% negative ratio:
-  - ConvNeXt-S best: val_dice=0.903 (ep 49). Test: recall=36.0%, precision=0.24%, 145 preds/img
-  - ViT-S best: val_dice=0.878 (ep 50). Test: recall=21.9%, precision=0.07%, 292 preds/img
-  - **ConvNeXt-S wins** backbone comparison on all metrics — proceed with ConvNeXt only
-  - Precision improved 5× vs Run 5 but recall collapsed: 60% negative ratio too aggressive
-  - Root cause: pos_weight=20 insufficient to counteract 60% negative tile dominance in loss
-  - See `docs/training_methods.md §3.9` for Run 7 plan
-- ✅ **Run 7 backbone comparison (2026-06-02)** — both backbones, 27% negatives, pos_weight=50:
-  - ConvNeXt-S: val_dice=0.884, test recall=28.1%, precision=0.03%, 876 preds/img
-  - ViT-S: val_dice=0.856, test recall=32.5%, precision=0.05%, 654 preds/img
-  - **Worse than Run 6** — pos_weight=50 + 27% negatives caused diffuse activations
-  - Root cause: val_dice blind to over-prediction (val set is 97% positive tiles)
-  - ViT-S beat ConvNeXt-S in this config — backbone ranking is not stable
-  - See `docs/training_methods.md §3.10` for Run 8 fix
-- ✅ **Run 8 complete (2026-06-03/04)** — fixed val metric + rebalanced negatives:
-  - ConvNeXt-S: val_dice=0.861 (ep47). Test: recall=34.2%, precision=0.15%, 218 preds/img. Medium recall=4.6% (first time >0%)
-  - ViT-S: val_dice=0.852 (ep43). Test: recall=28.1%, precision=0.24%, 111 preds/img. Medium recall=18.2% (best yet)
-  - Val metric fix worked: preds/img down 5× vs Run 7 for ViT-S; medium recall improved
-  - Success gate NOT met: need precision >1% at recall ≥60%; Run 5 OBB baseline still leads on precision (7.5%)
-  - Observation: constant LR causes staircase convergence — Run 9 adds CosineAnnealingLR
-  - See `docs/training_methods.md §3.10` for full results and comparison table
-- ✅ **Run 9 training complete (2026-06-04/05)** — cosine LR + ~48% negatives + rebuilt val set:
-  - ConvNeXt-S: val_dice=0.635 (ep36). Test (t=0.5): recall=3.1%, 44 preds/img. Test (t=0.3): recall=0.0%. **Collapsed** — 48% negatives too aggressive for ConvNeXt frozen backbone.
-  - ViT-S: val_dice=0.681 (ep36). Test eval: recall=0.0% at t=0.5.
-  - Val set improved: 32% negative tiles (was 6.9%), giving honest val_dice
-  - Cosine LR confirmed faster convergence: both backbones converged at ep36 vs ep47/43 in Run 8
-  - **Key finding:** ConvNeXt's purely local features collapse under heavier negative supervision; ViT-S global attention is more robust. See `docs/training_methods.md §3.11`
-  - **Eval rule change:** all future evals use `--threshold 0.3` as base (captures full activation distribution for post-hoc sweep). See `docs/training_methods.md §6.3`
-
-- ✅ **Run 10 complete (2026-06-05/06)** — 4-way comparison: ViT-S × ConvNeXt-S × {38%, 42%} neg.
-  See `docs/training_methods.md §3.13` for full results and incident log.
-
-  | Model | Neg% | recall@t=0.3 | medium_recall | best_t | precision | F1 | gate |
-  |-------|------|-------------|---------------|--------|-----------|-----|------|
-  | ConvNeXt-S 10a | 38% | 0.44% | 0% | 0.95 | 0.35% | 0.39% | ✗ |
-  | **ViT-S 10a** | **38%** | **1.75%** | **9.09%** | **0.90** | **1.37%** | **1.54%** | **✗** |
-  | ConvNeXt-S 10b | 42% | 0.88% | 0% | 0.95 | 0.61% | 0.72% | ✗ |
-  | ViT-S 10b | 42% | 1.32% | 4.55% | 0.90 | 0.97% | 1.12% | ✗ |
-
-  **Conclusions:**
-  - **ConvNeXt-S definitively eliminated** — zero medium-streak recall at both ratios. Frozen local features cannot encode streak signal regardless of training configuration.
-  - **ViT-S 10a (38% neg) is best to date** — only config with medium-streak recall (9.09%) and precision >1% at a usable threshold (t=0.90).
-  - **42% negatives hurts ViT-S** — medium recall drops from 9.09% → 4.55%. Use 38%.
-  - **Recall ceiling with frozen backbone: ~1–2%.** Root cause is ImageNet domain mismatch, not hyperparameters. Gate (≥60% recall) requires backbone adaptation.
+- ✅ **Run 4 complete (2026-05-29)** — two ViT-S OBB models on geometry-stratified Atwood + Frigate.
+  - **OBB MMDet ViT-S (Run 5 cache):** `weights/run5_vits_mmdet/best_coco_bbox_mAP_epoch_15.pth`
+    Val: mAP@50=0.611. Test: short-recall=0%, medium-recall=49%, long-recall=75%.
+  - **Centerline ViT-S:** val dice=0.2327 (plateau from epoch 1). Superseded by heatmap approach.
+- ✅ **Runs 5–10 complete (2026-05-31 – 2026-06-06)** — ViT-S/ConvNeXt-S frozen heatmap grid search.
+  - ConvNeXt-S definitively eliminated at Run 10: zero medium-streak recall at all configs.
+  - ViT-S 10a (38% neg, cosine LR): best frozen result — medium_recall=9.09%, recall=1.75%, F1=1.54%.
+  - **Root cause:** frozen ImageNet features cannot distinguish FITS streak signal from background.
+    Gate (recall ≥ 60%) requires backbone adaptation.
+  - See `docs/training_methods.md §3.7–§3.13` for full results.
+- ✅ **Run 11 (2026-06-05)** — synthetic streak augmentation on negative FITS tiles.
+  Script: `scripts/generate_synthetic_streaks.py`. Results documented in training_methods.md.
+- ✅ **Run 12 (2026-06-06)** — ViT-S heatmap at 1800 px tiles (full-frame Atwood scale).
+  - 0% short-streak recall: 150 px streak ≈ 3 ViT patches at 1800 px — undetectable.
+  - Norm mismatch: trained autostretch but inference defaulted to zscore.
+  - Root cause documented in memory: `project_medium_streak_finding.md`.
+- ✅ **Runs 13, 14, 16 — AstroPT-89M exploration (2026-06-07). Abandoned.**
+  - Three configurations (1800px downscale, 256px native, 720px + zscore) all achieved 0% medium recall.
+  - Root cause: AstroPT's fixed 16×16 feature grid (256 cells) cannot resolve medium-streak geometry.
+  - Post-mortem: `docs/astropt_exploration_postmortem.md`.
+- ✅ **Run 15 complete (2026-06-07/08)** — ViT-S heatmap at **400 px tiles, zscore norm**.
+  - Fixes Run 12's 1800 px scale mismatch and autostretch norm mismatch.
+  - Weights: `weights/run15_vits/best.pt`
+  - Pipeline: `scripts/run15_pipeline.sh`
+  - Results at t=0.85 (OBB IoU metric, val_atwood): F1=21.9%, long_recall=20.9%, medium_recall=8.3%, short_recall=0%
+  - Without collinear stitch (streak-match metric): recall=84.7%, F1=22.1% at t=0.50
+  - Known issue: `stitch_collinear_fragments` transitivity absorbs short streaks into long chains (ratio up to 8.5×). Fix: `max_growth_ratio=3.0` parameter added to stitch.
+  - **Registered as `vits_heatmap` in pipeline.py — primary production detector.**
+  - See `results/run15_vits/` for threshold sweep, eval results, streak match comparison.
 
 ## Next Steps
 
-### Run 11 — Synthetic streak augmentation (CPU-feasible)
+### Run 17 — Partial ViT-S backbone unfreeze (primary path)
 
-**Goal:** Break the frozen-backbone recall ceiling by giving the model many more positive
-examples with diverse geometry and SNR. Physically-motivated streaks (Gaussian PSF, random
-angle/length/SNR) are rendered onto real negative FITS tiles, then cached and merged with
-real positives for training.
+**Goal:** Break the frozen-backbone recall ceiling (~21% at t=0.85) by unfreezing the last
+2–4 ViT-S transformer blocks and training end-to-end on the Run 15 dataset (400px tiles,
+zscore norm).
 
-**Script:** `scripts/generate_synthetic_streaks.py`
+**Why:** The frozen backbone produces ImageNet features. FITS streaks are faint (SNR 2–15),
+thin (2–5 px), and linear — geometry not present in DINOv3's pretraining. Even with 15+
+training runs, the frozen head cannot recover streak signal the backbone didn't encode.
+Run 15 achieves 84.7% recall with streak-match geometry metric but only 21.9% with OBB IoU
+— the model finds streak centres accurately but the OBB geometry is still weak.
 
+**Hardware:** GPU required. Options:
+- Vast.ai / RunPod A10 at ~$0.15/hr — full run ~$3–5
+- RTX 5070 Ti workstation (WSL2 Ubuntu)
+
+**Config (starting point):**
 ```bash
-# 1. Build NPY tiles (need real negatives to augment)
-python scripts/convert_tiles_to_npy.py \
-  --annotations /Volumes/External/TrainingData/annotations/all_train_run10a_tiled.json \
-  --output-dir  /tmp/argus_synth_npy \
-  --output-ann  /Volumes/External/TrainingData/annotations/all_train_run10a_tiled_npy.json
-
-# 2. Generate synthetic positive tiles (2 per negative → ~13,400 synthetic positives)
-python scripts/generate_synthetic_streaks.py \
-  --neg-annotations /Volumes/External/TrainingData/annotations/all_train_run10a_tiled_npy.json \
-  --output-dir  /tmp/argus_synth_npy/synthetic \
-  --output-ann  /Volumes/External/TrainingData/annotations/synth_run11_npy.json \
-  --n-per-neg 2 --snr-min 3 --snr-max 12 --seed 42
-
-# 3. Cache + merge + train (merge synth JSON with real positives before caching)
+# Unfreeze last 2 ViT-S blocks (blocks 10, 11 of 12)
+python training/train_dinov3_heatmap_cached.py \
+  --annotations /tmp/argus_run15_cache/train.json \
+  --val-annotations /tmp/argus_run15_cache/val.json \
+  --output-dir weights/run17_vits_unfrozen \
+  --backbone vits --unfreeze-last-n-blocks 2 \
+  --epochs 40 --pos-weight 20 --neg-ratio 0.38 \
+  --lr 1e-4 --cosine-lr --backbone-lr-mult 0.1
 ```
 
-Then train ViT-S 10a config (38% neg, cosine LR, pos_weight=20) on the augmented set.
+**Success gate:** recall ≥ 60% AND precision > 1% on `test_atwood.json` using OBB IoU metric.
 
-**Success signal:** medium_recall > 9.09% (beating Run 10 ViT-S 10a without augmentation).
+### Stitch fix validation (pending)
 
-**Alternative if no GPU available:** Cheap cloud rental — Vast.ai / RunPod A10 at ~$0.15/hr
-enables partial ViT-S backbone unfreeze (last 2 blocks) which directly addresses the domain
-mismatch root cause. A full run costs ~$3–5.
+The `max_growth_ratio=3.0` guard was added to `stitch_collinear_fragments` in
+`inference/tiled_pipeline.py` but the post-fix threshold sweep on
+`results/run15_vits/threshold_sweep_stitchfix/` was never completed because the
+`t0.05_nostitch` predictions needed to finish first.
 
-**ConvNeXt status:** Permanently dropped from MPS experiments. Requires GPU + partial unfreeze.
-
-**New tooling from Run 10:**
-- `scripts/generate_synthetic_streaks.py` — Gaussian PSF streak renderer for NPY tiles
-- `scripts/run10_pipeline.sh` — 4-backbone pipeline template (with NPY-delete bug fix documented)
-- `scripts/run10_recovery.sh` — recovery from corrupted feature cache incident
-
-Success gate: recall ≥ 60% AND precision > 1% on test_atwood.json.
-
-### Run 6 data prep (complete)
-
-Run 5 revealed a precision catastrophe caused by insufficient hard negatives (only 3%
-of training tiles were negative). The fix is to rebuild the tiled dataset with:
-- `--hard-neg-per-pos 5`: 5 annotation-free tiles per positive image (the hardest negatives)
-- `--neg-tiles-per-image 50`: 50 tiles from pure-negative images (up from 2)
-- Frigate fixed: re-tile from raw source to eliminate doubly-virtual path bug
-
-Also: Frigate cluster-2 data must be included. The inclusion was already planned but the
-doubly-virtual path bug in Run 5 caused 75 Frigate tiles to be silently replaced with blank
-images. This is now documented in `docs/training_methods.md §3.8` (Run 6 fix).
-
+To complete this:
 ```bash
-# Step 1: Rebuild Atwood tiled annotation with hard negatives
-python scripts/build_tiled_brentimages_json.py \
-  --src data/annotations/all_train_run5.json \
-  --out /Volumes/External/TrainingData/annotations/atwood_train_run6_tiled.json \
-  --native-tile-size 400 --overlap 0.5 \
-  --neg-tiles-per-image 50 \
-  --hard-neg-per-pos 5
-
-# Step 2: Fix Frigate — build from raw source (not virtual tile paths)
-python scripts/build_tiled_frigate_json.py \
-  --images /Volumes/External/TrainingData/raw/frigate/raw \
-  --annotations <frigate_cluster2_annotations.json> \
-  --output /Volumes/External/TrainingData/annotations/frigate_tiled_run6.json \
-  --tile-size 400 --overlap 0.5
-
-# Step 3: Merge + NPY convert → all_train_run6_tiled_npy.json
-# Step 4: Train both backbones identically (see docs/training_methods.md §3.8)
+python scripts/run_posthoc_threshold_analysis.py \
+  --predictions results/run15_vits/t0.05_nostitch/predictions.json \
+  --annotations data/annotations/val_run12_1800_npy.json \
+  --stitch --stitch-max-growth-ratio 3.0 \
+  --output results/run15_vits/threshold_sweep_stitchfix/
 ```
 
-### Run 6 backbone comparison
+Compare short_recall to OBB baseline (75%) and Run 12 (0%).
 
-Train ConvNeXt-S and ViT-S with **identical hyperparameters** on `all_train_run6_tiled_npy.json`.
-The backbone that achieves better precision at ≥60% recall on `test_atwood.json` is progressed
-to ViT-B / ViT-L for the paper run.
+### Dead detector cleanup (pending)
 
-Success gate: precision > 10% at recall ≥ 60%.
+The following detectors were removed from active use but their code is still present:
+- `_run_classical_detector` (OpenCV) — defined in `pipeline.py` but not wired into `_run_all_detectors`
+- Duplicate `vits_heatmap` block in `_run_all_detectors` (merge conflict residue — the sidecar block and the non-sidecar block both exist)
+- `dinov3_vits_run5` in `_model_registry()` — weights still present but detector is superseded
+
+Clean up these before the next major feature.
 
 ### Evaluation rules (apply to every heatmap eval)
 
 **Standard heatmap training strategy (all future runs):**
-- Cache features with `--native-tile-size 400 --tile-overlap 0.5` on the full-frame
-  annotation file (e.g. `all_train_run5.json`). This tiles each 6248×4176 Atwood image
-  into ~4–6 annotation-covered 400px crops — same scale as the OBB training data.
-- Write cache to external drive: `/Volumes/External/TrainingData/heatmap_cache/<run>/`
+- Cache features with `--native-tile-size 400 --tile-overlap 0.5` (Run 15 standard).
+  Each 6248×4176 Atwood image tiles into ~4–6 annotation-covered 400 px crops.
+- Write cache to external drive or `/tmp/argus_<run>_cache/` (internal SSD, 100 GB budget).
 - Train with `train_dinov3_heatmap_cached.py` on the tiled cache.
 - Evaluate with `--tiled` in `evaluate_dinov3_heatmap.py`.
+- Always use `--threshold 0.3` as the base eval threshold to capture the full activation
+  distribution for post-hoc sweep (see `scripts/run_posthoc_threshold_analysis.py`).
+- For stitch eval: always pass `--stitch-max-growth-ratio 3.0` to prevent short streaks
+  from being absorbed into long false-positive chains.
 
 **Full-image caching (no `--native-tile-size`) must not be used for Atwood-scale images.**
-Medium streaks span <2 feature patches at full-frame 384px — blob detections, not
-thin-line OBBs. The eval script warns but does not abort. See `docs/training_methods.md §6`.
+Medium streaks span <2 feature patches at full-frame 384 px — undetectable.
+See Run 12 postmortem in `memory/project_medium_streak_finding.md` and `docs/training_methods.md §6`.
 
-Applies to: `scripts/evaluate_dinov3_heatmap.py` for any checkpoint with
-`cache image_size < 600 px`.
+**FITS-domain eval only.** Do not evaluate heatmap models on the SatStreaks JPEG benchmark.
+The heatmap models are trained on raw FITS (Atwood); JPEG compression changes pixel
+distributions in ways that break the threshold logic.
 
 ## Hardware
 - **Dev / CI:** MacBook Air M3 — CPU or MPS. Use `MODEL_SIZE=tiny` (Swin-T).
@@ -342,9 +269,20 @@ academic research code.
 ## Environment Variables Required
 ```bash
 export DATABASE_URL=sqlite+aiosqlite:///./argus.db   # default
-export MODEL_SIZE=tiny     # tiny=Swin-T (dev/MPS), large=Swin-L (A100),
-                           # dinov3_vitb=ViT-B/16 (Mac MPS), dinov3_vitl=ViT-L/16 (GPU)
-export ARGUS_NORM=zscore   # zscore (Swin-T/L) or autostretch (DINOv3 ViT-B/L)
+
+# ViT-S/16 heatmap detector (primary) — MUST match the training run's tile size and norm
+export VITS_HEATMAP_CHECKPOINT=weights/run15_vits/best.pt
+export VITS_HEATMAP_NORM=zscore
+export VITS_HEATMAP_NATIVE_TILE_SIZE=400   # must match Run 15 cache tile size
+export VITS_HEATMAP_TILE_OVERLAP=0.5
+export VITS_HEATMAP_THRESHOLD=0.85
+
+# Multi-model DINO ensemble (set to [] to use heatmap only)
+export ARGUS_MODEL_CONFIGS=[]
+
+# Default norm for CLI / direct pipeline.py calls (must match loaded weights)
+export ARGUS_NORM=zscore
+
 # Optional for cloud deployment:
 export STORAGE_BACKEND=local   # or s3
 export QUEUE_BACKEND=memory    # or sqs

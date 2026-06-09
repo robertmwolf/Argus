@@ -1571,6 +1571,98 @@ delete NPY in a new Step 4e after all caches are built. Recovery: `scripts/run10
 
 ---
 
+### 3.14 Runs 11–12 — Synthetic Augmentation and Scale Experiments (2026-06-05/06)
+
+**Run 11 — Synthetic streak augmentation**
+
+Goal: break the frozen-backbone recall ceiling by rendering physically-motivated
+Gaussian PSF streaks onto negative FITS tiles.  Script: `scripts/generate_synthetic_streaks.py`.
+Results: recall improvement was smaller than hoped; root cause (ImageNet features) remained.
+
+**Run 12 — ViT-S heatmap at 1800 px tiles**
+
+Config: full-frame Atwood images tiled at 1800 px native size (to try to capture more context).
+Norm: autostretch (mismatch — inference defaulted to zscore).
+
+Results: **0% short-streak recall**.  Root cause: 150 px short streak ≈ 3 ViT patches at 1800 px
+scale — undetectable by a 16 px stride backbone.  The tile size must match the streak length
+scale, not the image size.
+
+Key finding documented in `memory/project_medium_streak_finding.md`: medium streaks at 1280 px
+tiles dropped to 0% recall because conf=0.10 eval was queued but never run.  The correct fix
+is to train at the streak-length-appropriate tile size (400 px for Atwood data where median
+streak is ~44 px at native scale).
+
+---
+
+### 3.15 Runs 13, 14, 16 — AstroPT-89M Backbone Exploration (2026-06-07)
+
+Hypothesis: AstroPT v1.0 (89M params, GPT-style, pretrained on DESI survey data) would
+produce better astronomical feature separability than ImageNet-pretrained ViT-S.
+
+Three configurations tested:
+- Run 13: 1800 px → 256 px downscale (cell = 113 px native).  0% medium recall; OBBs 2–6× oversized.
+- Run 14: native 256 px tiles (cell = 16 px native).  0% medium recall; 262 FPs/image from PSF halos.
+- Run 16: 720 px tiles + zscore (cell = 45 px native).  50.7% long recall, 0% medium recall, 49 FPs/img.
+
+**Root cause:** AstroPT's fixed 16×16 feature grid (256 cells total) cannot represent
+medium-streak geometry accurately.  The geometry head predicts OBBs too large for medium
+streaks, causing IoU < 0.1 regardless of threshold.
+
+**Conclusion:** AstroPT abandoned.  Full post-mortem in `docs/astropt_exploration_postmortem.md`.
+
+---
+
+### 3.16 Run 15 — ViT-S Heatmap at 400 px / Z-score (2026-06-07/08) ← CURRENT ACTIVE
+
+**Goal:** Fix the two root causes from Run 12:
+1. Scale mismatch — train at 400 px to match OBB detector's inference tile size (streaks ≈ 9 patches at 400 px vs ≈ 3 at 1800 px)
+2. Norm mismatch — train and infer with zscore throughout
+
+**Config:**
+- Backbone: DINOv3 ViT-S/16 (frozen)
+- Tile size: 400 px, overlap: 0.0 (training cache)
+- Norm: zscore
+- Epochs: 40, cosine LR (5e-4 → 1e-6)
+- Negative ratio: 38 % (ViT-S 10a optimal)
+- pos_weight: 20
+
+**Training:** `scripts/run15_pipeline.sh`.  Cache at `/tmp/argus_run15_cache/` (~25K train entries, ~3K val).
+
+**Weights:** `weights/run15_vits/best.pt`
+
+**Results (val_atwood, OBB IoU metric, t=0.85):**
+
+| Metric | Value |
+|---|---|
+| Recall | 21.1% |
+| Precision | 22.8% |
+| F1 | 21.9% |
+| Short recall | 0% |
+| Medium recall | 6.2% |
+| Long recall | 20.8% |
+
+**Results (val_atwood, streak-match metric, no stitch, t=0.50):**
+
+| Metric | Value |
+|---|---|
+| Recall | 84.7% |
+| Precision | 12.7% |
+| F1 | 22.1% |
+| Short recall | 25.0% |
+| Medium recall | 35.4% |
+| Long recall | 84.3% |
+| Mean angle error | 1.50° |
+
+**Known issue — stitch absorption of short streaks:**
+`stitch_collinear_fragments` uses union-find transitivity; a 339 px short streak was absorbed
+into an 2866 px chain (ratio 8.5×).  Fix: `max_growth_ratio=3.0` added to
+`inference/tiled_pipeline.py`.  Post-fix sweep queued at `results/run15_vits/threshold_sweep_stitchfix/`.
+
+**Registered in pipeline:** `vits_heatmap` in `inference/pipeline.py` and
+`inference/vits_heatmap_detector.py`.  Default checkpoint path:
+`weights/run15_vits/best.pt` (via `VITS_HEATMAP_CHECKPOINT` env var).
+
 ---
 
 ## 6. Evaluation Policy
