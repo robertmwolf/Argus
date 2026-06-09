@@ -127,14 +127,30 @@ def _letterbox(array: np.ndarray, size: int) -> tuple[np.ndarray, float, float, 
     return canvas, float(scale), float(pad_x), float(pad_y)
 
 
-def _component_to_obb(
+def _component_to_segment(
     mask: np.ndarray,
     score_map: np.ndarray,
     patch_size: int,
     geometry_map: np.ndarray | None,
     image_size: int,
 ) -> dict[str, Any] | None:
-    """Fit an OBB to a connected heatmap component via PCA."""
+    """Fit a line segment to a connected heatmap component via PCA.
+
+    Returns a dict with both the new endpoint fields (x1, y1, x2, y2) and a
+    backward-compat obb sub-dict derived from the segment geometry.
+
+    Args:
+        mask: Boolean mask of active feature-map pixels for this component.
+        score_map: Per-pixel probability map from the heatmap head.
+        patch_size: Feature-map patch stride in source pixels.
+        geometry_map: Optional 4-channel geometry prediction (cos2, sin2,
+            length_norm, width_norm).  When present, overrides PCA angle and
+            length.
+        image_size: Square canvas side length (used to de-normalise geometry).
+
+    Returns:
+        Detection dict or None if the component has fewer than 2 pixels.
+    """
     ys, xs = np.nonzero(mask)
     if len(xs) < 2:
         return None
@@ -156,20 +172,36 @@ def _component_to_obb(
             cos2, sin2 = float(geom[0].mean()), float(geom[1].mean())
             if abs(cos2) + abs(sin2) > 1e-3:
                 angle = (0.5 * math.degrees(math.atan2(sin2, cos2))) % 180.0
+                # Recompute major axis unit vector from refined angle
+                rad = math.radians(angle)
+                major = np.array([math.cos(rad), math.sin(rad)], dtype=np.float32)
             length = max(float(geom[2].mean()) * image_size, patch_size)
             width  = max(float(geom[3].mean()) * image_size, patch_size)
 
+    # Compute endpoints from centre + half-length along major axis
+    half = length / 2.0
+    x1 = float(center[0]) - half * float(major[0])
+    y1 = float(center[1]) - half * float(major[1])
+    x2 = float(center[0]) + half * float(major[0])
+    y2 = float(center[1]) + half * float(major[1])
+
     return {
+        "x1": x1, "y1": y1, "x2": x2, "y2": y2,
         "confidence": float(score_map[mask].mean()),
+        "streak_length_px": length,
+        # Backward-compat OBB derived from segment geometry
         "obb": {
             "cx": float(center[0]),
             "cy": float(center[1]),
             "w":  length,
-            "h":  width,
+            "h":  max(width, 3.0),
             "angle_deg": angle,
         },
-        "streak_length_px": length,
     }
+
+
+# Keep old name as an alias for any external callers
+_component_to_obb = _component_to_segment
 
 
 def _run_single_tile(
@@ -206,34 +238,96 @@ def _run_single_tile(
         mask = labels == label_id
         if int(mask.sum()) < min_pixels:
             continue
-        det = _component_to_obb(mask, probs, patch_size, geometry, image_size)
+        det = _component_to_segment(mask, probs, patch_size, geometry, image_size)
         if det is None:
             continue
         obb = det["obb"]
+        # Unscale OBB centre and dimensions from letterbox canvas to tile-local pixels
         obb["cx"]  = (obb["cx"] - pad_x) / scale
         obb["cy"]  = (obb["cy"] - pad_y) / scale
         obb["w"]  /= scale
         obb["h"]  /= scale
-        det["streak_length_px"] = max(float(obb["w"]), float(obb["h"]))
+        det["streak_length_px"] = float(obb["w"])
+        # Unscale explicit endpoints
+        det["x1"] = (det["x1"] - pad_x) / scale
+        det["y1"] = (det["y1"] - pad_y) / scale
+        det["x2"] = (det["x2"] - pad_x) / scale
+        det["y2"] = (det["y2"] - pad_y) / scale
         cx, cy = obb["cx"], obb["cy"]
         hw, hh = obb["w"] / 2, obb["h"] / 2
         detections.append({
             "bbox":             [cx - hw, cy - hh, cx + hw, cy + hh],
             "confidence":       det["confidence"],
             "method":           "convnext_heatmap",
+            "x1":               det["x1"],
+            "y1":               det["y1"],
+            "x2":               det["x2"],
+            "y2":               det["y2"],
             "obb":              obb,
             "streak_length_px": det["streak_length_px"],
         })
     return detections
 
 
+def _run_single_tile_probs(
+    array: np.ndarray,
+    model: Any,
+    image_size: int,
+    device: torch.device,
+) -> tuple[np.ndarray, float, float, float]:
+    """Run model on one tile and return the raw probability map in tile-pixel space.
+
+    Returns:
+        Tuple of (heat_tile, scale, pad_x, pad_y) where ``heat_tile`` is a
+        float32 array shaped ``(H_tile, W_tile)`` with heatmap probabilities
+        upsampled to the original tile resolution.
+    """
+    import cv2 as _cv2
+    if array.ndim == 2:
+        array = np.stack([array] * 3, axis=2)
+    h, w = array.shape[:2]
+    canvas, scale, pad_x, pad_y = _letterbox(array, image_size)
+    img_tensor = (
+        torch.from_numpy(canvas.astype(np.float32) / 255.0)
+        .permute(2, 0, 1)
+        .unsqueeze(0)
+        .to(device)
+    )
+    with torch.no_grad():
+        output = model(imagenet_normalize(img_tensor))
+        probs = torch.sigmoid(output[:, :1])[0, 0].cpu().numpy().astype(np.float32)
+
+    # Upsample feature-map probs → letterbox canvas size → tile pixel size
+    probs_canvas = _cv2.resize(probs, (image_size, image_size), interpolation=_cv2.INTER_LINEAR)
+    y0r, x0r = round(pad_y), round(pad_x)
+    new_h, new_w = round(h * scale), round(w * scale)
+    probs_content = probs_canvas[y0r:y0r + new_h, x0r:x0r + new_w]
+    heat_tile = _cv2.resize(probs_content, (w, h), interpolation=_cv2.INTER_LINEAR)
+    return heat_tile, scale, pad_x, pad_y
+
+
 def _remap_detection(det: dict[str, Any], x0: int, y0: int) -> dict[str, Any]:
-    """Shift tile-local detection coordinates to full-image coordinates."""
+    """Shift tile-local detection coordinates to full-image coordinates.
+
+    Args:
+        det: Detection dict in tile-local pixel coordinates.
+        x0: Tile left edge in full-image pixels.
+        y0: Tile top edge in full-image pixels.
+
+    Returns:
+        Detection dict with all coordinate fields shifted by (x0, y0).
+    """
     det = dict(det)
     b = det["bbox"]
     det["bbox"] = [b[0] + x0, b[1] + y0, b[2] + x0, b[3] + y0]
     obb = {**det["obb"], "cx": det["obb"]["cx"] + x0, "cy": det["obb"]["cy"] + y0}
     det["obb"] = obb
+    # Shift explicit endpoints when present
+    if "x1" in det:
+        det["x1"] = det["x1"] + x0
+        det["y1"] = det["y1"] + y0
+        det["x2"] = det["x2"] + x0
+        det["y2"] = det["y2"] + y0
     return det
 
 

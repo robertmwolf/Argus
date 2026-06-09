@@ -423,6 +423,12 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
                     dec_tip1_deg=det_dict.get("dec_tip1_deg"),
                     ra_tip2_deg=det_dict.get("ra_tip2_deg"),
                     dec_tip2_deg=det_dict.get("dec_tip2_deg"),
+                    # Segment endpoints (present for heatmap detectors)
+                    x1=det_dict.get("x1"),
+                    y1=det_dict.get("y1"),
+                    x2=det_dict.get("x2"),
+                    y2=det_dict.get("y2"),
+                    angle_deg=obb.get("angle_deg"),
                 )
                 session.add(det)
                 await session.flush()
@@ -952,6 +958,12 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
                 "dec_tip1_deg": primary.dec_tip1_deg,
                 "ra_tip2_deg": primary.ra_tip2_deg,
                 "dec_tip2_deg": primary.dec_tip2_deg,
+                # Segment endpoints (null for legacy rows / classical detectors)
+                "x1": primary.x1,
+                "y1": primary.y1,
+                "x2": primary.x2,
+                "y2": primary.y2,
+                "angle_deg": primary.angle_deg,
                 "identifications": [
                     {
                         "satellite_name": i.satellite_name,

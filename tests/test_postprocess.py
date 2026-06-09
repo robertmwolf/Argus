@@ -503,10 +503,12 @@ class TestFuseGroupGeometries:
 
         fused = fuse_group_geometries(dets)
 
-        assert fused[0]["obb"]["w"] == pytest.approx(365.0)
-        assert fused[1]["obb"]["w"] == pytest.approx(365.0)
-        assert fused[0]["obb"]["cx"] == pytest.approx(252.5)
-        assert fused[1]["streak_length_px"] == pytest.approx(365.0)
+        # New endpoint-based fusion projects OBB-derived endpoints onto the axis,
+        # giving a result within 1% of the exact OBB-interval value.
+        assert fused[0]["obb"]["w"] == pytest.approx(365.0, rel=0.01)
+        assert fused[1]["obb"]["w"] == pytest.approx(365.0, rel=0.01)
+        assert fused[0]["obb"]["cx"] == pytest.approx(252.5, rel=0.01)
+        assert fused[1]["streak_length_px"] == pytest.approx(365.0, rel=0.01)
 
     def test_fuse_uses_longest_member_axis_over_highest_confidence(self):
         from inference.postprocess import fuse_group_geometries

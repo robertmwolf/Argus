@@ -10,7 +10,16 @@ const HIGHLIGHT_COLOUR = '#FF6B35'  // orange — highlighted row
 // Geometry helpers
 // ---------------------------------------------------------------------------
 
-function streakEndpoints(obb, scaleX, scaleY) {
+function streakEndpoints(det, scaleX, scaleY) {
+  // Prefer native endpoint fields (set by heatmap detectors from Run 15+).
+  // Fall back to OBB-derived endpoints for legacy DB rows.
+  if (det.x1 != null && det.y1 != null && det.x2 != null && det.y2 != null) {
+    return {
+      p1: { x: det.x1 * scaleX, y: det.y1 * scaleY },
+      p2: { x: det.x2 * scaleX, y: det.y2 * scaleY },
+    }
+  }
+  const obb = det.obb
   const { cx, cy, w, h, angle_deg } = obb
   const rad = (angle_deg * Math.PI) / 180
   // Use the longer OBB dimension as the streak half-length.  For correctly
@@ -180,18 +189,20 @@ function roundRect(ctx, x, y, w, h, r) {
 
 function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
   const { obb, confidence: conf = 1 } = det
-  if (!obb || [obb.cx, obb.cy, obb.w, obb.h, obb.angle_deg].some((v) => v == null)) return
+  const hasEndpoints = det.x1 != null && det.y1 != null && det.x2 != null && det.y2 != null
+  const hasObb = obb && ![obb.cx, obb.cy, obb.w, obb.h, obb.angle_deg].some((v) => v == null)
+  if (!hasEndpoints && !hasObb) return
 
   // Exclude the synthetic "unified" entry when deciding colour — only look at
   // actual detector sources.
   const individualSources = (det.sources ?? [{ method: det.method }])
     .filter(s => s.method !== 'unified')
   const isClassical = individualSources.length > 0 &&
-    individualSources.every(s => s.method === 'astride' || s.method === 'opencv' || s.method === 'classical')
+    individualSources.every(s => s.method === 'astride' || s.method === 'classical')
   const isStreakMind = individualSources.length > 0 &&
     individualSources.every(s => s.method === 'streakmind_yolo')
   const isHeatmap = individualSources.length > 0 &&
-    individualSources.every(s => s.method === 'dinov3_heatmap_centerline')
+    individualSources.every(s => s.method === 'vits_heatmap' || s.method === 'dinov3_heatmap_centerline')
   const colour = highlighted ? HIGHLIGHT_COLOUR
     : isClassical ? CLASSICAL_COLOUR
     : isStreakMind ? STREAKMIND_COLOUR
@@ -201,7 +212,7 @@ function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
   const endpointR = highlighted ? 5.5 : 4
   const lineWidth = highlighted ? 2.5 : 1.5
 
-  const { p1, p2 } = streakEndpoints(obb, scaleX, scaleY)
+  const { p1, p2 } = streakEndpoints(det, scaleX, scaleY)
 
   drawOBB(ctx, obb, colour, alpha * 0.55, scaleX, scaleY, highlighted ? 1.5 : 1)
   drawCenterline(ctx, p1, p2, colour, alpha, lineWidth)
@@ -312,21 +323,28 @@ export default function ResultViewer({
 
     // Labels always on top of everything
     detections.forEach((det, i) => {
-      if (!det.obb || [det.obb.cx, det.obb.cy, det.obb.w, det.obb.h, det.obb.angle_deg].some(v => v == null) || !isVisible(i)) return
+      const _hasEndpts = det.x1 != null && det.y1 != null && det.x2 != null && det.y2 != null
+      const _hasObb = det.obb && ![det.obb.cx, det.obb.cy, det.obb.w, det.obb.h, det.obb.angle_deg].some(v => v == null)
+      if ((!_hasEndpts && !_hasObb) || !isVisible(i)) return
       const indSources = (det.sources ?? [{ method: det.method }]).filter(s => s.method !== 'unified')
       const isClassical = indSources.length > 0 &&
-        indSources.every(s => s.method === 'astride' || s.method === 'opencv' || s.method === 'classical')
+        indSources.every(s => s.method === 'astride' || s.method === 'classical')
       const isStreakMind = indSources.length > 0 &&
         indSources.every(s => s.method === 'streakmind_yolo')
       const isHeatmap = indSources.length > 0 &&
-        indSources.every(s => s.method === 'dinov3_heatmap_centerline')
+        indSources.every(s => s.method === 'vits_heatmap' || s.method === 'dinov3_heatmap_centerline')
       const colour = i === highlightIndex ? HIGHLIGHT_COLOUR
         : isClassical ? CLASSICAL_COLOUR
         : isStreakMind ? STREAKMIND_COLOUR
         : isHeatmap ? HEATMAP_COLOUR
         : OBB_COLOUR
       const alpha = i === highlightIndex ? 1.0 : 0.4 + (det.confidence ?? 1) * 0.6
-      drawLabel(ctx, det.obb, i, colour, alpha, scaleX, scaleY)
+      const _obbForLabel = _hasObb ? det.obb : {
+        cx: (det.x1 + det.x2) / 2, cy: (det.y1 + det.y2) / 2,
+        w: Math.sqrt((det.x2-det.x1)**2+(det.y2-det.y1)**2), h: 3,
+        angle_deg: Math.atan2(det.y2-det.y1, det.x2-det.x1)*180/Math.PI,
+      }
+      drawLabel(ctx, _obbForLabel, i, colour, alpha, scaleX, scaleY)
     })
   }, [imgLoaded, heatmapLoaded, showHeatmap, detections, visibleSet, highlightIndex, imageWidth, imageHeight])
 
@@ -450,12 +468,8 @@ export default function ResultViewer({
         <div className="shrink-0 bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-400 flex flex-col gap-1.5">
           <p className="text-slate-300 font-semibold mb-0.5">Legend</p>
           <div className="flex items-center gap-2">
-            <span className="inline-block w-6 border-t-2 border-dashed border-cyan-400" />
-            <span className="text-cyan-300">DINOv3 ViT-Base</span>
-          </div>
-          <div className="flex items-center gap-2">
             <span className="inline-block w-6 border-t-2 border-lime-400" />
-            <span className="text-lime-300">DINOv3 Heatmap Centerline</span>
+            <span className="text-lime-300">ViT-S Heatmap (Run 15)</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="inline-block w-6 border-t-2 border-fuchsia-400" />
@@ -463,7 +477,7 @@ export default function ResultViewer({
           </div>
           <div className="flex items-center gap-2">
             <span className="inline-block w-6 border-t-2 border-dashed border-amber-400" />
-            <span className="text-amber-300">ASTRiDE / OpenCV</span>
+            <span className="text-amber-300">ASTRiDE</span>
           </div>
           <div className="flex items-center gap-2 mt-0.5 pt-1.5 border-t border-slate-700">
             <span className="inline-flex items-center justify-center w-3 h-3 rounded-full bg-cyan-400 text-[7px] font-bold text-black">1</span>

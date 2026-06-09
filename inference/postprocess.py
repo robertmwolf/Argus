@@ -19,6 +19,184 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Segment geometry helpers (used by NMS and grouping)
+# ---------------------------------------------------------------------------
+
+
+def _seg_angle_error_deg(a: float, b: float) -> float:
+    """Return the smallest angle difference for 180-degree-symmetric streaks.
+
+    Args:
+        a: First angle in degrees.
+        b: Second angle in degrees.
+
+    Returns:
+        Absolute angular error in [0, 90].
+    """
+    diff = abs(float(a) - float(b)) % 180.0
+    return min(diff, 180.0 - diff)
+
+
+def _seg_perp_offset(
+    x1a: float, y1a: float, x2a: float, y2a: float,
+    x1b: float, y1b: float, x2b: float, y2b: float,
+) -> float:
+    """Perpendicular distance from segment A's axis to segment B's midpoint.
+
+    Args:
+        x1a, y1a, x2a, y2a: Endpoints of the reference segment A.
+        x1b, y1b, x2b, y2b: Endpoints of segment B.
+
+    Returns:
+        Non-negative perpendicular distance in pixels.
+    """
+    import math as _math
+    dx = x2a - x1a
+    dy = y2a - y1a
+    length = _math.sqrt(dx * dx + dy * dy)
+    if length < 1e-9:
+        return _math.sqrt((x1b - x1a) ** 2 + (y1b - y1a) ** 2)
+    # Unit normal to A
+    nx = -dy / length
+    ny = dx / length
+    # Midpoint of B
+    mx = (x1b + x2b) / 2.0
+    my = (y1b + y2b) / 2.0
+    return abs((mx - x1a) * nx + (my - y1a) * ny)
+
+
+def _seg_1d_iou(
+    x1a: float, y1a: float, x2a: float, y2a: float,
+    x1b: float, y1b: float, x2b: float, y2b: float,
+) -> float:
+    """1-D IoU of two segments projected onto segment A's axis direction.
+
+    Args:
+        x1a, y1a, x2a, y2a: Endpoints of the axis / reference segment A.
+        x1b, y1b, x2b, y2b: Endpoints of segment B.
+
+    Returns:
+        1-D IoU in [0, 1].
+    """
+    import math as _math
+    dx = x2a - x1a
+    dy = y2a - y1a
+    length_a = _math.sqrt(dx * dx + dy * dy)
+    if length_a < 1e-9:
+        return 0.0
+    cos_a = dx / length_a
+    sin_a = dy / length_a
+
+    # A's interval is [0, length_a] along its own axis
+    a_lo, a_hi = 0.0, length_a
+
+    # Project B's endpoints onto A's axis (origin at A's p1)
+    tb1 = (x1b - x1a) * cos_a + (y1b - y1a) * sin_a
+    tb2 = (x2b - x1a) * cos_a + (y2b - y1a) * sin_a
+    b_lo, b_hi = min(tb1, tb2), max(tb1, tb2)
+
+    inter = max(0.0, min(a_hi, b_hi) - max(a_lo, b_lo))
+    union = max(a_hi, b_hi) - min(a_lo, b_lo)
+    return float(inter / union) if union > 0.0 else 0.0
+
+
+def _det_endpoints(det: dict) -> tuple[float, float, float, float] | None:
+    """Return (x1, y1, x2, y2) from a detection dict.
+
+    Prefers native endpoint fields; falls back to deriving from obb.
+
+    Args:
+        det: Detection dict.
+
+    Returns:
+        Tuple (x1, y1, x2, y2) or None if neither source is available.
+    """
+    import math as _math
+    if all(k in det for k in ("x1", "y1", "x2", "y2")):
+        return float(det["x1"]), float(det["y1"]), float(det["x2"]), float(det["y2"])
+    obb = det.get("obb")
+    if obb is None:
+        return None
+    cx = float(obb.get("cx", 0))
+    cy = float(obb.get("cy", 0))
+    half = float(obb.get("w", 0)) / 2.0
+    rad = _math.radians(float(obb.get("angle_deg", 0)))
+    cos_r = _math.cos(rad)
+    sin_r = _math.sin(rad)
+    return (cx - half * cos_r, cy - half * sin_r,
+            cx + half * cos_r, cy + half * sin_r)
+
+
+def _segment_suppress(
+    det_a: dict,
+    det_b: dict,
+    angle_tol: float = 10.0,
+    perp_tol: float = 8.0,
+    iou_min: float = 0.3,
+) -> bool:
+    """Return True if two detections should be mutually suppressed by segment NMS.
+
+    Args:
+        det_a: First detection dict (must have x1/y1/x2/y2 or obb).
+        det_b: Second detection dict.
+        angle_tol: Maximum angle error in degrees.
+        perp_tol: Maximum perpendicular offset in pixels.
+        iou_min: Minimum 1-D IoU along det_a's axis.
+
+    Returns:
+        True when all three criteria are satisfied.
+    """
+    ep_a = _det_endpoints(det_a)
+    ep_b = _det_endpoints(det_b)
+    if ep_a is None or ep_b is None:
+        return False
+    x1a, y1a, x2a, y2a = ep_a
+    x1b, y1b, x2b, y2b = ep_b
+
+    # Angle
+    import math as _math
+    angle_a = _math.degrees(_math.atan2(y2a - y1a, x2a - x1a)) % 180.0
+    angle_b = _math.degrees(_math.atan2(y2b - y1b, x2b - x1b)) % 180.0
+    if _seg_angle_error_deg(angle_a, angle_b) >= angle_tol:
+        return False
+
+    # Perpendicular offset
+    if _seg_perp_offset(x1a, y1a, x2a, y2a, x1b, y1b, x2b, y2b) >= perp_tol:
+        return False
+
+    # 1-D IoU
+    if _seg_1d_iou(x1a, y1a, x2a, y2a, x1b, y1b, x2b, y2b) <= iou_min:
+        return False
+
+    return True
+
+
+def _segment_group_match(
+    det_a: dict,
+    det_b: dict,
+    angle_tol: float = 15.0,
+    perp_tol: float = 20.0,
+    iou_min: float = 0.1,
+) -> bool:
+    """Return True if two detections belong to the same streak (grouping criteria).
+
+    Looser thresholds than NMS: we want to group partial detections of the same
+    physical streak even when they only partially overlap.
+
+    Args:
+        det_a: First detection dict.
+        det_b: Second detection dict.
+        angle_tol: Maximum angle error in degrees (default 15).
+        perp_tol: Maximum perpendicular offset in pixels (default 20).
+        iou_min: Minimum 1-D IoU (default 0.1).
+
+    Returns:
+        True when all three criteria are satisfied.
+    """
+    return _segment_suppress(det_a, det_b, angle_tol, perp_tol, iou_min)
+
+
+# ---------------------------------------------------------------------------
 # OBB construction
 # ---------------------------------------------------------------------------
 
@@ -465,15 +643,22 @@ def nms_detections(
     detections: list[dict],
     iou_threshold: float = 0.5,
 ) -> list[dict]:
-    """Non-maximum suppression on OBB detections using Shapely polygon IoU.
+    """Non-maximum suppression using segment-based three-criterion overlap.
 
-    Suppresses lower-confidence detections whose rotated IoU with a
-    kept detection exceeds *iou_threshold*.
+    Suppresses lower-confidence detections that satisfy all three criteria
+    relative to a kept detection:
+      1. Angle error < 10 degrees
+      2. Perpendicular offset < 8 px
+      3. 1-D IoU along the kept detection's axis > 0.3
+
+    For detections that have only an ``obb`` and no ``x1/y1/x2/y2`` fields
+    (classical detector output), endpoints are derived from the OBB.
 
     Args:
         detections: List of detection dicts, each containing an 'obb' key
-            (from bbox_to_obb) and a 'confidence' key.
-        iou_threshold: Suppress if rotated IoU exceeds this value.
+            and/or 'x1/y1/x2/y2' endpoint keys, plus a 'confidence' key.
+        iou_threshold: Unused — kept for API compatibility.  The segment
+            criteria are always applied at fixed tolerances.
 
     Returns:
         Filtered list of detection dicts, ordered by confidence descending.
@@ -491,21 +676,12 @@ def nms_detections(
         if i in suppressed:
             continue
         kept.append(det)
-        obb_i = det.get("obb")
-        if obb_i is None:
-            continue
         for j in range(i + 1, len(sorted_dets)):
             if j in suppressed:
                 continue
-            obb_j = sorted_dets[j].get("obb")
-            if obb_j is None:
-                continue
-            iou = _rotated_iou(obb_i, obb_j)
-            if iou > iou_threshold:
+            if _segment_suppress(det, sorted_dets[j]):
                 suppressed.add(j)
-                logger.debug(
-                    "NMS: suppressed detection %d (IoU=%.3f > %.3f)", j, iou, iou_threshold
-                )
+                logger.debug("NMS: suppressed detection %d (segment match)", j)
 
     logger.debug("NMS: kept %d / %d detections", len(kept), len(sorted_dets))
     return kept
@@ -561,21 +737,25 @@ def group_detections(
             # group further from here, which would cause chain-linking across
             # unrelated detections.
             continue
-        obb_i = sorted_dets[i].get("obb")
-        if obb_i is None:
-            continue
+        det_i = sorted_dets[i]
+        obb_i = det_i.get("obb")
         for j in range(i + 1, n):
             if group_id[j] != -1:
                 continue
-            obb_j = sorted_dets[j].get("obb")
-            if obb_j is None:
-                continue
-            if (
-                _rotated_iou(obb_i, obb_j) > iou_threshold
-                or _rotated_iom(obb_i, obb_j) > iom_threshold
-                or _collinear_streak_match(obb_i, obb_j)
-            ):
+            det_j = sorted_dets[j]
+            obb_j = det_j.get("obb")
+            # Primary: segment-based grouping (works for both new and legacy dets)
+            if _segment_group_match(det_i, det_j):
                 group_id[j] = group_id[i]
+                continue
+            # Fallback for legacy detections that have only an OBB
+            if obb_i is not None and obb_j is not None:
+                if (
+                    _rotated_iou(obb_i, obb_j) > iou_threshold
+                    or _rotated_iom(obb_i, obb_j) > iom_threshold
+                    or _collinear_streak_match(obb_i, obb_j)
+                ):
+                    group_id[j] = group_id[i]
 
     for det, gid in zip(sorted_dets, group_id):
         det["streak_id"] = gid + 1  # 1-based for display
@@ -634,57 +814,81 @@ def fuse_group_geometries(detections: list[dict]) -> list[dict]:
         if len(group) < 2:
             continue
 
-        # Prefer a tight OBB (aspect ≥ 5:1) as the axis seed; fall back to
-        # longest OBB as before.  Tight OBBs (e.g. classical detectors) provide
-        # a more accurate angle than DINO's loose axis-aligned bbox.
-        _OBB_AR_THRESHOLD = 5.0
-        primary = max(
-            group,
-            key=lambda d: (
-                1 if _obb_aspect_ratio((d.get("obb") or {})) >= _OBB_AR_THRESHOLD else 0,
-                float((d.get("obb") or {}).get("w", 0.0)),
-                d.get("confidence", 0.0),
-            ),
-        )
-        base = primary["obb"]
-        theta = math.radians(float(base["angle_deg"]))
-        cos_a = math.cos(theta)
-        sin_a = math.sin(theta)
-        perp_x = -sin_a
-        perp_y = cos_a
-        origin_x = float(base["cx"])
-        origin_y = float(base["cy"])
+        # Prefer the highest-confidence member that has native endpoints.
+        # Fall back to the longest OBB when no member has endpoints.
+        primary_with_seg = [d for d in group if all(k in d for k in ("x1", "y1", "x2", "y2"))]
+        if primary_with_seg:
+            primary = max(primary_with_seg, key=lambda d: d.get("confidence", 0.0))
+            ep = _det_endpoints(primary)
+            assert ep is not None
+            px1, py1, px2, py2 = ep
+            axis_angle = math.atan2(py2 - py1, px2 - px1)
+        else:
+            # Legacy path: use longest tight OBB as axis seed
+            _OBB_AR_THRESHOLD = 5.0
+            primary = max(
+                group,
+                key=lambda d: (
+                    1 if _obb_aspect_ratio((d.get("obb") or {})) >= _OBB_AR_THRESHOLD else 0,
+                    float((d.get("obb") or {}).get("w", 0.0)),
+                    d.get("confidence", 0.0),
+                ),
+            )
+            base_obb = primary.get("obb") or {}
+            axis_angle = math.radians(float(base_obb.get("angle_deg", 0.0)))
+
+        cos_a = math.cos(axis_angle)
+        sin_a = math.sin(axis_angle)
+
+        # Project all fragment endpoints onto the chosen axis
+        # (origin = midpoint of the primary detection)
+        ep_primary = _det_endpoints(primary)
+        if ep_primary is None:
+            continue
+        ox = (ep_primary[0] + ep_primary[2]) / 2.0
+        oy = (ep_primary[1] + ep_primary[3]) / 2.0
 
         t_values: list[float] = []
-        perp_offsets: list[float] = []
         widths: list[float] = []
         for det in group:
-            obb = det["obb"]
-            cx = float(obb["cx"])
-            cy = float(obb["cy"])
-            half = float(obb["w"]) / 2.0
-            dx = cx - origin_x
-            dy = cy - origin_y
-            centre_t = dx * cos_a + dy * sin_a
-            perp_offsets.append(dx * perp_x + dy * perp_y)
-            t_values.extend([centre_t - half, centre_t + half])
-            widths.append(float(obb.get("h", 0.0)))
+            ep = _det_endpoints(det)
+            if ep is None:
+                continue
+            for px, py in ((ep[0], ep[1]), (ep[2], ep[3])):
+                t_values.append((px - ox) * cos_a + (py - oy) * sin_a)
+            obb = det.get("obb") or {}
+            widths.append(float(obb.get("h", 3.0)))
+
+        if not t_values:
+            continue
 
         t_start = min(t_values)
         t_end = max(t_values)
-        centre_t = (t_start + t_end) / 2.0
-        centre_perp = float(np.median(perp_offsets)) if perp_offsets else 0.0
-        fused = {
-            **base,
-            "cx": origin_x + centre_t * cos_a + centre_perp * perp_x,
-            "cy": origin_y + centre_t * sin_a + centre_perp * perp_y,
-            "w": max(float(base["w"]), t_end - t_start),
-            "h": max(float(np.median(widths)) if widths else float(base["h"]), 3.0),
+        fused_length = max(t_end - t_start, 1.0)
+        fused_cx = ox + ((t_start + t_end) / 2.0) * cos_a
+        fused_cy = oy + ((t_start + t_end) / 2.0) * sin_a
+        fused_x1 = fused_cx - (fused_length / 2.0) * cos_a
+        fused_y1 = fused_cy - (fused_length / 2.0) * sin_a
+        fused_x2 = fused_cx + (fused_length / 2.0) * cos_a
+        fused_y2 = fused_cy + (fused_length / 2.0) * sin_a
+        fused_angle = math.degrees(axis_angle) % 180.0
+        fused_h = max(float(np.median(widths)) if widths else 3.0, 3.0)
+
+        fused_obb = {
+            "cx": fused_cx,
+            "cy": fused_cy,
+            "w": fused_length,
+            "h": fused_h,
+            "angle_deg": fused_angle,
         }
 
         for det in group:
-            det["obb"] = dict(fused)
-            det["streak_length_px"] = float(fused["w"])
+            det["obb"] = dict(fused_obb)
+            det["x1"] = fused_x1
+            det["y1"] = fused_y1
+            det["x2"] = fused_x2
+            det["y2"] = fused_y2
+            det["streak_length_px"] = fused_length
 
     return detections
 
@@ -731,17 +935,23 @@ def classify_detection_quality(
     obb = det.get("obb") or {}
 
     # --- Edge check (flag 1) -------------------------------------------------
-    cx = float(obb.get("cx", 0))
-    cy = float(obb.get("cy", 0))
-    half = float(obb.get("w", 0)) / 2.0
-    angle_rad = math.radians(float(obb.get("angle_deg", 0)))
-    cos_a = math.cos(angle_rad)
-    sin_a = math.sin(angle_rad)
-
-    tip1_x = cx - half * cos_a
-    tip1_y = cy - half * sin_a
-    tip2_x = cx + half * cos_a
-    tip2_y = cy + half * sin_a
+    # Prefer native endpoint fields; fall back to OBB-derived endpoints.
+    if all(k in det for k in ("x1", "y1", "x2", "y2")):
+        tip1_x = float(det["x1"])
+        tip1_y = float(det["y1"])
+        tip2_x = float(det["x2"])
+        tip2_y = float(det["y2"])
+    else:
+        cx = float(obb.get("cx", 0))
+        cy = float(obb.get("cy", 0))
+        half = float(obb.get("w", 0)) / 2.0
+        angle_rad = math.radians(float(obb.get("angle_deg", 0)))
+        cos_a = math.cos(angle_rad)
+        sin_a = math.sin(angle_rad)
+        tip1_x = cx - half * cos_a
+        tip1_y = cy - half * sin_a
+        tip2_x = cx + half * cos_a
+        tip2_y = cy + half * sin_a
 
     m = edge_margin_px
     edge_contacts: list[str] = []

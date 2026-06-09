@@ -136,24 +136,6 @@ def _model_registry() -> list[dict]:
     root = Path(__file__).resolve().parent.parent
     return [
         {
-            "id":        "dinov3_vitb",
-            "size":      "dinov3_vitb",
-            "label":     "DINOv3 ViT-B",
-            "dataset":   "SatStreaks+GTImages",
-            "weights":   root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
-            "config":    root / "models" / "dino" / "streak_dinov3_vitb.py",
-            "norm_mode": "autostretch",
-        },
-        {
-            "id":        "dinov3_vits_run4",
-            "size":      "dinov3_vits_run4",
-            "label":     "ViT-S OBB Run 4",
-            "dataset":   "BrentImages+Frigate",
-            "weights":   root / "weights" / "run4_vits_mmdet" / "best_coco_bbox_mAP_epoch_15.pth",
-            "config":    root / "models" / "dino" / "streak_dinov3_vits_400px_run3.py",
-            "norm_mode": "autostretch",
-        },
-        {
             "id":        "dinov3_vits_run5",
             "size":      "dinov3_vits_run5",
             "label":     "ViT-S OBB Run 5",
@@ -589,18 +571,11 @@ def _run_streakmind_yolo_detector(
     return detections
 
 
-def _run_heatmap_centerline_detector(array: "np.ndarray") -> list[dict]:
-    """Run the DINOv3 heatmap-centerline detector if its weights are available."""
-    from inference.heatmap_detector import run_heatmap_centerline_detector
+def _run_vits_heatmap_detector(array: "np.ndarray") -> list[dict]:
+    """Run the ViT-S/16 heatmap detector (Run 15+) if its weights are available."""
+    from inference.vits_heatmap_detector import run_vits_heatmap_detector
 
-    return run_heatmap_centerline_detector(array)
-
-
-def _run_convnext_heatmap_detector(array: "np.ndarray") -> list[dict]:
-    """Run the ConvNeXt-S stage-2 heatmap detector if its weights are available."""
-    from inference.convnext_heatmap_detector import run_convnext_heatmap_detector
-
-    return run_convnext_heatmap_detector(array)
+    return run_vits_heatmap_detector(array)
 
 
 def _run_vits_heatmap_detector(array: "np.ndarray") -> list[dict]:
@@ -1096,29 +1071,16 @@ def get_detector_statuses() -> list[dict]:
                 "status":  "active" if weight_ok else "no_weights",
             })
 
-    # Heatmap centerline detector
+    # ViT-S/16 heatmap detector (Run 15+)
     try:
-        from inference.heatmap_detector import get_heatmap_detector_status
-        statuses.append(get_heatmap_detector_status())
+        from inference.vits_heatmap_detector import get_vits_heatmap_status
+        statuses.append(get_vits_heatmap_status())
     except ImportError:
         statuses.append({
-            "id": "dinov3_heatmap_centerline",
-            "name": "DINOv3 Heatmap Centerline",
+            "id": "vits_heatmap",
+            "name": "DINOv3 ViT-S HeatMap",
             "type": "ml",
-            "dataset": "SatStreaks centerline catchment",
-            "status": "unavailable",
-        })
-
-    # ConvNeXt-S Stage-2 heatmap detector
-    try:
-        from inference.convnext_heatmap_detector import get_convnext_heatmap_status
-        statuses.append(get_convnext_heatmap_status())
-    except ImportError:
-        statuses.append({
-            "id": "convnext_heatmap",
-            "name": "ConvNeXt-S HeatMap",
-            "type": "ml",
-            "dataset": "Atwood+Frigate Run5",
+            "dataset": "Atwood+Frigate Run15",
             "status": "unavailable",
         })
 
@@ -1163,10 +1125,6 @@ def get_detector_statuses() -> list[dict]:
     except ImportError:
         classical_status = "unavailable"
 
-    statuses.append({
-        "id": "opencv", "name": "OpenCV Morphological",
-        "type": "classical", "dataset": "—", "status": classical_status,
-    })
     statuses.append({
         "id": "astride", "name": "ASTRiDE",
         "type": "classical", "dataset": "—", "status": classical_status,
@@ -1331,12 +1289,13 @@ def _run_all_detectors(
                 f2 = pool.submit(
                     _timed_detector,
                     alt_id,
-                    fn,
+                    _run_tiled_dino_inference,
                     model,
                     alt_array,
                     image_size,
                     confidence_threshold,
                     alt_id,
+                    tta_enabled,
                 )
                 tasks[f2] = alt_id
                 dual_norm_ids.append(alt_id)
@@ -1348,11 +1307,6 @@ def _run_all_detectors(
         _heatmap_sidecar: dict[str, "np.ndarray"] = {}
 
         # Secondary detectors
-        if _enabled("opencv"):
-            tasks[pool.submit(_timed_detector, "opencv", _run_classical_detector, array)] = "opencv"
-        else:
-            results["opencv"] = []
-
         if _enabled("astride"):
             tasks[pool.submit(_timed_detector, "astride", _run_astride_detector, fits_path)] = "astride"
         else:
@@ -1363,22 +1317,26 @@ def _run_all_detectors(
         else:
             results["streakmind_yolo"] = []
 
-        if _enabled("dinov3_heatmap_centerline"):
-            def _heatmap_task_with_sidecar(arr: "np.ndarray") -> list[dict]:
-                from inference.heatmap_detector import run_heatmap_centerline_detector_and_heatmap
-                dets, heat = run_heatmap_centerline_detector_and_heatmap(arr)
+        if _enabled("vits_heatmap"):
+            # Run 15 was trained on zscore-normalised FITS data.  Re-normalise
+            # from raw float32 when the pipeline default norm differs.
+            _vits_norm = os.environ.get("VITS_HEATMAP_NORM", "zscore").lower()
+            if raw_array_f32 is not None and default_norm_mode and default_norm_mode != _vits_norm:
+                from inference.fits_loader import apply_norm as _apply_norm
+                _vits_array = _apply_norm(raw_array_f32, _vits_norm)
+            else:
+                _vits_array = array
+
+            def _vits_heatmap_task_with_sidecar(arr: "np.ndarray") -> list[dict]:
+                from inference.vits_heatmap_detector import run_vits_heatmap_detector_and_heatmap
+                dets, heat = run_vits_heatmap_detector_and_heatmap(arr)
                 if heat is not None:
                     _heatmap_sidecar["heat"] = heat
                 return dets
 
-            tasks[pool.submit(_timed_detector, "dinov3_heatmap_centerline", _heatmap_task_with_sidecar, array)] = "dinov3_heatmap_centerline"
+            tasks[pool.submit(_timed_detector, "vits_heatmap", _vits_heatmap_task_with_sidecar, _vits_array)] = "vits_heatmap"
         else:
-            results["dinov3_heatmap_centerline"] = []
-
-        if _enabled("convnext_heatmap"):
-            tasks[pool.submit(_timed_detector, "convnext_heatmap", _run_convnext_heatmap_detector, array)] = "convnext_heatmap"
-        else:
-            results["convnext_heatmap"] = []
+            results["vits_heatmap"] = []
 
         if _enabled("vits_heatmap"):
             tasks[pool.submit(_timed_detector, "vits_heatmap", _run_vits_heatmap_detector, array)] = "vits_heatmap"
@@ -1584,7 +1542,7 @@ def run_with_array(
             max_dino_post,
         )
 
-    classical_dets = all_det_results.get("opencv", [])
+    classical_dets = []  # OpenCV morphological detector removed
     astride_dets   = all_det_results.get("astride", [])
 
     inference_ms = (time.perf_counter() - t1) * 1000
@@ -1607,10 +1565,8 @@ def run_with_array(
     h_img = array.shape[0]
     w_img = array.shape[1]
 
-    streakmind_yolo_dets  = all_det_results.get("streakmind_yolo", [])
-    heatmap_dets          = all_det_results.get("dinov3_heatmap_centerline", [])
-    convnext_heatmap_dets = all_det_results.get("convnext_heatmap", [])
-    vits_heatmap_dets     = all_det_results.get("vits_heatmap", [])
+    streakmind_yolo_dets = all_det_results.get("streakmind_yolo", [])
+    heatmap_dets         = all_det_results.get("vits_heatmap", [])
 
     if raw_mode:
         # Raw mode: no Radon, no extent tracing, no NMS, no grouping.
@@ -1631,7 +1587,7 @@ def run_with_array(
 
         detections = (
             raw_dets + classical_dets + astride_dets
-            + streakmind_yolo_dets + heatmap_dets + convnext_heatmap_dets + vits_heatmap_dets
+            + streakmind_yolo_dets + heatmap_dets
         )
         for idx, det in enumerate(detections):
             det["streak_id"] = idx + 1
@@ -1651,7 +1607,7 @@ def run_with_array(
         ))
         all_ml_dets = (
             raw_dets + classical_dets + astride_dets
-            + streakmind_yolo_dets + heatmap_dets + convnext_heatmap_dets + vits_heatmap_dets
+            + streakmind_yolo_dets + heatmap_dets
         )
         for det in all_ml_dets:
             x1, y1, x2, y2 = det["bbox"]
@@ -1690,12 +1646,10 @@ def run_with_array(
         astride_dets         = nms_detections(astride_dets,         iou_threshold=0.5)
         streakmind_yolo_dets  = nms_detections(streakmind_yolo_dets,  iou_threshold=0.5)
         heatmap_dets          = nms_detections(heatmap_dets,          iou_threshold=0.5)
-        convnext_heatmap_dets = nms_detections(convnext_heatmap_dets, iou_threshold=0.5)
-        vits_heatmap_dets     = nms_detections(vits_heatmap_dets,     iou_threshold=0.5)
 
         combined = (
             raw_dets + classical_dets + astride_dets
-            + streakmind_yolo_dets + heatmap_dets + convnext_heatmap_dets + vits_heatmap_dets
+            + streakmind_yolo_dets + heatmap_dets
         )
         detections = group_detections(combined, iou_threshold=0.5)
         detections = fuse_group_geometries(detections)
@@ -1806,6 +1760,23 @@ def run_with_array(
         "[load=%.0fms  infer=%.0fms  post=%.0fms  crossid=%.0fms]",
         len(detections), fits_load_ms, inference_ms, postprocess_ms, crossid_ms,
     )
+
+    # Ensure every detection has x1/y1/x2/y2 set. Heatmap detectors set these
+    # natively; classical/ASTRiDE detectors produce OBB-only dicts so we
+    # derive the endpoints here as a universal backfill.
+    import math as _math
+    for _det in detections:
+        if _det.get("x1") is None:
+            _obb = _det.get("obb") or {}
+            _cx  = float(_obb.get("cx") or 0)
+            _cy  = float(_obb.get("cy") or 0)
+            _hw  = float(_obb.get("w") or 0) / 2.0
+            _rad = _math.radians(float(_obb.get("angle_deg") or 0))
+            _det["x1"] = _cx - _hw * _math.cos(_rad)
+            _det["y1"] = _cy - _hw * _math.sin(_rad)
+            _det["x2"] = _cx + _hw * _math.cos(_rad)
+            _det["y2"] = _cy + _hw * _math.sin(_rad)
+
     return detections, array, _heatmap_sidecar.get("heat")
 
 
