@@ -47,6 +47,7 @@ results/*/proposals*.json
 results/**/proposals*.json
 results/*/predictions.json
 results/**/predictions.json
+results/**/*predictions.json
 results/**/*.bbox.json
 # Claude Code dev artifacts
 .claude/launch.json
