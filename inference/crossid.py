@@ -466,7 +466,7 @@ def _confidence_with_epoch_penalty(
     Returns:
         ``(penalized_confidence, epoch_penalty)``.
     """
-    if search_mode in ("broad_epoch", "single_tip_endpoint"):
+    if search_mode in ("broad_epoch", "single_tip_endpoint", "forward_epoch"):
         sigma = _BROAD_EPOCH_PENALTY_SIGMA_HOURS
     else:
         sigma = 24.0

@@ -392,13 +392,21 @@ def upsert_tles(records: list[dict[str, Any]], engine=None, *, source: str | Non
 # Read
 # ---------------------------------------------------------------------------
 
+_FORWARD_EPOCH_DAYS = 7  # include TLEs published up to this many days after obs
+
+
 def query_tles_for_window(
     obs_time: datetime,
     epoch_window_days: int = 3,
     min_mean_motion: float = 0,
     engine=None,
 ) -> list[dict[str, Any]]:
-    """Return TLE records whose epoch falls in (obs_time - window, obs_time].
+    """Return TLE records whose epoch falls in (obs_time - window, obs_time + 7d].
+
+    The 7-day forward tolerance ensures that an object whose most recent TLE was
+    published just after the observation (e.g., obs on May 27, TLE epoch June 1)
+    is still a candidate.  SGP4 back-propagation from a slightly future epoch is
+    valid, and the epoch-age penalty in crossid will down-weight stale entries.
 
     Args:
         obs_time: UTC observation time.
@@ -418,7 +426,7 @@ def query_tles_for_window(
         obs_time = obs_time.replace(tzinfo=timezone.utc)
 
     epoch_start = (obs_time - timedelta(days=epoch_window_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    epoch_end = obs_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    epoch_end = (obs_time + timedelta(days=_FORWARD_EPOCH_DAYS)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     sql = (
         "SELECT c.norad_id, c.epoch, c.object_name, "
@@ -447,8 +455,8 @@ def query_tles_for_window(
 
     result = [dict(r._mapping) for r in rows]
     logger.debug(
-        "query_tles_for_window: %d latest-per-object records for window %s → %s",
-        len(result), epoch_start, epoch_end,
+        "query_tles_for_window: %d latest-per-object records for window %s → %s (+%dd fwd)",
+        len(result), epoch_start, epoch_end, _FORWARD_EPOCH_DAYS,
     )
     return result
 

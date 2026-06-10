@@ -231,7 +231,13 @@ class TLECatalogManager:
         search_window_days: int,
         mode: str,
     ) -> list[dict[str, Any]]:
-        """Attach search-mode metadata used by cross-ID scoring and UI."""
+        """Attach search-mode metadata used by cross-ID scoring and UI.
+
+        TLEs whose epoch is after obs_time are tagged "forward_epoch" regardless
+        of the caller-supplied mode.  The crossid epoch penalty uses a wider sigma
+        for forward_epoch so that back-propagating from a recently-published TLE
+        (e.g., epoch 4 days after the shot) is not crushed to near-zero.
+        """
         fresh_at = self._fresh_data_timestamp()
         fresh_iso = fresh_at.isoformat().replace("+00:00", "Z") if fresh_at else None
         annotated: list[dict[str, Any]] = []
@@ -241,11 +247,14 @@ class TLECatalogManager:
                 abs((obs_time - epoch_dt).total_seconds()) / 3600.0
                 if epoch_dt is not None else None
             )
+            row_mode = mode
+            if epoch_dt is not None and epoch_dt > obs_time:
+                row_mode = "forward_epoch"
             annotated.append({
                 **row,
                 "epoch_drift_hours": drift_h,
                 "epoch_search_window_days": search_window_days,
-                "tle_search_mode": mode,
+                "tle_search_mode": row_mode,
                 "tle_data_fresh_at": fresh_iso,
             })
         return annotated
