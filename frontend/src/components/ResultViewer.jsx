@@ -36,19 +36,6 @@ function streakEndpoints(det, scaleX, scaleY) {
 // Drawing primitives
 // ---------------------------------------------------------------------------
 
-function drawOBB(ctx, obb, colour, alpha, scaleX, scaleY, lineWidth) {
-  const { cx, cy, w, h, angle_deg } = obb
-  const rad = (angle_deg * Math.PI) / 180
-  ctx.save()
-  ctx.globalAlpha = alpha
-  ctx.strokeStyle = colour
-  ctx.lineWidth = lineWidth
-  ctx.translate(cx * scaleX, cy * scaleY)
-  ctx.rotate(rad)
-  ctx.strokeRect((-w / 2) * scaleX, (-h / 2) * scaleY, w * scaleX, h * scaleY)
-  ctx.restore()
-}
-
 function drawCenterline(ctx, p1, p2, colour, alpha, lineWidth) {
   ctx.save()
   ctx.globalAlpha = alpha
@@ -84,52 +71,6 @@ function drawEndpoint(ctx, p, label, colour, alpha, radius) {
   ctx.textAlign = 'center'
   ctx.textBaseline = 'bottom'
   ctx.fillText(label, p.x, p.y - radius - 1)
-  ctx.restore()
-}
-
-function drawAngleIndicator(ctx, obb, colour, alpha, scaleX, scaleY) {
-  const { cx, cy, w, h, angle_deg } = obb
-  const rad = (angle_deg * Math.PI) / 180
-  const cxS = cx * scaleX
-  const cyS = cy * scaleY
-
-  // Arc radius: proportional to streak length, clamped
-  const arcR = Math.max(16, Math.min(28, (Math.max(w, h) / 2) * scaleX * 0.28))
-
-  ctx.save()
-  ctx.globalAlpha = alpha * 0.75
-  ctx.strokeStyle = colour
-  ctx.fillStyle = colour
-  ctx.lineWidth = 1
-
-  // Horizontal reference tick from centre
-  ctx.beginPath()
-  ctx.moveTo(cxS, cyS)
-  ctx.lineTo(cxS + arcR + 4, cyS)
-  ctx.stroke()
-
-  // Arc from 0 → angle_deg (counterclockwise if negative)
-  ctx.beginPath()
-  if (rad >= 0) {
-    ctx.arc(cxS, cyS, arcR, 0, rad)
-  } else {
-    ctx.arc(cxS, cyS, arcR, rad, 0)
-  }
-  ctx.stroke()
-
-  // Angle text at midpoint of arc
-  const midAngle = rad / 2
-  const labelR = arcR + 11
-  ctx.globalAlpha = alpha
-  ctx.font = 'bold 10px system-ui, sans-serif'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText(
-    `${angle_deg.toFixed(1)}°`,
-    cxS + labelR * Math.cos(midAngle),
-    cyS + labelR * Math.sin(midAngle),
-  )
-
   ctx.restore()
 }
 
@@ -214,11 +155,9 @@ function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
 
   const { p1, p2 } = streakEndpoints(det, scaleX, scaleY)
 
-  drawOBB(ctx, obb, colour, alpha * 0.55, scaleX, scaleY, highlighted ? 1.5 : 1)
   drawCenterline(ctx, p1, p2, colour, alpha, lineWidth)
   drawEndpoint(ctx, p1, '1', colour, alpha, endpointR)
   drawEndpoint(ctx, p2, '2', colour, alpha, endpointR)
-  drawAngleIndicator(ctx, obb, colour, alpha, scaleX, scaleY)
 }
 
 // ---------------------------------------------------------------------------
@@ -355,8 +294,8 @@ export default function ResultViewer({
     const my = e.clientY - rect.top
     const coordWidth = imageWidth || imgRef.current.naturalWidth
     const coordHeight = imageHeight || imgRef.current.naturalHeight
-    const scaleX = canvasRef.current.width / coordWidth
-    const scaleY = canvasRef.current.height / coordHeight
+    const scaleX = rect.width / coordWidth
+    const scaleY = rect.height / coordHeight
 
     let hit = null
     detections.forEach((det, i) => {
