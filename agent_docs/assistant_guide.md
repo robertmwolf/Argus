@@ -63,35 +63,31 @@ Progress:
 
 ## Next Steps
 
-### Run 17 — Partial ViT-S backbone unfreeze (primary path)
+### Run 17 — ViT-B frozen heatmap (in progress, 2026-06-09)
 
-**Goal:** Break the frozen-backbone recall ceiling (~21% at t=0.85) by unfreezing the last
-2–4 ViT-S transformer blocks and training end-to-end on the Run 15 dataset (400px tiles,
-zscore norm).
+**Goal:** Establish whether ViT-B's richer 768-dim features improve on ViT-S frozen
+(Run 15, F1=21.9%).  All hyperparameters held constant vs Run 15; backbone size is the
+only variable.
 
-**Why:** The frozen backbone produces ImageNet features. FITS streaks are faint (SNR 2–15),
-thin (2–5 px), and linear — geometry not present in DINOv3's pretraining. Even with 15+
-training runs, the frozen head cannot recover streak signal the backbone didn't encode.
-Run 15 achieves 84.7% recall with streak-match geometry metric but only 21.9% with OBB IoU
-— the model finds streak centres accurately but the OBB geometry is still weak.
+**Pipeline:** `scripts/run17_vitb_pipeline.sh`
+Builds merged FITS-direct annotations via `scripts/build_run17_annotations.py`, then
+caches ViT-B features at 400px tiles / zscore norm and trains the heatmap head.
+Weights will land at `weights/run17_vitb/best.pt`.
 
-**Hardware:** GPU required. Options:
-- Vast.ai / RunPod A10 at ~$0.15/hr — full run ~$3–5
-- RTX 5070 Ti workstation (WSL2 Ubuntu)
+**Success gate:** F1 > 21.9% AND medium_recall > 8.3% on val set (OBB IoU metric).
+If ViT-B frozen does not beat ViT-S frozen, the frozen-backbone ceiling is size-independent
+and backbone unfreeze (Track B) is the only remaining lever.
 
-**Config (starting point):**
-```bash
-# Unfreeze last 2 ViT-S blocks (blocks 10, 11 of 12)
-python training/train_dinov3_heatmap_cached.py \
-  --annotations /tmp/argus_run15_cache/train.json \
-  --val-annotations /tmp/argus_run15_cache/val.json \
-  --output-dir weights/run17_vits_unfrozen \
-  --backbone vits --unfreeze-last-n-blocks 2 \
-  --epochs 40 --pos-weight 20 --neg-ratio 0.38 \
-  --lr 1e-4 --cosine-lr --backbone-lr-mult 0.1
-```
+### Run 18 — backbone unfreeze (next after Run 17 results)
 
-**Success gate:** recall ≥ 60% AND precision > 1% on `test_atwood.json` using OBB IoU metric.
+Two options depending on Run 17 outcome:
+- **If ViT-B frozen beats ViT-S:** unfreeze last 2 ViT-B blocks — richer features +
+  domain adaptation. Requires end-to-end training script (not cached), ~$3–5 on A10.
+- **If no improvement:** unfreeze last 2 ViT-S blocks (cheaper, same domain-adaptation
+  benefit). Use `train_dinov3_heatmap.py` (non-cached) with two param groups:
+  backbone LR = 1e-5, head LR = 1e-4.
+
+**Success gate (either variant):** recall ≥ 60% AND precision > 1% (OBB IoU metric).
 
 ### Stitch fix validation (pending)
 
@@ -104,7 +100,7 @@ To complete this:
 ```bash
 python scripts/run_posthoc_threshold_analysis.py \
   --predictions results/run15_vits/t0.05_nostitch/predictions.json \
-  --annotations data/annotations/val_run12_1800_npy.json \
+  --annotations /Volumes/External/TrainingData/annotations/val_run17_fits.json \
   --stitch --stitch-max-growth-ratio 3.0 \
   --output results/run15_vits/threshold_sweep_stitchfix/
 ```
@@ -120,15 +116,59 @@ The following detectors were removed from active use but their code is still pre
 
 Clean up these before the next major feature.
 
+### Canonical evaluation metric (applies to every run)
+
+`eval/geometry_metrics.py` is the **standard evaluation tool for all ARGUS models**.
+Run it for every trained model and save results to `results/<run_name>/geometry_eval.json`.
+
+```bash
+python -m eval.geometry_metrics \
+    --predictions results/<run>/t0.50/predictions.json \
+    --annotations data/annotations/val_atwood.json \
+    --output results/<run>/geometry_eval.json
+```
+
+Three tiers:
+- **Tier 1** — Did the model find the streak? (strict centerline match, no buffer at ends)
+- **Tier 2** — Angle and endpoint accuracy of the raw model output
+- **Tier 3** — Same metrics after Radon angle + endpoint refinement (pass `--images-dir`)
+
+See `agent_docs/test_strategy.md §Canonical Model Evaluation Standard` for full details.
+
 ### Evaluation rules (apply to every heatmap eval)
 
 **Standard heatmap training strategy (all future runs):**
-- Cache features with `--native-tile-size 400 --tile-overlap 0.5` (Run 15 standard).
+- Build merged annotations with `scripts/build_run17_annotations.py` (or a successor
+  script). The cache script (`cache_dinov3_heatmap_features.py`) loads FITS natively,
+  so NPY pre-conversion is not required to start a run.
+- **For faster future runs: pre-convert FITS to NPY once, store durably on external drive.**
+  FITS loading via astropy is ~100× slower than `np.load` — the Run 17 train cache took
+  ~10 hours for 5446 images from FITS vs ~1 hour from NPY. One-time conversion command:
+  ```bash
+  python scripts/convert_tiles_to_npy.py \
+    --annotations /Volumes/External/TrainingData/annotations/all_train_run5_tiled_ts1800.json \
+    --output-dir  /Volumes/External/TrainingData/argus_fits_npy/atwood_train \
+    --output-ann  /Volumes/External/TrainingData/annotations/train_real_atwood_npy.json \
+    --norm-mode zscore
+  # repeat for val_atwood_tiled_ts1800.json → val_real_atwood_npy.json
+  ```
+  Store at a stable external drive path (never `/tmp`). Update `build_run17_annotations.py`
+  to prefer these NPY annotations when they exist, falling back to FITS if missing.
+  **Do not delete NPY tiles after a run** — they are reusable across backbone experiments.
+- The Run 17 failure root cause was not NPY itself but fragile `/tmp` symlinks and
+  hardcoded paths. Durable NPY on the external drive + the 0-tile abort guard is safe.
+- Cache features with `--native-tile-size 400 --tile-overlap 0.0` (Run 15/17 standard).
   Each 6248×4176 Atwood image tiles into ~4–6 annotation-covered 400 px crops.
-- Write cache to external drive or `/tmp/argus_<run>_cache/` (internal SSD, 100 GB budget).
+- **Always add a 0-tile abort guard** after each cache step:
+  ```bash
+  TILES=$(python3 -c "import json; d=json.load(open('$CACHE/manifest.json')); print(len(d['manifest']))")
+  [ "$TILES" -gt 0 ] || { echo "ERROR: cache wrote 0 tiles"; exit 1; }
+  ```
+- Write cache to `/tmp/argus_<run>_cache/` (internal SSD, 100 GB budget).
+  ViT-B features are 768-dim (2× ViT-S), so expect ~2× the cache size of a ViT-S run.
 - Train with `train_dinov3_heatmap_cached.py` on the tiled cache.
 - Evaluate with `--tiled` in `evaluate_dinov3_heatmap.py`.
-- Always use `--threshold 0.3` as the base eval threshold to capture the full activation
+- Always use `--threshold 0.05` as the base eval threshold to capture the full activation
   distribution for post-hoc sweep (see `scripts/run_posthoc_threshold_analysis.py`).
 - For stitch eval: always pass `--stitch-max-growth-ratio 3.0` to prevent short streaks
   from being absorbed into long false-positive chains.
@@ -140,6 +180,55 @@ See Run 12 postmortem in `memory/project_medium_streak_finding.md` and `docs/tra
 **FITS-domain eval only.** Do not evaluate heatmap models on the SatStreaks JPEG benchmark.
 The heatmap models are trained on raw FITS (Atwood); JPEG compression changes pixel
 distributions in ways that break the threshold logic.
+
+## Dataset & File Naming Convention
+
+**Rule:** A `runN` prefix belongs only on artifacts that are *ephemeral to that specific run*
+and will not be reused — cached feature tiles, model weights, eval results.
+Stable, reusable datasets get content-based names with no run number.
+
+**Canonical dataset names** (external drive `annotations/` and local `data/annotations/`):
+
+| File | What it contains |
+|---|---|
+| `train_real_atwood.json` | All real Atwood FITS training images (full-frame, 6248×4176) |
+| `train_real_frigate.json` | All Frigate manual annotations |
+| `train_synth_short_npy.json` | Synthetic short-streak NPY tiles (used by `generate_synthetic_streaks.py`) |
+| `train_synth_medium_npy.json` | Synthetic medium-streak NPY tiles |
+| `val_real_atwood.json` | Real Atwood val split (full-frame FITS) |
+| `test_real_atwood.json` | Held-out test split — do not use for hyperparam tuning |
+
+**Canonical NPY directories** (external drive) — for synthetic streak generation only:
+
+| Directory | Contents |
+|---|---|
+| `argus_synth_npy/short/` | Synthetic short-streak base tiles (float32 NPY, 1800×1800) |
+| `argus_synth_npy/medium/` | Synthetic medium-streak base tiles |
+
+**NPY pre-conversion is NOT needed for heatmap feature caching.**
+`cache_dinov3_heatmap_features.py` loads FITS files natively. Only
+`generate_synthetic_streaks.py` requires NPY input (it reads normalised tiles to
+composite synthetic streaks). `scripts/convert_tiles_to_npy.py` is therefore
+**legacy for pipeline use** — keep it only to support synthetic data generation.
+
+**Run-scoped names are correct for:**
+- `weights/runN_*/` — model checkpoints
+- `results/runN_*/` — eval metrics and threshold sweeps
+- `/tmp/argus_runN_cache/` — feature tile caches (deleted after training)
+- `yolo_runN_dataset/` — YOLO-format exports for a specific training run
+- `all_train_runN_npy.json` etc. — intermediate merged annotations generated during a run
+  (these should be replaced with canonical sources for the next run; delete when stale)
+
+**When starting a new training run:**
+1. Draw from canonical source annotations, not from `*_runN_*` intermediate files.
+2. Name any new merged/filtered annotation you create after its *content*, not the run
+   (e.g. `train_real_atwood_frigate.json`, not `all_train_run17_npy.json`).
+3. If you need to add synthetic data generated during this run, create it under
+   `argus_synth_npy/<type>/` and register it in a canonical annotation file.
+
+**Legacy files** (`all_train_run13_npy.json`, `synth_run13_short_npy.json`, etc.) exist from
+before this convention was established.  Do not create new files following the old pattern.
+Migrate a legacy file to the canonical name the first time you need to edit it.
 
 ## Hardware
 - **Dev / CI:** MacBook Air M3 — CPU or MPS. Use `MODEL_SIZE=tiny` (Swin-T).

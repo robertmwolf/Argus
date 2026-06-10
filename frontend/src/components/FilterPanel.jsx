@@ -10,7 +10,6 @@
 
 const METHOD_LABELS = {
   unified:                   'Unified Confidence',
-  astride:                   'ASTRiDE',
   opencv:                    'OpenCV Morphological',
   dinov3_vitb:               'DINOv3 ViT-Base',
   dinov3_heatmap_centerline: 'DINOv3 Heatmap Centerline',
@@ -20,7 +19,6 @@ const METHOD_LABELS = {
 
 const METHOD_ACCENT = {
   unified:                   'accent-emerald-400',
-  astride:                   'accent-amber-400',
   opencv:                    'accent-orange-400',
   dinov3_vitb:               'accent-cyan-400',
   dinov3_heatmap_centerline: 'accent-lime-400',

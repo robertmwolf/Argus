@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 const OBB_COLOUR = '#00DCFF'        // cyan  — DINOv3 / ML
 const HEATMAP_COLOUR = '#A3E635'    // lime  — DINOv3 heatmap centerline
 const STREAKMIND_COLOUR = '#E879F9' // fuchsia — StreakMindYOLO
-const CLASSICAL_COLOUR = '#F59E0B'  // amber  — ASTRiDE / OpenCV
+const CLASSICAL_COLOUR = '#F59E0B'  // amber  — OpenCV
 const HIGHLIGHT_COLOUR = '#FF6B35'  // orange — highlighted row
 
 // ---------------------------------------------------------------------------
@@ -198,7 +198,7 @@ function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
   const individualSources = (det.sources ?? [{ method: det.method }])
     .filter(s => s.method !== 'unified')
   const isClassical = individualSources.length > 0 &&
-    individualSources.every(s => s.method === 'astride' || s.method === 'classical')
+    individualSources.every(s => s.method === 'classical' || s.method === 'opencv')
   const isStreakMind = individualSources.length > 0 &&
     individualSources.every(s => s.method === 'streakmind_yolo')
   const isHeatmap = individualSources.length > 0 &&
@@ -328,7 +328,7 @@ export default function ResultViewer({
       if ((!_hasEndpts && !_hasObb) || !isVisible(i)) return
       const indSources = (det.sources ?? [{ method: det.method }]).filter(s => s.method !== 'unified')
       const isClassical = indSources.length > 0 &&
-        indSources.every(s => s.method === 'astride' || s.method === 'classical')
+        indSources.every(s => s.method === 'classical' || s.method === 'opencv')
       const isStreakMind = indSources.length > 0 &&
         indSources.every(s => s.method === 'streakmind_yolo')
       const isHeatmap = indSources.length > 0 &&
@@ -474,10 +474,6 @@ export default function ResultViewer({
           <div className="flex items-center gap-2">
             <span className="inline-block w-6 border-t-2 border-fuchsia-400" />
             <span className="text-fuchsia-300">YOLO-OBB - GTImages</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-6 border-t-2 border-dashed border-amber-400" />
-            <span className="text-amber-300">ASTRiDE</span>
           </div>
           <div className="flex items-center gap-2 mt-0.5 pt-1.5 border-t border-slate-700">
             <span className="inline-flex items-center justify-center w-3 h-3 rounded-full bg-cyan-400 text-[7px] font-bold text-black">1</span>

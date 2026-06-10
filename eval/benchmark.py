@@ -290,7 +290,7 @@ def run_benchmark(
 # Display order (unified always first, then ML methods, then classical).
 _METHOD_ORDER = [
     "unified", "dinov3_heatmap_centerline", "dinov3_vitb", "dinov3_vitl", "tiny", "large",
-    "streakmind_yolo", "astride", "opencv", "classical", "ml",
+    "streakmind_yolo", "opencv", "classical", "ml",
 ]
 
 _METHOD_LABELS = {
@@ -300,7 +300,6 @@ _METHOD_LABELS = {
     "dinov3_vitl":             "DINOv3 ViT-L",
     "tiny":        "DINO Swin-T",
     "large":       "DINO Swin-L",
-    "astride":     "ASTRiDE",
     "opencv":      "OpenCV",
     "classical":   "Classical",
     "ml":          "ML",
@@ -409,8 +408,8 @@ def run_pipeline_predictions_all_methods(
 ) -> dict[str, list[dict]]:
     """Run the multi-method pipeline on every image in a COCO annotation file.
 
-    Loads the DINO model once, runs the full pipeline (DINO + classical +
-    ASTRiDE) on each annotated image, then extracts per-method and
+    Loads the DINO model once, runs the full pipeline (DINO + classical)
+    on each annotated image, then extracts per-method and
     unified prediction lists via ``extract_method_predictions()``.
 
     Args:

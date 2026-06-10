@@ -567,25 +567,25 @@ class TestFormatComparisonTable:
     def test_unified_appears_first(self):
         from eval.benchmark import format_comparison_table
         method_metrics = {
-            "astride": self._make_metrics(),
+            "opencv":  self._make_metrics(),
             "unified": self._make_metrics(precision=0.95),
         }
         table = format_comparison_table(method_metrics)
         unified_pos = table.index("Unified")
-        astride_pos = table.index("ASTRiDE")
-        assert unified_pos < astride_pos
+        opencv_pos = table.index("OpenCV")
+        assert unified_pos < opencv_pos
 
     def test_table_contains_all_methods(self):
         from eval.benchmark import format_comparison_table
         method_metrics = {
             "unified":     self._make_metrics(),
             "dinov3_vitb": self._make_metrics(),
-            "astride":     self._make_metrics(),
+            "opencv":      self._make_metrics(),
         }
         table = format_comparison_table(method_metrics)
         assert "Unified" in table
         assert "DINOv3 ViT-B" in table
-        assert "ASTRiDE" in table
+        assert "OpenCV" in table
 
     def test_table_contains_metric_rows(self):
         from eval.benchmark import format_comparison_table
@@ -674,7 +674,7 @@ class TestRunMultiMethodBenchmark:
         cm_dir = tmp_path / "confusion_matrices"
         assert cm_dir.exists()
         pngs = list(cm_dir.glob("confusion_matrix_*.png"))
-        assert len(pngs) == 3  # unified, dinov3_vitb, astride
+        assert len(pngs) == 3  # unified, dinov3_vitb, opencv (or similar 3 methods)
 
     def test_raises_without_predictions_or_pipeline_flag(self, tmp_path):
         from eval.benchmark import run_multi_method_benchmark

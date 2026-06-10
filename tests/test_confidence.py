@@ -59,11 +59,6 @@ class TestDetectorProfile:
         p = DetectorProfile(name="Test", precision=0.5, recall=0.5)
         assert p.confidence_ceiling is None
 
-    def test_astride_has_ceiling(self):
-        profile = DETECTOR_PROFILES["astride"]
-        assert profile.confidence_ceiling is not None
-        assert 0.0 < profile.confidence_ceiling < 1.0
-
     def test_ceiling_in_unit_interval_when_set(self):
         for key, profile in DETECTOR_PROFILES.items():
             if profile.confidence_ceiling is not None:
@@ -139,7 +134,7 @@ class TestComputeUnifiedConfidence:
         ])
         assert result["score"] == pytest.approx(0.0, abs=1e-6)
 
-    def test_low_confidence_non_astride_detector_lowers_score(self):
+    def test_low_confidence_secondary_detector_lowers_score(self):
         # Low-confidence ML detectors still provide small reliability-weighted boosts.
         # "tiny" IS in DETECTOR_PROFILES (higher weight than default); "mystery_detector" is not.
         low_known = compute_unified_confidence([
@@ -204,50 +199,8 @@ class TestComputeUnifiedConfidence:
 # ---------------------------------------------------------------------------
 
 class TestConfidenceCeiling:
-    def test_astride_only_scores_zero(self):
-        # ASTRiDE-only detections are disregarded upstream; scorer returns 0
-        # for legacy callers that still pass one through.
-        result = compute_unified_confidence([{"method": "astride", "confidence": 0.99}])
-        assert result["score"] == 0.0
-        assert result["components"] == []
-
-    def test_astride_corroborates_without_lowering_score(self):
-        single = compute_unified_confidence([{"method": "dinov3_vitb", "confidence": 0.80}])
-        with_astride = compute_unified_confidence([
-            {"method": "dinov3_vitb", "confidence": 0.80},
-            {"method": "astride", "confidence": 0.60},
-        ])
-        assert with_astride["score"] > single["score"]
-        assert with_astride["score"] >= 0.80
-
-    def test_ml_plus_high_astride_lands_near_ninety_percent(self):
-        result = compute_unified_confidence([
-            {"method": "ml", "confidence": 0.86},
-            {"method": "astride", "confidence": 0.99},
-        ])
-        assert result["score"] == pytest.approx(0.8996)
-
-    def test_astride_component_marked_corroboration_only(self):
-        result = compute_unified_confidence([
-            {"method": "dinov3_vitb", "confidence": 0.87},
-            {"method": "astride", "confidence": 0.99},
-        ])
-        comp = next(c for c in result["components"] if c["method"] == "astride")
-        assert comp["role"] == "corroboration_only"
-        assert comp["weight"] == 0.0
-
     def test_no_ceiling_detector_eff_conf_equals_raw(self):
         result = compute_unified_confidence([{"method": "dinov3_vitb", "confidence": 0.87}])
         comp = result["components"][0]
         assert comp["eff_conf"] == pytest.approx(comp["raw_conf"])
         assert comp["ceiling"] is None
-
-    def test_astride_does_not_create_divergence_penalty(self):
-        # ASTRiDE is excluded from divergence, so it cannot drag down a strong
-        # corroborated ML detection.
-        result = compute_unified_confidence([
-            {"method": "dinov3_vitb", "confidence": 0.85},
-            {"method": "astride", "confidence": 0.10},
-        ])
-        assert result["divergence"] == 0.0
-        assert result["score"] >= 0.85

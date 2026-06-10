@@ -82,24 +82,6 @@ _FAST_IMAGE_SIZE = 256
 # to at least this value so a 500 px streak stays above ~80 px after scaling.
 _MIN_INFERENCE_IMAGE_SIZE = 1280
 
-# ASTRiDE's contour finder can take minutes on full-frame 20+ MP FITS images,
-# which blocks the API worker because detector results are joined before
-# post-processing. Run it at full resolution below this cap and downsample above
-# it by default. If downsampling is disabled, ASTRiDE still runs at full
-# resolution because selecting the detector should always execute it.
-_DEFAULT_ASTRIDE_MAX_PIXELS = 8_000_000
-_DEFAULT_ASTRIDE_DOWNSAMPLE_MAX_PIXELS = 4_000_000
-_DEFAULT_ASTRIDE_DOWNSAMPLE_MIN_SCALE = 0.25
-_DEFAULT_ASTRIDE_MAX_DETECTIONS = 50
-
-# ASTRiDE is disabled by default: near-zero recall on JPEG inputs (most test
-# sets), 600+ FP detections per image on real FITS, and max corroboration boost
-# of 4 %.  Set ARGUS_ENABLE_ASTRIDE=1 or pass "astride" in enabled_detectors
-# to re-enable it for research/comparison runs.
-_ASTRIDE_ENABLED_BY_DEFAULT: bool = (
-    os.environ.get("ARGUS_ENABLE_ASTRIDE", "0").strip() not in ("", "0", "false", "False")
-)
-
 # Radon refinement is intentionally CPU-bound. With a low detector threshold a
 # noisy large frame can yield 100+ DINO boxes, turning postprocess into minutes
 # of work. Keep only the strongest DINO candidates before the expensive OBB
@@ -604,225 +586,6 @@ def _run_vits_heatmap_detector(array: "np.ndarray") -> list[dict]:
     return result
 
 
-def _downsample_fits_image_for_astride(fits_image: Any, max_pixels: int) -> tuple[Any, float]:
-    """Return a downsampled FITSImage-like object and its linear scale.
-
-    Args:
-        fits_image: Parsed FITSImage or compatible object.
-        max_pixels: Target maximum pixel count for ASTRiDE input.
-
-    Returns:
-        ``(downsampled_image, scale)`` where ``scale`` maps original pixels to
-        downsampled pixels. If downsampling is not needed, returns the original
-        image and scale 1.0.
-    """
-    import cv2
-    import numpy as np
-
-    image_pixels = int(fits_image.width_px) * int(fits_image.height_px)
-    if max_pixels <= 0 or image_pixels <= max_pixels:
-        return fits_image, 1.0
-
-    min_scale = float(os.environ.get(
-        "ASTRIDE_DOWNSAMPLE_MIN_SCALE",
-        str(_DEFAULT_ASTRIDE_DOWNSAMPLE_MIN_SCALE),
-    ))
-    scale = math.sqrt(max_pixels / image_pixels)
-    scale = max(min_scale, min(1.0, scale))
-
-    new_width = max(1, int(round(int(fits_image.width_px) * scale)))
-    new_height = max(1, int(round(int(fits_image.height_px) * scale)))
-    data = np.asarray(fits_image.data, dtype=np.float32)
-    resized = cv2.resize(
-        data,
-        (new_width, new_height),
-        interpolation=cv2.INTER_AREA,
-    ).astype(np.float32, copy=False)
-
-    downsampled = copy.copy(fits_image)
-    downsampled.data = resized
-    downsampled.width_px = new_width
-    downsampled.height_px = new_height
-    if hasattr(downsampled, "header") and downsampled.header is not None:
-        downsampled.header = downsampled.header.copy()
-        downsampled.header["NAXIS1"] = new_width
-        downsampled.header["NAXIS2"] = new_height
-
-    logger.info(
-        "Downsampled ASTRiDE input %dx%d -> %dx%d (scale=%.3f)",
-        fits_image.width_px,
-        fits_image.height_px,
-        new_width,
-        new_height,
-        scale,
-    )
-    return downsampled, scale
-
-
-def _scale_astride_detection(det: Any, scale: float) -> Any:
-    """Scale an ASTRiDE StreakDetection from downsampled to original pixels.
-
-    Args:
-        det: StreakDetection or compatible object.
-        scale: Linear scale used to downsample the input image.
-
-    Returns:
-        A detection object in original image pixel coordinates.
-    """
-    if scale == 1.0:
-        return det
-
-    scaled = copy.copy(det)
-    for attr in ("x_start", "y_start", "x_end", "y_end", "x_center", "y_center"):
-        setattr(scaled, attr, float(getattr(det, attr)) / scale)
-    scaled.length_px = float(det.length_px) / scale
-    scaled.width_px = float(det.width_px) / scale
-    scaled.area_px = float(det.area_px) / (scale * scale)
-    return scaled
-
-
-def _run_astride_detector(
-    fits_path: Path,
-    min_length_px: float = 20.0,
-    contour_threshold: float = 3.0,
-) -> list[dict]:
-    """Run the Phase-0 ASTRiDE detector on the raw FITS file.
-
-    Calls src.detection.classical_detector.detect_streaks, then converts each
-    StreakDetection to the standard pipeline dict format so it can enter the
-    shared NMS pool alongside DINO and OpenCV detections.
-
-    Args:
-        fits_path: Path to the FITS file (same path passed to run()).
-        min_length_px: Minimum streak length forwarded to ASTRiDE.
-        contour_threshold: ASTRiDE sigma threshold for contour search.
-
-    Returns:
-        Detection dicts compatible with the rest of the pipeline, each with
-        method='astride'.
-    """
-    try:
-        from src.ingest.fits_parser import parse_fits
-        from src.detection.classical_detector import detect_streaks
-    except ImportError:
-        logger.debug("ASTRiDE detector unavailable (src package not importable); skipping")
-        return []
-
-    try:
-        fits_image = parse_fits(fits_path)
-        max_pixels = int(os.environ.get("ASTRIDE_MAX_PIXELS", str(_DEFAULT_ASTRIDE_MAX_PIXELS)))
-        image_pixels = int(fits_image.width_px) * int(fits_image.height_px)
-        if max_pixels > 0 and image_pixels > max_pixels:
-            downsample_max_pixels = int(os.environ.get(
-                "ASTRIDE_DOWNSAMPLE_MAX_PIXELS",
-                str(_DEFAULT_ASTRIDE_DOWNSAMPLE_MAX_PIXELS),
-            ))
-            if downsample_max_pixels <= 0:
-                logger.warning(
-                    "Running ASTRiDE at full resolution for %s: image has %d "
-                    "pixels, above ASTRIDE_MAX_PIXELS=%d, and downsampling is "
-                    "disabled",
-                    fits_path.name,
-                    image_pixels,
-                    max_pixels,
-                )
-                astride_scale = 1.0
-            else:
-                fits_image, astride_scale = _downsample_fits_image_for_astride(
-                    fits_image,
-                    downsample_max_pixels,
-                )
-        else:
-            astride_scale = 1.0
-        streak_dets = detect_streaks(
-            fits_image,
-            contour_threshold=contour_threshold,
-            min_length_px=max(1.0, min_length_px * astride_scale),
-        )
-        streak_dets = [
-            _scale_astride_detection(d, astride_scale)
-            for d in streak_dets
-        ]
-    except Exception:
-        logger.exception("ASTRiDE detector failed on %s", fits_path)
-        return []
-
-    detections: list[dict] = []
-    for d in streak_dets:
-        aspect = d.length_px / max(d.width_px, 1.0)
-        confidence = min(0.99, max(0.2, aspect / 20.0))
-        detections.append({
-            "bbox": [
-                float(min(d.x_start, d.x_end)),
-                float(min(d.y_start, d.y_end)),
-                float(max(d.x_start, d.x_end)),
-                float(max(d.y_start, d.y_end)),
-            ],
-            "confidence": confidence,
-            "method": "astride",
-            "obb": {
-                "cx": float(d.x_center),
-                "cy": float(d.y_center),
-                "w": float(d.length_px),
-                "h": float(d.width_px),
-                "angle_deg": float(d.angle_deg),
-            },
-            "streak_length_px": float(d.length_px),
-        })
-
-    max_detections = int(os.environ.get(
-        "ASTRIDE_MAX_DETECTIONS",
-        str(_DEFAULT_ASTRIDE_MAX_DETECTIONS),
-    ))
-    if max_detections > 0 and len(detections) > max_detections:
-        before_count = len(detections)
-        detections = sorted(
-            detections,
-            key=lambda d: d.get("confidence", 0.0),
-            reverse=True,
-        )[:max_detections]
-        logger.warning(
-            "Capped ASTRiDE detections from %d to %d; set "
-            "ASTRIDE_MAX_DETECTIONS=0 to process all",
-            before_count,
-            max_detections,
-        )
-
-    logger.debug("ASTRiDE detector: %d candidate streak(s)", len(detections))
-    return detections
-
-
-def _lower_astride_only_confidence(detections: list[dict]) -> list[dict]:
-    """Set ASTRiDE-only grouped streaks to a conservative confidence.
-
-    ASTRiDE-only detections are useful enough to show, but they should not carry
-    the high aspect-ratio confidence used internally for ranking candidates.
-    Once detections have been grouped across methods, this helper can tell
-    whether an ASTRiDE candidate has independent support and lower only the
-    ASTRiDE-only groups.
-
-    Args:
-        detections: Grouped detections with ``streak_id`` and ``method`` keys.
-
-    Returns:
-        Detections with ASTRiDE-only group confidence set to 0.30.
-    """
-    methods_by_group: dict[Any, set[str]] = {}
-    for det in detections:
-        group_key = det.get("streak_id")
-        method = str(det.get("method", "")).lower()
-        methods_by_group.setdefault(group_key, set()).add(method)
-
-    lowered = 0
-    for det in detections:
-        if methods_by_group.get(det.get("streak_id"), set()) == {"astride"}:
-            det["confidence"] = 0.30
-            lowered += 1
-    if lowered:
-        logger.debug("Set %d ASTRiDE-only detection(s) to 0.30 confidence", lowered)
-    return detections
-
-
 # ---------------------------------------------------------------------------
 # Pixel → sky coordinate conversion
 # ---------------------------------------------------------------------------
@@ -1098,17 +861,6 @@ def get_detector_statuses() -> list[dict]:
             "status":  "active" if Path(entry["weights"]).exists() else "no_weights",
         })
 
-    # Classical / ASTRiDE (share the same import gate)
-    try:
-        from src.detection.classical_detector import detect_streaks as _ds  # noqa: F401
-        classical_status = "active"
-    except ImportError:
-        classical_status = "unavailable"
-
-    statuses.append({
-        "id": "astride", "name": "ASTRiDE",
-        "type": "classical", "dataset": "—", "status": classical_status,
-    })
     return statuses
 
 
@@ -1176,7 +928,7 @@ def _run_all_detectors(
 ) -> tuple[dict[str, list[dict]], dict, list[str]]:
     """Run all enabled detectors concurrently via a ThreadPoolExecutor.
 
-    DINO models and secondary detectors (classical, ASTRiDE) are
+    DINO models and secondary detectors (classical) are
     submitted in parallel.  Detectors whose ID is absent from
     *enabled_detectors* are skipped entirely (None = all enabled).
 
@@ -1190,7 +942,7 @@ def _run_all_detectors(
     Args:
         models_with_specs: List of (model, device, spec) from load_models().
         array: uint8 (H, W, 3) image pre-normalised with ``default_norm_mode``.
-        fits_path: Path to the FITS file (needed by ASTRiDE).
+        fits_path: Path to the FITS file.
         image_size: Inference resolution for DINO.
         confidence_threshold: Minimum detection score.
         tta_enabled: Whether to run 3x TTA inference for each DINO model.
@@ -1214,9 +966,6 @@ def _run_all_detectors(
     def _enabled(det_id: str) -> bool:
         if enabled_detectors is not None:
             return det_id in enabled_detectors
-        # Default (None = "all"): skip astride unless explicitly opted in.
-        if det_id == "astride":
-            return _ASTRIDE_ENABLED_BY_DEFAULT
         return True
 
     tasks: dict[Any, str] = {}
@@ -1287,11 +1036,6 @@ def _run_all_detectors(
         _heatmap_sidecar: dict[str, "np.ndarray"] = {}
 
         # Secondary detectors
-        if _enabled("astride"):
-            tasks[pool.submit(_timed_detector, "astride", _run_astride_detector, fits_path)] = "astride"
-        else:
-            results["astride"] = []
-
         if _enabled("streakmind_yolo"):
             tasks[pool.submit(_timed_detector, "streakmind_yolo", _run_streakmind_yolo_detector, array, confidence_threshold)] = "streakmind_yolo"
         else:
@@ -1389,7 +1133,7 @@ def run_with_array(
             Takes priority over ``model``/``inference_device`` when provided.
             Enables running multiple DINO checkpoints in parallel.
         enabled_detectors: Set of detector IDs to run (e.g. {"classical",
-            "astride"}).  None (default) enables all detectors.
+            "vits_heatmap"}).  None (default) enables all detectors.
         raw_mode: If True, skip Radon angle refinement, OBB extent tracing,
             per-detector NMS, and cross-detector grouping.  Every detection
             from every model is returned as a unique streak with the raw OBB
@@ -1505,7 +1249,7 @@ def run_with_array(
         _meta = {"id": model_size, "size": model_size, "label": model_size, "dataset": ""}
         _models_with_specs = [(model, inference_device, _meta)]
 
-    # Run all detectors (DINO variants + classical + ASTRiDE) in parallel.
+    # Run all detectors (DINO variants + classical) in parallel.
     all_det_results, _heatmap_sidecar, _dual_norm_ids = _run_all_detectors(
         _models_with_specs, array, fits_path, image_size,
         confidence_threshold, tta_enabled, enabled_detectors,
@@ -1539,7 +1283,6 @@ def run_with_array(
         )
 
     classical_dets = []  # OpenCV morphological detector removed
-    astride_dets   = all_det_results.get("astride", [])
 
     inference_ms = (time.perf_counter() - t1) * 1000
     logger.debug("inference_ms=%.1f  raw_dets=%d  tta=%s  threshold=%.2f",
@@ -1573,7 +1316,7 @@ def run_with_array(
                 det["obb"] = bbox_to_obb(det["bbox"], seed_angle)
             det["streak_length_px"] = float(det["obb"]["w"])
 
-        for det in classical_dets + astride_dets:
+        for det in classical_dets:
             if det.get("obb"):
                 det.setdefault("streak_length_px", float(det["obb"]["w"]))
             elif det.get("bbox"):
@@ -1582,7 +1325,7 @@ def run_with_array(
                 det["streak_length_px"] = float(det["obb"]["w"])
 
         detections = (
-            raw_dets + classical_dets + astride_dets
+            raw_dets + classical_dets
             + streakmind_yolo_dets + heatmap_dets
         )
         for idx, det in enumerate(detections):
@@ -1602,7 +1345,7 @@ def run_with_array(
             str(_DEFAULT_RADON_ANGLE_SEARCH_RANGE),
         ))
         all_ml_dets = (
-            raw_dets + classical_dets + astride_dets
+            raw_dets + classical_dets
             + streakmind_yolo_dets + heatmap_dets
         )
         for det in all_ml_dets:
@@ -1639,17 +1382,15 @@ def run_with_array(
 
         raw_dets             = nms_detections(raw_dets,             iou_threshold=0.5)
         classical_dets       = nms_detections(classical_dets,       iou_threshold=0.5)
-        astride_dets         = nms_detections(astride_dets,         iou_threshold=0.5)
         streakmind_yolo_dets  = nms_detections(streakmind_yolo_dets,  iou_threshold=0.5)
         heatmap_dets          = nms_detections(heatmap_dets,          iou_threshold=0.5)
 
         combined = (
-            raw_dets + classical_dets + astride_dets
+            raw_dets + classical_dets
             + streakmind_yolo_dets + heatmap_dets
         )
         detections = group_detections(combined, iou_threshold=0.5)
         detections = fuse_group_geometries(detections)
-        detections = _lower_astride_only_confidence(detections)
 
     postprocess_ms = (time.perf_counter() - t2) * 1000
     logger.debug("postprocess_ms=%.1f  dets=%d  raw_mode=%s", postprocess_ms, len(detections), raw_mode)
@@ -1758,7 +1499,7 @@ def run_with_array(
     )
 
     # Ensure every detection has x1/y1/x2/y2 set. Heatmap detectors set these
-    # natively; classical/ASTRiDE detectors produce OBB-only dicts so we
+    # natively; classical detectors produce OBB-only dicts so we
     # derive the endpoints here as a universal backfill.
     import math as _math
     for _det in detections:

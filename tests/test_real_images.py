@@ -165,7 +165,7 @@ class TestRealFitsLoader:
 
 @pytest.mark.real_data
 class TestRealClassicalDetector:
-    """Verify the ASTRiDE classical detector runs cleanly on real images."""
+    """Verify the classical (src/) detector runs cleanly on real images."""
 
     def test_detector_returns_list(self, real_fits_files):
         _require_real_images(real_fits_files)
@@ -180,7 +180,7 @@ class TestRealClassicalDetector:
     def test_streak_images_produce_at_least_one_detection(self, real_fits_files):
         """At least one *streak* file must yield ≥1 detection.
 
-        Classical ASTRiDE may miss faint or short synthetic streaks, so we
+        The classical detector may miss faint or short synthetic streaks, so we
         require the aggregate count across all streak-named files to be ≥ 1
         rather than requiring every individual file to produce a detection.
         """

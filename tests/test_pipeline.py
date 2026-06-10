@@ -107,11 +107,7 @@ class TestRunFastMode:
         with patch.object(pl, "_load_model", return_value=mock_model), \
              patch.object(pl, "_run_inference", return_value=list(fake_dets)), \
              patch.object(pl, "_run_classical_detector", return_value=[]), \
-             patch.object(pl, "_run_astride_detector", return_value=[]), \
-             patch.object(pl, "_run_yolo_detector", return_value=[]), \
-             patch.object(pl, "_run_yolo_full_detector", return_value=[]), \
              patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
-             patch.object(pl, "_run_heatmap_centerline_detector", return_value=[]), \
              patch.dict(os.environ, extra_env, clear=False):
             return pl.run(_SYNTH_FITS, fast=fast)
 
@@ -162,11 +158,7 @@ class TestRunFastMode:
         with patch.object(pl, "_load_model", return_value=MagicMock()), \
              patch.object(pl, "_run_inference", return_value=[]), \
              patch.object(pl, "_run_classical_detector", return_value=[classical]), \
-             patch.object(pl, "_run_astride_detector", return_value=[]), \
-             patch.object(pl, "_run_yolo_detector", return_value=[]), \
-             patch.object(pl, "_run_yolo_full_detector", return_value=[]), \
              patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
-             patch.object(pl, "_run_heatmap_centerline_detector", return_value=[]), \
              patch.dict(os.environ,
                         {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS)},
                         clear=False):
@@ -188,11 +180,7 @@ class TestRunFastMode:
         with patch.object(pl, "_load_model", return_value=MagicMock()), \
              patch.object(pl, "_run_inference", return_value=list(_FAKE_DETS[:1])), \
              patch.object(pl, "_run_classical_detector", return_value=[]), \
-             patch.object(pl, "_run_astride_detector", return_value=[]), \
-             patch.object(pl, "_run_yolo_detector", return_value=[]), \
-             patch.object(pl, "_run_yolo_full_detector", return_value=[]), \
              patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
-             patch.object(pl, "_run_heatmap_centerline_detector", return_value=[]), \
              patch.dict(os.environ,
                         {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS),
                          "FAST_MODE": "true"},
@@ -203,137 +191,10 @@ class TestRunFastMode:
 
 
 # ---------------------------------------------------------------------------
-# refine_angle NOT called in fast mode
+# Cross-ID candidate cap
 # ---------------------------------------------------------------------------
 
-class TestAstrideFiltering:
-    def test_astride_downsamples_images_above_pixel_cap(self, tmp_path):
-        import inference.pipeline as pl
-
-        fits_path = tmp_path / "large.fits"
-        fits_path.touch()
-        parsed = SimpleNamespace(
-            width_px=6248,
-            height_px=4176,
-            filepath=fits_path,
-            data=np.zeros((4176, 6248), dtype=np.float32),
-            header={"NAXIS1": 6248, "NAXIS2": 4176},
-        )
-        small_det = SimpleNamespace(
-            x_start=10.0,
-            y_start=20.0,
-            x_end=110.0,
-            y_end=40.0,
-            x_center=60.0,
-            y_center=30.0,
-            angle_deg=11.0,
-            length_px=102.0,
-            width_px=3.0,
-            area_px=306.0,
-        )
-
-        seen = {}
-
-        def fake_detect(image, contour_threshold, min_length_px):
-            seen["shape"] = image.data.shape
-            seen["width_px"] = image.width_px
-            seen["height_px"] = image.height_px
-            seen["min_length_px"] = min_length_px
-            return [small_det]
-
-        with patch("src.ingest.fits_parser.parse_fits", return_value=parsed), \
-             patch("src.detection.classical_detector.detect_streaks", side_effect=fake_detect), \
-             patch.dict(os.environ, {
-                 "ASTRIDE_MAX_PIXELS": "8000000",
-                 "ASTRIDE_DOWNSAMPLE_MAX_PIXELS": "4000000",
-             }, clear=False):
-            result = pl._run_astride_detector(fits_path)
-
-        assert seen["width_px"] < parsed.width_px
-        assert seen["height_px"] < parsed.height_px
-        assert seen["shape"] == (seen["height_px"], seen["width_px"])
-        assert seen["min_length_px"] < 20.0
-        assert len(result) == 1
-        assert result[0]["bbox"][0] > small_det.x_start
-        assert result[0]["obb"]["w"] > small_det.length_px
-
-    def test_astride_runs_full_resolution_when_downsample_disabled(self, tmp_path):
-        import inference.pipeline as pl
-
-        fits_path = tmp_path / "large.fits"
-        fits_path.touch()
-        parsed = SimpleNamespace(
-            width_px=6248,
-            height_px=4176,
-            filepath=fits_path,
-            data=np.zeros((4176, 6248), dtype=np.float32),
-            header={"NAXIS1": 6248, "NAXIS2": 4176},
-        )
-        raw = [
-            SimpleNamespace(
-                x_start=10.0,
-                y_start=20.0,
-                x_end=110.0,
-                y_end=40.0,
-                x_center=60.0,
-                y_center=30.0,
-                angle_deg=11.0,
-                length_px=102.0,
-                width_px=3.0,
-                area_px=306.0,
-            )
-        ]
-
-        with patch("src.ingest.fits_parser.parse_fits", return_value=parsed), \
-             patch("src.detection.classical_detector.detect_streaks", return_value=raw) as mock_detect, \
-             patch.dict(os.environ, {
-                 "ASTRIDE_MAX_PIXELS": "8000000",
-                 "ASTRIDE_DOWNSAMPLE_MAX_PIXELS": "0",
-             }, clear=False):
-            result = pl._run_astride_detector(fits_path)
-
-        assert len(result) == 1
-        mock_detect.assert_called_once()
-        image_arg = mock_detect.call_args.args[0]
-        assert image_arg.width_px == parsed.width_px
-        assert image_arg.height_px == parsed.height_px
-
-    def test_astride_detection_cap_limits_candidates(self, tmp_path):
-        import inference.pipeline as pl
-
-        fits_path = tmp_path / "small.fits"
-        fits_path.touch()
-        parsed = SimpleNamespace(
-            width_px=200,
-            height_px=200,
-            filepath=fits_path,
-            data=np.zeros((200, 200), dtype=np.float32),
-            header={"NAXIS1": 200, "NAXIS2": 200},
-        )
-        raw = [
-            SimpleNamespace(
-                x_start=float(i),
-                y_start=0.0,
-                x_end=float(i + 20),
-                y_end=1.0,
-                x_center=float(i + 10),
-                y_center=0.5,
-                angle_deg=0.0,
-                length_px=20.0,
-                width_px=float(10 - i),
-                area_px=20.0,
-            )
-            for i in range(8)
-        ]
-
-        with patch("src.ingest.fits_parser.parse_fits", return_value=parsed), \
-             patch("src.detection.classical_detector.detect_streaks", return_value=raw), \
-             patch.dict(os.environ, {"ASTRIDE_MAX_DETECTIONS": "3"}, clear=False):
-            result = pl._run_astride_detector(fits_path)
-
-        assert len(result) == 3
-        assert result[0]["confidence"] >= result[-1]["confidence"]
-
+class TestCrossIdCap:
     def test_crossid_candidate_cap_limits_identification_work(self):
         import inference.crossid as crossid
         import inference.pipeline as pl
@@ -355,11 +216,7 @@ class TestAstrideFiltering:
         with patch.object(pl, "_load_model", return_value=MagicMock()), \
              patch.object(pl, "_run_inference", return_value=raw_dets), \
              patch.object(pl, "_run_classical_detector", return_value=[]), \
-             patch.object(pl, "_run_astride_detector", return_value=[]), \
-             patch.object(pl, "_run_yolo_detector", return_value=[]), \
-             patch.object(pl, "_run_yolo_full_detector", return_value=[]), \
              patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
-             patch.object(pl, "_run_heatmap_centerline_detector", return_value=[]), \
              patch.object(pl, "_pixel_to_sky", return_value=(10.0, 20.0)), \
              patch.object(pp, "refine_angle", return_value=0.0), \
              patch.object(crossid, "cross_identify", side_effect=_mark_identified) as mock_crossid, \

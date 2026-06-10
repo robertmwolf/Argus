@@ -128,6 +128,68 @@ Recent API/FITS loader coverage to preserve:
 
 ---
 
+## Canonical Model Evaluation Standard (all runs from Run 15 onward)
+
+Every model run is evaluated with `eval/geometry_metrics.py`.  This is the
+**only** metric that allows apples-to-apples comparison across runs.
+
+### Three-tier evaluation
+
+**Tier 1 — Detection** (`tier1_detection`)
+Did the model find the streak at all?  A prediction "finds" a GT streak when:
+- The predicted OBB centre projects onto the GT centerline segment (t ∈ [0, 1])
+- The perpendicular distance to that centreline ≤ `perp_threshold_px` (default 10 px)
+
+The strict no-buffer rule is intentional: a prediction whose centre lands off the
+end of the streak cannot be recovered by Radon or endpoint refinement.
+
+Reports: `detection_recall`, `detection_precision`, per-band (short/medium/long).
+
+**Tier 2 — Raw geometry** (`tier2_raw_geometry`)
+For each Tier-1 matched pair: angular error (mod 180°) and mean endpoint error
+between the model's raw OBB and the GT streak.
+
+Reports: `mean/median/p90` for `angle_err_deg` and `endpoint_err_px`, per-band.
+
+**Tier 3 — Refined geometry** (`tier3_refined_geometry`)
+Same geometry metrics after Radon angle refinement + OBB endpoint extension.
+Requires raw FITS images (`--images-dir`).  The delta vs Tier 2 quantifies the
+value of post-processing.
+
+Reports: same as Tier 2 plus `angle_improvement_deg`, `endpoint_improvement_px`.
+
+### Running the evaluation
+
+```bash
+# Tier 1 + 2 only (fast, no GPU, works offline):
+python -m eval.geometry_metrics \
+    --predictions results/run15_vits/t0.50/predictions.json \
+    --annotations data/annotations/val_atwood.json \
+    --output results/run15_vits/geometry_eval.json
+
+# Tier 1 + 2 + 3 (needs raw FITS images):
+python -m eval.geometry_metrics \
+    --predictions results/run15_vits/t0.50/predictions.json \
+    --annotations data/annotations/val_atwood.json \
+    --images-dir data/raw \
+    --output results/run15_vits/geometry_eval.json
+```
+
+Save the output JSON to `results/<run_name>/geometry_eval.json` so runs can be
+compared side-by-side.
+
+### What the numbers diagnose
+
+| Symptom | Likely root cause |
+|---|---|
+| Low Tier-1 recall | Threshold too high, or backbone can't activate on streaks |
+| Good Tier-1, large Tier-2 angle err | Head not learning OBB orientation |
+| Large Tier-2 angle, small Tier-3 angle | Radon doing heavy lifting — model angle is noisy but fixable |
+| Large Tier-3 endpoint err | Endpoint tracing is the weak link, not angle |
+| Short streaks only fail Tier 1 | Tile size / resolution issue |
+
+---
+
 ## Baseline Metrics Collection — Week 4
 
 The end-to-end test in `tests/test_end_to_end.py` must:

@@ -288,7 +288,7 @@ async def test_full_upload_poll_result_cycle(client, tmp_path):
     # Top-level method is always "unified"; individual method is in sources
     assert det["method"] == "unified"
     # A single detector keeps its own confidence; reliability weights only
-    # affect corroboration boosts from additional non-ASTRiDE detectors.
+    # affect corroboration boosts from additional detectors.
     assert det["confidence"] == pytest.approx(0.92)
     sources = det["sources"]
     assert sources[0]["method"] == "unified"

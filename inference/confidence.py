@@ -6,11 +6,9 @@ Replaces the plain Noisy-OR formula with an F-beta weighted corroboration score 
   1. Uses the best detector confidence as the score floor
   2. Weights corroborating detectors by their empirical F-0.5 score
   3. Caps each detector's effective confidence at an optional ceiling (for
-     detectors whose raw confidence magnitude is miscalibrated, e.g. ASTRiDE)
+     detectors whose raw confidence magnitude is miscalibrated)
   4. Tempers the corroboration boost when detectors strongly disagree
-  5. Treats ASTRiDE as corroboration-only: it cannot create a standalone
-     streak confidence and can only add a small boost to non-ASTRiDE detections.
-  6. Applies per-band reliability weights when streak_band is provided so that
+  5. Applies per-band reliability weights when streak_band is provided so that
      detectors dominant in specific length ranges contribute proportionally more.
 
 The score represents how confident we can be that a detection is a real streak,
@@ -166,19 +164,6 @@ DETECTOR_PROFILES: dict[str, DetectorProfile] = {
         recall=0.75,
         notes="est. pre-Phase D",
     ),
-    # ASTRiDE classical: near-zero recall in practice (classical contour detector).
-    # Precision ~1-5% measured via OpenCV proxy in multi_method_benchmark.
-    # Confidence magnitude is unreliable (aspect-ratio derived, not ML); ceiling
-    # caps its effective contribution regardless of raw score.
-    # Treated as corroboration-only in compute_unified_confidence.
-    "astride": DetectorProfile(
-        name="ASTRiDE",
-        precision=0.03,
-        recall=0.03,
-        confidence_ceiling=0.45,
-        notes="near-zero measured recall; ceiling retained because raw confidence "
-              "is aspect-ratio derived and uncalibrated",
-    ),
 }
 
 # Default for any method not in DETECTOR_PROFILES.
@@ -189,10 +174,6 @@ _DEFAULT_PROFILE = DetectorProfile(
     notes="default — no benchmark data",
 )
 
-_ASTRIDE_METHODS = {"astride"}
-_ASTRIDE_MAX_CORROBORATION_BOOST = 0.04
-
-
 def _get_profile(method: str) -> DetectorProfile:
     return DETECTOR_PROFILES.get(method, _DEFAULT_PROFILE)
 
@@ -201,7 +182,7 @@ def _confidence_floor_with_corroboration(
     sources: list[dict],
     streak_band: str | None = None,
 ) -> dict:
-    """Compute confidence for non-ASTRiDE detector outputs.
+    """Compute confidence from multiple detector outputs.
 
     The strongest detector keeps its own effective confidence. Additional
     detectors contribute reliability-weighted corroboration into the remaining
@@ -286,18 +267,10 @@ def compute_unified_confidence(
       4. corroboration = 1 - Π(1 - w_i × eff_i)               -- for non-best detectors
       5. score = baseline + remaining confidence mass × corroboration
 
-    ASTRiDE is special-cased as corroboration-only.  An ASTRiDE-only source list
-    returns score 0.0 because those candidates should be dropped upstream.  When
-    ASTRiDE overlaps another detector, it is excluded from non-ASTRiDE
-    corroboration and divergence so it cannot drag a score down.
-    Instead, its raw confidence adds at most a small boost to the best
-    non-ASTRiDE raw confidence.  For example, ML 0.86 plus ASTRiDE 0.99
-    yields roughly 0.90.
-
-    A single non-ASTRiDE detector keeps its own effective confidence. Multiple
-    agreeing detectors push the score toward 1, with empirical precision/recall
-    (and optional per-band weights) controlling how much corroborating detectors
-    can boost the baseline.
+    A single detector keeps its own effective confidence. Multiple agreeing
+    detectors push the score toward 1, with empirical precision/recall (and
+    optional per-band weights) controlling how much corroborating detectors can
+    boost the baseline.
 
     Args:
         sources: List of ``{"method": str, "confidence": float}`` dicts from one
@@ -321,44 +294,7 @@ def compute_unified_confidence(
     if not detector_sources:
         return {"score": 0.0, "components": [], "divergence": 0.0, "fn_penalty": 0.0}
 
-    non_astride_sources = [
-        s for s in detector_sources
-        if str(s.get("method", "")).lower() not in _ASTRIDE_METHODS
-    ]
-    astride_sources = [
-        s for s in detector_sources
-        if str(s.get("method", "")).lower() in _ASTRIDE_METHODS
-    ]
-
-    if not non_astride_sources:
-        return {"score": 0.0, "components": [], "divergence": 0.0, "fn_penalty": 0.0}
-
-    result = _confidence_floor_with_corroboration(non_astride_sources, streak_band)
-    if not astride_sources:
-        return result
-
-    best_non_astride_conf = max(float(s.get("confidence", 0.0)) for s in non_astride_sources)
-    best_astride_conf = max(float(s.get("confidence", 0.0)) for s in astride_sources)
-    corroborated_score = min(
-        0.99,
-        best_non_astride_conf + _ASTRIDE_MAX_CORROBORATION_BOOST * best_astride_conf,
-    )
-    result["score"] = round(max(result["score"], corroborated_score), 6)
-
-    for src in astride_sources:
-        raw_conf = float(src.get("confidence", 0.0))
-        result["components"].append({
-            "method": src.get("method", ""),
-            "raw_conf": raw_conf,
-            "eff_conf": round(raw_conf, 4),
-            "weight": 0.0,
-            "contribution": round(_ASTRIDE_MAX_CORROBORATION_BOOST * raw_conf, 4),
-            "ceiling": DETECTOR_PROFILES["astride"].confidence_ceiling,
-            "streak_band": streak_band,
-            "role": "corroboration_only",
-        })
-
-    return result
+    return _confidence_floor_with_corroboration(detector_sources, streak_band)
 
 
 if __name__ == "__main__":
@@ -366,11 +302,6 @@ if __name__ == "__main__":
     examples = [
         ("Single DINOv3 multisource (conf=0.91)", [
             {"method": "dinov3_vitb_multisource", "confidence": 0.91}]),
-        ("ASTRiDE-only high-conf FP is disregarded", [{"method": "astride", "confidence": 0.99}]),
-        ("DINOv3 multisource + ASTRiDE corroboration", [
-            {"method": "dinov3_vitb_multisource", "confidence": 0.90},
-            {"method": "astride", "confidence": 0.99},
-        ]),
         ("Passes through old unified entry", [
             {"method": "unified", "confidence": 0.88},
             {"method": "tiny", "confidence": 0.75},
