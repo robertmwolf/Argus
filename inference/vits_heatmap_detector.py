@@ -158,7 +158,8 @@ def run_vits_heatmap_detector(
             d["method"] = "vits_heatmap"
         return dets
 
-    from inference.tiled_pipeline import tile_image, _torchvision_nms, _numpy_nms
+    from inference.tiled_pipeline import tile_image
+    from inference.postprocess import nms_detections
 
     all_dets: list[dict[str, Any]] = []
     for tile, x0, y0 in tile_image(array, native_tile_size, tile_overlap):
@@ -171,24 +172,9 @@ def run_vits_heatmap_detector(
     if len(all_dets) <= 1:
         return all_dets
 
-    preds_xywh = [
-        {
-            "bbox":        [d["bbox"][0], d["bbox"][1],
-                            d["bbox"][2] - d["bbox"][0],
-                            d["bbox"][3] - d["bbox"][1]],
-            "score":       float(d["confidence"]),
-            "category_id": 1,
-        }
-        for d in all_dets
-    ]
-    try:
-        kept = _torchvision_nms(preds_xywh, iou_threshold=0.3)
-    except Exception:
-        kept = _numpy_nms(preds_xywh, iou_threshold=0.3)
-
-    result = [all_dets[i] for i in kept]
+    result = nms_detections(all_dets)
     logger.debug(
-        "ViT-S heatmap (tiled): %d raw → %d after NMS", len(all_dets), len(result)
+        "ViT-S heatmap (tiled): %d raw → %d after segment NMS", len(all_dets), len(result)
     )
     return result
 
@@ -233,7 +219,8 @@ def run_vits_heatmap_detector_and_heatmap(
         heat_full = heat_tile
         return dets, heat_full
 
-    from inference.tiled_pipeline import tile_image, _torchvision_nms, _numpy_nms
+    from inference.tiled_pipeline import tile_image
+    from inference.postprocess import nms_detections
 
     all_dets: list[dict[str, Any]] = []
     for tile, x0, y0 in tile_image(array, native_tile_size, tile_overlap):
@@ -256,19 +243,4 @@ def run_vits_heatmap_detector_and_heatmap(
     if len(all_dets) <= 1:
         return all_dets, heat_full
 
-    preds_xywh = [
-        {
-            "bbox":        [d["bbox"][0], d["bbox"][1],
-                            d["bbox"][2] - d["bbox"][0],
-                            d["bbox"][3] - d["bbox"][1]],
-            "score":       float(d["confidence"]),
-            "category_id": 1,
-        }
-        for d in all_dets
-    ]
-    try:
-        kept = _torchvision_nms(preds_xywh, iou_threshold=0.3)
-    except Exception:
-        kept = _numpy_nms(preds_xywh, iou_threshold=0.3)
-
-    return [all_dets[i] for i in kept], heat_full
+    return nms_detections(all_dets), heat_full
