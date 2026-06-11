@@ -63,6 +63,73 @@ Progress:
 
 ## Next Steps
 
+### Run 17 — YOLO11s-OBB detector (ready to train, 2026-06-10)
+
+**Goal:** Train a YOLO11s-OBB streak detector on the Run 15 distribution (real Atwood
+FITS + synthetic short/medium NPY) for fast single-stage inference.
+
+**Dataset:** `/Volumes/External/TrainingData/yolo_run17_dataset/`
+- 103,516 PNG tiles (400px, zscore→uint8 3ch) + DOTA polygon OBB labels
+- Label format: `class x1 y1 x2 y2 x3 y3 x4 y4` (9 fields, corners normalised [0,1])
+- Active yaml: `dataset_10pct_bg.yaml` — 21,432 positive + 2,143 background tiles (10% bg)
+- Export script: `scripts/export_yolo_obb_dataset.py` (DOTA format, OBB clipping)
+
+**Pretrained weights:** `weights/yolo11s-obb.pt` (move from repo root after first run)
+
+**Training command (run from repo root):**
+```bash
+# Stage images to internal SSD first for speed (~10GB, fits in 100GB budget)
+python scripts/stage_yolo_dataset_ssd.py   # TODO: create this helper
+
+# Then train
+nohup /Users/robert/miniconda3/envs/satid/bin/python -c "
+from ultralytics import YOLO
+model = YOLO('weights/yolo11s-obb.pt')
+model.train(
+    task='obb',
+    data='/tmp/yolo_run17_ssd.yaml',      # points to /tmp/yolo_run17/images/
+    imgsz=416, epochs=50, batch=4, device='mps', workers=2,
+    cos_lr=True, degrees=10, hsv_s=0, hsv_h=0,
+    project='weights/yolo_run17', name='run',
+    exist_ok=True, patience=15, save_period=5, cache=True,
+)
+" > /tmp/yolo_run17_train.log 2>&1 &
+```
+
+**Critical setup notes (do not skip):**
+
+1. **SSD staging required.** Images on external drive give ~4.5h/epoch; SSD gives ~80min/epoch.
+   Staging structure must have `/images/` as a path component — ultralytics auto-detects
+   labels by replacing `/images/` with `/labels/` in the path.
+   Correct: `/tmp/yolo_run17/images/train/` → `/tmp/yolo_run17/labels/train/`
+   Wrong: `/tmp/yolo_run17_images/train/` (labels never found, instances=0 every batch)
+
+2. **MPS bug patch (torch 2.11).** `batch_idx.unique(return_counts=True)` on MPS returns
+   garbage counts. Patch already applied to ultralytics loss.py:
+   ```python
+   # loss.py ~line 996 — already patched, verify before training:
+   _, counts = batch_idx.cpu().unique(return_counts=True)  # .cpu(): MPS unique returns garbage
+   max_count = int(counts.max().item())
+   counts = counts.to(dtype=torch.int32).to(device=self.device)
+   out = torch.zeros(batch_size, max_count, 6, device=self.device)
+   ```
+   Verify with: `grep -A3 "cpu().unique" .../ultralytics/utils/loss.py`
+   If patch is missing (e.g. after ultralytics upgrade), re-apply before training.
+
+3. **imgsz must be divisible by 32.** Use 416, not 400.
+
+4. **workers=0 causes ~4× slowdown** vs workers=2 on MPS. Use workers=2.
+
+**Expected performance:** ~80 min/epoch on M3 MPS with SSD staging + workers=2 + cache=True.
+20 epochs ≈ 27h. Consider running 50 epochs overnight.
+
+**Success gate:** mAP50 > 0.50 on val set. Compare short/medium/long recall against Run 15
+ViT-S heatmap baseline (short=0%, medium=8.3%, long=20.9%).
+
+**Cleanup after training:**
+- Move `yolo11s-obb.pt` from repo root → `weights/yolo11s-obb.pt`
+- Delete SSD staging dir `/tmp/yolo_run17/`
+
 ### Run 17 — ViT-B frozen heatmap (in progress, 2026-06-09)
 
 **Goal:** Establish whether ViT-B's richer 768-dim features improve on ViT-S frozen
@@ -183,22 +250,46 @@ distributions in ways that break the threshold logic.
 
 ## Dataset & File Naming Convention
 
+**Full reference:** `agent_docs/dataset_naming.md` — read it before creating any new dataset.
+
 **Rule:** A `runN` prefix belongs only on artifacts that are *ephemeral to that specific run*
 and will not be reused — cached feature tiles, model weights, eval results.
 Stable, reusable datasets get content-based names with no run number.
 
-**Canonical dataset names** (external drive `annotations/` and local `data/annotations/`):
+### Full-frame source datasets  (`annotations/` directory)
 
-| File | What it contains |
+| Current file | Annotations | Canonical name (use at next edit) |
+|---|---|---|
+| `val_run17_fits.json` | 1 156 | `val_atwood_v2.json` ← **use this for all current val work** |
+| `val_atwood.json` | 228 | `val_atwood_v1.json` (older labelling, same 240 images) |
+| `test_atwood.json` | 228 | `test_atwood_v1.json` |
+
+Training source files have not yet been migrated to canonical names.
+Current run-scoped files and their canonical equivalents (create at **Run 18**, not before):
+
+| Current file | Canonical name |
 |---|---|
-| `train_real_atwood.json` | All real Atwood FITS training images (full-frame, 6248×4176) |
-| `train_real_frigate.json` | All Frigate manual annotations |
-| `train_synth_short_npy.json` | Synthetic short-streak NPY tiles (used by `generate_synthetic_streaks.py`) |
-| `train_synth_medium_npy.json` | Synthetic medium-streak NPY tiles |
-| `val_real_atwood.json` | Real Atwood val split (full-frame FITS) |
-| `test_real_atwood.json` | Held-out test split — do not use for hyperparam tuning |
+| `all_train_run17_merged.json` | `train_atwood_frigate_synth_v1.json` |
+| `all_train_run5_tiled_ts1800.json` (de-tiled Atwood source) | `train_atwood_v1.json` |
+| `frigate_streaks.json` | `train_frigate_v1.json` |
+| `synth_run13_short_npy.json` | `train_synth_short_v1.json` |
+| `synth_run13_medium_npy.json` | `train_synth_medium_v1.json` |
 
-**Canonical NPY directories** (external drive) — for synthetic streak generation only:
+The merge script (`build_run17_annotations.py`) should become a non-run-scoped
+`build_train_annotation.py` that accepts `--output` and writes to the canonical name.
+Do this at Run 18 — the current run-scoped file is fine for Run 17.
+
+### Tiled eval datasets  (self-contained directories at `/Volumes/External/TrainingData/`)
+
+| Directory | Source | Context tiles | Total tiles | Notes |
+|---|---|---|---|---|
+| `val_atwood_near_ctx_t400_c4_v1/` | `val_run17_fits.json` | 4 | ~5 424 | **Current recommended fast eval** |
+
+Build with `scripts/build_tiled_val_annotation.py`.  Evaluate **without** `--tiled`
+(each NPY is already a 400-px crop).  See `agent_docs/dataset_naming.md` for full
+tile-count table and rebuild command.
+
+### Canonical NPY directories  (external drive) — synthetic streak generation only
 
 | Directory | Contents |
 |---|---|
@@ -211,20 +302,21 @@ Stable, reusable datasets get content-based names with no run number.
 composite synthetic streaks). `scripts/convert_tiles_to_npy.py` is therefore
 **legacy for pipeline use** — keep it only to support synthetic data generation.
 
-**Run-scoped names are correct for:**
+### Run-scoped names are correct for
+
 - `weights/runN_*/` — model checkpoints
 - `results/runN_*/` — eval metrics and threshold sweeps
 - `/tmp/argus_runN_cache/` — feature tile caches (deleted after training)
 - `yolo_runN_dataset/` — YOLO-format exports for a specific training run
 - `all_train_runN_npy.json` etc. — intermediate merged annotations generated during a run
-  (these should be replaced with canonical sources for the next run; delete when stale)
+  (replace with canonical sources for the next run; delete when stale)
 
-**When starting a new training run:**
+### When starting a new training run
+
 1. Draw from canonical source annotations, not from `*_runN_*` intermediate files.
-2. Name any new merged/filtered annotation you create after its *content*, not the run
-   (e.g. `train_real_atwood_frigate.json`, not `all_train_run17_npy.json`).
-3. If you need to add synthetic data generated during this run, create it under
-   `argus_synth_npy/<type>/` and register it in a canonical annotation file.
+2. Name any new merged/filtered annotation after its *content*, not the run.
+3. If you need to add synthetic data, create it under `argus_synth_npy/<type>/`
+   and register it in a canonical annotation file.
 
 **Legacy files** (`all_train_run13_npy.json`, `synth_run13_short_npy.json`, etc.) exist from
 before this convention was established.  Do not create new files following the old pattern.
@@ -247,6 +339,7 @@ Always read the relevant agent_docs file before writing code:
 - `agent_docs/dinov3_plan.md`        — DINOv3 backbone integration plan and phase status
 - `agent_docs/datasets.md`           — where to get test data, download links
 - `agent_docs/dependencies.md`       — exact packages, versions, install commands
+- `agent_docs/dataset_naming.md`     — naming & versioning schema for all datasets (read before creating any annotation)
 - `agent_docs/test_strategy.md`      — how to measure and record baseline accuracy
 - `agent_docs/spacetrack.md`         — Space-Track API policy, TLE catalog setup, rate limits
 - `agent_docs/Training_Handoff.md`   — Phase D training: Route 1 (RTX 5070 Ti workstation) and Route 2 (RTX 4090 cloud rental)
