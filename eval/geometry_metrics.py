@@ -528,7 +528,6 @@ def _load_ground_truth(annotations_path: Path) -> list[dict]:
     with open(annotations_path) as f:
         coco = json.load(f)
 
-    id_to_filename = {img["id"]: img["file_name"] for img in coco["images"]}
     ground_truth: list[dict] = []
     for ann in coco["annotations"]:
         if ann.get("iscrowd", 0):
@@ -550,7 +549,7 @@ def _load_ground_truth(annotations_path: Path) -> list[dict]:
                 continue
             cx, cy, w, h, ang = [float(v) for v in obb_raw[:5]]
         ground_truth.append({
-            "image_id": id_to_filename.get(ann["image_id"], str(ann["image_id"])),
+            "image_id": str(ann["image_id"]),
             "obb": {"cx": cx, "cy": cy, "w": w, "h": h, "angle_deg": ang},
             "streak_length_px": max(w, h),
         })
