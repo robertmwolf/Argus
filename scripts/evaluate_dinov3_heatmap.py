@@ -238,6 +238,10 @@ def main() -> int:
                         help="Max gap in px between collinear fragments to merge (default: 400).")
     parser.add_argument("--stitch-max-growth-ratio", type=float, default=3.0,
                         help="Max merged-span / longer-input-span ratio for stitching (default: 3.0).")
+    parser.add_argument("--pretiled", action="store_true",
+                        help="Annotation contains pre-tiled crops at the model's native tile size "
+                             "(e.g. val_atwood_near_ctx_t400_c4_v1). Suppresses the image_size<600 "
+                             "warning — tiles are already at training scale so letterbox is correct.")
     parser.add_argument("--scales", type=int, nargs="+", default=None, metavar="PX",
                         help="Run multi-scale inference at these native tile sizes (px) and "
                              "merge via NMS.  Implies --tiled.  Example: --scales 1800 518 110. "
@@ -266,7 +270,7 @@ def main() -> int:
         # <2 feature patches in the resized image, producing blob OBBs that fail all
         # IoU thresholds.  This is a measurement error, not a model failure.
         # The rule: if cache image_size < 600 px, always pass --tiled.
-        if not args.tiled and image_size < 600:
+        if not args.tiled and not args.pretiled and image_size < 600:
             logger.warning(
                 "WARNING: evaluating a heatmap checkpoint cached at %d px without "
                 "--tiled. Medium-band recall will be artificially near zero because "
@@ -359,6 +363,14 @@ def main() -> int:
             except Exception as exc:
                 logger.warning("Could not load %s: %s", img_path, exc)
                 continue
+            # Crop to the annotation window if tile_origin is present.
+            # GT coordinates are tile-local so inference must run in the same space.
+            tile_origin = meta.get("tile_origin")
+            if tile_origin is not None:
+                x0, y0 = int(tile_origin[0]), int(tile_origin[1])
+                crop_w = int(meta.get("width",  arr.shape[1]))
+                crop_h = int(meta.get("height", arr.shape[0]))
+                arr = arr[y0:y0 + crop_h, x0:x0 + crop_w]
             dets = _run_tiled(arr)
             if args.stitch and len(dets) > 1:
                 # stitch_collinear_fragments expects bbox=[x,y,w,h] and "score".
