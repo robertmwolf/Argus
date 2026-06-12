@@ -13,16 +13,16 @@ from typing import Any
 import numpy as np
 import torch
 from scipy import ndimage
-from skimage.transform import radon
 from torch.utils.data import DataLoader
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from eval.metrics import evaluate
+from eval.streak_metrics import evaluate_segments
+from inference.convnext_heatmap_detector import _component_to_segment
 from inference.device import get_device
-from inference.fits_loader import FITSLoader
+from inference.streak_segment import obb_to_segment
 from models.plain_dinov3.streak_heatmap import (
     ConvNeXtStreakHeatmap,
     DINOv3StreakHeatmap,
@@ -35,52 +35,6 @@ from training.train_dinov3_heatmap_cached import HeatmapHead
 logger = logging.getLogger(__name__)
 
 
-def _component_to_obb(
-    mask: np.ndarray,
-    score_map: np.ndarray,
-    patch_size: int,
-    geometry_map: np.ndarray | None = None,
-    image_size: int | None = None,
-) -> dict[str, Any] | None:
-    ys, xs = np.nonzero(mask)
-    if len(xs) < 2:
-        return None
-    pts = np.column_stack([(xs + 0.5) * patch_size, (ys + 0.5) * patch_size]).astype(np.float32)
-    center = pts.mean(axis=0)
-    cov = np.cov((pts - center).T)
-    vals, vecs = np.linalg.eigh(cov)
-    order = np.argsort(vals)[::-1]
-    major = vecs[:, order[0]]
-    minor = vecs[:, order[1]]
-    rel = pts - center
-    along = rel @ major
-    across = rel @ minor
-    length = max(float(along.max() - along.min()) + patch_size, patch_size)
-    width = max(float(across.max() - across.min()) + patch_size, patch_size)
-    angle = math.degrees(math.atan2(float(major[1]), float(major[0]))) % 180.0
-    if geometry_map is not None and image_size is not None:
-        geom_vals = geometry_map[:, mask]
-        if geom_vals.shape[1] > 0:
-            cos2 = float(geom_vals[0].mean())
-            sin2 = float(geom_vals[1].mean())
-            if abs(cos2) + abs(sin2) > 1e-3:
-                angle = (0.5 * math.degrees(math.atan2(sin2, cos2))) % 180.0
-            length = max(float(geom_vals[2].mean()) * image_size, patch_size)
-            width = max(float(geom_vals[3].mean()) * image_size, patch_size)
-    confidence = float(score_map[mask].mean())
-    return {
-        "confidence": confidence,
-        "obb": {
-            "cx": float(center[0]),
-            "cy": float(center[1]),
-            "w": length,
-            "h": width,
-            "angle_deg": angle,
-        },
-        "streak_length_px": length,
-    }
-
-
 def heatmap_to_detections(
     probs: np.ndarray,
     image_id: int,
@@ -90,125 +44,60 @@ def heatmap_to_detections(
     image_size: int,
     letterbox: tuple[float, float, float],
     geometry_map: np.ndarray | None = None,
-    image_array: np.ndarray | None = None,
-    refine_geometry: bool = True,
 ) -> list[dict[str, Any]]:
-    """Convert one heatmap to ARGUS-style detection dictionaries."""
+    """Convert one heatmap to segment-based detection dicts (x1, y1, x2, y2)."""
     binary = probs >= threshold
     labels, n_labels = ndimage.label(binary)
+    scale, pad_x, pad_y = letterbox
     detections: list[dict[str, Any]] = []
     for label_id in range(1, n_labels + 1):
         mask = labels == label_id
         if int(mask.sum()) < min_pixels:
             continue
-        det = _component_to_obb(mask, probs, patch_size, geometry_map=geometry_map, image_size=image_size)
+        det = _component_to_segment(mask, probs, patch_size, geometry_map, image_size)
         if det is None:
             continue
-        scale, pad_x, pad_y = letterbox
-        obb = det["obb"]
-        obb["cx"] = (obb["cx"] - pad_x) / scale
-        obb["cy"] = (obb["cy"] - pad_y) / scale
-        obb["w"] /= scale
-        obb["h"] /= scale
-        det["streak_length_px"] = max(float(obb["w"]), float(obb["h"]))
-        if refine_geometry and image_array is not None:
-            _refine_detection_geometry(det, image_array)
+        # Unscale from letterbox canvas to source-tile pixels
+        det["x1"] = (det["x1"] - pad_x) / scale
+        det["y1"] = (det["y1"] - pad_y) / scale
+        det["x2"] = (det["x2"] - pad_x) / scale
+        det["y2"] = (det["y2"] - pad_y) / scale
+        det["streak_length_px"] = math.sqrt(
+            (det["x2"] - det["x1"]) ** 2 + (det["y2"] - det["y1"]) ** 2
+        )
         det["image_id"] = image_id
+        # Drop the obb field — segment representation is canonical
+        det.pop("obb", None)
         detections.append(det)
     return detections
 
 
-def _refine_detection_geometry(det: dict[str, Any], image_array: np.ndarray) -> None:
-    """Refine component OBB angle and length using original-image pixels."""
-    obb = det["obb"]
-    h, w = image_array.shape[:2]
-    cx = float(np.clip(obb["cx"], 0, max(w - 1, 0)))
-    cy = float(np.clip(obb["cy"], 0, max(h - 1, 0)))
-    half = max(float(obb["w"]), float(obb["h"]), 64.0) / 2.0 + 24.0
-    half = min(half, 384.0)
-    x1 = int(max(0, math.floor(cx - half)))
-    x2 = int(min(w, math.ceil(cx + half)))
-    y1 = int(max(0, math.floor(cy - half)))
-    y2 = int(min(h, math.ceil(cy + half)))
-    crop = image_array[y1:y2, x1:x2]
-    if crop.size == 0 or min(crop.shape[:2]) < 8:
-        return
-    gray = crop[..., 0].astype(np.float32) if crop.ndim == 3 else crop.astype(np.float32)
-    gray = gray - float(np.median(gray))
-    gray[gray < 0] = 0
-    if float(gray.max()) <= 0:
-        return
-    step = 1
-    if max(gray.shape[:2]) > 512:
-        step = int(math.ceil(max(gray.shape[:2]) / 512))
-        gray = gray[::step, ::step]
-
-    seed = float(obb.get("angle_deg", 0.0))
-    theta = (90.0 - np.arange(seed - 25.0, seed + 25.0, 2.0)) % 180.0
-    sinogram = radon(gray, theta=theta, circle=False)
-    variances = sinogram.var(axis=0)
-    best_theta = float(theta[int(np.argmax(variances))])
-    angle = (90.0 - best_theta) % 180.0
-    obb["angle_deg"] = angle
-
-    ux, uy = math.cos(math.radians(angle)), math.sin(math.radians(angle))
-    yy, xx = np.nonzero(gray > max(float(gray.mean() + gray.std()), float(np.percentile(gray, 95))))
-    if len(xx) >= 2:
-        pts_x = xx.astype(np.float32) * step + x1
-        pts_y = yy.astype(np.float32) * step + y1
-        along = (pts_x - cx) * ux + (pts_y - cy) * uy
-        across = np.abs(-(pts_x - cx) * uy + (pts_y - cy) * ux)
-        keep = across <= max(float(obb["h"]), 8.0)
-        if int(keep.sum()) >= 2:
-            along_kept = along[keep]
-            obb["w"] = max(float(along_kept.max() - along_kept.min()), float(obb["w"]))
-            obb["h"] = max(float(np.percentile(across[keep], 90) * 2.0), 4.0)
-            det["streak_length_px"] = float(obb["w"])
-
-
 def coco_ground_truth(annotation_file: Path) -> list[dict[str, Any]]:
-    """Read COCO annotations into ARGUS metric ground truth format."""
+    """Read COCO annotations into segment-based ground truth format."""
     coco = json.loads(annotation_file.read_text())
-    id_to_file = {int(img["id"]): img["file_name"] for img in coco.get("images", [])}
-    _ = id_to_file
     gts: list[dict[str, Any]] = []
     for ann in coco.get("annotations", []):
         image_id = int(ann["image_id"])
-        obb = ann.get("obb")
-        if isinstance(obb, list):
-            obb_dict = {"cx": obb[0], "cy": obb[1], "w": obb[2], "h": obb[3], "angle_deg": obb[4]}
-        elif isinstance(obb, dict):
-            obb_dict = obb
+        # Prefer native x1/y1/x2/y2; derive from obb or bbox if needed
+        if all(k in ann for k in ("x1", "y1", "x2", "y2")):
+            x1, y1, x2, y2 = float(ann["x1"]), float(ann["y1"]), float(ann["x2"]), float(ann["y2"])
         else:
-            x, y, w, h = ann["bbox"]
-            obb_dict = {"cx": x + w / 2, "cy": y + h / 2, "w": w, "h": h, "angle_deg": 0.0}
+            obb = ann.get("obb")
+            if isinstance(obb, list):
+                obb = {"cx": obb[0], "cy": obb[1], "w": obb[2], "h": obb[3], "angle_deg": obb[4]}
+            elif not isinstance(obb, dict):
+                bx, by, bw, bh = ann["bbox"]
+                obb = {"cx": bx + bw / 2, "cy": by + bh / 2, "w": bw, "h": bh, "angle_deg": 0.0}
+            seg = obb_to_segment(obb, confidence=1.0, image_id=image_id)
+            x1, y1, x2, y2 = seg.x1, seg.y1, seg.x2, seg.y2
+        length = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
         gts.append({
             "image_id": image_id,
-            "obb": obb_dict,
-            "streak_length_px": max(float(obb_dict["w"]), float(obb_dict["h"])),
+            "x1": x1, "y1": y1, "x2": x2, "y2": y2,
+            "streak_length_px": length,
         })
     return gts
 
-
-def _load_eval_image(path: Path, loader: FITSLoader) -> np.ndarray | None:
-    suffix = path.suffix.lower()
-    try:
-        if suffix == ".npy":
-            import os as _os
-            from inference.fits_loader import apply_norm as _apply_norm
-            raw = np.load(str(path))
-            if raw.dtype == np.uint8:
-                return np.stack([raw, raw, raw], axis=-1)
-            norm = _os.environ.get("ARGUS_NORM", "zscore")
-            return _apply_norm(raw.astype(np.float32), norm)  # (H, W, 3) uint8
-        if suffix in {".fits", ".fit", ".fts"}:
-            return np.asarray(loader.load(path)["array"], dtype=np.uint8)
-        from PIL import Image
-        with Image.open(path) as im:
-            return np.asarray(im.convert("RGB"), dtype=np.uint8)
-    except Exception as exc:
-        logger.warning("Could not reload %s for geometry refinement: %s", path, exc)
-        return None
 
 
 def main() -> int:
@@ -218,6 +107,14 @@ def main() -> int:
     parser.add_argument("--weights", default=None, help="Override DINOv3 backbone weights from checkpoint args")
     parser.add_argument("--output", default="results/plain_dinov3_heatmap/metrics.json")
     parser.add_argument("--threshold", type=float, default=0.5)
+    parser.add_argument("--threshold-sweep", type=float, nargs="+", default=None,
+                        metavar="T",
+                        help="Run a threshold sweep instead of a single eval. Load the model "
+                             "and run inference once at --threshold (use a low value like 0.05 "
+                             "to keep all candidates), then re-filter by each sweep threshold "
+                             "and write metrics to --output with the threshold embedded in the "
+                             "filename, e.g. metrics_t050.json. Example: "
+                             "--threshold 0.05 --threshold-sweep 0.2 0.3 0.4 0.5 0.6 0.7")
     parser.add_argument("--min-pixels", type=int, default=2)
     parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--max-samples", type=int, default=None)
@@ -225,7 +122,6 @@ def main() -> int:
                         default="autostretch",
                         help="Pixel normalisation for raw FITS/NPY tiles. Must match "
                              "the mode used when the feature cache was built.")
-    parser.add_argument("--no-refine-geometry", action="store_true")
     parser.add_argument("--tiled", action="store_true",
                         help="Use the pipeline detector (with tiling) instead of the "
                              "full-image letterbox path. Required for accurate medium-band "
@@ -336,9 +232,26 @@ def main() -> int:
             return 1
 
         from inference.tiled_pipeline import stitch_collinear_fragments as _stitch_frags
-        from inference.fits_loader import FITSLoader as _FITSLoader
+        from inference.fits_loader import FITSLoader as _FITSLoader, apply_norm as _apply_norm
         _os.environ["ARGUS_NORM"] = args.norm_mode  # match training normalization
         _fits_loader = _FITSLoader()
+
+        def _load_eval_image(path: Path) -> np.ndarray | None:
+            try:
+                suffix = path.suffix.lower()
+                if suffix == ".npy":
+                    raw = np.load(str(path))
+                    if raw.dtype == np.uint8:
+                        return np.stack([raw, raw, raw], axis=-1)
+                    return _apply_norm(raw.astype(np.float32), args.norm_mode)
+                if suffix in {".fits", ".fit", ".fts"}:
+                    return np.asarray(_fits_loader.load(path)["array"], dtype=np.uint8)
+                from PIL import Image as _PIL_Image
+                with _PIL_Image.open(path) as im:
+                    return np.asarray(im.convert("RGB"), dtype=np.uint8)
+            except Exception as exc:
+                logger.warning("Could not load %s: %s", path, exc)
+                return None
         coco_data = json.loads(Path(args.annotations).read_text())
         images_meta = coco_data.get("images", [])
         if args.max_samples:
@@ -357,7 +270,7 @@ def main() -> int:
         for meta in images_meta:
             img_path = _resolve(meta["file_name"])
             try:
-                arr = _load_eval_image(img_path, _fits_loader)
+                arr = _load_eval_image(img_path)
                 if arr is None:
                     continue
             except Exception as exc:
@@ -402,20 +315,33 @@ def main() -> int:
         if args.max_samples:
             allowed = {int(m["id"]) for m in images_meta}
             ground_truth = [g for g in ground_truth if int(g["image_id"]) in allowed]
-        metrics = evaluate(predictions, ground_truth)
+
+        def _write_metrics(preds: list[dict], threshold_val: float, out_path: Path) -> None:
+            metrics = evaluate_segments(preds, ground_truth)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            payload = {"metrics": metrics, "n_predictions": len(preds),
+                       "tiled": True, "stitch": args.stitch, "threshold": threshold_val}
+            out_path.write_text(json.dumps(payload, indent=2))
+            (out_path.parent / "predictions.json").write_text(json.dumps(preds, indent=2))
+            logger.info("wrote %s (%d predictions, tiled)", out_path, len(preds))
+
+        if args.threshold_sweep:
+            # Re-filter the already-run predictions at each sweep threshold — no model reload.
+            base_out = Path(args.output)
+            for t in args.threshold_sweep:
+                tag = f"t{int(round(t * 100)):03d}"
+                sweep_out = base_out.parent / f"metrics_{tag}.json"
+                filtered = [p for p in predictions if p.get("confidence", 0.0) >= t]
+                _write_metrics(filtered, t, sweep_out)
+            return 0
+
         out_path = Path(args.output)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        payload = {"metrics": metrics, "n_predictions": len(predictions),
-                   "tiled": True, "stitch": args.stitch}
-        out_path.write_text(json.dumps(payload, indent=2))
-        (out_path.parent / "predictions.json").write_text(json.dumps(predictions, indent=2))
-        logger.info("wrote %s (%d predictions, tiled)", out_path, len(predictions))
+        _write_metrics(predictions, args.threshold, out_path)
         return 0
     # --- End tiled path ---
 
     ds = StreakHeatmapDataset(args.annotations, image_size=image_size, max_samples=args.max_samples, norm_mode=args.norm_mode)
     loader = DataLoader(ds, batch_size=args.batch_size, shuffle=False, collate_fn=collate_heatmap_batch)
-    image_loader = FITSLoader()
 
     predictions: list[dict[str, Any]] = []
     with torch.no_grad():
@@ -429,10 +355,7 @@ def main() -> int:
                 geometry = decode_geometry(output[:, 1:5]).cpu().numpy()
             image_ids = batch["image_id"].cpu().numpy().tolist()
             letterboxes = batch["letterbox"].cpu().numpy().tolist()
-            file_names = batch["file_name"]
-            for idx, (prob, image_id, letterbox, file_name) in enumerate(zip(probs[:, 0], image_ids, letterboxes, file_names)):
-                image_path = ds._resolve_image_path(str(file_name))
-                image_array = None if args.no_refine_geometry else _load_eval_image(image_path, image_loader)
+            for idx, (prob, image_id, letterbox) in enumerate(zip(probs[:, 0], image_ids, letterboxes)):
                 predictions.extend(
                     heatmap_to_detections(
                         prob,
@@ -443,8 +366,6 @@ def main() -> int:
                         image_size,
                         (float(letterbox[0]), float(letterbox[1]), float(letterbox[2])),
                         geometry_map=None if geometry is None else geometry[idx],
-                        image_array=image_array,
-                        refine_geometry=not args.no_refine_geometry,
                     )
                 )
 
@@ -453,7 +374,7 @@ def main() -> int:
         allowed_ids = {int(meta["id"]) for meta in ds.images}
         ground_truth = [gt for gt in ground_truth if int(gt["image_id"]) in allowed_ids]
 
-    metrics = evaluate(predictions, ground_truth)
+    metrics = evaluate_segments(predictions, ground_truth)
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {"metrics": metrics, "n_predictions": len(predictions)}

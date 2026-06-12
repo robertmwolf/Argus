@@ -235,8 +235,21 @@ See `agent_docs/test_strategy.md §Canonical Model Evaluation Standard` for full
   ViT-B features are 768-dim (2× ViT-S), so expect ~2× the cache size of a ViT-S run.
 - Train with `train_dinov3_heatmap_cached.py` on the tiled cache.
 - Evaluate with `--tiled` in `evaluate_dinov3_heatmap.py`.
-- Always use `--threshold 0.05` as the base eval threshold to capture the full activation
-  distribution for post-hoc sweep (see `scripts/run_posthoc_threshold_analysis.py`).
+- **Threshold sweep (standard pattern):** load the model once at `--threshold 0.05` (keeps
+  all candidates) and pass `--threshold-sweep 0.2 0.3 0.4 0.5 0.6 0.7`.  The script runs
+  inference once per image, then re-filters by each sweep value in memory and writes
+  `metrics_t020.json`, `metrics_t030.json`, … alongside the `--output` path.
+  **Never launch N parallel processes for N thresholds** — each process reloads the model.
+  Example:
+  ```bash
+  python scripts/evaluate_dinov3_heatmap.py \
+    --checkpoint weights/runN_vits/best.pt \
+    --annotations data/annotations/val.json \
+    --output results/runN/sweep/metrics_placeholder.json \
+    --tiled --stitch --norm-mode zscore \
+    --threshold 0.05 \
+    --threshold-sweep 0.2 0.3 0.4 0.5 0.6 0.7
+  ```
 - For stitch eval: always pass `--stitch-max-growth-ratio 3.0` to prevent short streaks
   from being absorbed into long false-positive chains.
 
