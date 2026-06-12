@@ -416,8 +416,15 @@ def stitch_collinear_fragments(
         obb_a = pA.get("obb")
         obb_b = pB.get("obb")
         if isinstance(obb_a, dict) and isinstance(obb_b, dict):
+            import math as _math
             merged["obb"] = _merge_obb(obb_a, obb_b)
-            merged["streak_length_px"] = merged["obb"]["w"]
+            obb = merged["obb"]
+            r = _math.radians(obb["angle_deg"])
+            merged["x1"] = obb["cx"] - obb["w"] / 2 * _math.cos(r)
+            merged["y1"] = obb["cy"] - obb["w"] / 2 * _math.sin(r)
+            merged["x2"] = obb["cx"] + obb["w"] / 2 * _math.cos(r)
+            merged["y2"] = obb["cy"] + obb["w"] / 2 * _math.sin(r)
+            merged["streak_length_px"] = obb["w"]
         return merged
 
     angles = [_angle(p) for p in preds]

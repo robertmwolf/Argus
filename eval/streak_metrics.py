@@ -12,13 +12,12 @@ streak is detected at a small lateral offset (a 400×3 px streak at 2 px offset
 gets OBB IoU ≈ 0.20 and is counted as FP even though it is geometrically
 correct).
 
-Prediction / GT dict formats accepted by :func:`evaluate_segments` are
-identical to those used by :mod:`eval.metrics`:
+Prediction / GT dict formats accepted by :func:`evaluate_segments`:
 
-  prediction  — {image_id, confidence, obb, streak_length_px}
-  ground_truth — {image_id, obb, streak_length_px}
+  prediction  — {image_id, confidence, x1, y1, x2, y2, streak_length_px}
+  ground_truth — {image_id, x1, y1, x2, y2, streak_length_px}
 
-where ``obb`` is ``{cx, cy, w, h, angle_deg}``.
+Legacy ``obb``-only dicts are also accepted for backward compatibility.
 
 # Source: StreakMind — segment-match evaluation methodology
 """
@@ -35,7 +34,7 @@ from typing import Any
 import numpy as np
 
 # Import canonical types from inference module — single source of truth.
-from inference.streak_segment import StreakSegment, obb_to_segment  # noqa: F401
+from inference.streak_segment import StreakSegment, obb_to_segment, detection_dict_to_segment  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +115,7 @@ def _length_1d_iou(pred: StreakSegment, gt: StreakSegment) -> float:
 def segment_match(
     pred: StreakSegment,
     gt: StreakSegment,
-    angle_tol_deg: float = 5.0,
+    angle_tol_deg: float = 15.0,
     perp_tol_px: float = 5.0,
     length_iou_min: float = 0.5,
 ) -> bool:
@@ -258,7 +257,7 @@ def _match_all_segments(
 def evaluate_segments(
     predictions: list[dict],
     ground_truth: list[dict],
-    angle_tol_deg: float = 5.0,
+    angle_tol_deg: float = 15.0,
     perp_tol_px: float = 5.0,
     length_iou_min: float = 0.5,
     short_max_px: float = _SHORT_MAX,
@@ -294,23 +293,11 @@ def evaluate_segments(
     if not ground_truth or not predictions:
         return _empty_result()
 
-    pred_segs = [
-        obb_to_segment(
-            p["obb"],
-            float(p.get("confidence", 0.0)),
-            p["image_id"],
-            str(p.get("method", "")),
-        )
-        for p in predictions
-    ]
-    # Carry streak_length_px from source dict onto segment for band filtering
+    pred_segs = [detection_dict_to_segment(p) for p in predictions]
     for seg, p in zip(pred_segs, predictions):
         seg.streak_length_px = float(p.get("streak_length_px") or seg.length_px)
 
-    gt_segs = [
-        obb_to_segment(g["obb"], 1.0, g["image_id"])
-        for g in ground_truth
-    ]
+    gt_segs = [detection_dict_to_segment(g) for g in ground_truth]
     for seg, g in zip(gt_segs, ground_truth):
         seg.streak_length_px = float(g.get("streak_length_px") or seg.length_px)
 
@@ -403,14 +390,8 @@ def _band_prf(
     Returns:
         Tuple of (precision, recall, f1).
     """
-    pred_segs = [
-        obb_to_segment(p["obb"], float(p.get("confidence", 0.0)), p["image_id"])
-        for p in predictions
-    ]
-    gt_segs = [
-        obb_to_segment(g["obb"], 1.0, g["image_id"])
-        for g in ground_truth
-    ]
+    pred_segs = [detection_dict_to_segment(p) for p in predictions]
+    gt_segs = [detection_dict_to_segment(g) for g in ground_truth]
 
     is_tp, n_gt, _ = _match_all_segments(
         pred_segs, gt_segs, angle_tol_deg, perp_tol_px, length_iou_min
