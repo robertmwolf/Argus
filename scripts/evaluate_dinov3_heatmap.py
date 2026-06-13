@@ -307,8 +307,8 @@ def main() -> int:
                         help="Merge collinear tile fragments after per-image NMS "
                              "(tiled mode only). Reconstructs OBB from merged bbox so "
                              "IoU matching against full-extent GT annotations works.")
-    parser.add_argument("--stitch-max-gap", type=float, default=400.0,
-                        help="Max gap in px between collinear fragments to merge (default: 400).")
+    parser.add_argument("--stitch-max-gap", type=float, default=200.0,
+                        help="Max gap in px between collinear fragments to merge (default: 200).")
     parser.add_argument("--stitch-max-growth-ratio", type=float, default=3.0,
                         help="Max merged-span / longer-input-span ratio for stitching (default: 3.0).")
     parser.add_argument("--pretiled", action="store_true",

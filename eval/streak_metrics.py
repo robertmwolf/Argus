@@ -38,9 +38,15 @@ from inference.streak_segment import StreakSegment, obb_to_segment, detection_di
 
 logger = logging.getLogger(__name__)
 
-# Band thresholds (pixels) — kept in sync with eval/metrics.py
-_SHORT_MAX = 150.0
-_LONG_MIN = 400.0
+# Band thresholds (pixels) — architecture-aligned (see agent_docs/heatmap_training_lessons.md).
+#   < _MIN_LENGTH      sub-resolvable (≈ <4 ViT patches at 400px tiling) — out of scope
+#   [_MIN_LENGTH, _SHORT_MAX)  short  — fits in one 400px tile, no stitch (pure model capability)
+#   [_SHORT_MAX, _LONG_MIN)    medium — multi-tile, stitch-dependent
+#   [_LONG_MIN, inf)           long   — many-tile, stitch stress-test (~spans a large frame fraction)
+# _SHORT_MAX = native_tile_size (single-tile/multi-tile boundary). Frigate (<50px) is excluded.
+_MIN_LENGTH = 50.0
+_SHORT_MAX = 400.0
+_LONG_MIN = 1000.0
 
 
 # ---------------------------------------------------------------------------
@@ -262,6 +268,7 @@ def evaluate_segments(
     length_iou_min: float = 0.5,
     short_max_px: float = _SHORT_MAX,
     long_min_px: float = _LONG_MIN,
+    min_length_px: float = _MIN_LENGTH,
 ) -> dict:
     """Compute the full evaluation metric suite using line-segment matching.
 
@@ -279,6 +286,11 @@ def evaluate_segments(
         length_iou_min: Minimum 1-D IoU along GT axis for a match (default 0.5).
         short_max_px: Upper bound on "short" streak length band (pixels).
         long_min_px: Lower bound on "long" streak length band (pixels).
+        min_length_px: Sub-resolution floor (pixels). Streaks shorter than this
+            are dropped from BOTH ground truth and predictions before scoring:
+            sub-floor GT is not counted as missed recall, and sub-floor
+            predictions are dropped (not counted as false positives). Excludes
+            Frigate-scale (<50px) micro-streaks the 16px-patch grid cannot resolve.
 
     Returns:
         Dict with keys:
@@ -300,6 +312,20 @@ def evaluate_segments(
     gt_segs = [detection_dict_to_segment(g) for g in ground_truth]
     for seg, g in zip(gt_segs, ground_truth):
         seg.streak_length_px = float(g.get("streak_length_px") or seg.length_px)
+
+    # Drop sub-resolution streaks (< min_length_px) from both sides. Below the
+    # ~4-patch resolvability floor the 16px-grid architecture cannot form a line,
+    # so sub-floor GT is not scored as missed recall and sub-floor predictions
+    # are dropped (not counted as FPs). Keeps preds/GT and their segments in sync.
+    if min_length_px > 0:
+        keep_p = [i for i, s in enumerate(pred_segs) if s.streak_length_px >= min_length_px]
+        keep_g = [i for i, s in enumerate(gt_segs) if s.streak_length_px >= min_length_px]
+        predictions = [predictions[i] for i in keep_p]
+        pred_segs   = [pred_segs[i] for i in keep_p]
+        ground_truth = [ground_truth[i] for i in keep_g]
+        gt_segs     = [gt_segs[i] for i in keep_g]
+        if not ground_truth or not predictions:
+            return _empty_result()
 
     is_tp, n_gt, matched_pairs = _match_all_segments(
         pred_segs, gt_segs, angle_tol_deg, perp_tol_px, length_iou_min
@@ -333,7 +359,7 @@ def evaluate_segments(
 
     # Per-band breakdown
     bands = {
-        "short":  (0.0, short_max_px),
+        "short":  (min_length_px, short_max_px),
         "medium": (short_max_px, long_min_px),
         "long":   (long_min_px, float("inf")),
     }

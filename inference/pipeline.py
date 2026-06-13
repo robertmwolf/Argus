@@ -573,7 +573,7 @@ def _run_vits_heatmap_detector(array: "np.ndarray") -> list[dict]:
          "score": float(d["confidence"])}
         for d in dets
     ]
-    max_gap = float(os.environ.get("VITS_HEATMAP_STITCH_MAX_GAP", "400"))
+    max_gap = float(os.environ.get("VITS_HEATMAP_STITCH_MAX_GAP", "200"))
     max_growth = float(os.environ.get("VITS_HEATMAP_STITCH_MAX_GROWTH_RATIO", "3.0"))
     stitched = stitch_collinear_fragments(stitch_in, max_gap_px=max_gap,
                                           max_growth_ratio=max_growth)
@@ -1072,7 +1072,7 @@ def _run_all_detectors(
                     _heatmap_sidecar["vits_heatmap"] = heat
                 # Apply collinear stitch with growth guard (same as offline eval)
                 if len(dets) > 1:
-                    max_gap    = float(os.environ.get("VITS_HEATMAP_STITCH_MAX_GAP", "400"))
+                    max_gap    = float(os.environ.get("VITS_HEATMAP_STITCH_MAX_GAP", "200"))
                     max_growth = float(os.environ.get("VITS_HEATMAP_STITCH_MAX_GROWTH_RATIO", "3.0"))
                     stitch_in = [
                         {**d,
@@ -1114,7 +1114,7 @@ def _run_all_detectors(
                     _heatmap_sidecar["vitb_heatmap"] = heat
                 # Apply collinear stitch with growth guard (same as offline eval)
                 if len(dets) > 1:
-                    max_gap    = float(os.environ.get("VITB_HEATMAP_STITCH_MAX_GAP", "400"))
+                    max_gap    = float(os.environ.get("VITB_HEATMAP_STITCH_MAX_GAP", "200"))
                     max_growth = float(os.environ.get("VITB_HEATMAP_STITCH_MAX_GROWTH_RATIO", "3.0"))
                     stitch_in = [
                         {**d,

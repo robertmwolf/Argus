@@ -257,11 +257,12 @@ def nms_predictions(
 
 def stitch_collinear_fragments(
     preds: list[Prediction],
-    max_gap_px: float = 400.0,
+    max_gap_px: float = 200.0,
     max_perp_ratio: float = 0.8,
-    angle_tol_deg: float = 20.0,
+    angle_tol_deg: float = 10.0,
     min_aspect_ratio: float = 1.5,
     max_growth_ratio: float = 3.0,
+    conf_floor: float = 0.5,
 ) -> list[Prediction]:
     """Merge non-overlapping collinear streak fragments from multi-tile inference.
 
@@ -278,14 +279,23 @@ def stitch_collinear_fragments(
     4. The perpendicular center offset is ≤ ``max_perp_ratio`` × the average
        transverse box width.
     5. The merged span would be ≤ ``max_growth_ratio`` × the longer input
-       fragment.  This prevents short true-positive detections from being
-       absorbed into long false-positive chains through union-find transitivity.
+       fragment.  This is enforced TWICE: pairwise when building edges, and
+       again as a GLOBAL cap when collapsing each connected component (see
+       below) so transitive A–B–C chains cannot blow past the ratio.
 
-    Boxes with an axis-aligned aspect ratio below ``min_aspect_ratio`` are
-    excluded from stitching (near-square boxes have ambiguous angle).
+    Only fragments with ``score ≥ conf_floor`` participate in stitching; lower-
+    confidence fragments pass through unchanged (they do not seed or extend
+    chains, which is what previously let background noise inflate a clean streak
+    into a frame-spanning blob).  Boxes with an axis-aligned aspect ratio below
+    ``min_aspect_ratio`` are likewise excluded (near-square boxes have ambiguous
+    angle).
 
-    Compatible fragments are merged into a single enclosing bounding box with
-    the maximum score of the merged group.
+    Connected components are collapsed by a **guarded greedy merge**: fragments
+    are ordered along the shared streak axis and merged one at a time only while
+    the running merged span stays ≤ ``max_growth_ratio`` × the longest original
+    fragment in the chain.  A fragment that would breach the cap starts a new
+    sub-detection instead of being absorbed.  This is the fix for the union-find
+    transitivity bug where pairwise-legal merges chained into 4–5× blow-ups.
 
     Args:
         preds: Post-NMS predictions in full-image coordinates with
@@ -301,9 +311,13 @@ def stitch_collinear_fragments(
         min_aspect_ratio: Minimum axis-aligned aspect ratio (longer / shorter
             side) to consider a box as a streak candidate.  Boxes below this
             threshold are returned unchanged without stitching.
-        max_growth_ratio: Maximum ratio of merged span to the longer input
+        max_growth_ratio: Maximum ratio of merged span to the longest original
             fragment's span.  Default 3.0 blocks merges that would create a
-            detection more than 3× longer than either input.
+            detection more than 3× longer than any input.  Enforced both
+            pairwise and globally per connected component.
+        conf_floor: Minimum ``score`` for a fragment to participate in
+            stitching.  Lower-confidence fragments pass through unchanged so
+            background-noise fragments cannot seed or extend a chain.
 
     Returns:
         Predictions after merging collinear fragments, sorted by descending
@@ -430,14 +444,19 @@ def stitch_collinear_fragments(
     angles = [_angle(p) for p in preds]
     aspects = [_aspect(p) for p in preds]
     centers = [_center(p) for p in preds]
+    scores = [float(p.get("score", p.get("confidence", 0.0))) for p in preds]
     n = len(preds)
+
+    # A fragment is eligible to stitch only if it is streak-shaped AND confident
+    # enough.  Ineligible fragments form no edges and pass through as singletons.
+    eligible = [aspects[i] >= min_aspect_ratio and scores[i] >= conf_floor for i in range(n)]
 
     edges: list[tuple[int, int]] = []
     for i in range(n):
-        if aspects[i] < min_aspect_ratio:
+        if not eligible[i]:
             continue
         for j in range(i + 1, n):
-            if aspects[j] < min_aspect_ratio:
+            if not eligible[j]:
                 continue
 
             theta_i = angles[i]
@@ -502,14 +521,61 @@ def stitch_collinear_fragments(
 
             edges.append((i, j))
 
-    # Merge connected components.
+    def _along_len(pred: Prediction) -> float:
+        """Streak-axis length of a fragment (OBB major axis, bbox-diag fallback)."""
+        obb = pred.get("obb")
+        if isinstance(obb, dict) and "w" in obb:
+            return float(obb["w"])
+        slp = pred.get("streak_length_px")
+        if slp:
+            return float(slp)
+        _, _, w, h = pred["bbox"]
+        return math.hypot(w, h)
+
+    def _axis_interval(pred: Prediction, cos_t: float, sin_t: float) -> tuple[float, float]:
+        """Projected [lo, hi] extent of a fragment along the (cos_t, sin_t) axis."""
+        obb = pred.get("obb")
+        if isinstance(obb, dict) and "cx" in obb:
+            c = obb["cx"] * cos_t + obb["cy"] * sin_t
+            half = float(obb.get("w", 0.0)) / 2.0
+        else:
+            x, y, w, h = pred["bbox"]
+            c = (x + w / 2.0) * cos_t + (y + h / 2.0) * sin_t
+            half = (abs(w * cos_t) + abs(h * sin_t)) / 2.0
+        return c - half, c + half
+
+    # Collapse each connected component with a GUARDED GREEDY MERGE.  Union-find
+    # only tells us which fragments are pairwise-compatible; merging them all
+    # unconditionally is what let A–B–C chains blow past max_growth_ratio.  We
+    # instead order each component along its mean streak axis and merge one
+    # fragment at a time, starting a fresh sub-detection whenever the next
+    # fragment is separated by more than max_gap_px along the axis, OR the single
+    # merge step would more than max_growth_ratio× the running detection.  Both
+    # guards together stop transitive noise chains while still allowing a genuine
+    # long streak to assemble from many small gap-respecting collinear fragments.
     groups = _union_find_components(n, edges)
     result: list[Prediction] = []
     for group in groups:
-        merged = preds[group[0]]
-        for k in group[1:]:
-            merged = _merge(merged, preds[k])
-        result.append(merged)
+        if len(group) == 1:
+            result.append(preds[group[0]])
+            continue
+        theta = sum(angles[i] for i in group) / len(group)
+        cos_t, sin_t = math.cos(theta), math.sin(theta)
+        ordered = sorted(group, key=lambda i: centers[i][0] * cos_t + centers[i][1] * sin_t)
+        cur = preds[ordered[0]]
+        for k in ordered[1:]:
+            cand = preds[k]
+            lo_c, hi_c = _axis_interval(cur, cos_t, sin_t)
+            lo_k, hi_k = _axis_interval(cand, cos_t, sin_t)
+            gap = max(lo_k - hi_c, lo_c - hi_k)        # >0 only when disjoint
+            trial = _merge(cur, cand)
+            trial_span = float(trial.get("streak_length_px") or _along_len(trial))
+            if gap <= max_gap_px and trial_span <= max_growth_ratio * _along_len(cur):
+                cur = trial
+            else:
+                result.append(cur)            # gap/growth breached — emit, restart
+                cur = cand
+        result.append(cur)
 
     result.sort(key=lambda p: float(p.get("score", 0.0)), reverse=True)
     return result

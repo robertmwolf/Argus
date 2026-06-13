@@ -339,6 +339,34 @@ def test_stitch_three_collinear_fragments() -> None:
     assert result[0]["score"] == 0.9  # max of all three
 
 
+def test_stitch_does_not_bridge_across_large_gap_transitively() -> None:
+    """Anti-transitivity: a true streak must not absorb a far collinear fragment.
+
+    A and B are a real 2-tile streak (gap 50). C is a far collinear fragment
+    600 px past B — beyond max_gap_px. Old union-find merged {A,B,C} into one
+    frame-spanning blob; the guarded greedy merge must keep C separate.
+    """
+    a = _horiz_streak(0,    95, 200, 10, score=0.9)
+    b = _horiz_streak(250,  95, 200, 10, score=0.9)   # gap 50 from A → merges
+    c = _horiz_streak(1050, 95, 200, 10, score=0.9)   # gap 600 from B → must NOT chain
+    result = stitch_collinear_fragments([a, b, c], max_gap_px=200.0)
+    assert len(result) == 2
+    spans = sorted(r["bbox"][2] for r in result)
+    assert abs(spans[0] - 200.0) < 1.0   # lone C
+    assert abs(spans[1] - 450.0) < 1.0   # merged A+B (x=0..450)
+
+
+def test_stitch_excludes_low_confidence_fragments() -> None:
+    """Fragments below conf_floor do not seed/extend chains (pass through)."""
+    a = _horiz_streak(0,   95, 200, 10, score=0.9)
+    b = _horiz_streak(250, 95, 200, 10, score=0.2)   # below floor 0.5
+    result = stitch_collinear_fragments([a, b], max_gap_px=200.0, conf_floor=0.5)
+    assert len(result) == 2          # not merged — b is ineligible
+    # Lowering the floor lets them merge.
+    merged = stitch_collinear_fragments([a, b], max_gap_px=200.0, conf_floor=0.0)
+    assert len(merged) == 1
+
+
 def test_select_tile_params_overlap_covers_streak() -> None:
     """Overlap should ensure the tile stride ≤ max estimated streak length."""
     streak_px = 40.0
