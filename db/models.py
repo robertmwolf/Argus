@@ -85,6 +85,7 @@ class Observation(Base):
     fits_wcs_json: Mapped[str | None] = mapped_column(Text)   # JSON string
     enabled_detectors_json: Mapped[str | None] = mapped_column(Text)
     raw_mode: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    fast_mode: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     status: Mapped[str] = mapped_column(Text, default="queued", nullable=False)
 
 
@@ -228,6 +229,10 @@ def _migrate_existing_tables(sync_conn) -> None:
     if "raw_mode" not in obs_columns:
         sync_conn.exec_driver_sql(
             "ALTER TABLE observations ADD COLUMN raw_mode INTEGER DEFAULT 0 NOT NULL"
+        )
+    if "fast_mode" not in obs_columns:
+        sync_conn.exec_driver_sql(
+            "ALTER TABLE observations ADD COLUMN fast_mode INTEGER DEFAULT 0 NOT NULL"
         )
 
     columns = {col["name"] for col in inspect(sync_conn).get_columns("detections")}

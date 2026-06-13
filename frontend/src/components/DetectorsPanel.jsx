@@ -5,10 +5,12 @@ import { useEffect, useState } from 'react'
  *
  * Props:
  *   onSelectionChange(Set<string>) — called whenever the enabled set changes
+ *   fastMode(bool)                 — current fast mode state
+ *   onFastModeChange(bool)         — called when fast mode toggle changes
  *   rawMode(bool)                  — current raw mode state
  *   onRawModeChange(bool)          — called when raw mode toggle changes
  */
-export default function DetectorsPanel({ onSelectionChange, rawMode = false, onRawModeChange }) {
+export default function DetectorsPanel({ onSelectionChange, fastMode = false, onFastModeChange, rawMode = false, onRawModeChange }) {
   const [detectors, setDetectors] = useState(null) // null = loading
   const [selected, setSelected] = useState(null)   // null until loaded
   const [fetchError, setFetchError] = useState(false)
@@ -82,7 +84,38 @@ export default function DetectorsPanel({ onSelectionChange, rawMode = false, onR
         )}
       </div>
 
-      {/* Processing mode toggle */}
+      {/* Fast mode toggle */}
+      <div
+        className="flex items-center justify-between px-4 py-3 border-b border-slate-800 cursor-pointer select-none hover:bg-slate-800/30 transition-colors"
+        onClick={() => onFastModeChange?.(!fastMode)}
+      >
+        <div>
+          <span className="text-sm font-medium text-slate-200">Fast mode</span>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Skip plate solve and TLE cross-identification
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={fastMode}
+          onClick={e => { e.stopPropagation(); onFastModeChange?.(!fastMode) }}
+          className={[
+            'relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent',
+            'transition-colors duration-200 focus:outline-none',
+            fastMode ? 'bg-cyan-500' : 'bg-slate-700',
+          ].join(' ')}
+        >
+          <span
+            className={[
+              'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200',
+              fastMode ? 'translate-x-4' : 'translate-x-0',
+            ].join(' ')}
+          />
+        </button>
+      </div>
+
+      {/* Raw output toggle */}
       <div
         className="flex items-center justify-between px-4 py-3 border-b border-slate-800 cursor-pointer select-none hover:bg-slate-800/30 transition-colors"
         onClick={() => onRawModeChange?.(!rawMode)}

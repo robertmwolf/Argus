@@ -24,8 +24,9 @@ export default function App() {
   const [disabledStreaks, setDisabledStreaks] = useState(new Set())   // Set of displayDetections indices
   const [methodThresholds, setMethodThresholds] = useState({})        // { method: 0-1 }
   const [enabledDetectors, setEnabledDetectors] = useState(null)      // null until DetectorsPanel loads
+  const [fastMode, setFastMode] = useState(false)
   const [rawMode, setRawMode] = useState(false)
-  const [showHeatmap, setShowHeatmap] = useState(false)
+  const [heatmapModel, setHeatmapModel] = useState(null) // null | 'vits_heatmap' | 'vitb_heatmap'
 
   useEffect(() => {
     fetch('/health')
@@ -174,6 +175,15 @@ export default function App() {
     setMethodThresholds({})
   }
 
+  const handleClearQueue = async () => {
+    try {
+      await fetch('/api/clear-queue', { method: 'POST' })
+    } catch {
+      // best-effort — reset UI regardless
+    }
+    handleReset()
+  }
+
   const isProcessing = jobId && jobStatus && jobStatus !== 'complete' && jobStatus !== 'failed'
   const isComplete = result !== null
 
@@ -237,15 +247,32 @@ export default function App() {
             </div>
             <DetectorsPanel
               onSelectionChange={setEnabledDetectors}
+              fastMode={fastMode}
+              onFastModeChange={setFastMode}
               rawMode={rawMode}
               onRawModeChange={setRawMode}
             />
-            <UploadZone
-              onQueued={handleQueued}
-              onError={setError}
-              enabledDetectors={enabledDetectors}
-              rawMode={rawMode}
-            />
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <UploadZone
+                  onQueued={handleQueued}
+                  onError={setError}
+                  enabledDetectors={enabledDetectors}
+                  fastMode={fastMode}
+                  rawMode={rawMode}
+                />
+              </div>
+              <button
+                onClick={handleClearQueue}
+                className="flex-shrink-0 self-stretch flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium border border-slate-700 bg-slate-800/60 text-slate-400 hover:text-red-400 hover:border-red-800 transition-colors"
+                title="Cancel any running or queued jobs and return to a clean state"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Clear Queue
+              </button>
+            </div>
           </>
         )}
 
@@ -294,19 +321,27 @@ export default function App() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
               <div className="lg:col-span-2">
-                {result.has_heatmap && (
-                  <div className="flex justify-end mb-2">
-                    <button
-                      onClick={() => setShowHeatmap(v => !v)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                        showHeatmap
-                          ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                          : 'bg-slate-800 border-slate-600 text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      <span className={`inline-block w-3 h-3 rounded-sm ${showHeatmap ? 'bg-amber-400' : 'bg-slate-600'}`} />
-                      Heatmap
-                    </button>
+                {result.has_heatmap?.length > 0 && (
+                  <div className="flex justify-end items-center gap-1.5 mb-2">
+                    <span className="text-xs text-slate-500">Heatmap</span>
+                    {result.has_heatmap.map(modelId => {
+                      const label = { vits_heatmap: 'ViT-S', vitb_heatmap: 'ViT-B' }[modelId] ?? modelId
+                      const active = heatmapModel === modelId
+                      return (
+                        <button
+                          key={modelId}
+                          onClick={() => setHeatmapModel(active ? null : modelId)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                            active
+                              ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                              : 'bg-slate-800 border-slate-600 text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          <span className={`inline-block w-3 h-3 rounded-sm ${active ? 'bg-amber-400' : 'bg-slate-600'}`} />
+                          {label}
+                        </button>
+                      )
+                    })}
                   </div>
                 )}
                 <ResultViewer
@@ -317,7 +352,7 @@ export default function App() {
                   imageHeight={result.image_height}
                   highlightIndex={highlightIndex}
                   onHover={setHighlightIndex}
-                  showHeatmap={showHeatmap}
+                  heatmapModel={heatmapModel}
                 />
               </div>
               <div className="lg:col-span-1">

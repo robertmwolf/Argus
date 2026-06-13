@@ -31,6 +31,14 @@ class JobQueue(ABC):
             The next job ID to process.
         """
 
+    @abstractmethod
+    async def clear(self) -> int:
+        """Remove all pending items without processing them.
+
+        Returns:
+            Number of items removed.
+        """
+
 
 class InMemoryQueue(JobQueue):
     """In-process asyncio queue — single-process deployments only."""
@@ -44,6 +52,15 @@ class InMemoryQueue(JobQueue):
     async def dequeue(self) -> str:
         return await self._q.get()
 
+    async def clear(self) -> int:
+        count = 0
+        while True:
+            try:
+                self._q.get_nowait()
+                count += 1
+            except asyncio.QueueEmpty:
+                return count
+
 
 class SQSQueue(JobQueue):
     """AWS SQS queue backend — implemented in Phase 7."""
@@ -52,6 +69,9 @@ class SQSQueue(JobQueue):
         raise NotImplementedError("SQS queue not implemented until Phase 7")
 
     async def dequeue(self) -> str:
+        raise NotImplementedError("SQS queue not implemented until Phase 7")
+
+    async def clear(self) -> int:
         raise NotImplementedError("SQS queue not implemented until Phase 7")
 
 

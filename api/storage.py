@@ -101,23 +101,41 @@ class StorageBackend(ABC):
         """
 
     @abstractmethod
-    async def save_heatmap(self, job_id: str, data: bytes) -> None:
+    async def save_heatmap(self, job_id: str, data: bytes, model_id: str | None = None) -> None:
         """Persist the heatmap overlay PNG for a job.
 
         Args:
             job_id: UUID string identifying the job.
             data: RGBA PNG bytes.
+            model_id: Detector ID (e.g. 'vits_heatmap'). When set, the PNG is
+                stored as ``heatmap_{model_id}.png`` so multiple heatmap models
+                can coexist for the same job.  None uses the legacy
+                ``heatmap.png`` path.
         """
 
     @abstractmethod
-    async def load_heatmap(self, job_id: str) -> bytes | None:
+    async def load_heatmap(self, job_id: str, model_id: str | None = None) -> bytes | None:
         """Load the heatmap overlay PNG, or None if not available.
+
+        Args:
+            job_id: UUID string identifying the job.
+            model_id: Detector ID matching a prior ``save_heatmap`` call.
+                None loads from the legacy ``heatmap.png`` path.
+
+        Returns:
+            RGBA PNG bytes, or None if not found.
+        """
+
+    @abstractmethod
+    async def list_heatmaps(self, job_id: str) -> list[str]:
+        """Return the model IDs for which heatmaps have been saved.
 
         Args:
             job_id: UUID string identifying the job.
 
         Returns:
-            RGBA PNG bytes, or None if not found.
+            List of model_id strings (e.g. ['vits_heatmap', 'vitb_heatmap']).
+            Legacy ``heatmap.png`` files are reported as the empty string ''.
         """
 
 
@@ -163,14 +181,30 @@ class LocalStorage(StorageBackend):
         path = self._base / job_id / "header.json"
         return path.read_bytes() if path.exists() else None
 
-    async def save_heatmap(self, job_id: str, data: bytes) -> None:
-        path = self._base / job_id / "heatmap.png"
+    def _heatmap_path(self, job_id: str, model_id: str | None) -> Path:
+        name = f"heatmap_{model_id}.png" if model_id else "heatmap.png"
+        return self._base / job_id / name
+
+    async def save_heatmap(self, job_id: str, data: bytes, model_id: str | None = None) -> None:
+        path = self._heatmap_path(job_id, model_id)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
 
-    async def load_heatmap(self, job_id: str) -> bytes | None:
-        path = self._base / job_id / "heatmap.png"
+    async def load_heatmap(self, job_id: str, model_id: str | None = None) -> bytes | None:
+        path = self._heatmap_path(job_id, model_id)
         return path.read_bytes() if path.exists() else None
+
+    async def list_heatmaps(self, job_id: str) -> list[str]:
+        job_dir = self._base / job_id
+        if not job_dir.exists():
+            return []
+        ids: list[str] = []
+        for p in sorted(job_dir.glob("heatmap*.png")):
+            if p.name == "heatmap.png":
+                ids.append("")
+            elif p.name.startswith("heatmap_") and p.name.endswith(".png"):
+                ids.append(p.name[len("heatmap_"):-len(".png")])
+        return ids
 
 
 class S3Storage(StorageBackend):
@@ -200,10 +234,13 @@ class S3Storage(StorageBackend):
     async def load_fits_header(self, job_id: str) -> bytes | None:
         raise NotImplementedError("S3 storage not implemented until Phase 7")
 
-    async def save_heatmap(self, job_id: str, data: bytes) -> None:
+    async def save_heatmap(self, job_id: str, data: bytes, model_id: str | None = None) -> None:
         raise NotImplementedError("S3 storage not implemented until Phase 7")
 
-    async def load_heatmap(self, job_id: str) -> bytes | None:
+    async def load_heatmap(self, job_id: str, model_id: str | None = None) -> bytes | None:
+        raise NotImplementedError("S3 storage not implemented until Phase 7")
+
+    async def list_heatmaps(self, job_id: str) -> list[str]:
         raise NotImplementedError("S3 storage not implemented until Phase 7")
 
 

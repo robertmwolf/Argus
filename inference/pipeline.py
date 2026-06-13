@@ -840,6 +840,19 @@ def get_detector_statuses() -> list[dict]:
             "status":  "unavailable",
         })
 
+    # ViT-B/16 heatmap detector (Run 17)
+    try:
+        from inference.vitb_heatmap_detector import get_vitb_heatmap_status
+        statuses.append(get_vitb_heatmap_status())
+    except ImportError:
+        statuses.append({
+            "id":      "vitb_heatmap",
+            "name":    "DINOv3 ViT-B HeatMap",
+            "type":    "ml",
+            "dataset": "Atwood+Frigate Run17",
+            "status":  "unavailable",
+        })
+
     # YOLO variants
     _yolo_entries = [
         {
@@ -1056,7 +1069,7 @@ def _run_all_detectors(
                 from inference.tiled_pipeline import stitch_collinear_fragments
                 dets, heat = run_vits_heatmap_detector_and_heatmap(arr)
                 if heat is not None:
-                    _heatmap_sidecar["heat"] = heat
+                    _heatmap_sidecar["vits_heatmap"] = heat
                 # Apply collinear stitch with growth guard (same as offline eval)
                 if len(dets) > 1:
                     max_gap    = float(os.environ.get("VITS_HEATMAP_STITCH_MAX_GAP", "400"))
@@ -1082,6 +1095,48 @@ def _run_all_detectors(
             tasks[pool.submit(_timed_detector, "vits_heatmap", _vits_heatmap_task_with_sidecar, _vits_array)] = "vits_heatmap"
         else:
             results["vits_heatmap"] = []
+
+        if _enabled("vitb_heatmap"):
+            # Run 17 ViT-B trained on zscore-normalised FITS data.  Re-normalise
+            # from raw float32 when the pipeline default norm differs.
+            _vitb_norm = os.environ.get("VITB_HEATMAP_NORM", "zscore").lower()
+            if raw_array_f32 is not None and default_norm_mode and default_norm_mode != _vitb_norm:
+                from inference.fits_loader import apply_norm as _apply_norm_vitb
+                _vitb_array = _apply_norm_vitb(raw_array_f32, _vitb_norm)
+            else:
+                _vitb_array = array
+
+            def _vitb_heatmap_task_with_sidecar(arr: "np.ndarray") -> list[dict]:
+                from inference.vitb_heatmap_detector import run_vitb_heatmap_detector_and_heatmap
+                from inference.tiled_pipeline import stitch_collinear_fragments
+                dets, heat = run_vitb_heatmap_detector_and_heatmap(arr)
+                if heat is not None:
+                    _heatmap_sidecar["vitb_heatmap"] = heat
+                # Apply collinear stitch with growth guard (same as offline eval)
+                if len(dets) > 1:
+                    max_gap    = float(os.environ.get("VITB_HEATMAP_STITCH_MAX_GAP", "400"))
+                    max_growth = float(os.environ.get("VITB_HEATMAP_STITCH_MAX_GROWTH_RATIO", "3.0"))
+                    stitch_in = [
+                        {**d,
+                         "bbox":  [d["bbox"][0], d["bbox"][1],
+                                   d["bbox"][2] - d["bbox"][0],
+                                   d["bbox"][3] - d["bbox"][1]],
+                         "score": float(d["confidence"])}
+                        for d in dets
+                    ]
+                    stitched = stitch_collinear_fragments(stitch_in, max_gap_px=max_gap,
+                                                          max_growth_ratio=max_growth)
+                    dets = []
+                    for s in stitched:
+                        x, y, w, h = s["bbox"]
+                        dets.append({**s,
+                                     "bbox":       [x, y, x + w, y + h],
+                                     "confidence": s.get("confidence", s.get("score", 0.0))})
+                return dets
+
+            tasks[pool.submit(_timed_detector, "vitb_heatmap", _vitb_heatmap_task_with_sidecar, _vitb_array)] = "vitb_heatmap"
+        else:
+            results["vitb_heatmap"] = []
 
         for f in as_completed(tasks):
             key = tasks[f]
@@ -1116,7 +1171,7 @@ def run_with_array(
     models: list[tuple[Any, Any, dict]] | None = None,
     enabled_detectors: set[str] | None = None,
     raw_mode: bool = False,
-) -> tuple[list[dict], "np.ndarray", "np.ndarray | None"]:
+) -> tuple[list[dict], "np.ndarray", "dict[str, np.ndarray]"]:
     """Run the full ARGUS inference pipeline on a single FITS image.
 
     Args:
@@ -1305,7 +1360,10 @@ def run_with_array(
     w_img = array.shape[1]
 
     streakmind_yolo_dets = all_det_results.get("streakmind_yolo", [])
-    heatmap_dets         = all_det_results.get("vits_heatmap", [])
+    heatmap_dets = (
+        all_det_results.get("vits_heatmap", [])
+        + all_det_results.get("vitb_heatmap", [])
+    )
 
     if raw_mode:
         # Raw mode: no Radon, no extent tracing, no NMS, no grouping.
@@ -1514,7 +1572,7 @@ def run_with_array(
             _det["x2"] = _cx + _hw * _math.cos(_rad)
             _det["y2"] = _cy + _hw * _math.sin(_rad)
 
-    return detections, array, _heatmap_sidecar.get("heat")
+    return detections, array, _heatmap_sidecar
 
 
 def run(

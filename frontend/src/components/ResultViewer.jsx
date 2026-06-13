@@ -172,7 +172,8 @@ function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
  *   detections       — array of detection dicts from /api/result
  *   highlightIndex   — index of the detection to highlight (or null)
  *   onHover(index)   — called when mouse enters an OBB (null = leave)
- *   showHeatmap      — when true, renders heatmap overlay if available
+ *   heatmapModel     — detector model ID to overlay (e.g. 'vits_heatmap'), or
+ *                      null to show no heatmap
  */
 export default function ResultViewer({
   jobId,
@@ -182,7 +183,7 @@ export default function ResultViewer({
   imageHeight,
   highlightIndex,
   onHover,
-  showHeatmap = false,
+  heatmapModel = null,
 }) {
   const canvasRef = useRef(null)
   const imgRef = useRef(null)
@@ -202,13 +203,13 @@ export default function ResultViewer({
   }, [jobId])
 
   useEffect(() => {
-    if (!jobId || !showHeatmap) {
+    if (!jobId || !heatmapModel) {
       heatmapImgRef.current = null
       setHeatmapLoaded(false)
       return
     }
     const img = new Image()
-    img.src = `/api/heatmap/${jobId}`
+    img.src = `/api/heatmap/${jobId}?model=${heatmapModel}`
     img.onload = () => {
       heatmapImgRef.current = img
       setHeatmapLoaded(true)
@@ -217,7 +218,7 @@ export default function ResultViewer({
       heatmapImgRef.current = null
       setHeatmapLoaded(false)
     }
-  }, [jobId, showHeatmap])
+  }, [jobId, heatmapModel])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -243,7 +244,7 @@ export default function ResultViewer({
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
 
-    if (showHeatmap && heatmapImgRef.current) {
+    if (heatmapModel && heatmapImgRef.current) {
       ctx.save()
       ctx.globalAlpha = 0.65
       ctx.drawImage(heatmapImgRef.current, 0, 0, canvas.width, canvas.height)
@@ -285,7 +286,7 @@ export default function ResultViewer({
       }
       drawLabel(ctx, _obbForLabel, i, colour, alpha, scaleX, scaleY)
     })
-  }, [imgLoaded, heatmapLoaded, showHeatmap, detections, visibleSet, highlightIndex, imageWidth, imageHeight])
+  }, [imgLoaded, heatmapLoaded, heatmapModel, detections, visibleSet, highlightIndex, imageWidth, imageHeight])
 
   const onMouseMove = (e) => {
     if (!canvasRef.current || !imgRef.current) return

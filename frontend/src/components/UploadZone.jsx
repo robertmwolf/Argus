@@ -15,9 +15,10 @@ function ext(filename) {
  *   onQueued(jobId, filename)  — called once the file is uploaded and queued
  *   onError(message)           — called on network or validation errors
  *   enabledDetectors           — Set<string> of detector IDs to run (null = all)
+ *   fastMode                   — bool, skip plate solve + TLE cross-ID when true
  *   rawMode                    — bool, skip Radon/NMS/grouping when true
  */
-export default function UploadZone({ onQueued, onError, enabledDetectors, rawMode = false }) {
+export default function UploadZone({ onQueued, onError, enabledDetectors, fastMode = false, rawMode = false }) {
   const [dragging, setDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
 
@@ -33,6 +34,7 @@ export default function UploadZone({ onQueued, onError, enabledDetectors, rawMod
     if (enabledDetectors !== null && enabledDetectors !== undefined) {
       form.append('enabled_detectors', JSON.stringify([...enabledDetectors]))
     }
+    form.append('fast_mode', fastMode ? 'true' : 'false')
     form.append('raw_mode', rawMode ? 'true' : 'false')
 
     try {
@@ -48,7 +50,7 @@ export default function UploadZone({ onQueued, onError, enabledDetectors, rawMod
       onError?.(err.message)
       setUploading(false)
     }
-  }, [onQueued, onError, enabledDetectors, rawMode])
+  }, [onQueued, onError, enabledDetectors, fastMode, rawMode])
 
   const onDrop = useCallback((e) => {
     e.preventDefault()

@@ -19,6 +19,7 @@ import logging
 import os
 import shutil
 import time
+from datetime import datetime, timezone
 
 # Load .env before any os.environ reads — safe no-op if python-dotenv not installed
 try:
@@ -32,7 +33,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Form, HTTPException, Request, UploadFile, status
+from fastapi import FastAPI, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from sqlalchemy import select, text, update
@@ -216,13 +217,13 @@ async def lifespan(app: FastAPI):
     app.state.pipeline_models_key = None   # ARGUS_MODEL_CONFIGS hash for cache invalidation
 
     await _recover_startup_jobs(app)
-    worker_task = asyncio.create_task(_worker_loop(app))
+    app.state.worker_task = asyncio.create_task(_worker_loop(app))
 
     yield
 
-    worker_task.cancel()
+    app.state.worker_task.cancel()
     try:
-        await worker_task
+        await app.state.worker_task
     except asyncio.CancelledError:
         pass
     await engine.dispose()
@@ -278,6 +279,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
         exposure_time = obs.exposure_time
         enabled_detectors = _parse_enabled_detectors(obs.enabled_detectors_json)
         raw_mode = bool(obs.raw_mode)
+        fast_mode = bool(obs.fast_mode)
         obs.status = "processing"
         await session.commit()
 
@@ -339,6 +341,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
             "fits_path": tmp_path,
             "enabled_detectors": enabled_detectors,
             "raw_mode": raw_mode,
+            "fast": fast_mode,
         }
         if should_run_dino:
             multi_config_raw = os.environ.get("ARGUS_MODEL_CONFIGS", "")
@@ -375,7 +378,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
             pipeline_kwargs["models"] = []
 
         pipeline_t0 = time.perf_counter()
-        detections, fits_array, heat_array = await asyncio.to_thread(
+        detections, fits_array, heat_dict = await asyncio.to_thread(
             pipeline_run,
             **pipeline_kwargs,
         )
@@ -389,14 +392,14 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
         png_bytes = await asyncio.to_thread(_render_png, tmp_path, detections, fits_array)
         await storage.save_image(job_id, png_bytes)
 
-        if heat_array is not None:
-            heatmap_png = await asyncio.to_thread(
-                _render_heatmap_png, heat_array,
+        for _hm_model_id, _heat_array in (heat_dict or {}).items():
+            _heatmap_png = await asyncio.to_thread(
+                _render_heatmap_png, _heat_array,
                 fits_array.shape[1] if fits_array is not None else None,
                 fits_array.shape[0] if fits_array is not None else None,
             )
-            if heatmap_png is not None:
-                await storage.save_heatmap(job_id, heatmap_png)
+            if _heatmap_png is not None:
+                await storage.save_heatmap(job_id, _heatmap_png, model_id=_hm_model_id)
 
         db_t0 = time.perf_counter()
         async with session_factory() as session:
@@ -790,6 +793,7 @@ async def upload(
     file: UploadFile,
     enabled_detectors: str | None = Form(None),
     raw_mode: bool = Form(False),
+    fast_mode: bool = Form(False),
 ) -> dict[str, str]:
     """Accept a FITS, PNG, or JPEG upload and enqueue it for processing.
 
@@ -863,10 +867,12 @@ async def upload(
             Observation(
                 id=job_id,
                 filename=filename,
+                uploaded_at=datetime.now(tz=timezone.utc).isoformat(),
                 obs_epoch=obs_epoch,
                 exposure_time=exposure_time,
                 enabled_detectors_json=_enabled_detectors_json(enabled_detector_set),
                 raw_mode=raw_mode,
+                fast_mode=fast_mode,
                 status="queued",
             )
         )
@@ -996,7 +1002,7 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
         except Exception:
             logger.exception("Could not determine source image dimensions for job %s", job_id)
 
-        has_heatmap = await request.app.state.storage.load_heatmap(job_id) is not None
+        has_heatmap = await request.app.state.storage.list_heatmaps(job_id)
 
         return {
             "job_id": job_id,
@@ -1070,7 +1076,11 @@ async def preview(job_id: str, request: Request) -> Response:
 
 
 @app.get("/api/heatmap/{job_id}")
-async def heatmap(job_id: str, request: Request) -> Response:
+async def heatmap(
+    job_id: str,
+    request: Request,
+    model: str | None = Query(default=None, description="Detector model ID (e.g. 'vits_heatmap')"),
+) -> Response:
     """Return the heatmap overlay PNG for a completed heatmap-detector job.
 
     The PNG is RGBA: orange-to-yellow colormap with alpha proportional to
@@ -1080,20 +1090,32 @@ async def heatmap(job_id: str, request: Request) -> Response:
     Args:
         job_id: UUID of the observation.
         request: FastAPI Request (for app state access).
+        model: Optional detector ID to select a specific heatmap when the job
+            ran multiple heatmap detectors.  Omit to get the first available.
 
     Returns:
         RGBA PNG image bytes.
 
     Raises:
-        HTTPException 404: Job not found or heatmap not available (job used a
-            different detector, or is still processing).
+        HTTPException 404: Job not found or heatmap not available.
     """
     async with request.app.state.session_factory() as session:
         obs = await session.get(Observation, job_id)
         if obs is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
 
-    png = await request.app.state.storage.load_heatmap(job_id)
+    if model is not None:
+        png = await request.app.state.storage.load_heatmap(job_id, model_id=model)
+    else:
+        # Prefer named model files; fall back to legacy heatmap.png
+        png = None
+        for try_id in ["vits_heatmap", "vitb_heatmap"]:
+            png = await request.app.state.storage.load_heatmap(job_id, model_id=try_id)
+            if png is not None:
+                break
+        if png is None:
+            png = await request.app.state.storage.load_heatmap(job_id)
+
     if png is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1125,6 +1147,48 @@ async def fits_header(job_id: str, request: Request) -> dict[str, Any]:
     if raw is None:
         return {"cards": []}
     return {"cards": json.loads(raw)}
+
+
+@app.post("/api/clear-queue")
+async def clear_queue(request: Request) -> dict[str, Any]:
+    """Cancel the running job (if any), drain pending jobs, and restart the worker.
+
+    Sets all queued and processing observations to 'cancelled' in the DB.
+    The ML inference thread for any in-progress job keeps running until it
+    finishes naturally, but its result is discarded.
+
+    Returns:
+        dict with ``cancelled`` count of DB rows updated.
+    """
+    # Cancel the running worker task so it stops awaiting the current job.
+    task: asyncio.Task | None = getattr(request.app.state, "worker_task", None)
+    if task is not None and not task.done():
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+    # Drain any queued job IDs from the in-memory queue.
+    await request.app.state.queue.clear()
+
+    # Mark all queued/processing rows as cancelled in the DB.
+    async with request.app.state.session_factory() as session:
+        result = await session.execute(
+            update(Observation)
+            .where(Observation.status.in_(["queued", "processing"]))
+            .values(status="cancelled")
+            .returning(Observation.id)
+        )
+        cancelled_ids = list(result.scalars())
+        await session.commit()
+
+    logger.info("clear_queue: cancelled %d job(s): %s", len(cancelled_ids), cancelled_ids)
+
+    # Restart a fresh worker loop for new uploads.
+    request.app.state.worker_task = asyncio.create_task(_worker_loop(request.app))
+
+    return {"cancelled": len(cancelled_ids)}
 
 
 @app.get("/api/detectors")
