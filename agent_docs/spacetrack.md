@@ -65,8 +65,10 @@ one-time bootstrap tool and the daily keep-up cron job.
 ```bash
 export SPACETRACK_USER=your@email.com
 export SPACETRACK_PASS=yourpassword
-# ARGUS_ENV defaults to development (test site), which mirrors production data.
-# No need to switch to production for the bootstrap.
+# IMPORTANT: ARGUS_ENV must be 'production' for bootstrap scripts.
+# The default 'development' endpoint (for-testing-only.space-track.org) returns
+# no data and will silently write 0-record coverage entries for every day.
+export ARGUS_ENV=production
 
 # One-time bootstrap — last 90 days (default), one query per day, ~4.5 min:
 python scripts/bootstrap_recent_tles.py
@@ -95,6 +97,40 @@ The script is fully idempotent — re-running skips already-covered days.
 
 > **Scheduling rule:** Never schedule at :00 or :30 past the hour.
 > Use :16 or :44 (Space-Track admin recommendation).
+
+### Detecting and filling coverage gaps
+
+Days that were bootstrapped while `ARGUS_ENV=development` was active hit
+`for-testing-only.space-track.org`, which returns no data.  Those days land in
+`tle_catalog_coverage` with `record_count=0` — they look covered but are empty.
+
+**Detect gaps:**
+
+```bash
+# List all zero-record days in the coverage table:
+sqlite3 argus.db "
+  SELECT source_tag, record_count, downloaded_at
+  FROM tle_catalog_coverage
+  WHERE source_tag LIKE 'gp_history_creation_%' AND record_count = 0
+  ORDER BY source_tag;
+"
+```
+
+**Fill gaps:**
+
+```bash
+# Re-fetch all zero-record gap days from the production Space-Track API.
+# Reads credentials and ARGUS_ENV=production from .env automatically.
+# Safe to re-run — days already containing real data are untouched.
+python scripts/fill_tle_gaps.py
+```
+
+`fill_tle_gaps.py` queries `tle_catalog_coverage` for `record_count=0` entries,
+calls `fetch_day(force=True)` for each, and updates the coverage record.
+It does **not** touch days that already have data, so it is safe to run at any
+time without re-fetching the full catalog.
+
+**Coverage tag written per day:** `gp_history_creation_YYYY_MM_DD`
 
 ### Prior years — annual zip bundles
 
@@ -276,6 +312,7 @@ provenance against the local catalog.
 | Tag | Source | Written by |
 |---|---|---|
 | `zip_YYYY` / `txt_YYYY` | Annual Space-Track zip bundle | `bootstrap_tle_catalog.py` |
+| `gp_history_creation_YYYY_MM_DD` | Space-Track GP_History by CREATION_DATE | `bootstrap_recent_tles.py` / `fill_tle_gaps.py` |
 | `celestrak_refresh` | CelesTrak GP API (live edge) | `celestrak_client.py` / `TLECatalogManager` |
 | `gp_current` | Space-Track GP class (explicit maintenance) | `bootstrap_tle_catalog.py --update-current` |
 

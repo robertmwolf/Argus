@@ -187,9 +187,10 @@ FAST_MODE=false
 # ARGUS_ENABLE_ASTRIDE=1
 
 # ARGUS_ENV controls which Space-Track endpoint is used:
-#   development (default) → https://for-testing-only.space-track.org/
+#   development (default) → https://for-testing-only.space-track.org/  (no real data)
 #   production            → https://www.space-track.org/
-ARGUS_ENV=development
+# IMPORTANT: bootstrap scripts require production to fetch real TLE data.
+ARGUS_ENV=production
 ```
 
 ### TLE Catalog Setup
@@ -206,8 +207,7 @@ python scripts/bootstrap_tle_catalog.py \
     --zip data/tle_zips/data/exports/tle2025.txt
 
 # Step 2 — Bootstrap the last 90 days from Space-Track GP_History (~4.5 min).
-# ARGUS_ENV defaults to development (test site), which mirrors production data.
-# No need to switch to production — the same historical records are available.
+# Requires ARGUS_ENV=production in .env (the test site returns no data).
 python scripts/bootstrap_recent_tles.py
 ```
 
@@ -221,7 +221,7 @@ already cached and skipped automatically.
 ```bash
 # Install the cron job — runs at 00:16 UTC daily (off-hour as required by Space-Track).
 # Crontab requires a single line; no backslash continuations.
-echo '16 0 * * * SPACETRACK_USER=your@email.com SPACETRACK_PASS=yourpassword /Users/robert/miniconda3/envs/satid/bin/python /Users/robert/Argus/scripts/bootstrap_recent_tles.py >> /Users/robert/Argus/logs/tle_keepup.log 2>&1' | crontab -
+echo '16 0 * * * SPACETRACK_USER=your@email.com SPACETRACK_PASS=yourpassword ARGUS_ENV=production /Users/robert/miniconda3/envs/satid/bin/python /Users/robert/Argus/scripts/bootstrap_recent_tles.py >> /Users/robert/Argus/logs/tle_keepup.log 2>&1' | crontab -
 
 # Verify it was installed:
 crontab -l
@@ -237,6 +237,22 @@ crontab -r          # removes all cron jobs (use if this is your only one)
 crontab -e          # opens vim; delete the line, then :wq to save
 crontab -l          # verify it's gone
 ```
+
+**Detecting and filling coverage gaps:**
+
+Coverage is tracked per-day in `tle_catalog_coverage`.  Days that were queried
+while `ARGUS_ENV=development` was active (the test site) will have
+`record_count=0` even though Space-Track has real data for those dates.
+
+```bash
+# Find all zero-record gap days and re-fetch them from the production site:
+python scripts/fill_tle_gaps.py
+```
+
+`fill_tle_gaps.py` queries `tle_catalog_coverage` for days with `record_count=0`,
+forces a re-fetch of each from the production Space-Track API, and updates the
+coverage record.  It reads credentials and `ARGUS_ENV=production` from `.env`
+automatically.  Safe to re-run; already-covered days with real data are untouched.
 
 If the catalog has no coverage for an observation time window, ARGUS leaves the
 object unidentified (`unknown`) rather than querying Space-Track at runtime.
