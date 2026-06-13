@@ -225,6 +225,8 @@ def main() -> int:
         if val_metrics["dice"] > best_dice:
             best_dice = val_metrics["dice"]
             torch.save(payload, work_dir / "best.pt")
+        # Persist history every epoch so an early stop still leaves the dice curve.
+        (work_dir / "history.json").write_text(json.dumps(history, indent=2))
 
     (work_dir / "history.json").write_text(json.dumps(history, indent=2))
     logger.info("best val dice %.3f saved to %s", best_dice, work_dir / "best.pt")

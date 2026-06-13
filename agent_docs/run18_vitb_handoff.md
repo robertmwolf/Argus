@@ -35,7 +35,27 @@ All fixed as of 2026-06-12:
    `evaluate_dinov3_heatmap.py --heatmap-cache`. Never re-run the backbone per
    threshold.
 
-## Recipe deltas to try (fixing undertraining)
+## ROOT CAUSE FOUND (2026-06-12) + ready-to-run pipeline
+
+Run 17 didn't fail from the backbone (ViT-B loads with 0 missing keys) or the
+frozen approach (ViT-S got dice 0.77 frozen). It failed from **data
+inconsistency**: training mixed FITS+PNG+synthetic-NPY (70% synthetic) while
+validation was pure FITS, so the head underfit (train_dice stuck at 0.37) and
+val_dice (0.105) measured a different distribution.
+
+**Fix is built and ready:**
+- New consistent split: `scripts/build_run18_split.py` → `data/annotations/{train,val}_run18.json`
+  (real FITS only; synthetic streaks rendered ON real FITS; ~38% negative tiles
+  per Run 10; stratified by band; split by frame; val_atwood/test_atwood excluded).
+  Train: short 694 / med 2392 / long 2005 + 580 neg windows.
+- Overnight pipeline: `bash scripts/run18_vitb_pipeline.sh` (cache → train → eval).
+  Reduced to 22 epochs (slow MPS); best.pt/latest.pt + history.json saved EVERY
+  epoch so you can Ctrl-C and use best.pt, or `--resume` from latest.pt.
+  Caching is ~3.5 hr (backbone pass); training is fast after.
+- **Success signal during training:** if train_dice climbs past ~0.6 the
+  consistency fix worked (Run 17 was stuck at 0.37).
+
+## Recipe deltas to try (if the consistency fix alone isn't enough)
 
 Run 17 baseline recipe: ViT-B/16, 400px tiles, zscore norm, frozen backbone +
 cached-head, 40 epochs. Changes to try, roughly in priority order:
