@@ -235,23 +235,27 @@ See `agent_docs/test_strategy.md §Canonical Model Evaluation Standard` for full
   ViT-B features are 768-dim (2× ViT-S), so expect ~2× the cache size of a ViT-S run.
 - Train with `train_dinov3_heatmap_cached.py` on the tiled cache.
 - Evaluate with `--tiled` in `evaluate_dinov3_heatmap.py`.
-- **Threshold sweep (standard pattern):** load the model once at `--threshold 0.05` (keeps
-  all candidates) and pass `--threshold-sweep 0.2 0.3 0.4 0.5 0.6 0.7`.  The script runs
-  inference once per image, then re-filters by each sweep value in memory and writes
-  `metrics_t020.json`, `metrics_t030.json`, … alongside the `--output` path.
-  **Never launch N parallel processes for N thresholds** — each process reloads the model.
-  Example:
+- **Threshold sweep — use the heatmap cache (canonical).** Binarisation happens at each
+  real threshold *before* stitch, which is correct.  Two steps:
   ```bash
-  python scripts/evaluate_dinov3_heatmap.py \
-    --checkpoint weights/runN_vits/best.pt \
-    --annotations data/annotations/val.json \
-    --output results/runN/sweep/metrics_placeholder.json \
-    --tiled --stitch --norm-mode zscore \
-    --threshold 0.05 \
-    --threshold-sweep 0.2 0.3 0.4 0.5 0.6 0.7
+  # 1. cache once (backbone pass)
+  python scripts/cache_heatmap_maps.py --annotations data/annotations/val_balanced_v1.json \
+    --checkpoint weights/runN_vits/best.pt --output-dir ~/argus_runN_cache --norm-mode zscore
+  # 2. zero-GPU sweep through the fixed stitch + peak filter
+  python scripts/evaluate_dinov3_heatmap.py --tiled --stitch \
+    --heatmap-cache ~/argus_runN_cache --annotations data/annotations/val_balanced_v1.json \
+    --norm-mode zscore --threshold 0.05 --threshold-sweep 0.5 0.6 0.7 0.8 \
+    --peak-floor 0.0 --output results/runN/balanced_v1/metrics_placeholder.json
   ```
-- For stitch eval: always pass `--stitch-max-growth-ratio 3.0` to prevent short streaks
-  from being absorbed into long false-positive chains.
+  **Do NOT** use the old `--threshold-sweep` *without* `--heatmap-cache`: that path binarises
+  once at the base `--threshold` and re-filters stitched output, so noise fragments merged at
+  a low base threshold can't be undone — it under-reports recall.  **Never launch N parallel
+  processes for N thresholds** either (each reloads the model).
+- `--peak-floor` (pre-stitch) and `--top-k` (post-stitch) drive the noise filter; sweep
+  `--peak-floor` to trade precision for recall.  Bands default to short[50,400)/medium[400,1000)/
+  long[1000+) with a 50px floor (`eval/streak_metrics.py`).
+- For stitch eval: the fixed `stitch_collinear_fragments` defaults (angle 10°, gap 200,
+  conf_floor 0.5, global growth 3×) prevent the transitivity blow-up; no extra flags needed.
 - **Heatmap cache (fastest threshold sweeps):** run `scripts/cache_heatmap_maps.py` once to
   save per-image feature-resolution probability maps (float32 NPY, ~400 KB each).
   Then pass `--heatmap-cache DIR --tiled` to skip GPU inference entirely on future sweeps —
