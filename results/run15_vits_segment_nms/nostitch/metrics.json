@@ -1,0 +1,31 @@
+{
+  "metrics": {
+    "precision": 0.0082,
+    "recall": 0.3684,
+    "f1": 0.016,
+    "mean_angle_error_deg": 1.233,
+    "mean_perp_offset_px": 0.885,
+    "mean_length_1d_iou": 0.6479,
+    "per_band": {
+      "short": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "medium": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "long": {
+        "precision": 0.0059,
+        "recall": 0.4167,
+        "f1": 0.0116
+      }
+    }
+  },
+  "n_predictions": 1707,
+  "tiled": true,
+  "stitch": false,
+  "threshold": 0.5
+}
