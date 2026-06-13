@@ -32,6 +32,8 @@ from models.plain_dinov3.streak_heatmap import (
 from training.dinov3_heatmap_dataset import StreakHeatmapDataset, collate_heatmap_batch
 from training.train_dinov3_heatmap_cached import HeatmapHead
 
+_HEATMAP_PATCH_SIZE = 16  # ViT-S/16 and ViT-B/16
+
 logger = logging.getLogger(__name__)
 
 
@@ -100,6 +102,181 @@ def coco_ground_truth(annotation_file: Path) -> list[dict[str, Any]]:
 
 
 
+def _detections_from_feat_heatmap(
+    feat_probs: np.ndarray,
+    threshold: float,
+    min_pixels: int,
+    image_id: int,
+    patch_size: int = _HEATMAP_PATCH_SIZE,
+) -> list[dict[str, Any]]:
+    """Convert a feature-resolution probability map to detection dicts.
+
+    Args:
+        feat_probs: Float32 array shaped (H_feat, W_feat) loaded from the
+            heatmap cache.  Each element represents one 16-px patch in the
+            source image.
+        threshold: Binarisation threshold in [0, 1].
+        min_pixels: Minimum connected component size in feature-map pixels.
+        image_id: COCO image id to stamp on each detection.
+        patch_size: Feature stride in source pixels (default 16).
+
+    Returns:
+        Detection dicts with bbox/confidence/x1/y1/x2/y2/streak_length_px
+        in source-image pixel coordinates, consistent with the tiled eval path.
+    """
+    from scipy import ndimage as _ndimage
+
+    feat_h, feat_w = feat_probs.shape
+    binary = feat_probs >= threshold
+    labels, n_labels = _ndimage.label(binary)
+    detections: list[dict[str, Any]] = []
+    for label_id in range(1, n_labels + 1):
+        mask = labels == label_id
+        if int(mask.sum()) < min_pixels:
+            continue
+        # image_size arg only affects geometry decoding; we pass None for geometry
+        det = _component_to_segment(
+            mask, feat_probs, patch_size, None, feat_h * patch_size
+        )
+        if det is None:
+            continue
+        obb = det["obb"]
+        hw, hh = obb["w"] / 2.0, obb["h"] / 2.0
+        detections.append({
+            "bbox":             [obb["cx"] - hw, obb["cy"] - hh,
+                                 obb["cx"] + hw, obb["cy"] + hh],
+            "confidence":       det["confidence"],
+            "x1":               det["x1"],
+            "y1":               det["y1"],
+            "x2":               det["x2"],
+            "y2":               det["y2"],
+            "obb":              obb,
+            "streak_length_px": det["streak_length_px"],
+            "method":           "vits_heatmap",
+            "image_id":         image_id,
+        })
+    return detections
+
+
+def _eval_from_heatmap_cache(args: "argparse.Namespace") -> int:
+    """Threshold-sweep eval using pre-cached feature-resolution heatmaps.
+
+    Loads NPY heatmaps written by ``cache_heatmap_maps.py`` and re-applies
+    thresholding + connected components + optional stitch at each requested
+    threshold without touching the GPU.  All 240 val image heatmaps fit in
+    ~100 MB RAM so they are held in memory for efficient multi-threshold sweeps.
+
+    Called from ``main()`` when ``--heatmap-cache`` is provided with ``--tiled``.
+    """
+    cache_dir = Path(args.heatmap_cache)
+    manifest_path = cache_dir / "manifest.json"
+    if not manifest_path.exists():
+        logger.error("manifest.json not found in --heatmap-cache dir: %s", cache_dir)
+        return 1
+    manifest_data = json.loads(manifest_path.read_text())
+    logger.info(
+        "Heatmap cache: %d images  checkpoint=%s",
+        manifest_data.get("n_images", "?"),
+        manifest_data.get("checkpoint", "?"),
+    )
+
+    coco_data = json.loads(Path(args.annotations).read_text())
+    images_meta = coco_data.get("images", [])
+    if args.max_samples:
+        images_meta = images_meta[: args.max_samples]
+    image_ids_in_split = {int(m["id"]) for m in images_meta}
+
+    ground_truth = coco_ground_truth(Path(args.annotations))
+    if args.max_samples:
+        ground_truth = [g for g in ground_truth if int(g["image_id"]) in image_ids_in_split]
+
+    # Load all heatmaps into memory (~100 MB for 240 val images at 16× downsample)
+    heatmaps: dict[int, np.ndarray] = {}
+    n_missing = 0
+    for meta in images_meta:
+        image_id = int(meta["id"])
+        npy_name = manifest_data["images"].get(str(image_id))
+        if npy_name is None:
+            logger.warning("image_id=%d not in manifest, skipping", image_id)
+            n_missing += 1
+            continue
+        npy_path = cache_dir / npy_name
+        if not npy_path.exists():
+            logger.warning("NPY missing: %s", npy_path)
+            n_missing += 1
+            continue
+        heatmaps[image_id] = np.load(str(npy_path))
+    logger.info("Loaded %d/%d heatmaps (%d missing)", len(heatmaps),
+                len(images_meta), n_missing)
+
+    from inference.tiled_pipeline import stitch_collinear_fragments as _stitch_frags
+
+    def _stitch_dets(dets: list[dict]) -> list[dict]:
+        if len(dets) <= 1:
+            return dets
+        stitch_in = []
+        for d in dets:
+            x1, y1, x2, y2 = d["bbox"]
+            stitch_in.append({**d, "bbox": [x1, y1, x2 - x1, y2 - y1],
+                               "score": d["confidence"]})
+        stitched = _stitch_frags(stitch_in,
+                                 max_gap_px=args.stitch_max_gap,
+                                 max_growth_ratio=args.stitch_max_growth_ratio)
+        out = []
+        for s in stitched:
+            x, y, w, h = s["bbox"]
+            out.append({**s, "bbox": [x, y, x + w, y + h],
+                        "confidence": s.get("confidence", s.get("score", 0.0))})
+        return out
+
+    def _detect_all(threshold: float) -> list[dict]:
+        preds: list[dict] = []
+        for meta in images_meta:
+            image_id = int(meta["id"])
+            feat = heatmaps.get(image_id)
+            if feat is None:
+                continue
+            dets = _detections_from_feat_heatmap(
+                feat, threshold, args.min_pixels, image_id
+            )
+            if args.stitch and dets:
+                dets = _stitch_dets(dets)
+            preds.extend(dets)
+            logger.debug("cache eval img_id=%d t=%.2f dets=%d", image_id, threshold, len(dets))
+        return preds
+
+    def _write_metrics(preds: list[dict], threshold_val: float, out_path: Path) -> None:
+        metrics = evaluate_segments(preds, ground_truth)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "metrics": metrics,
+            "n_predictions": len(preds),
+            "tiled": True,
+            "stitch": args.stitch,
+            "threshold": threshold_val,
+            "source": "heatmap_cache",
+        }
+        out_path.write_text(json.dumps(payload, indent=2))
+        (out_path.parent / f"predictions_t{int(round(threshold_val * 100)):03d}.json").write_text(
+            json.dumps(preds, indent=2)
+        )
+        logger.info("wrote %s (%d predictions, heatmap-cache)", out_path, len(preds))
+
+    base_out = Path(args.output)
+
+    if args.threshold_sweep:
+        for t in args.threshold_sweep:
+            tag = f"t{int(round(t * 100)):03d}"
+            sweep_out = base_out.parent / f"metrics_{tag}.json"
+            preds = _detect_all(t)
+            _write_metrics(preds, t, sweep_out)
+        return 0
+
+    preds = _detect_all(args.threshold)
+    _write_metrics(preds, args.threshold, base_out)
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--annotations", default="data/annotations/test.json")
@@ -143,11 +320,25 @@ def main() -> int:
                              "merge via NMS.  Implies --tiled.  Example: --scales 1800 518 110. "
                              "When omitted, falls back to single-scale tiling controlled by "
                              "VITS_HEATMAP_NATIVE_TILE_SIZE / CONVNEXT_HEATMAP_NATIVE_TILE_SIZE.")
+    parser.add_argument("--heatmap-cache", default=None, metavar="DIR",
+                        help="Directory of pre-cached feature-resolution heatmaps produced by "
+                             "scripts/cache_heatmap_maps.py.  When provided with --tiled, skips "
+                             "model loading and GPU inference entirely — threshold sweeps run "
+                             "from cached NPY probability maps in seconds.  The cache must have "
+                             "been built with the same checkpoint and tiling params as this eval.")
     args = parser.parse_args()
     if args.scales:
         args.tiled = True  # --scales implies tiled
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+
+    # Fast path: load pre-cached heatmaps and sweep thresholds without GPU inference
+    if args.heatmap_cache is not None:
+        if not args.tiled:
+            logger.error("--heatmap-cache requires --tiled (heatmaps were built with tiled inference)")
+            return 1
+        return _eval_from_heatmap_cache(args)
+
     device = get_device()
     ckpt = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
     train_args = ckpt.get("args", {})

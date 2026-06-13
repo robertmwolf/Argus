@@ -252,6 +252,27 @@ See `agent_docs/test_strategy.md §Canonical Model Evaluation Standard` for full
   ```
 - For stitch eval: always pass `--stitch-max-growth-ratio 3.0` to prevent short streaks
   from being absorbed into long false-positive chains.
+- **Heatmap cache (fastest threshold sweeps):** run `scripts/cache_heatmap_maps.py` once to
+  save per-image feature-resolution probability maps (float32 NPY, ~400 KB each).
+  Then pass `--heatmap-cache DIR --tiled` to skip GPU inference entirely on future sweeps —
+  re-thresholding runs from cached NPY maps in seconds.
+  ```bash
+  # Step 1: build cache once (GPU, ~same time as a single eval)
+  python scripts/cache_heatmap_maps.py \
+    --annotations data/annotations/val_run17_fits.json \
+    --checkpoint weights/run15_vits/best.pt \
+    --output-dir /tmp/argus_run15_heatmap_cache \
+    --norm-mode zscore
+
+  # Step 2: sweep thresholds without GPU (repeatable, seconds per run)
+  python scripts/evaluate_dinov3_heatmap.py \
+    --annotations data/annotations/val_run17_fits.json \
+    --output results/run15_vits/cache_sweep/metrics_placeholder.json \
+    --tiled --stitch --stitch-max-growth-ratio 3.0 \
+    --heatmap-cache /tmp/argus_run15_heatmap_cache \
+    --threshold 0.50 \
+    --threshold-sweep 0.60 0.70 0.80 0.85 0.90
+  ```
 
 **Full-image caching (no `--native-tile-size`) must not be used for Atwood-scale images.**
 Medium streaks span <2 feature patches at full-frame 384 px — undetectable.
