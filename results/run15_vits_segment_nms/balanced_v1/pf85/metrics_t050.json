@@ -1,0 +1,32 @@
+{
+  "metrics": {
+    "precision": 0.4152,
+    "recall": 0.9121,
+    "f1": 0.5707,
+    "mean_angle_error_deg": 0.452,
+    "mean_perp_offset_px": 1.93,
+    "mean_length_1d_iou": 0.9376,
+    "per_band": {
+      "short": {
+        "precision": 0.1188,
+        "recall": 0.6102,
+        "f1": 0.1989
+      },
+      "medium": {
+        "precision": 0.626,
+        "recall": 0.82,
+        "f1": 0.71
+      },
+      "long": {
+        "precision": 0.8242,
+        "recall": 0.9375,
+        "f1": 0.8772
+      }
+    }
+  },
+  "n_predictions": 587,
+  "tiled": true,
+  "stitch": true,
+  "threshold": 0.5,
+  "source": "heatmap_cache"
+}

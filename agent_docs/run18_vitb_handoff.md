@@ -61,8 +61,16 @@ single-tile and stitch-independent, so it is the cleanest measure of raw model
 capability. Secondary: match-or-beat ViT-S medium-band recall (ViT-B's intended
 advantage). Measure through the fixed pipeline below.
 
-**Run 15 ViT-S baseline on val_balanced_v1:** _(filled from P5 — see
-`results/run15_vits_segment_nms/balanced_v1/README.md`)_
+**Run 15 ViT-S baseline on val_balanced_v1** (fixed pipeline, peak-floor 0.85,
+threshold 0.7 — see `results/run15_vits_segment_nms/balanced_v1/README.md`):
+
+| Metric | short | medium | long | overall |
+|--------|------:|-------:|-----:|--------:|
+| recall | **0.746** | 0.850 | 0.938 | 0.933 |
+| F1     | 0.261 | 0.791 | 0.893 | 0.619 |
+
+Run 18 must beat **short recall 0.746** (single-tile, stitch-independent — the
+clean model-capability number) to justify shipping over ViT-S.
 
 ## Eval commands (the fixed workflow)
 
