@@ -188,6 +188,10 @@ def _component_to_segment(
     return {
         "x1": x1, "y1": y1, "x2": x2, "y2": y2,
         "confidence": float(score_map[mask].mean()),
+        # Peak (max) activation in the component. A real streak has a sharp
+        # high peak; diffuse background blobs are softer even when their mean
+        # clears the threshold. Used by the detector's peak-floor / top-K filter.
+        "peak_confidence": float(score_map[mask].max()),
         "streak_length_px": length,
         # Backward-compat OBB derived from segment geometry
         "obb": {

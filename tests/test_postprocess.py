@@ -524,3 +524,40 @@ class TestFuseGroupGeometries:
 
         assert fused[0]["obb"]["angle_deg"] == pytest.approx(112.0)
         assert fused[1]["obb"]["angle_deg"] == pytest.approx(112.0)
+
+
+# ---------------------------------------------------------------------------
+# filter_peak_topk
+# ---------------------------------------------------------------------------
+
+def test_filter_peak_topk_floor_drops_soft_detections() -> None:
+    from inference.postprocess import filter_peak_topk
+    dets = [
+        {"peak_confidence": 0.99, "confidence": 0.9},
+        {"peak_confidence": 0.60, "confidence": 0.55},
+        {"peak_confidence": 0.72, "confidence": 0.60},
+    ]
+    kept = filter_peak_topk(dets, peak_floor=0.65)
+    assert [d["peak_confidence"] for d in kept] == [0.99, 0.72]
+
+
+def test_filter_peak_topk_keeps_top_k_by_peak() -> None:
+    from inference.postprocess import filter_peak_topk
+    dets = [
+        {"peak_confidence": 0.5}, {"peak_confidence": 0.99}, {"peak_confidence": 0.8},
+    ]
+    kept = filter_peak_topk(dets, top_k=2)
+    assert [d["peak_confidence"] for d in kept] == [0.99, 0.8]
+
+
+def test_filter_peak_topk_both_off_is_identity() -> None:
+    from inference.postprocess import filter_peak_topk
+    dets = [{"peak_confidence": 0.3}, {"peak_confidence": 0.9}]
+    assert len(filter_peak_topk(dets)) == 2
+
+
+def test_filter_peak_topk_falls_back_to_confidence() -> None:
+    from inference.postprocess import filter_peak_topk
+    dets = [{"confidence": 0.9}, {"confidence": 0.4}]  # no peak_confidence
+    kept = filter_peak_topk(dets, peak_floor=0.5)
+    assert len(kept) == 1 and kept[0]["confidence"] == 0.9

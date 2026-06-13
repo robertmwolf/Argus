@@ -146,6 +146,7 @@ def _detections_from_feat_heatmap(
             "bbox":             [obb["cx"] - hw, obb["cy"] - hh,
                                  obb["cx"] + hw, obb["cy"] + hh],
             "confidence":       det["confidence"],
+            "peak_confidence":  det.get("peak_confidence", det["confidence"]),
             "x1":               det["x1"],
             "y1":               det["y1"],
             "x2":               det["x2"],
@@ -239,8 +240,17 @@ def _eval_from_heatmap_cache(args: "argparse.Namespace") -> int:
             dets = _detections_from_feat_heatmap(
                 feat, threshold, args.min_pixels, image_id
             )
+            # Peak-floor gate BEFORE stitch (drops noise components so they
+            # cannot seed chains); top-K AFTER stitch (keep the K strongest
+            # final streaks per image).
+            if args.peak_floor > 0.0:
+                dets = [d for d in dets
+                        if d.get("peak_confidence", d["confidence"]) >= args.peak_floor]
             if args.stitch and dets:
                 dets = _stitch_dets(dets)
+            if args.top_k > 0 and len(dets) > args.top_k:
+                dets = sorted(dets, key=lambda d: d.get("peak_confidence", d["confidence"]),
+                              reverse=True)[:args.top_k]
             preds.extend(dets)
             logger.debug("cache eval img_id=%d t=%.2f dets=%d", image_id, threshold, len(dets))
         return preds
@@ -293,6 +303,13 @@ def main() -> int:
                              "filename, e.g. metrics_t050.json. Example: "
                              "--threshold 0.05 --threshold-sweep 0.2 0.3 0.4 0.5 0.6 0.7")
     parser.add_argument("--min-pixels", type=int, default=2)
+    parser.add_argument("--peak-floor", type=float, default=0.0,
+                        help="Drop detections whose peak activation is below this "
+                             "(applied before stitch). 0.0 = off. The true streak "
+                             "has a sharp peak (~1.0); diffuse noise blobs are softer.")
+    parser.add_argument("--top-k", type=int, default=0,
+                        help="Keep only the K highest-peak detections per image "
+                             "(applied after stitch). 0 = off.")
     parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--max-samples", type=int, default=None)
     parser.add_argument("--norm-mode", choices=["autostretch", "zscore", "zscale"],

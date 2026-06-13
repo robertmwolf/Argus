@@ -687,6 +687,45 @@ def nms_detections(
     return kept
 
 
+def filter_peak_topk(
+    detections: list[dict],
+    peak_floor: float = 0.0,
+    top_k: int = 0,
+) -> list[dict]:
+    """Drop background-noise detections by peak activation and per-image rank.
+
+    Heatmap detectors emit many weak components per image at a low binarisation
+    threshold; the true streak is the highest-``peak_confidence`` component (a
+    real streak has a sharp peak, diffuse blobs do not).  Two complementary,
+    optional gates:
+
+    1. ``peak_floor`` — drop detections whose ``peak_confidence`` (falling back
+       to ``confidence``) is below the floor.  ``0.0`` disables this gate.
+    2. ``top_k`` — keep only the K highest-peak detections.  ``0`` disables
+       this gate (keep all).  Use a value comfortably above the expected number
+       of streaks per frame so constellation frames are not truncated.
+
+    Args:
+        detections: Detection dicts with ``peak_confidence`` and/or ``confidence``.
+        peak_floor: Minimum peak activation to keep (``0.0`` = off).
+        top_k: Keep at most this many highest-peak detections (``0`` = off).
+
+    Returns:
+        Filtered detections, ordered by descending peak activation.
+    """
+    if not detections:
+        return []
+
+    def _peak(d: dict) -> float:
+        return float(d.get("peak_confidence", d.get("confidence", 0.0)))
+
+    kept = [d for d in detections if _peak(d) >= peak_floor] if peak_floor > 0.0 else list(detections)
+    if top_k and top_k > 0 and len(kept) > top_k:
+        kept = sorted(kept, key=_peak, reverse=True)[:top_k]
+        return kept
+    return sorted(kept, key=_peak, reverse=True)
+
+
 def group_detections(
     detections: list[dict],
     iou_threshold: float = 0.5,

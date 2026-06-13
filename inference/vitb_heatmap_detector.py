@@ -33,7 +33,7 @@ import numpy as np
 # Re-use the model loader and backbone-agnostic tile helpers from ViT-S module.
 # _load_model is checkpoint-agnostic: it reads model_size from the checkpoint's
 # train_cache_metadata, so ViT-B checkpoints load correctly via the same path.
-from inference.vits_heatmap_detector import _load_model
+from inference.vits_heatmap_detector import _load_model, _filter_peak_topk
 from inference.convnext_heatmap_detector import (
     _run_single_tile,
     _run_single_tile_probs,
@@ -84,6 +84,8 @@ def run_vitb_heatmap_detector(
     min_pixels       = int(os.environ.get("VITB_HEATMAP_MIN_PIXELS", "2"))
     native_tile_size = int(os.environ.get("VITB_HEATMAP_NATIVE_TILE_SIZE", "400"))
     tile_overlap     = float(os.environ.get("VITB_HEATMAP_TILE_OVERLAP", "0.5"))
+    peak_floor       = float(os.environ.get("VITB_HEATMAP_PEAK_FLOOR", "0.0"))
+    top_k            = int(os.environ.get("VITB_HEATMAP_TOPK", "0"))
 
     try:
         model, image_size, device, use_geometry = _load_model(ckpt_path)
@@ -103,7 +105,7 @@ def run_vitb_heatmap_detector(
                                 use_geometry=use_geometry)
         for d in dets:
             d["method"] = "vitb_heatmap"
-        return dets
+        return _filter_peak_topk(dets, peak_floor, top_k)
 
     from inference.tiled_pipeline import tile_image
     from inference.postprocess import nms_detections
@@ -117,11 +119,12 @@ def run_vitb_heatmap_detector(
             all_dets.append(d)
 
     if len(all_dets) <= 1:
-        return all_dets
+        return _filter_peak_topk(all_dets, peak_floor, top_k)
 
-    result = nms_detections(all_dets)
+    result = _filter_peak_topk(nms_detections(all_dets), peak_floor, top_k)
     logger.debug(
-        "ViT-B heatmap (tiled): %d raw → %d after segment NMS", len(all_dets), len(result)
+        "ViT-B heatmap (tiled): %d raw → %d after segment NMS + peak/top-K",
+        len(all_dets), len(result)
     )
     return result
 
@@ -142,6 +145,8 @@ def run_vitb_heatmap_detector_and_heatmap(
     min_pixels       = int(os.environ.get("VITB_HEATMAP_MIN_PIXELS", "2"))
     native_tile_size = int(os.environ.get("VITB_HEATMAP_NATIVE_TILE_SIZE", "400"))
     tile_overlap     = float(os.environ.get("VITB_HEATMAP_TILE_OVERLAP", "0.5"))
+    peak_floor       = float(os.environ.get("VITB_HEATMAP_PEAK_FLOOR", "0.0"))
+    top_k            = int(os.environ.get("VITB_HEATMAP_TOPK", "0"))
 
     try:
         model, image_size, device, use_geometry = _load_model(ckpt_path)
@@ -164,7 +169,7 @@ def run_vitb_heatmap_detector_and_heatmap(
             d["method"] = "vitb_heatmap"
         heat_tile, _, _, _ = _run_single_tile_probs(array, model, image_size, device)
         heat_full = heat_tile
-        return dets, heat_full
+        return _filter_peak_topk(dets, peak_floor, top_k), heat_full
 
     from inference.tiled_pipeline import tile_image
     from inference.postprocess import nms_detections
@@ -186,6 +191,6 @@ def run_vitb_heatmap_detector_and_heatmap(
         )
 
     if len(all_dets) <= 1:
-        return all_dets, heat_full
+        return _filter_peak_topk(all_dets, peak_floor, top_k), heat_full
 
-    return nms_detections(all_dets), heat_full
+    return _filter_peak_topk(nms_detections(all_dets), peak_floor, top_k), heat_full
