@@ -310,6 +310,131 @@ def _run_single_tile_probs(
     return heat_tile, scale, pad_x, pad_y
 
 
+def _run_tile_batch_full(
+    tiles: list[tuple["np.ndarray", int, int]],
+    model: Any,
+    image_size: int,
+    device: torch.device,
+    threshold: float,
+    min_pixels: int,
+    use_geometry: bool = True,
+    batch_size: int = 4,
+) -> list[tuple[list[dict[str, Any]], "np.ndarray", int, int, int, int]]:
+    """Process tiles in batches with a single forward pass per batch.
+
+    Eliminates the double forward pass that the *_and_heatmap functions
+    previously required (one pass for detections, one for the heatmap overlay).
+    Returns (dets, heat_tile, x0, y0, tile_h, tile_w) for each input tile in
+    the same order they were supplied.
+    """
+    import cv2 as _cv2
+
+    # Pre-process all tiles to letterbox canvases; keep metadata for unscaling.
+    prepped: list[tuple[torch.Tensor, int, int, int, int, float, float, float]] = []
+    for tile, x0, y0 in tiles:
+        if tile.ndim == 2:
+            tile = np.stack([tile] * 3, axis=2)
+        th, tw = tile.shape[:2]
+        canvas, scale, pad_x, pad_y = _letterbox(tile, image_size)
+        t = torch.from_numpy(canvas.astype(np.float32) / 255.0).permute(2, 0, 1)
+        prepped.append((t, x0, y0, th, tw, scale, pad_x, pad_y))
+
+    patch_size = 16
+    results: list[tuple[list[dict[str, Any]], np.ndarray, int, int, int, int]] = []
+
+    for i in range(0, len(prepped), batch_size):
+        chunk = prepped[i:i + batch_size]
+        batch = torch.stack([c[0] for c in chunk]).to(device)
+
+        with torch.no_grad():
+            output = model(imagenet_normalize(batch))
+            logits = output[:, :1]
+            probs_np = torch.sigmoid(logits).cpu().numpy().astype(np.float32)  # (N,1,hf,wf)
+            if use_geometry and output.shape[1] >= 5:
+                geom_np = decode_geometry(output[:, 1:5]).cpu().numpy()  # (N,4,hf,wf)
+            else:
+                geom_np = None
+
+        for j, (_, x0, y0, th, tw, scale, pad_x, pad_y) in enumerate(chunk):
+            probs = probs_np[j, 0]
+            geometry = geom_np[j] if geom_np is not None else None
+
+            # Detections
+            binary = probs >= threshold
+            labels, n_labels = ndimage.label(binary)
+            dets: list[dict[str, Any]] = []
+            for label_id in range(1, n_labels + 1):
+                mask = labels == label_id
+                if int(mask.sum()) < min_pixels:
+                    continue
+                det = _component_to_segment(mask, probs, patch_size, geometry, image_size)
+                if det is None:
+                    continue
+                obb = det["obb"]
+                obb["cx"] = (obb["cx"] - pad_x) / scale
+                obb["cy"] = (obb["cy"] - pad_y) / scale
+                obb["w"] /= scale
+                obb["h"] /= scale
+                det["streak_length_px"] = float(obb["w"])
+                det["x1"] = (det["x1"] - pad_x) / scale
+                det["y1"] = (det["y1"] - pad_y) / scale
+                det["x2"] = (det["x2"] - pad_x) / scale
+                det["y2"] = (det["y2"] - pad_y) / scale
+                cx, cy = obb["cx"], obb["cy"]
+                hw, hh = obb["w"] / 2, obb["h"] / 2
+                dets.append({
+                    "bbox": [cx - hw, cy - hh, cx + hw, cy + hh],
+                    "confidence": det["confidence"],
+                    "method": "convnext_heatmap",
+                    "x1": det["x1"], "y1": det["y1"], "x2": det["x2"], "y2": det["y2"],
+                    "obb": obb,
+                    "streak_length_px": det["streak_length_px"],
+                })
+
+            # Heatmap — upsample feature-map probs → tile pixel resolution
+            probs_canvas = _cv2.resize(probs, (image_size, image_size), interpolation=_cv2.INTER_LINEAR)
+            y0r, x0r = round(pad_y), round(pad_x)
+            new_h, new_w = round(th * scale), round(tw * scale)
+            probs_content = probs_canvas[y0r:y0r + new_h, x0r:x0r + new_w]
+            heat_tile = _cv2.resize(probs_content, (tw, th), interpolation=_cv2.INTER_LINEAR)
+
+            results.append((dets, heat_tile, x0, y0, th, tw))
+
+    return results
+
+
+def _rescale_detections(dets: list[dict[str, Any]], scale: float) -> list[dict[str, Any]]:
+    """Scale detection coordinates from a downscaled image back to original size.
+
+    Args:
+        dets: Detections in downscaled-image coordinates.
+        scale: Factor to multiply all coordinates by (orig_size / scaled_size).
+
+    Returns:
+        New list of dicts with all coordinate and dimension fields scaled.
+    """
+    out = []
+    for det in dets:
+        det = dict(det)
+        b = det["bbox"]
+        det["bbox"] = [b[0] * scale, b[1] * scale, b[2] * scale, b[3] * scale]
+        obb = dict(det["obb"])
+        obb["cx"] *= scale
+        obb["cy"] *= scale
+        obb["w"]  *= scale
+        obb["h"]  *= scale
+        det["obb"] = obb
+        if "streak_length_px" in det:
+            det["streak_length_px"] = det["streak_length_px"] * scale
+        if "x1" in det:
+            det["x1"] = det["x1"] * scale
+            det["y1"] = det["y1"] * scale
+            det["x2"] = det["x2"] * scale
+            det["y2"] = det["y2"] * scale
+        out.append(det)
+    return out
+
+
 def _remap_detection(det: dict[str, Any], x0: int, y0: int) -> dict[str, Any]:
     """Shift tile-local detection coordinates to full-image coordinates.
 

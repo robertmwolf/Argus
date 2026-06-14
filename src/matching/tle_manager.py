@@ -1,23 +1,22 @@
 """TLE catalog manager for ARGUS inference.
 
 Provides :class:`TLECatalogManager`, the single entry point for retrieving TLE
-records during cross-identification.  It implements the two-track lookup policy:
+records during cross-identification.
 
-Live track (obs_time within the last 72 hours)
-    1. Check the local ``tle_catalog`` table.
-    2. On a miss, trigger a CelesTrak refresh if the 2-hour cooldown has elapsed,
-       then re-check.
+Inference path (get_tles) — DB only, no network calls ever:
+    1. Normal epoch window query (epoch_window_days around obs_time).
+    2. On insufficient coverage, widen to the broad epoch window (default ±60 d).
+    3. On a miss, log a diagnostic and return empty.
 
-Historical track (obs_time older than 72 hours)
-    1. Check the local ``tle_catalog`` table only.
-    2. On a miss, log a diagnostic and return empty — operator must have
-       bootstrapped the relevant year's zip bundle via
-       ``scripts/bootstrap_tle_catalog.py``.
+Catalog refresh is handled entirely by scheduled tasks outside the inference
+path (e.g. scripts/celestrak_client.py run by a cron/launchd job).  The
+helper methods get_current_fallback_tles, _refresh_current_catalog, and
+_try_celestrak_refresh exist for use by those tasks only and are never called
+from get_tles.
 
-Development current-data refreshes use Space-Track's test API via the GP class.
 Space-Track ``gp_history`` is **never** called at runtime.  It is a one-time
-download resource (per Space-Track API policy: 1 query per lifetime per object)
-and must only be used via explicit operator/admin tools.
+download resource (per Space-Track API policy) and must only be used via
+explicit operator/admin tools such as scripts/bootstrap_tle_catalog.py.
 """
 
 from __future__ import annotations
@@ -129,22 +128,15 @@ class TLECatalogManager:
                 )
 
         age_hours = (datetime.now(tz=timezone.utc) - obs_time).total_seconds() / 3600
-        current_rows = self.get_current_fallback_tles(obs_time, min_mean_motion)
-        if current_rows:
-            return current_rows
-
-        if age_hours < self.live_threshold_hours:
-            rows = self._try_celestrak_refresh(obs_time, epoch_window_days, min_mean_motion)
-        else:
-            logger.warning(
-                "No local TLE coverage for historical obs_time=%s (age=%.1fh). "
-                "Run: python scripts/bootstrap_tle_catalog.py --zip-dir data/tle_zips/ "
-                "--years %d",
-                obs_time.isoformat(),
-                age_hours,
-                obs_time.year,
-            )
-
+        logger.warning(
+            "No local TLE coverage for obs_time=%s (age=%.1fh, broad_window=±%dd). "
+            "Run: python scripts/bootstrap_tle_catalog.py --zip-dir data/tle_zips/ "
+            "--years %d  (or ensure the scheduled catalog refresh has run recently)",
+            obs_time.isoformat(),
+            age_hours,
+            broad_window_days,
+            obs_time.year,
+        )
         return rows
 
     def get_current_fallback_tles(

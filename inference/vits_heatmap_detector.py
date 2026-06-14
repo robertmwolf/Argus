@@ -21,6 +21,14 @@ VITS_HEATMAP_NATIVE_TILE_SIZE
     Must match the ``native_tile_size`` used when caching training features.
 VITS_HEATMAP_TILE_OVERLAP
     Fractional overlap between adjacent tiles (float, default 0.5).
+VITS_HEATMAP_MAX_LONG_EDGE
+    Downscale the image so its longest edge does not exceed this value before
+    tiling (int, default 0 = disabled).  Reduces tile count quadratically;
+    e.g. halving a 6k-wide frame cuts ~620 tiles to ~155.  Detections are
+    rescaled back to original coordinates after inference.
+VITS_HEATMAP_TILE_BATCH_SIZE
+    Number of tiles processed per model forward call (int, default 4).
+    Higher values reduce MPS kernel-launch overhead but increase peak memory.
 """
 
 from __future__ import annotations
@@ -39,6 +47,8 @@ from inference.convnext_heatmap_detector import (
     _run_single_tile,
     _run_single_tile_probs,
     _remap_detection,
+    _rescale_detections,
+    _run_tile_batch_full,
 )
 
 logger = logging.getLogger(__name__)
@@ -148,6 +158,7 @@ def run_vits_heatmap_detector(
     tile_overlap     = float(os.environ.get("VITS_HEATMAP_TILE_OVERLAP", "0.5"))
     peak_floor       = float(os.environ.get("VITS_HEATMAP_PEAK_FLOOR", "0.0"))
     top_k            = int(os.environ.get("VITS_HEATMAP_TOPK", "0"))
+    max_long_edge    = int(os.environ.get("VITS_HEATMAP_MAX_LONG_EDGE", "0"))
 
     try:
         model, image_size, device, use_geometry = _load_model(ckpt_path)
@@ -161,13 +172,21 @@ def run_vits_heatmap_detector(
         array = np.clip(array, 0, 255).astype(np.uint8)
 
     h, w = array.shape[:2]
+    prescale = 1.0
+    if max_long_edge > 0 and max(h, w) > max_long_edge:
+        import cv2
+        prescale = max_long_edge / max(h, w)
+        array = cv2.resize(array, (int(w * prescale), int(h * prescale)), interpolation=cv2.INTER_AREA)
+        h, w = array.shape[:2]
+        logger.info("ViT-S heatmap: prescaled to %dx%d (scale=%.3f)", w, h, prescale)
 
     if max(h, w) <= native_tile_size:
         dets = _run_single_tile(array, model, image_size, device, threshold, min_pixels,
                                 use_geometry=use_geometry)
         for d in dets:
             d["method"] = "vits_heatmap"
-        return _filter_peak_topk(dets, peak_floor, top_k)
+        dets = _filter_peak_topk(dets, peak_floor, top_k)
+        return _rescale_detections(dets, 1.0 / prescale) if prescale != 1.0 else dets
 
     from inference.tiled_pipeline import tile_image
     from inference.postprocess import nms_detections
@@ -181,7 +200,8 @@ def run_vits_heatmap_detector(
             all_dets.append(d)
 
     if len(all_dets) <= 1:
-        return _filter_peak_topk(all_dets, peak_floor, top_k)
+        dets = _filter_peak_topk(all_dets, peak_floor, top_k)
+        return _rescale_detections(dets, 1.0 / prescale) if prescale != 1.0 else dets
 
     result = nms_detections(all_dets)
     result = _filter_peak_topk(result, peak_floor, top_k)
@@ -189,7 +209,7 @@ def run_vits_heatmap_detector(
         "ViT-S heatmap (tiled): %d raw → %d after segment NMS + peak/top-K",
         len(all_dets), len(result)
     )
-    return result
+    return _rescale_detections(result, 1.0 / prescale) if prescale != 1.0 else result
 
 
 def run_vits_heatmap_detector_and_heatmap(
@@ -210,6 +230,8 @@ def run_vits_heatmap_detector_and_heatmap(
     tile_overlap     = float(os.environ.get("VITS_HEATMAP_TILE_OVERLAP", "0.5"))
     peak_floor       = float(os.environ.get("VITS_HEATMAP_PEAK_FLOOR", "0.0"))
     top_k            = int(os.environ.get("VITS_HEATMAP_TOPK", "0"))
+    max_long_edge    = int(os.environ.get("VITS_HEATMAP_MAX_LONG_EDGE", "0"))
+    tile_batch_size  = int(os.environ.get("VITS_HEATMAP_TILE_BATCH_SIZE", "4"))
 
     try:
         model, image_size, device, use_geometry = _load_model(ckpt_path)
@@ -222,40 +244,50 @@ def run_vits_heatmap_detector_and_heatmap(
     if array.dtype != np.uint8:
         array = np.clip(array, 0, 255).astype(np.uint8)
 
+    h_orig, w_orig = array.shape[:2]
+    prescale = 1.0
+    if max_long_edge > 0 and max(h_orig, w_orig) > max_long_edge:
+        import cv2
+        prescale = max_long_edge / max(h_orig, w_orig)
+        array = cv2.resize(array, (int(w_orig * prescale), int(h_orig * prescale)), interpolation=cv2.INTER_AREA)
+        logger.info("ViT-S heatmap: prescaled to %dx%d (scale=%.3f)", array.shape[1], array.shape[0], prescale)
+
     h_full, w_full = array.shape[:2]
     heat_full = np.zeros((h_full, w_full), dtype=np.float32)
 
     if max(h_full, w_full) <= native_tile_size:
-        dets = _run_single_tile(array, model, image_size, device, threshold, min_pixels,
-                                use_geometry=use_geometry)
-        for d in dets:
+        tile_results = _run_tile_batch_full(
+            [(array, 0, 0)], model, image_size, device, threshold, min_pixels, use_geometry, tile_batch_size
+        )
+        dets_tile, heat_full, _, _, _, _ = tile_results[0]
+        for d in dets_tile:
             d["method"] = "vits_heatmap"
-        heat_tile, _, _, _ = _run_single_tile_probs(array, model, image_size, device)
-        heat_full = heat_tile
-        return _filter_peak_topk(dets, peak_floor, top_k), heat_full
+        dets_tile = _filter_peak_topk(dets_tile, peak_floor, top_k)
+        if prescale != 1.0:
+            import cv2
+            heat_full = cv2.resize(heat_full, (w_orig, h_orig), interpolation=cv2.INTER_LINEAR)
+            dets_tile = _rescale_detections(dets_tile, 1.0 / prescale)
+        return dets_tile, heat_full
 
     from inference.tiled_pipeline import tile_image
     from inference.postprocess import nms_detections
 
+    tiles = list(tile_image(array, native_tile_size, tile_overlap))
     all_dets: list[dict[str, Any]] = []
-    for tile, x0, y0 in tile_image(array, native_tile_size, tile_overlap):
-        th, tw = tile.shape[:2]
-        # Detections
-        for det in _run_single_tile(tile, model, image_size, device, threshold, min_pixels,
-                                    use_geometry=use_geometry):
+    for tile_dets, heat_tile, x0, y0, th, tw in _run_tile_batch_full(
+        tiles, model, image_size, device, threshold, min_pixels, use_geometry, tile_batch_size
+    ):
+        for det in tile_dets:
             d = _remap_detection(det, x0, y0)
             d["method"] = "vits_heatmap"
             all_dets.append(d)
-        # Heatmap tile — take per-pixel max for overlapping tiles
-        heat_tile, _, _, _ = _run_single_tile_probs(tile, model, image_size, device)
         y1e, x1e = min(y0 + th, h_full), min(x0 + tw, w_full)
-        np.maximum(
-            heat_full[y0:y1e, x0:x1e],
-            heat_tile[:y1e - y0, :x1e - x0],
-            out=heat_full[y0:y1e, x0:x1e],
-        )
+        np.maximum(heat_full[y0:y1e, x0:x1e], heat_tile[:y1e - y0, :x1e - x0],
+                   out=heat_full[y0:y1e, x0:x1e])
 
-    if len(all_dets) <= 1:
-        return _filter_peak_topk(all_dets, peak_floor, top_k), heat_full
-
-    return _filter_peak_topk(nms_detections(all_dets), peak_floor, top_k), heat_full
+    result = _filter_peak_topk(nms_detections(all_dets) if len(all_dets) > 1 else all_dets, peak_floor, top_k)
+    if prescale != 1.0:
+        import cv2
+        heat_full = cv2.resize(heat_full, (w_orig, h_orig), interpolation=cv2.INTER_LINEAR)
+        result = _rescale_detections(result, 1.0 / prescale)
+    return result, heat_full

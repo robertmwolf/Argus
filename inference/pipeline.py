@@ -1227,10 +1227,6 @@ def run_with_array(
     """
     fits_path = Path(fits_path)
 
-    # Respect FAST_MODE env var
-    if os.environ.get("FAST_MODE", "").lower() == "true":
-        fast = True
-
     model_size    = os.environ.get("MODEL_SIZE", "tiny")
     weights_env   = os.environ.get("MODEL_WEIGHTS", "")
     confidence_threshold = float(
@@ -1407,36 +1403,37 @@ def run_with_array(
             + streakmind_yolo_dets + heatmap_dets
         )
         for det in all_ml_dets:
-            x1, y1, x2, y2 = det["bbox"]
-            px1 = max(0, int(math.floor(x1)))
-            py1 = max(0, int(math.floor(y1)))
-            px2 = min(w_img, int(math.ceil(x2)))
-            py2 = min(h_img, int(math.ceil(y2)))
-            crop = array[py1:py2, px1:px2]
-            # Use the detector's own angle when available (more accurate seed
-            # than the bbox diagonal), falling back to the bbox diagonal.
             seed_angle = (
                 det["obb"]["angle_deg"] if det.get("obb")
                 else _angle_from_bbox(det["bbox"])
             )
-            initial_obb = det["obb"] if det.get("obb") else bbox_to_obb(det["bbox"], seed_angle)
-            angle = refine_angle(crop, initial_obb, angle_search_range=angle_range)
-            # For heatmap line-segment detections the native obb already has the
-            # correct cx/cy (midpoint of traced segment) and Radon-refined angle.
-            # Reconstructing from the axis-aligned bbox would move the centre to
-            # the bbox centroid of a fragment, causing angle drift at the far tips.
-            if det.get("geometry_type") == "line_segment" and det.get("obb"):
-                obb = {**det["obb"], "angle_deg": angle}
+            if fast:
+                # Skip Radon refinement and extent tracing in fast mode.
+                det["obb"] = det.get("obb") or bbox_to_obb(det["bbox"], seed_angle)
+                det["streak_length_px"] = float(det["obb"]["w"])
             else:
-                obb = bbox_to_obb(det["bbox"], angle)
-            obb = extend_obb_to_streak_extent(
-                array, obb,
-                _gray=_gray_f32,
-                _threshold=_extent_threshold,
-                sample_halfwidth=15,
-            )
-            det["obb"] = obb
-            det["streak_length_px"] = float(obb["w"])
+                x1, y1, x2, y2 = det["bbox"]
+                px1 = max(0, int(math.floor(x1)))
+                py1 = max(0, int(math.floor(y1)))
+                px2 = min(w_img, int(math.ceil(x2)))
+                py2 = min(h_img, int(math.ceil(y2)))
+                crop = array[py1:py2, px1:px2]
+                initial_obb = det["obb"] if det.get("obb") else bbox_to_obb(det["bbox"], seed_angle)
+                angle = refine_angle(crop, initial_obb, angle_search_range=angle_range)
+                # For heatmap line-segment detections the native obb already has the
+                # correct cx/cy (midpoint of traced segment) and Radon-refined angle.
+                if det.get("geometry_type") == "line_segment" and det.get("obb"):
+                    obb = {**det["obb"], "angle_deg": angle}
+                else:
+                    obb = bbox_to_obb(det["bbox"], angle)
+                obb = extend_obb_to_streak_extent(
+                    array, obb,
+                    _gray=_gray_f32,
+                    _threshold=_extent_threshold,
+                    sample_halfwidth=15,
+                )
+                det["obb"] = obb
+                det["streak_length_px"] = float(obb["w"])
 
         raw_dets             = nms_detections(raw_dets,             iou_threshold=0.5)
         classical_dets       = nms_detections(classical_dets,       iou_threshold=0.5)

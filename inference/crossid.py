@@ -152,29 +152,6 @@ def _catalog_from_rows(db_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
-def _fetch_current_tle_catalog(obs_time: datetime) -> list[dict[str, Any]]:
-    """Return current fallback TLEs, refreshing stale data through the manager."""
-    if obs_time.tzinfo is None:
-        obs_time = obs_time.replace(tzinfo=timezone.utc)
-    return _catalog_from_rows(_tle_manager.get_current_fallback_tles(obs_time))
-
-
-def _catalog_has_mode(catalog: list[dict[str, Any]], mode: str) -> bool:
-    """Return True when any catalog entry came from a given search mode."""
-    return any(_catalog_entry(entry).get("tle_search_mode") == mode for entry in catalog)
-
-
-def _best_position_score(detections: list[dict]) -> float:
-    """Return the best raw position score currently attached to detections."""
-    best = 0.0
-    for det in detections:
-        for ident in det.get("identifications", []):
-            score = ident.get("position_score")
-            if score is None:
-                continue
-            best = max(best, float(score))
-    return best
-
 
 # ---------------------------------------------------------------------------
 # SGP4 propagation
@@ -609,7 +586,6 @@ def cross_identify(
     exposure_time: float | None = None,
     min_mean_motion: float = 0,
     _catalog_override: list[dict[str, Any]] | None = None,
-    _allow_current_retry: bool = True,
 ) -> list[dict]:
     """Cross-match detections against Space-Track TLEs.
 
@@ -989,39 +965,6 @@ def cross_identify(
                 "Best match: %s (NORAD %d) sep=%.1f\" conf=%.3f",
                 top3[0]["satellite_name"], top3[0]["norad_id"],
                 top3[0]["separation_arcsec"], top3[0]["confidence"],
-            )
-
-    if (
-        _allow_current_retry
-        and _catalog_has_mode(raw_catalog, "broad_epoch")
-        and _best_position_score(detections) < _MIN_VIABLE_POSITION_SCORE
-    ):
-        logger.info(
-            "Broad epoch TLE search produced no viable propagated match "
-            "(best position score %.4f); trying current TLE fallback",
-            _best_position_score(detections),
-        )
-        try:
-            current_catalog = _fetch_current_tle_catalog(obs_time)
-        except Exception:
-            logger.warning(
-                "Current TLE fallback fetch failed — keeping broad epoch results",
-                exc_info=True,
-            )
-            current_catalog = []
-
-        if current_catalog:
-            return cross_identify(
-                detections,
-                obs_time,
-                observer_lat,
-                observer_lon,
-                observer_alt_m,
-                epoch_window_days=epoch_window_days,
-                exposure_time=exposure_time,
-                min_mean_motion=min_mean_motion,
-                _catalog_override=current_catalog,
-                _allow_current_retry=False,
             )
 
     return detections
