@@ -1,0 +1,138 @@
+{
+  "perp_threshold_px": 10.0,
+  "tier1_detection": {
+    "n_gt": 239,
+    "n_found": 219,
+    "n_false_positives": 1458,
+    "detection_recall": 0.9163,
+    "detection_precision": 0.1306,
+    "per_band": {
+      "short": {
+        "n_gt": 9,
+        "n_found": 8,
+        "recall": 0.8889
+      },
+      "medium": {
+        "n_gt": 50,
+        "n_found": 45,
+        "recall": 0.9
+      },
+      "long": {
+        "n_gt": 180,
+        "n_found": 166,
+        "recall": 0.9222
+      }
+    }
+  },
+  "tier2_raw_geometry": {
+    "n_pairs": 219,
+    "angle_err_deg": {
+      "mean": 1.264,
+      "median": 0.261,
+      "p90": 1.211
+    },
+    "endpoint_err_px": {
+      "mean": 33.196,
+      "median": 15.74,
+      "p90": 39.933
+    },
+    "per_band": {
+      "short": {
+        "n_pairs": 8,
+        "angle_err_deg": {
+          "mean": 4.631,
+          "median": 3.847,
+          "p90": 8.25
+        },
+        "endpoint_err_px": {
+          "mean": 15.64,
+          "median": 14.127,
+          "p90": 20.875
+        }
+      },
+      "medium": {
+        "n_pairs": 45,
+        "angle_err_deg": {
+          "mean": 1.811,
+          "median": 0.55,
+          "p90": 1.471
+        },
+        "endpoint_err_px": {
+          "mean": 21.385,
+          "median": 15.253,
+          "p90": 24.664
+        }
+      },
+      "long": {
+        "n_pairs": 166,
+        "angle_err_deg": {
+          "mean": 0.954,
+          "median": 0.214,
+          "p90": 0.672
+        },
+        "endpoint_err_px": {
+          "mean": 37.243,
+          "median": 16.154,
+          "p90": 43.096
+        }
+      }
+    }
+  },
+  "tier3_refined_geometry": {
+    "n_pairs": 219,
+    "angle_err_deg": {
+      "mean": 10.538,
+      "median": 14.065,
+      "p90": 15.326
+    },
+    "endpoint_err_px": {
+      "mean": 92.634,
+      "median": 76.91,
+      "p90": 157.677
+    },
+    "per_band": {
+      "short": {
+        "n_pairs": 8,
+        "angle_err_deg": {
+          "mean": 0.373,
+          "median": 0.339,
+          "p90": 0.701
+        },
+        "endpoint_err_px": {
+          "mean": 16.53,
+          "median": 14.289,
+          "p90": 28.064
+        }
+      },
+      "medium": {
+        "n_pairs": 45,
+        "angle_err_deg": {
+          "mean": 7.885,
+          "median": 4.697,
+          "p90": 15.461
+        },
+        "endpoint_err_px": {
+          "mean": 35.537,
+          "median": 23.494,
+          "p90": 56.261
+        }
+      },
+      "long": {
+        "n_pairs": 166,
+        "angle_err_deg": {
+          "mean": 11.747,
+          "median": 14.681,
+          "p90": 15.33
+        },
+        "endpoint_err_px": {
+          "mean": 111.78,
+          "median": 111.957,
+          "p90": 170.335
+        }
+      }
+    },
+    "angle_improvement_deg": -9.274,
+    "endpoint_improvement_px": -59.438
+  },
+  "date_recorded": "2026-06-14T22:05:52Z"
+}

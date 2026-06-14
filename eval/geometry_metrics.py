@@ -557,37 +557,43 @@ def _load_ground_truth(annotations_path: Path) -> list[dict]:
 
 
 def _load_image_arrays(
-    image_ids: list[str],
+    image_id_to_filename: dict[int, str],
     images_dir: Path,
 ) -> dict[str, np.ndarray]:
-    """Load FITS images as numpy arrays, keyed by image_id (filename).
+    """Load FITS images as numpy arrays, keyed by str(image_id).
+
+    Searches images_dir for the basename of each filename.  If the file is
+    not found by basename, falls back to treating file_name as an absolute
+    path (for COCO annotations that store full paths).
 
     Args:
-        image_ids: List of filenames (may be relative paths).
-        images_dir: Directory in which to look for each file.
+        image_id_to_filename: Mapping of integer image_id → file_name from
+            the COCO annotations images list.
+        images_dir: Root directory to search for images.
 
     Returns:
-        Dict mapping image_id → numpy array.  Missing files are logged and
-        omitted.
+        Dict mapping str(image_id) → numpy array.  Missing files are logged
+        and omitted.
     """
     from inference.fits_loader import FITSLoader
 
     loader = FITSLoader()
     arrays: dict[str, np.ndarray] = {}
-    for img_id in image_ids:
-        path = images_dir / Path(img_id).name
-        if not path.exists():
-            logger.warning("geometry_metrics: image not found: %s", path)
+    for img_id, file_name in image_id_to_filename.items():
+        # Try basename under images_dir first, then absolute path from annotation
+        candidate = images_dir / Path(file_name).name
+        if not candidate.exists():
+            candidate = Path(file_name)
+        if not candidate.exists():
+            logger.warning("geometry_metrics: image not found: %s", file_name)
             continue
         try:
-            tensor, _ = loader.load(path)
-            # Convert CHW float tensor to HWC uint8 numpy
-            arr = tensor.permute(1, 2, 0).numpy()
-            arr = (arr * 255).clip(0, 255).astype(np.uint8)
-            arrays[img_id] = arr
-            logger.debug("Loaded %s  shape=%s", path.name, arr.shape)
+            result = loader.load(candidate)
+            arr = result["array"]  # uint8 HWC numpy array
+            arrays[str(img_id)] = arr
+            logger.debug("Loaded %s  shape=%s", candidate.name, arr.shape)
         except Exception as exc:
-            logger.warning("geometry_metrics: failed to load %s: %s", path, exc)
+            logger.warning("geometry_metrics: failed to load %s: %s", candidate, exc)
     return arrays
 
 
@@ -619,9 +625,16 @@ if __name__ == "__main__":
 
     image_arrays: dict[str, np.ndarray] | None = None
     if args.images_dir:
-        image_ids = list({p["image_id"] for p in preds})
-        image_arrays = _load_image_arrays(image_ids, Path(args.images_dir))
-        logger.info("Loaded %d/%d images for Tier 3", len(image_arrays), len(image_ids))
+        with open(args.annotations) as _f:
+            _coco = json.load(_f)
+        pred_img_ids = {p["image_id"] for p in preds}
+        id_to_filename: dict[int, str] = {
+            img["id"]: img["file_name"]
+            for img in _coco["images"]
+            if img["id"] in pred_img_ids
+        }
+        image_arrays = _load_image_arrays(id_to_filename, Path(args.images_dir))
+        logger.info("Loaded %d/%d images for Tier 3", len(image_arrays), len(id_to_filename))
 
     results = evaluate_geometry(preds, gt, perp_threshold_px=args.perp_threshold,
                                 image_arrays=image_arrays)
