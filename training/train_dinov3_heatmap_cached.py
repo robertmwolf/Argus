@@ -147,6 +147,10 @@ def main() -> int:
                         help="LR scheduler. 'cosine' uses CosineAnnealingLR(T_max=epochs) "
                              "for faster convergence (~30%% fewer epochs). Default: none "
                              "(constant LR, Run 8 behaviour).")
+    parser.add_argument("--warmup-epochs", type=int, default=0,
+                        help="Linear LR warmup epochs before cosine decay (only with "
+                             "--lr-scheduler cosine). Lets a hotter peak LR run without "
+                             "an early loss spike. Default: 0 (no warmup).")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -192,11 +196,30 @@ def main() -> int:
 
     scheduler: torch.optim.lr_scheduler.LRScheduler | None = None
     if args.lr_scheduler == "cosine":
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=args.epochs, last_epoch=start_epoch - 2
-        )
-        logger.info("CosineAnnealingLR scheduler active (T_max=%d, start_epoch=%d)",
-                    args.epochs, start_epoch)
+        warmup = max(0, int(args.warmup_epochs))
+        if warmup > 0:
+            # Linear warmup (0.1*lr -> lr over `warmup` epochs) then cosine decay
+            # over the remainder. Lets us run a hotter peak LR without an early spike.
+            warm = torch.optim.lr_scheduler.LinearLR(
+                optimizer, start_factor=0.1, end_factor=1.0, total_iters=warmup
+            )
+            cos = torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer, T_max=max(1, args.epochs - warmup)
+            )
+            scheduler = torch.optim.lr_scheduler.SequentialLR(
+                optimizer, schedulers=[warm, cos], milestones=[warmup]
+            )
+            # Advance the schedule to the resume point if continuing a run.
+            for _ in range(max(0, start_epoch - 1)):
+                scheduler.step()
+            logger.info("Warmup(%d)+Cosine scheduler active (epochs=%d, start_epoch=%d)",
+                        warmup, args.epochs, start_epoch)
+        else:
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer, T_max=args.epochs, last_epoch=start_epoch - 2
+            )
+            logger.info("CosineAnnealingLR scheduler active (T_max=%d, start_epoch=%d)",
+                        args.epochs, start_epoch)
 
     metadata = {
         "args": vars(args),

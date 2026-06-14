@@ -62,6 +62,7 @@ paths** so the directory is portable (copy or move it without breaking anything)
 | `near_ctx` | Annotation tile + N nearest-neighbour context tiles, ordered by proximity to annotation centre | `scripts/build_tiled_val_annotation.py` |
 | `rand_neg` | Annotation tiles + randomly sampled negatives to a target ratio | `scripts/build_tiled_val_annotation.py` (removed in favour of `near_ctx`) |
 | `tiled` | Uniform grid — every tile at the given stride (no selection) | `scripts/cache_dinov3_heatmap_features.py` |
+| `window` | Streak-centred crops (one materialised window per annotation cluster) + clean negative-sky crops; the cacher tiles each window at run time | `scripts/build_atwood_window_dataset.py` |
 
 ### `params`  (method-specific, appended after method)
 
@@ -117,6 +118,30 @@ large for the repo machine's local disk.
 | Directory | Source | Method | Tile | Context | Notes |
 |---|---|---|---|---|---|
 | `val_atwood_near_ctx_t400_c4_v1/` | `val_run17_fits.json` | `near_ctx` | 400 px | 4 | **Current recommended fast eval** |
+
+### Heatmap training datasets (window crops)
+
+Self-contained dirs under TrainingData root; `annotation.json` uses **relative**
+`tiles/*.npy` paths (raw float32; zscore applied at cache time). obb coords are
+**window-local** because each window is a materialised crop with `tile_origin=[0,0]`.
+
+| Directory | Source | Contents | Built by |
+|---|---|---|---|
+| `train_atwood_synth_window_v1/` | `all_train_run17_merged.json` | real Atwood streak windows + synthetic-short + neg-sky crops | `scripts/build_atwood_window_dataset.py` |
+| `val_atwood_window_v1/` | same, held-out frames | real Atwood streak windows + neg-sky crops | same |
+
+**Supersedes** `data/annotations/{train,val}_run18.json` (run-scoped name + a
+coordinate-frame bug — see lesson below). Delete those once v1 is validated.
+
+> **Coordinate-frame lesson (2026-06-13).** `build_run18_split.py` emitted
+> annotations whose `file_name` was the FULL 6248×4176 frame but whose obb
+> coords were **window-local** (offset by `tile_origin`), and the heatmap cacher
+> tiles the whole `file_name` image — so every target landed ~1800 px off the
+> streak, on empty sky. Both ViT-S and ViT-B trained to val_dice ~0.12 on it
+> (Run 20 control). **Rule: an image's pixels and its obb coords must share one
+> frame.** If `file_name` is a full frame, obb must be full-frame; if obb is
+> window-local, materialise the crop and set `tile_origin=[0,0]`. The `window`
+> builder always materialises the crop, so the two can never disagree.
 
 ### Legacy training files  (run-scoped, not for reuse)
 

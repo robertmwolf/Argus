@@ -1,0 +1,44 @@
+{
+  "experiment": "run20_control_backbone",
+  "purpose": "Isolate backbone (ViT-S vs ViT-B) by holding data+recipe constant.",
+  "shared": {
+    "train_data": "data/annotations/train_run18.json",
+    "val_data": "data/annotations/val_run18.json",
+    "eval_data": "data/annotations/val_balanced_v1.json",
+    "cache_geometry": {
+      "image_size": 518,
+      "native_tile_size": 400,
+      "tile_overlap": 0.0,
+      "norm_mode": "zscore",
+      "neg_tiles_per_image": 4
+    },
+    "recipe_R": {
+      "epochs": 40,
+      "lr": 0.001,
+      "batch_size": 32,
+      "pos_weight": 20,
+      "geometry_weight": 0.25,
+      "hidden_channels": 256,
+      "lr_scheduler": "cosine",
+      "warmup_epochs": 0
+    }
+  },
+  "arms": {
+    "vit_s": {
+      "backbone": "dinov3_vits16_lvd1689m.pth",
+      "dim": 384,
+      "cache": "~/argus_run20_vits_cache",
+      "weights": "weights/run20_vits_control",
+      "history": "weights/run20_vits_control/history.json",
+      "eval": "results/run20_control/run20_vits_control/pf85"
+    },
+    "vit_b": {
+      "backbone": "dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth",
+      "dim": 768,
+      "cache": "~/argus_run19_cache (reused from run19)",
+      "weights": "weights/run20_vitb_control",
+      "history": "weights/run20_vitb_control/history.json",
+      "eval": "results/run20_control/run20_vitb_control/pf85"
+    }
+  }
+}

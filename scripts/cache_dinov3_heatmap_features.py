@@ -148,6 +148,13 @@ def _load_image_array(path: Path, loader: FITSLoader, norm_mode: str = "autostre
                 # Full-image normalisation was applied at convert_tiles_to_npy time;
                 # just replicate the grayscale channel to RGB.
                 return np.stack([raw, raw, raw], axis=-1)
+            if norm_mode == "none":
+                # Crop already normalised at build time (e.g. per-frame zscore in
+                # build_atwood_window_dataset.py v2+). Clip to [-3, 3] for safety,
+                # scale to [0, 255] uint8 for the backbone's imagenet_normalize path.
+                clipped = np.clip(raw.astype(np.float32), -3.0, 3.0)
+                scaled = ((clipped + 3.0) / 6.0 * 255.0).astype(np.uint8)
+                return np.stack([scaled, scaled, scaled], axis=-1)
             return apply_norm(raw.astype(np.float32), norm_mode)  # (H, W, 3) uint8
         else:
             with Image.open(path) as im:
@@ -366,7 +373,7 @@ def main() -> int:
     parser.add_argument("--neg-tiles-per-image", type=int, default=2,
                         help="Random background tiles to cache per unannotated "
                              "image for domain adaptation (default 2).")
-    parser.add_argument("--norm-mode", choices=["autostretch", "zscore", "zscale"],
+    parser.add_argument("--norm-mode", choices=["autostretch", "zscore", "zscale", "none"],
                         default="autostretch",
                         help="Pixel normalisation for raw FITS/NPY tiles. "
                              "'autostretch' (default) removes sky background so streak "

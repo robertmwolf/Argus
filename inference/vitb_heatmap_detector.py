@@ -1,15 +1,15 @@
 """ViT-B/16 cached-head heatmap detector for the ARGUS pipeline.
 
-Parallel to ``inference/vits_heatmap_detector.py`` but targets the Run 17
-ViT-B/16 checkpoint.  Model loading is delegated to the same
+Parallel to ``inference/vits_heatmap_detector.py`` but targets the ViT-B/16
+checkpoint.  Model loading is delegated to the same
 ``vits_heatmap_detector._load_model`` since that function reads backbone size
 and weights path from the checkpoint's ``train_cache_metadata`` block.
 
 Environment variables
 ---------------------
 VITB_HEATMAP_CHECKPOINT
-    Path to the ``best.pt`` checkpoint produced by Run 17 (ViT-B).
-    Default: ``weights/run17_vitb/best.pt``
+    Path to the ``best.pt`` checkpoint produced by train_window_v2_pipeline.sh (ViT-B).
+    Default: ``weights/vitb_window_v2/best.pt``
 VITB_HEATMAP_THRESHOLD
     Heatmap binarisation threshold (float, default 0.5).
 VITB_HEATMAP_MIN_PIXELS
@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 _DEFAULT_CHECKPOINT = (
     Path(__file__).resolve().parent.parent
     / "weights"
-    / "run17_vitb"
+    / "vitb_window_v2"
     / "best.pt"
 )
 

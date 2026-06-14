@@ -9,7 +9,7 @@ Environment variables
 VITS_HEATMAP_CHECKPOINT
     Path to the ``best.pt`` checkpoint produced by
     ``training/train_dinov3_heatmap_cached.py`` with ``--backbone vit``.
-    Default: ``weights/run5_vits_heatmap_cached/best.pt``
+    Default: ``weights/vits_window_v2/best.pt``
 VITS_HEATMAP_THRESHOLD
     Heatmap binarisation threshold (float, default 0.5).
 VITS_HEATMAP_IMAGE_SIZE
@@ -58,7 +58,7 @@ _MODEL_CACHE: dict[str, tuple[Any, int, torch.device, bool]] = {}
 _DEFAULT_CHECKPOINT = (
     Path(__file__).resolve().parent.parent
     / "weights"
-    / "run15_vits"
+    / "vits_window_v2"
     / "best.pt"
 )
 

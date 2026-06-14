@@ -35,25 +35,56 @@ All fixed as of 2026-06-12:
    `evaluate_dinov3_heatmap.py --heatmap-cache`. Never re-run the backbone per
    threshold.
 
-## ROOT CAUSE FOUND (2026-06-12) + ready-to-run pipeline
+## ROOT CAUSE — CORRECTED 2026-06-13 (Run 18 result + audit)
 
-Run 17 didn't fail from the backbone (ViT-B loads with 0 missing keys) or the
-frozen approach (ViT-S got dice 0.77 frozen). It failed from **data
-inconsistency**: training mixed FITS+PNG+synthetic-NPY (70% synthetic) while
-validation was pure FITS, so the head underfit (train_dice stuck at 0.37) and
-val_dice (0.105) measured a different distribution.
+**Run 18 (the consistent-data retrain) also failed**: train_dice 0.13, val_dice
+0.12, eval 0.000 on val_balanced_v1. So **data inconsistency was NOT the cause**
+(or not the whole one). A mechanical + optimization audit (2026-06-13) found:
 
-**Fix is built and ready:**
-- New consistent split: `scripts/build_run18_split.py` → `data/annotations/{train,val}_run18.json`
-  (real FITS only; synthetic streaks rendered ON real FITS; ~38% negative tiles
-  per Run 10; stratified by band; split by frame; val_atwood/test_atwood excluded).
-  Train: short 694 / med 2392 / long 2005 + 580 neg windows.
-- Overnight pipeline: `bash scripts/run18_vitb_pipeline.sh` (cache → train → eval).
-  Reduced to 22 epochs (slow MPS); best.pt/latest.pt + history.json saved EVERY
-  epoch so you can Ctrl-C and use best.pt, or `--resume` from latest.pt.
-  Caching is ~3.5 hr (backbone pass); training is fast after.
-- **Success signal during training:** if train_dice climbs past ~0.6 the
-  consistency fix worked (Run 17 was stuck at 0.37).
+- **No mechanical bug.** ViT-B checkpoint loads 0 missing / 0 unexpected keys;
+  cached features sane and comparably scaled to ViT-S (std 0.44 vs 0.42); head
+  `in_channels` auto-inferred to 768; zscore norm parity holds across
+  cache/train/eval.
+- **No feature deficiency.** Overfit probe: a frozen ViT-B head fits 12 streak
+  tiles to **train_dice 0.95** (vs ViT-S 0.68) given enough steps. The frozen
+  ViT-B features carry the streak signal *better* than ViT-S. **This disproves
+  the earlier "unfreeze the backbone" recommendation — do NOT unfreeze.**
+- **Real cause = UNDERTRAINING.** ViT-B's 768-d head converges slower per step.
+  Run 17 (40 ep) crept to train_dice 0.37; Run 18 (22 ep, cosine T_max=22)
+  strangled the LR before the head fit, landing at 0.13. ViT-S fit to 0.81 in
+  the same code because 384-d converges faster.
+
+Evidence table (identical training code, only the backbone/budget differ):
+
+| Run | backbone | epochs | final train_dice | best val_dice |
+|-----|----------|-------:|-----------------:|--------------:|
+| 15  | ViT-S    | 40     | 0.813            | 0.770 |
+| 17  | ViT-B    | 40     | 0.374            | 0.105 |
+| 18  | ViT-B    | 22     | 0.131            | 0.122 |
+
+**Fix = more training + hotter LR with warmup** (Run 19). Head training is cheap
+(frozen backbone, cached features); the ~3.5 hr cost is the one-time caching.
+
+### Historical note (superseded)
+The 2026-06-12 hypothesis below — that Run 17 failed from training on mixed
+FITS+PNG+synthetic-NPY (70% synthetic) vs pure-FITS validation — was plausible
+but **wrong**: Run 18 on a clean consistent split failed the same way. The
+consistent split (train_run18.json/val_run18.json) is still the right data; it
+just needed the corrected training budget.
+
+**Corrected pipeline (Run 19): `bash scripts/run19_vitb_pipeline.sh`**
+- Same consistent split `data/annotations/{train,val}_run18.json` (still correct:
+  real FITS only; synthetic streaks rendered ON real FITS; ~38% negative tiles;
+  stratified by band; split by frame; val/test_atwood excluded).
+- Corrected training budget: **epochs 80, lr 3e-3, 4-epoch linear warmup + cosine,
+  pos_weight 20** (vs Run 18's 22 ep / default lr / no warmup). `--warmup-epochs`
+  added to `train_dinov3_heatmap_cached.py`.
+- **KEEPS** the train/val feature cache at `~/argus_run19_cache` on exit (Run 18
+  deleted it) so LR/epoch re-sweeps are minutes, not another 3.5 hr re-cache.
+- best.pt/latest.pt + history.json every epoch; Ctrl-C → best.pt, or `--resume`.
+- **Success signal:** train_dice must climb past ~0.6 then toward ~0.8 (ViT-S
+  baseline 0.81). If it plateaus well below, escalate to a larger head
+  (`--hidden-channels`) — NOT a backbone unfreeze (probe disproved that).
 
 ## Recipe deltas to try (if the consistency fix alone isn't enough)
 
