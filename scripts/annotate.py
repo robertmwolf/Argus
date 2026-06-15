@@ -11,31 +11,23 @@ Usage:
     # Frigate processed PNGs:
     python scripts/annotate.py \\
         --image-dir /Volumes/External/TrainingData/raw/frigate/processed \\
-        --output data/annotations/frigate_streaks.json \\
-        --hough-preset frigate
+        --output data/annotations/frigate_streaks.json
 
     # Any FITS directory:
     python scripts/annotate.py \\
         --image-dir /path/to/fits \\
-        --output data/annotations/my_dataset.json \\
-        --hough-preset brentimages
+        --output data/annotations/my_dataset.json
 
     # BrentImages FITS night with .strk write-back:
     python scripts/annotate.py \\
-        --night-dir /Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood \\
-        --hough-preset brentimages
-
-    # Pre-compute Hough suggestion cache (run once before annotating):
-    python scripts/annotate.py --image-dir ... --output ... --precompute
+        --night-dir /Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood
 
 Keybindings:
-    Y / Enter           — accept all Hough suggestions for this image
-    Escape              — dismiss suggestions / cancel pending click
+    Escape              — cancel pending click
     Right / D / Space   — next image
     Left  / A           — previous image
     B                   — mark as blank (no streak), advance to next
     R                   — reject unusable, advance to next
-    H / T               — toggle Hough hints on/off (global, persists across images)
     Delete / BackSpace  — delete selected OBB
     S                   — save now
     Q                   — quit and save
@@ -66,7 +58,6 @@ CANVAS_H = 820
 
 COLORS = ["#00ff88", "#ff6644", "#44aaff", "#ffdd00", "#ff44ff"]
 SEL_COLOR = "#ffffff"
-SUGGESTION_COLOR = "#ffaa33"
 BLANK_COLOR = "#ff4444"
 OBB_LINE_WIDTH = 2
 DEFAULT_WIDTH = 10
@@ -144,153 +135,6 @@ def load_image(path: pathlib.Path) -> Image.Image:
         return fits_to_pil(path)
     return Image.open(path).convert("RGB")
 
-
-# ---- Hough detection ---------------------------------------------------------
-
-# Preset parameters: (threshold, minLineLength, maxLineGap, downsample)
-_HOUGH_PRESETS: dict[str, dict] = {
-    "frigate": {"threshold": 35, "min_length_frac": None, "min_length_px": 40, "max_gap": 10, "downsample": 1},
-    "brentimages": {"threshold": 60, "min_length_frac": None, "min_length_px": 50, "max_gap": 8,  "downsample": 4},
-}
-
-
-def estimate_streak_width(
-    img: np.ndarray, cx: float, cy: float, angle_deg: float, sample_range: int = 60
-) -> float:
-    """Estimate streak FWHM via perpendicular brightness profile."""
-    perp_rad = math.radians(angle_deg + 90)
-    cos_p, sin_p = math.cos(perp_rad), math.sin(perp_rad)
-    h, w = img.shape[:2]
-    profile = []
-    for d in range(-sample_range, sample_range + 1):
-        x = int(round(cx + d * cos_p))
-        y = int(round(cy + d * sin_p))
-        if 0 <= x < w and 0 <= y < h:
-            profile.append(float(img[y, x]))
-    if len(profile) < 5:
-        return 20.0
-    arr = np.array(profile)
-    lo, hi = arr.min(), arr.max()
-    if hi - lo < 5.0:
-        return 20.0
-    normed = (arr - lo) / (hi - lo)
-    above = np.where(normed >= 0.5)[0]
-    if len(above) < 2:
-        return 20.0
-    return max(6.0, min(80.0, float(above[-1] - above[0]) * 1.3))
-
-
-def _deduplicate_obbs(
-    obbs: list[dict], angle_thresh: float = 12.0, dist_thresh: float = 60.0
-) -> list[dict]:
-    kept: list[dict] = []
-    for obb in obbs:
-        dup = False
-        for k in kept:
-            diff = abs(obb["angle_deg"] - k["angle_deg"]) % 180
-            if diff > 90:
-                diff = 180 - diff
-            if diff < angle_thresh and math.hypot(obb["cx"] - k["cx"], obb["cy"] - k["cy"]) < dist_thresh:
-                dup = True
-                break
-        if not dup:
-            kept.append(obb)
-    return kept
-
-
-def hough_detect_streaks(img_path: pathlib.Path, preset: str = "frigate") -> list[dict]:
-    """Run Hough line detection on one image. Returns a list of OBB dicts."""
-    try:
-        import cv2 as cv
-    except ImportError:
-        log.warning("opencv-python not available — skipping Hough detection")
-        return []
-
-    params = _HOUGH_PRESETS.get(preset, _HOUGH_PRESETS["frigate"])
-    downsample = params.get("downsample", 1)
-
-    pil = load_image(img_path)
-    if downsample > 1:
-        small = pil.convert("L").resize(
-            (pil.width // downsample, pil.height // downsample), Image.LANCZOS
-        )
-        img = np.array(small)
-    else:
-        img = np.array(pil.convert("L"))
-
-    h, w = img.shape
-    border = 40
-
-    clahe = cv.createCLAHE(clipLimit=3.0, tileGridSize=(16, 16))
-    enhanced = clahe.apply(img)
-    blurred = cv.GaussianBlur(enhanced, (5, 5), 0)
-    edges = cv.Canny(blurred, 30, 100)
-
-    threshold = params["threshold"]
-    if params.get("min_length_frac"):
-        min_len = int(min(w, h) * params["min_length_frac"])
-    else:
-        min_len = params.get("min_length_px", 40)
-    max_gap = params["max_gap"]
-
-    lines = cv.HoughLinesP(edges, 1, np.pi / 360, threshold=threshold,
-                           minLineLength=min_len, maxLineGap=max_gap)
-    if lines is None:
-        return []
-
-    _MAX_WIDTH = 80.0
-    obbs: list[dict] = []
-    for line in lines:
-        x1, y1, x2, y2 = [float(v) * downsample for v in line[0]]
-        cx_l = (x1 + x2) / 2
-        cy_l = (y1 + y2) / 2
-        fw, fh = pil.width, pil.height
-        if cx_l < border or cx_l > fw - border or cy_l < border or cy_l > fh - border:
-            continue
-
-        angle_deg = math.degrees(math.atan2(y2 - y1, x2 - x1))
-        ds_cx, ds_cy = cx_l / downsample, cy_l / downsample
-        width = estimate_streak_width(img, ds_cx, ds_cy, angle_deg) * downsample
-
-        if width >= _MAX_WIDTH * downsample * 0.95:
-            continue
-
-        obb = endpoints_to_obb(x1, y1, x2, y2, max(6.0, width))
-        obbs.append({k: round(v, 2) for k, v in obb.items()})
-
-    obbs.sort(key=lambda o: -o["w"])
-    return _deduplicate_obbs(obbs)[:5]
-
-
-def precompute_all_suggestions(
-    images: list[dict],
-    suggestions_path: pathlib.Path,
-    preset: str = "frigate",
-    force: bool = False,
-) -> dict[str, list[dict]]:
-    """Hough-detect streaks on all images and write a sidecar JSON cache."""
-    cache: dict[str, list[dict]] = {}
-    if suggestions_path.exists() and not force:
-        with open(suggestions_path) as fh:
-            cache = json.load(fh)
-        log.info("Loaded %d cached entries from %s", len(cache), suggestions_path.name)
-
-    todo = [e for e in images if str(e["path"]) not in cache]
-    log.info("%d images to process (%d already cached)", len(todo), len(cache))
-
-    for i, entry in enumerate(todo):
-        log.info("[%d/%d] %s", i + 1, len(todo), entry["path"].name)
-        cache[str(entry["path"])] = hough_detect_streaks(entry["path"], preset=preset)
-        if (i + 1) % 10 == 0:
-            suggestions_path.parent.mkdir(parents=True, exist_ok=True)
-            suggestions_path.write_text(json.dumps(cache, indent=2))
-
-    suggestions_path.parent.mkdir(parents=True, exist_ok=True)
-    suggestions_path.write_text(json.dumps(cache, indent=2))
-    n_hit = sum(1 for v in cache.values() if v)
-    log.info("Done. %d/%d images have ≥1 detection. Saved to %s",
-             n_hit, len(cache), suggestions_path)
-    return cache
 
 
 # ---- image list loading ------------------------------------------------------
@@ -651,7 +495,6 @@ class AnnotationApp(tk.Tk):
         images: list[dict],
         coco: dict[str, Any],
         output_path: pathlib.Path,
-        suggestions: dict[str, list[dict]] | None = None,
         source_name: str = "manual",
         demo_dir: pathlib.Path | None = None,
         save_hook: Callable[[dict[str, Any]], None] | None = None,
@@ -665,7 +508,6 @@ class AnnotationApp(tk.Tk):
         self.images = images
         self.coco = coco
         self.output_path = output_path
-        self.suggestions = suggestions or {}
         self.source_name = source_name
         self.demo_dir = demo_dir or pathlib.Path.home() / "Desktop" / "Demo Images"
         self.save_hook = save_hook
@@ -682,10 +524,6 @@ class AnnotationApp(tk.Tk):
         self._pending_a: tuple[float, float] | None = None
         self._selected_obb_idx: int | None = None
         self._img_obbs: list[dict] = []
-        self._img_suggestions: list[dict] = []
-
-        # global state (persists across images)
-        self._show_suggestions: bool = True
 
         # display cache
         self._photo: ImageTk.PhotoImage | None = None
@@ -764,10 +602,9 @@ class AnnotationApp(tk.Tk):
         for txt, cmd in [
             ("◀  [A]",        self._prev),
             ("[D]  ▶",        self._next),
-            ("Accept  [Y]",   self._accept_suggestion),
             ("Blank  [B]",    self._mark_blank),
             ("Reject  [R]",   self._mark_rejected),
-            ("Dismiss  [Esc]", self._cancel_pending),
+            ("Cancel  [Esc]", self._cancel_pending),
             ("Delete  [Del]", self._delete_selected),
             ("Save  [S]",     self._save),
         ]:
@@ -775,12 +612,6 @@ class AnnotationApp(tk.Tk):
                 bot, text=txt, command=cmd,
                 bg="#2a2a4a", fg="#ccccee", relief="flat", padx=7, pady=2,
             ).pack(side="left", padx=3)
-
-        self.btn_hints = tk.Button(
-            bot, text="Hints ✓ [H]", command=self._toggle_suggestions,
-            bg="#2a2a4a", fg="#ffaa33", relief="flat", padx=7, pady=2,
-        )
-        self.btn_hints.pack(side="left", padx=3)
 
         self.btn_pending = tk.Button(
             bot, text="Pending only  [P]", command=self._toggle_pending_only,
@@ -812,14 +643,10 @@ class AnnotationApp(tk.Tk):
         self.bind("<Delete>",    lambda _: self._delete_selected())
         self.bind("<BackSpace>", lambda _: self._delete_selected())
         self.bind("<Escape>",    lambda _: self._cancel_pending())
-        self.bind("<y>",         lambda _: self._accept_suggestion())
-        self.bind("<Return>",    lambda _: self._accept_suggestion())
         self.bind("<b>",         lambda _: self._mark_blank())
         self.bind("<r>",         lambda _: self._mark_rejected())
         self.bind("<s>",         lambda _: self._save())
         self.bind("<q>",         lambda _: self._quit())
-        self.bind("<h>",         lambda _: self._toggle_suggestions())
-        self.bind("<t>",         lambda _: self._toggle_suggestions())
         self.bind("<p>",         lambda _: self._toggle_pending_only())
         self.bind("<i>",         lambda _: self._flag_demo())
 
@@ -885,7 +712,6 @@ class AnnotationApp(tk.Tk):
             self._pil_img = Image.new("RGB", (1200, 800), (30, 30, 50))
             self._photo = None
             self._img_obbs = []
-            self._img_suggestions = []
             self._pending_a = None
             self._selected_obb_idx = None
             self.canvas.delete("all")
@@ -949,9 +775,6 @@ class AnnotationApp(tk.Tk):
             ann["obb"] for ann in self.coco["annotations"]
             if ann["image_id"] == img_id
         ]
-
-        key = str(entry["path"])
-        self._img_suggestions = list(self.suggestions.get(key, []))
 
         self._pending_a = None
         self._selected_obb_idx = None
@@ -1038,7 +861,6 @@ class AnnotationApp(tk.Tk):
         self._draw_overlays()
 
     def _draw_overlays(self) -> None:
-        self.canvas.delete("suggestion")
         self.canvas.delete("confirmed")
         self.canvas.delete("pending")
         self.canvas.delete("blank_label")
@@ -1059,21 +881,6 @@ class AnnotationApp(tk.Tk):
                 fill=BLANK_COLOR, font=("Helvetica", 16, "bold"), tags="blank_label",
             )
             return
-
-        if self._show_suggestions:
-            for i, obb in enumerate(self._img_suggestions):
-                corners = obb_corners(obb["cx"], obb["cy"], obb["w"], obb["h"], obb["angle_deg"])
-                pts = self._corners_to_canvas(corners)
-                self.canvas.create_polygon(
-                    pts, outline=SUGGESTION_COLOR, fill="", width=1,
-                    dash=(8, 4), tags="suggestion",
-                )
-                cx, cy = self._img_to_canvas(obb["cx"], obb["cy"])
-                self.canvas.create_text(
-                    cx, cy - 10,
-                    text=f"? {i + 1}  w={obb['h']:.0f}px",
-                    fill=SUGGESTION_COLOR, font=("Helvetica", 8), tags="suggestion",
-                )
 
         for i, obb in enumerate(self._img_obbs):
             color = SEL_COLOR if i == self._selected_obb_idx else COLORS[i % len(COLORS)]
@@ -1110,7 +917,6 @@ class AnnotationApp(tk.Tk):
             self.lbl_score.config(text="")
             self.lbl_count.config(text="DONE", fg="#66ff88")
             self.lbl_zoom.config(text="")
-            self.btn_hints.config(text="Hints ✓ [H]" if self._show_suggestions else "Hints  [H]")
             self.btn_pending.config(text="Pending ✓ [P]", fg="#88ffcc")
             self.lbl_hint.config(text="All visible images are reviewed", fg="#88ffcc")
             return
@@ -1151,8 +957,6 @@ class AnnotationApp(tk.Tk):
         self.lbl_count.config(text=count_text, fg=count_color)
         self.lbl_zoom.config(text=f"zoom {self.zoom:.2f}×")
 
-        hints_label = "Hints ✓ [H]" if self._show_suggestions else "Hints  [H]"
-        self.btn_hints.config(text=hints_label)
         pending_label = "Pending ✓ [P]" if self._pending_only else "Pending only  [P]"
         pending_color = "#88ffcc" if self._pending_only else "#ccccee"
         self.btn_pending.config(text=pending_label, fg=pending_color)
@@ -1163,11 +967,8 @@ class AnnotationApp(tk.Tk):
             hint, color = "BLANK — press B to undo", BLANK_COLOR
         elif self._pending_a is not None:
             hint, color = "→ Click streak END", "#88ffcc"
-        elif self._img_suggestions and self._show_suggestions:
-            hint = f"Y = accept {len(self._img_suggestions)} suggestion(s)  |  click to annotate manually"
-            color = SUGGESTION_COLOR
         else:
-            hint = "Click streak START  |  B = blank  |  R = reject unusable  |  H = toggle hints"
+            hint = "Click streak START  |  B = blank  |  R = reject unusable"
             color = "#88ffcc"
         self.lbl_hint.config(text=hint, fg=color)
 
@@ -1205,30 +1006,12 @@ class AnnotationApp(tk.Tk):
         self._goto_var.set("")
 
     def _on_goto_return(self, _: tk.Event) -> str:
-        """Handle Return in the Go-to field without accepting suggestions."""
+        """Handle Return in the Go-to field."""
         self._goto_index()
         self.focus_set()
         return "break"
 
     # ---- annotation actions --------------------------------------------------
-
-    def _accept_suggestion(self) -> None:
-        if not self._img_suggestions:
-            return
-        img_id = self._get_or_create_image_id(self.images[self.idx])
-        for img in self.coco["images"]:
-            if img["id"] == img_id:
-                img["blank"] = False
-                img["rejected"] = False
-                img.pop("exclude_reason", None)
-                break
-        for obb in self._img_suggestions:
-            self._img_obbs.append(obb)
-        self.width_var.set(int(round(self._img_suggestions[0]["h"])))
-        self._img_suggestions = []
-        self._commit_obbs()
-        self._draw_overlays()
-        self._update_labels()
 
     def _mark_blank(self) -> None:
         """Toggle blank (no streak) status for the current image and advance."""
@@ -1285,12 +1068,6 @@ class AnnotationApp(tk.Tk):
         else:
             self._redraw()
             self._update_labels()
-
-    def _toggle_suggestions(self) -> None:
-        """Toggle Hough hint overlay globally (persists across images)."""
-        self._show_suggestions = not self._show_suggestions
-        self._draw_overlays()
-        self._update_labels()
 
     def _toggle_pending_only(self) -> None:
         """Toggle hiding images that already have a review decision."""
@@ -1360,10 +1137,7 @@ class AnnotationApp(tk.Tk):
         self._update_labels()
 
     def _cancel_pending(self) -> None:
-        if self._pending_a is not None:
-            self._pending_a = None
-        else:
-            self._img_suggestions = []
+        self._pending_a = None
         self._selected_obb_idx = None
         self._draw_overlays()
         self._update_labels()
@@ -1472,13 +1246,6 @@ def main() -> None:
         help="Output COCO JSON path (created fresh or resumed).",
     )
     parser.add_argument(
-        "--hough-preset", choices=list(_HOUGH_PRESETS), default="frigate",
-        help=(
-            "Hough parameter preset. frigate = short streaks (PNG), "
-            "brentimages = long streaks (FITS 4x downsample)."
-        ),
-    )
-    parser.add_argument(
         "--source-name", default="",
         help="Source label written into annotation attributes.",
     )
@@ -1503,18 +1270,6 @@ def main() -> None:
         ),
     )
     parser.add_argument(
-        "--precompute", action="store_true",
-        help="Run Hough detection on all images and write suggestion cache, then exit.",
-    )
-    parser.add_argument(
-        "--force-recompute", action="store_true",
-        help="Ignore existing suggestion cache and reprocess all images.",
-    )
-    parser.add_argument(
-        "--no-suggestions", action="store_true",
-        help="Disable Hough hints; annotate fully manually.",
-    )
-    parser.add_argument(
         "--demo-dir", type=pathlib.Path,
         default=pathlib.Path.home() / "Desktop" / "Demo Images",
         help="Folder where flagged demo images are copied (default: ~/Desktop/Demo Images).",
@@ -1530,7 +1285,6 @@ def main() -> None:
     if args.night_dir:
         if args.output == pathlib.Path("data/annotations/streak_annotations.json"):
             args.output = args.night_dir / "brentimages_annotations.json"
-        suggestions_path = args.night_dir / "brentimages_suggestions.json"
         log.info("Loading BrentImages night from %s", args.night_dir)
         try:
             strk_frames = load_night_frames(args.night_dir)
@@ -1553,8 +1307,6 @@ def main() -> None:
             )
         strk_save_hook = lambda coco: write_coco_to_strk(coco, strk_frames)
     else:
-        suggestions_path = args.output.parent / (args.output.stem + ".suggestions.json")
-
         log.info("Loading image list from %s", args.image_dir)
         try:
             images = load_from_dir(args.image_dir, args.priority_list, args.min_score)
@@ -1566,24 +1318,6 @@ def main() -> None:
     if not images:
         log.error("No images found")
         sys.exit(1)
-
-    if args.precompute:
-        precompute_all_suggestions(images, suggestions_path,
-                                   preset=args.hough_preset,
-                                   force=args.force_recompute)
-        return
-
-    # Load suggestion cache
-    suggestions: dict[str, list[dict]] = {}
-    if args.no_suggestions:
-        log.info("Suggestions disabled (--no-suggestions)")
-    elif suggestions_path.exists():
-        with open(suggestions_path) as fh:
-            suggestions = json.load(fh)
-        n_with = sum(1 for v in suggestions.values() if v)
-        log.info("Loaded suggestions: %d images, %d with detections", len(suggestions), n_with)
-    else:
-        log.info("No suggestion cache — run with --precompute for auto-hints")
 
     source_name = args.source_name or (
         args.night_dir.name if args.night_dir else args.image_dir.name
@@ -1616,7 +1350,7 @@ def main() -> None:
                 break
 
     app = AnnotationApp(images, coco, args.output,
-                        suggestions=suggestions, source_name=source_name,
+                        source_name=source_name,
                         demo_dir=args.demo_dir, save_hook=strk_save_hook)
     app._load_image(start_idx)
     app.mainloop()
