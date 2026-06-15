@@ -116,17 +116,7 @@ def _model_registry() -> list[dict]:
         List of dicts with keys: id, size, label, dataset, weights, config.
     """
     root = Path(__file__).resolve().parent.parent
-    return [
-        {
-            "id":        "dinov3_vits_run5",
-            "size":      "dinov3_vits_run5",
-            "label":     "ViT-S OBB Run 5",
-            "dataset":   "Atwood native-scale tiles + synthetic",
-            "weights":   root / "weights" / "run5_vits_mmdet" / "best_coco_bbox_mAP_epoch_15.pth",
-            "config":    root / "models" / "dino" / "streak_dinov3_vits_400px_run3.py",
-            "norm_mode": "zscore",
-        },
-    ]
+    return []
 
 
 # ---------------------------------------------------------------------------
@@ -153,8 +143,6 @@ def _select_config(model_size: str) -> Path:
         "dinov3_vitb":             root / "models" / "dino" / "streak_dinov3_vitb.py",
         "dinov3_vitl":             root / "models" / "dino" / "streak_dinov3_vitl.py",
         "dinov3_vitb_multisource": root / "models" / "dino" / "streak_dinov3_vitb_400px.py",
-        "dinov3_vits_run4":        root / "models" / "dino" / "streak_dinov3_vits_400px_run3.py",
-        "dinov3_vits_run5":        root / "models" / "dino" / "streak_dinov3_vits_400px_run3.py",
     }
     if model_size not in configs:
         raise ValueError(
@@ -853,29 +841,29 @@ def get_detector_statuses() -> list[dict]:
             "status":  "unavailable",
         })
 
-    # ViT-S/16 heatmap detector (window_v3)
+    # ViT-S/16 heatmap detector (window_v4)
     try:
-        from inference.vits_window_v3_detector import get_vits_v3_heatmap_status
-        statuses.append(get_vits_v3_heatmap_status())
+        from inference.vits_window_v4_detector import get_vits_v4_heatmap_status
+        statuses.append(get_vits_v4_heatmap_status())
     except ImportError:
         statuses.append({
-            "id":      "vits_heatmap_v3",
-            "name":    "DINOv3 ViT-S HeatMap v3",
+            "id":      "vits_heatmap_v4",
+            "name":    "DINOv3 ViT-S HeatMap v4",
             "type":    "ml",
-            "dataset": "Atwood window_v3",
+            "dataset": "Atwood window_v4",
             "status":  "unavailable",
         })
 
-    # ViT-B/16 heatmap detector (window_v3)
+    # ViT-B/16 heatmap detector (window_v4)
     try:
-        from inference.vitb_window_v3_detector import get_vitb_v3_heatmap_status
-        statuses.append(get_vitb_v3_heatmap_status())
+        from inference.vitb_window_v4_detector import get_vitb_v4_heatmap_status
+        statuses.append(get_vitb_v4_heatmap_status())
     except ImportError:
         statuses.append({
-            "id":      "vitb_heatmap_v3",
-            "name":    "DINOv3 ViT-B HeatMap v3",
+            "id":      "vitb_heatmap_v4",
+            "name":    "DINOv3 ViT-B HeatMap v4",
             "type":    "ml",
-            "dataset": "Atwood window_v3",
+            "dataset": "Atwood window_v4",
             "status":  "unavailable",
         })
 
@@ -1164,23 +1152,23 @@ def _run_all_detectors(
         else:
             results["vitb_heatmap"] = []
 
-        if _enabled("vits_heatmap_v3"):
-            _vits_v3_norm = os.environ.get("VITS_V3_HEATMAP_NORM", "zscore").lower()
-            if raw_array_f32 is not None and default_norm_mode and default_norm_mode != _vits_v3_norm:
-                from inference.fits_loader import apply_norm as _apply_norm_vits_v3
-                _vits_v3_array = _apply_norm_vits_v3(raw_array_f32, _vits_v3_norm)
+        if _enabled("vits_heatmap_v4"):
+            _vits_v4_norm = os.environ.get("VITS_V4_HEATMAP_NORM", "zscore").lower()
+            if raw_array_f32 is not None and default_norm_mode and default_norm_mode != _vits_v4_norm:
+                from inference.fits_loader import apply_norm as _apply_norm_vits_v4
+                _vits_v4_array = _apply_norm_vits_v4(raw_array_f32, _vits_v4_norm)
             else:
-                _vits_v3_array = array
+                _vits_v4_array = array
 
-            def _vits_v3_heatmap_task_with_sidecar(arr: "np.ndarray") -> list[dict]:
-                from inference.vits_window_v3_detector import run_vits_v3_heatmap_detector_and_heatmap
+            def _vits_v4_heatmap_task_with_sidecar(arr: "np.ndarray") -> list[dict]:
+                from inference.vits_window_v4_detector import run_vits_v4_heatmap_detector_and_heatmap
                 from inference.tiled_pipeline import stitch_collinear_fragments
-                dets, heat = run_vits_v3_heatmap_detector_and_heatmap(arr)
+                dets, heat = run_vits_v4_heatmap_detector_and_heatmap(arr)
                 if heat is not None:
-                    _heatmap_sidecar["vits_heatmap_v3"] = heat
+                    _heatmap_sidecar["vits_heatmap_v4"] = heat
                 if len(dets) > 1:
-                    max_gap    = float(os.environ.get("VITS_V3_HEATMAP_STITCH_MAX_GAP", "200"))
-                    max_growth = float(os.environ.get("VITS_V3_HEATMAP_STITCH_MAX_GROWTH_RATIO", "3.0"))
+                    max_gap    = float(os.environ.get("VITS_V4_HEATMAP_STITCH_MAX_GAP", "200"))
+                    max_growth = float(os.environ.get("VITS_V4_HEATMAP_STITCH_MAX_GROWTH_RATIO", "3.0"))
                     stitch_in = [
                         {**d,
                          "bbox":  [d["bbox"][0], d["bbox"][1],
@@ -1199,27 +1187,27 @@ def _run_all_detectors(
                                      "confidence": s.get("confidence", s.get("score", 0.0))})
                 return dets
 
-            tasks[pool.submit(_timed_detector, "vits_heatmap_v3", _vits_v3_heatmap_task_with_sidecar, _vits_v3_array)] = "vits_heatmap_v3"
+            tasks[pool.submit(_timed_detector, "vits_heatmap_v4", _vits_v4_heatmap_task_with_sidecar, _vits_v4_array)] = "vits_heatmap_v4"
         else:
-            results["vits_heatmap_v3"] = []
+            results["vits_heatmap_v4"] = []
 
-        if _enabled("vitb_heatmap_v3"):
-            _vitb_v3_norm = os.environ.get("VITB_V3_HEATMAP_NORM", "zscore").lower()
-            if raw_array_f32 is not None and default_norm_mode and default_norm_mode != _vitb_v3_norm:
-                from inference.fits_loader import apply_norm as _apply_norm_vitb_v3
-                _vitb_v3_array = _apply_norm_vitb_v3(raw_array_f32, _vitb_v3_norm)
+        if _enabled("vitb_heatmap_v4"):
+            _vitb_v4_norm = os.environ.get("VITB_V4_HEATMAP_NORM", "zscore").lower()
+            if raw_array_f32 is not None and default_norm_mode and default_norm_mode != _vitb_v4_norm:
+                from inference.fits_loader import apply_norm as _apply_norm_vitb_v4
+                _vitb_v4_array = _apply_norm_vitb_v4(raw_array_f32, _vitb_v4_norm)
             else:
-                _vitb_v3_array = array
+                _vitb_v4_array = array
 
-            def _vitb_v3_heatmap_task_with_sidecar(arr: "np.ndarray") -> list[dict]:
-                from inference.vitb_window_v3_detector import run_vitb_v3_heatmap_detector_and_heatmap
+            def _vitb_v4_heatmap_task_with_sidecar(arr: "np.ndarray") -> list[dict]:
+                from inference.vitb_window_v4_detector import run_vitb_v4_heatmap_detector_and_heatmap
                 from inference.tiled_pipeline import stitch_collinear_fragments
-                dets, heat = run_vitb_v3_heatmap_detector_and_heatmap(arr)
+                dets, heat = run_vitb_v4_heatmap_detector_and_heatmap(arr)
                 if heat is not None:
-                    _heatmap_sidecar["vitb_heatmap_v3"] = heat
+                    _heatmap_sidecar["vitb_heatmap_v4"] = heat
                 if len(dets) > 1:
-                    max_gap    = float(os.environ.get("VITB_V3_HEATMAP_STITCH_MAX_GAP", "200"))
-                    max_growth = float(os.environ.get("VITB_V3_HEATMAP_STITCH_MAX_GROWTH_RATIO", "3.0"))
+                    max_gap    = float(os.environ.get("VITB_V4_HEATMAP_STITCH_MAX_GAP", "200"))
+                    max_growth = float(os.environ.get("VITB_V4_HEATMAP_STITCH_MAX_GROWTH_RATIO", "3.0"))
                     stitch_in = [
                         {**d,
                          "bbox":  [d["bbox"][0], d["bbox"][1],
@@ -1238,9 +1226,9 @@ def _run_all_detectors(
                                      "confidence": s.get("confidence", s.get("score", 0.0))})
                 return dets
 
-            tasks[pool.submit(_timed_detector, "vitb_heatmap_v3", _vitb_v3_heatmap_task_with_sidecar, _vitb_v3_array)] = "vitb_heatmap_v3"
+            tasks[pool.submit(_timed_detector, "vitb_heatmap_v4", _vitb_v4_heatmap_task_with_sidecar, _vitb_v4_array)] = "vitb_heatmap_v4"
         else:
-            results["vitb_heatmap_v3"] = []
+            results["vitb_heatmap_v4"] = []
 
         for f in as_completed(tasks):
             key = tasks[f]
@@ -1463,8 +1451,8 @@ def run_with_array(
     heatmap_dets = (
         all_det_results.get("vits_heatmap", [])
         + all_det_results.get("vitb_heatmap", [])
-        + all_det_results.get("vits_heatmap_v3", [])
-        + all_det_results.get("vitb_heatmap_v3", [])
+        + all_det_results.get("vits_heatmap_v4", [])
+        + all_det_results.get("vitb_heatmap_v4", [])
     )
 
     if raw_mode:
