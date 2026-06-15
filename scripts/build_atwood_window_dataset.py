@@ -37,6 +37,17 @@ uses window-local obbs). This builder makes the REAL-window path do the same:
    frame random crops.  Neg tile fraction raised conservatively to ~0.42
    (was 0.38).  Going above 0.45 has caused training collapse in prior runs.
 
+## v3 changes
+
+3. **Per-annotated-frame background tiles**: for each training frame that has
+   streak annotations, ``--bg-per-frame`` (default 3) additional 1800×1800
+   background windows are sampled from regions that do NOT overlap any
+   annotation (with a 400 px clearance margin).  This closes the remaining
+   train/eval distribution gap: at inference the model tiles the full frame and
+   sees mostly empty-sky tiles from frames that *do* contain streaks — exactly
+   what v3 negatives now represent.  Corpus negatives remain but their count is
+   reduced proportionally so total neg fraction stays ≈ 0.42.
+
 ## Output (per agent_docs/dataset_naming.md)
 
 Self-contained, content-named, versioned directories under TrainingData root:
@@ -106,6 +117,8 @@ def main() -> None:
     p.add_argument("--pos-tiles-per-window", type=float, default=3.0)
     p.add_argument("--neg-tiles-per-image", type=int, default=4,
                    help="must match the cacher's --neg-tiles-per-image")
+    p.add_argument("--bg-per-frame", type=int, default=3,
+                   help="(v3+) background windows sampled per annotated training frame")
     p.add_argument("--seed", type=int, default=18)
     p.add_argument("--limit", type=int, default=0,
                    help="smoke test: cap positive windows (0 = all)")
@@ -225,13 +238,42 @@ def main() -> None:
         neg_tiles = args.neg_frac / (1 - args.neg_frac) * pos_tiles
         return int(round(neg_tiles / max(1, args.neg_tiles_per_image)))
 
-    def plan_negs(pos_windows, n):
+    # (v3+) Sample background windows from annotated frames, avoiding all annotation
+    # regions.  Each window is NEG_WIN×NEG_WIN with a BG_MARGIN clearance from
+    # every annotation window bbox; produces neg_tiles_per_image tiles when cached.
+    _BG_MARGIN = 400  # px clearance beyond each annotation window
+    def plan_frame_bg(pos_windows):
+        if args.version < 3 or args.bg_per_frame <= 0:
+            return []
+        by_frame = defaultdict(list)
+        for w in pos_windows:
+            by_frame[w["frame"]].append(w)
+        out = []
+        for frame, wins in by_frame.items():
+            excl = [(max(0, w["x0"] - _BG_MARGIN), max(0, w["y0"] - _BG_MARGIN),
+                     min(FRAME_W, w["x0"] + w["w"] + _BG_MARGIN),
+                     min(FRAME_H, w["y0"] + w["h"] + _BG_MARGIN))
+                    for w in wins]
+            sampled, attempts = 0, 0
+            while sampled < args.bg_per_frame and attempts < args.bg_per_frame * 40:
+                attempts += 1
+                nx = int(rng.integers(0, FRAME_W - NEG_WIN))
+                ny = int(rng.integers(0, FRAME_H - NEG_WIN))
+                nx1, ny1 = nx + NEG_WIN, ny + NEG_WIN
+                if not any(nx < rx1 and nx1 > rx0 and ny < ry1 and ny1 > ry0
+                           for rx0, ry0, rx1, ry1 in excl):
+                    out.append({"frame": frame, "x0": nx, "y0": ny,
+                                "w": NEG_WIN, "h": NEG_WIN})
+                    sampled += 1
+        return out
+
+    def plan_negs(pos_windows, n_corpus):
         # Draw from corpus_neg_frames first (diverse sky); fall back to sampling
         # from positive-window frames if corpus is exhausted.
         out = []
         corpus_pool = list(corpus_neg_frames)
         fallback_pool = [w["frame"] for w in pos_windows]
-        for i in range(n):
+        for i in range(n_corpus):
             if corpus_pool:
                 frame = corpus_pool[i % len(corpus_pool)]
             elif fallback_pool:
@@ -244,9 +286,29 @@ def main() -> None:
                         "w": NEG_WIN, "h": NEG_WIN})
         return out
 
-    train_negs = plan_negs(train_w, neg_count(train_w))
-    val_negs = plan_negs(val_w, neg_count(val_w))
-    logger.info("Negative-sky windows: train=%d val=%d", len(train_negs), len(val_negs))
+    # v3: frame_bg can exceed the neg budget if there are many annotated frames
+    # (e.g. 879 frames × 3 bg_per_frame = 2637 but budget is ~561 windows).
+    # Cap frame_bg at half the total neg budget so corpus still contributes;
+    # shuffle first so the cap is a random subset rather than the first N frames.
+    train_frame_bg_all = plan_frame_bg(train_w)
+    n_train_total = neg_count(train_w)
+    n_frame_bg_cap = n_train_total // 2
+    rng.shuffle(train_frame_bg_all)
+    train_frame_bg = train_frame_bg_all[:n_frame_bg_cap]
+    n_train_corpus = n_train_total - len(train_frame_bg)
+    train_negs = plan_negs(train_w, n_train_corpus) + train_frame_bg
+
+    val_frame_bg_all = plan_frame_bg(val_w)
+    n_val_total = neg_count(val_w)
+    n_val_frame_bg_cap = n_val_total // 2
+    rng.shuffle(val_frame_bg_all)
+    val_frame_bg = val_frame_bg_all[:n_val_frame_bg_cap]
+    n_val_corpus = n_val_total - len(val_frame_bg)
+    val_negs = plan_negs(val_w, n_val_corpus) + val_frame_bg
+
+    logger.info("Negative-sky windows: train=%d (%d corpus + %d frame-bg)  val=%d (%d corpus + %d frame-bg)",
+                len(train_negs), n_train_corpus, len(train_frame_bg),
+                len(val_negs), n_val_corpus, len(val_frame_bg))
 
     # ---- Materialise crops -> NPY, emit COCO with relative file_names ----
     # Group all jobs by source frame so each 104 MB FITS is loaded exactly once,

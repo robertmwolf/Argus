@@ -1,0 +1,171 @@
+"""ViT-S/16 window_v3 heatmap detector.
+
+Identical runtime to ``inference/vits_heatmap_detector.py`` but targets the
+window_v3 checkpoint and uses the ``VITS_V3_*`` env-var namespace so both
+versions can run simultaneously without collision.
+
+Environment variables
+---------------------
+VITS_V3_HEATMAP_CHECKPOINT
+    Default: ``weights/vits_window_v3/best.pt``
+VITS_V3_HEATMAP_THRESHOLD
+    Heatmap binarisation threshold (float, default 0.60).
+    0.60 is the empirically optimal threshold for window_v3 (best F1 on
+    val_balanced_v1; 0.70 produces more FPs without improving recall).
+VITS_V3_HEATMAP_MIN_PIXELS
+    Minimum component size in feature-map pixels (int, default 2).
+VITS_V3_HEATMAP_NATIVE_TILE_SIZE
+    Native-pixel tile size (int, default 400).
+VITS_V3_HEATMAP_TILE_OVERLAP
+    Fractional overlap between adjacent tiles (float, default 0.5).
+VITS_V3_HEATMAP_PEAK_FLOOR
+    Minimum peak heatmap value for a detection to survive (float, default 0.85).
+VITS_V3_HEATMAP_NORM
+    Normalisation mode applied to raw FITS before inference (default ``zscore``).
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+from inference.vits_heatmap_detector import _load_model, _filter_peak_topk
+from inference.convnext_heatmap_detector import (
+    _run_single_tile,
+    _run_single_tile_probs,
+    _remap_detection,
+)
+
+logger = logging.getLogger(__name__)
+
+_DEFAULT_CHECKPOINT = (
+    Path(__file__).resolve().parent.parent / "weights" / "vits_window_v3" / "best.pt"
+)
+
+
+def _default_checkpoint() -> Path:
+    return Path(os.environ.get("VITS_V3_HEATMAP_CHECKPOINT", str(_DEFAULT_CHECKPOINT)))
+
+
+def get_vits_v3_heatmap_status() -> dict[str, str]:
+    ckpt = _default_checkpoint()
+    return {
+        "id":      "vits_heatmap_v3",
+        "name":    "DINOv3 ViT-S HeatMap v3",
+        "type":    "ml",
+        "dataset": "Atwood window_v3",
+        "status":  "active" if ckpt.exists() else "no_weights",
+    }
+
+
+def run_vits_v3_heatmap_detector(
+    array: np.ndarray,
+    checkpoint: Path | None = None,
+) -> list[dict[str, Any]]:
+    ckpt_path = Path(checkpoint) if checkpoint else _default_checkpoint()
+    threshold        = float(os.environ.get("VITS_V3_HEATMAP_THRESHOLD", "0.60"))
+    min_pixels       = int(os.environ.get("VITS_V3_HEATMAP_MIN_PIXELS", "2"))
+    native_tile_size = int(os.environ.get("VITS_V3_HEATMAP_NATIVE_TILE_SIZE", "400"))
+    tile_overlap     = float(os.environ.get("VITS_V3_HEATMAP_TILE_OVERLAP", "0.5"))
+    peak_floor       = float(os.environ.get("VITS_V3_HEATMAP_PEAK_FLOOR", "0.85"))
+    top_k            = int(os.environ.get("VITS_V3_HEATMAP_TOPK", "0"))
+
+    try:
+        model, image_size, device, use_geometry = _load_model(ckpt_path)
+    except Exception as exc:
+        logger.warning("ViT-S v3 heatmap model load failed: %s", exc)
+        return []
+
+    if array.ndim == 2:
+        array = np.stack([array] * 3, axis=2)
+    if array.dtype != np.uint8:
+        array = np.clip(array, 0, 255).astype(np.uint8)
+
+    h, w = array.shape[:2]
+
+    if max(h, w) <= native_tile_size:
+        dets = _run_single_tile(array, model, image_size, device, threshold, min_pixels,
+                                use_geometry=use_geometry)
+        for d in dets:
+            d["method"] = "vits_heatmap_v3"
+        return _filter_peak_topk(dets, peak_floor, top_k)
+
+    from inference.tiled_pipeline import tile_image
+    from inference.postprocess import nms_detections
+
+    all_dets: list[dict[str, Any]] = []
+    for tile, x0, y0 in tile_image(array, native_tile_size, tile_overlap):
+        for det in _run_single_tile(tile, model, image_size, device, threshold, min_pixels,
+                                    use_geometry=use_geometry):
+            d = _remap_detection(det, x0, y0)
+            d["method"] = "vits_heatmap_v3"
+            all_dets.append(d)
+
+    if len(all_dets) <= 1:
+        return _filter_peak_topk(all_dets, peak_floor, top_k)
+
+    result = nms_detections(all_dets)
+    result = _filter_peak_topk(result, peak_floor, top_k)
+    logger.debug("ViT-S v3 heatmap (tiled): %d raw → %d after NMS + peak/top-K",
+                 len(all_dets), len(result))
+    return result
+
+
+def run_vits_v3_heatmap_detector_and_heatmap(
+    array: np.ndarray,
+    checkpoint: Path | None = None,
+) -> tuple[list[dict[str, Any]], np.ndarray | None]:
+    ckpt_path = Path(checkpoint) if checkpoint else _default_checkpoint()
+    threshold        = float(os.environ.get("VITS_V3_HEATMAP_THRESHOLD", "0.60"))
+    min_pixels       = int(os.environ.get("VITS_V3_HEATMAP_MIN_PIXELS", "2"))
+    native_tile_size = int(os.environ.get("VITS_V3_HEATMAP_NATIVE_TILE_SIZE", "400"))
+    tile_overlap     = float(os.environ.get("VITS_V3_HEATMAP_TILE_OVERLAP", "0.5"))
+    peak_floor       = float(os.environ.get("VITS_V3_HEATMAP_PEAK_FLOOR", "0.85"))
+    top_k            = int(os.environ.get("VITS_V3_HEATMAP_TOPK", "0"))
+
+    try:
+        model, image_size, device, use_geometry = _load_model(ckpt_path)
+    except Exception as exc:
+        logger.warning("ViT-S v3 heatmap model load failed (heatmap): %s", exc)
+        return [], None
+
+    if array.ndim == 2:
+        array = np.stack([array] * 3, axis=2)
+    if array.dtype != np.uint8:
+        array = np.clip(array, 0, 255).astype(np.uint8)
+
+    h_full, w_full = array.shape[:2]
+    heat_full = np.zeros((h_full, w_full), dtype=np.float32)
+
+    if max(h_full, w_full) <= native_tile_size:
+        dets = _run_single_tile(array, model, image_size, device, threshold, min_pixels,
+                                use_geometry=use_geometry)
+        for d in dets:
+            d["method"] = "vits_heatmap_v3"
+        heat_tile, _, _, _ = _run_single_tile_probs(array, model, image_size, device)
+        return _filter_peak_topk(dets, peak_floor, top_k), heat_tile
+
+    from inference.tiled_pipeline import tile_image
+    from inference.postprocess import nms_detections
+
+    all_dets: list[dict[str, Any]] = []
+    for tile, x0, y0 in tile_image(array, native_tile_size, tile_overlap):
+        th, tw = tile.shape[:2]
+        for det in _run_single_tile(tile, model, image_size, device, threshold, min_pixels,
+                                    use_geometry=use_geometry):
+            d = _remap_detection(det, x0, y0)
+            d["method"] = "vits_heatmap_v3"
+            all_dets.append(d)
+        heat_tile, _, _, _ = _run_single_tile_probs(tile, model, image_size, device)
+        y1e, x1e = min(y0 + th, h_full), min(x0 + tw, w_full)
+        np.maximum(heat_full[y0:y1e, x0:x1e], heat_tile[:y1e - y0, :x1e - x0],
+                   out=heat_full[y0:y1e, x0:x1e])
+
+    if len(all_dets) <= 1:
+        return _filter_peak_topk(all_dets, peak_floor, top_k), heat_full
+
+    return _filter_peak_topk(nms_detections(all_dets), peak_floor, top_k), heat_full

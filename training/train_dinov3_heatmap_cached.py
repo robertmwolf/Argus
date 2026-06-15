@@ -80,6 +80,26 @@ def _dice_score(logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     return ((2 * intersection + 1e-6) / denom).mean()
 
 
+def _focal_loss(
+    logits: torch.Tensor,
+    target: torch.Tensor,
+    alpha: float,
+    gamma: float,
+) -> torch.Tensor:
+    """Sigmoid focal loss (Lin et al. 2017) for binary heatmap pixels.
+
+    Replaces BCE+pos_weight when --focal-gamma > 0.  The (1-p_t)^gamma term
+    down-weights easy examples so the head is penalised more for confident
+    wrong predictions (i.e. bright background activations).
+    """
+    p = torch.sigmoid(logits)
+    ce = F.binary_cross_entropy_with_logits(logits, target, reduction="none")
+    p_t = p * target + (1.0 - p) * (1.0 - target)
+    focal_weight = (1.0 - p_t) ** gamma
+    alpha_t = alpha * target + (1.0 - alpha) * (1.0 - target)
+    return (alpha_t * focal_weight * ce).mean()
+
+
 def _run_epoch(
     head: HeatmapHead,
     loader: DataLoader,
@@ -87,6 +107,8 @@ def _run_epoch(
     device: torch.device,
     pos_weight: float,
     geometry_weight: float,
+    focal_gamma: float = 0.0,
+    focal_alpha: float = 0.85,
 ) -> dict[str, float]:
     training = optimizer is not None
     head.train(training)
@@ -105,14 +127,19 @@ def _run_epoch(
         if logits.shape[-2:] != target.shape[-2:]:
             target = F.interpolate(target, size=logits.shape[-2:], mode="nearest")
             geometry = F.interpolate(geometry, size=logits.shape[-2:], mode="nearest")
-        bce = F.binary_cross_entropy_with_logits(logits, target, pos_weight=pos_weight_tensor)
+        if focal_gamma > 0.0:
+            heatmap_loss = _focal_loss(logits, target, focal_alpha, focal_gamma)
+        else:
+            heatmap_loss = F.binary_cross_entropy_with_logits(
+                logits, target, pos_weight=pos_weight_tensor
+            )
         dice_loss = 1.0 - _dice_score(logits, target)
         mask = target.expand_as(geometry) > 0
         if bool(mask.any()):
             geom_loss = F.smooth_l1_loss(geom_pred[mask], geometry[mask])
         else:
             geom_loss = torch.zeros((), device=device)
-        loss = bce + dice_loss + geometry_weight * geom_loss
+        loss = heatmap_loss + dice_loss + geometry_weight * geom_loss
         if training:
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
@@ -151,6 +178,17 @@ def main() -> int:
                         help="Linear LR warmup epochs before cosine decay (only with "
                              "--lr-scheduler cosine). Lets a hotter peak LR run without "
                              "an early loss spike. Default: 0 (no warmup).")
+    parser.add_argument("--focal-gamma", type=float, default=0.0,
+                        help="Focal loss gamma (focusing parameter). 0 = standard BCE "
+                             "(default). 2.0 = standard RetinaNet focal loss. When > 0, "
+                             "replaces BCE+pos_weight with focal loss.")
+    parser.add_argument("--focal-alpha", type=float, default=0.85,
+                        help="Focal loss alpha (positive-class weight, analogous to "
+                             "pos_weight). Only used when --focal-gamma > 0. Default 0.85.")
+    parser.add_argument("--early-stopping-patience", type=int, default=0,
+                        help="Stop training if val_loss does not improve for this many "
+                             "consecutive epochs. 0 = disabled (default). best.pt is "
+                             "always the lowest-val-loss checkpoint seen so far.")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -221,18 +259,37 @@ def main() -> int:
             logger.info("CosineAnnealingLR scheduler active (T_max=%d, start_epoch=%d)",
                         args.epochs, start_epoch)
 
+    if args.focal_gamma > 0.0:
+        logger.info("Using focal loss (gamma=%.2f, alpha=%.2f) — pos_weight ignored",
+                    args.focal_gamma, args.focal_alpha)
+    if args.early_stopping_patience > 0:
+        logger.info("Early stopping patience=%d epochs (tracking val_loss)",
+                    args.early_stopping_patience)
+
     metadata = {
         "args": vars(args),
         "train_cache_metadata": train_ds.metadata,
         "val_cache_metadata": val_ds.metadata,
         "in_channels": in_channels,
     }
+
+    best_val_loss = float("inf")
+    no_improve_epochs = 0
+
     for epoch in range(start_epoch, args.epochs + 1):
-        train_metrics = _run_epoch(head, train_loader, optimizer, device, args.pos_weight, args.geometry_weight)
+        train_metrics = _run_epoch(
+            head, train_loader, optimizer, device,
+            args.pos_weight, args.geometry_weight,
+            focal_gamma=args.focal_gamma, focal_alpha=args.focal_alpha,
+        )
         if scheduler is not None:
             scheduler.step()
         with torch.no_grad():
-            val_metrics = _run_epoch(head, val_loader, None, device, args.pos_weight, args.geometry_weight)
+            val_metrics = _run_epoch(
+                head, val_loader, None, device,
+                args.pos_weight, args.geometry_weight,
+                focal_gamma=args.focal_gamma, focal_alpha=args.focal_alpha,
+            )
         row = {
             "epoch": epoch,
             "train_loss": train_metrics["loss"],
@@ -250,6 +307,21 @@ def main() -> int:
             torch.save(payload, work_dir / "best.pt")
         # Persist history every epoch so an early stop still leaves the dice curve.
         (work_dir / "history.json").write_text(json.dumps(history, indent=2))
+
+        # Early stopping: track val_loss (diverges before val_dice visibly degrades).
+        if args.early_stopping_patience > 0:
+            if val_metrics["loss"] < best_val_loss:
+                best_val_loss = val_metrics["loss"]
+                no_improve_epochs = 0
+            else:
+                no_improve_epochs += 1
+                if no_improve_epochs >= args.early_stopping_patience:
+                    logger.info(
+                        "Early stopping at epoch %d (val_loss no improvement for %d epochs, "
+                        "best=%.4f)",
+                        epoch, args.early_stopping_patience, best_val_loss,
+                    )
+                    break
 
     (work_dir / "history.json").write_text(json.dumps(history, indent=2))
     logger.info("best val dice %.3f saved to %s", best_dice, work_dir / "best.pt")

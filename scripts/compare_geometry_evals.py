@@ -30,6 +30,10 @@ MODELS: list[tuple[str, str]] = [
     ("vitb_window_v1",   "results/window_v1/vitb_window_v1/pf85/geometry_eval_tier3.json"),
     ("vits_window_v2",   "results/window_v2/vits_window_v2/pf85/geometry_eval_tier3.json"),
     ("vitb_window_v2",   "results/window_v2/vitb_window_v2/pf85/geometry_eval_tier3.json"),
+    ("vits_window_v3",   "results/window_v3/vits_window_v3/pf85/geometry_eval.json"),
+    ("vitb_window_v3",   "results/window_v3/vitb_window_v3/pf85/geometry_eval.json"),
+    ("vits_window_v4",   "results/window_v4/vits_window_v4/pf85/geometry_eval.json"),
+    ("vitb_window_v4",   "results/window_v4/vitb_window_v4/pf85/geometry_eval.json"),
 ]
 
 
