@@ -1330,7 +1330,7 @@ def run_with_array(
     t0 = time.perf_counter()
     from inference.fits_loader import FITSLoader
     loader = FITSLoader()
-    fits_data = loader.load(fits_path)
+    fits_data = loader.load(fits_path, skip_plate_solve=fast)
     array          = fits_data["array"]           # uint8 (H, W, 3)
     raw_array_f32  = fits_data.get("raw_float32") # float32 (H, W) or None for PNGs
     default_norm   = fits_data.get("norm_mode", "zscore")

@@ -213,7 +213,7 @@ class FITSLoader:
     trained weights.
     """
 
-    def load(self, path: str | Path) -> dict[str, Any]:
+    def load(self, path: str | Path, skip_plate_solve: bool = False) -> dict[str, Any]:
         """Load a FITS file and return normalised data.
 
         Normalisation is selected by ARGUS_NORM (module-level constant):
@@ -222,6 +222,9 @@ class FITSLoader:
 
         Args:
             path: Path to the FITS file.
+            skip_plate_solve: If True, suppress ASTAP plate solving even when
+                ARGUS_ENABLE_PLATE_SOLVE=true.  Pass True in fast mode since
+                plate solving is only useful for cross-ID, which fast mode skips.
 
         Returns:
             Dictionary with keys:
@@ -320,7 +323,7 @@ class FITSLoader:
                     if wcs is None:
                         wcs = _load_sidecar_wcs(path)
                         wcs_source = "sidecar" if wcs is not None else None
-                    if wcs is None and _should_attempt_plate_solve(header):
+                    if wcs is None and not skip_plate_solve and _should_attempt_plate_solve(header):
                         from inference.plate_solver import solve_from_header as _astap_solve
                         wcs = _astap_solve(path, header)
                         wcs_source = "astap" if wcs is not None else None
