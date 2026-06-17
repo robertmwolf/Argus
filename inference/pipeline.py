@@ -470,11 +470,12 @@ def _run_streakmind_yolo_detector(
     array: "np.ndarray",
     confidence_threshold: float = 0.25,
 ) -> list[dict]:
-    """Run the GTImages StreakMindYOLO detector.
+    """Run the YOLO11s-OBB streak detector (Run 17, Atwood 400px zscore).
 
-    Loads weights from ``STREAKMIND_YOLO_WEIGHTS`` or the best local comparison
-    training output. Returns detections with method ``"streakmind_yolo"`` so
-    the web UI can surface them as StreakMindYOLO.
+    Loads weights from ``STREAKMIND_YOLO_WEIGHTS`` or the Run 17 CPU-trained
+    model. Returns detections with method ``"streakmind_yolo"`` (id kept for
+    backward compat) so the web UI can surface them. Input ``array`` is expected
+    zscore-normalised uint8, matching the model's training distribution.
     """
     import numpy as np
 
@@ -482,7 +483,11 @@ def _run_streakmind_yolo_detector(
     weights = Path(
         os.environ.get(
             "STREAKMIND_YOLO_WEIGHTS",
-            str(root / "weights" / "streakmind_yolo_real" / "run" / "weights" / "best.pt"),
+            # CPU-trained YOLO11s-OBB (Run 17, Atwood 400px zscore). Replaces the
+            # old streakmind_yolo_real (yolo11n/GTImages): beats it on every axis
+            # at conf<=0.20 (short recall 11%->100%, angle 42deg->4deg). MPS
+            # training is broken — see agent_docs/assistant_guide.md.
+            str(root / "weights" / "yolo_run17" / "run_cpu_subset3k" / "weights" / "best.pt"),
         )
     )
     if not weights.exists():
@@ -501,7 +506,9 @@ def _run_streakmind_yolo_detector(
     yolo = _yolo_model_cache[cache_key]
 
     h_img, w_img = array.shape[:2]
-    tile_size = int(os.environ.get("STREAKMIND_YOLO_TILE_SIZE", "640"))
+    # 416 matches the model's training tile scale (400px tiles, imgsz=416).
+    # Feeding 640px tiles shrinks streaks relative to the trained scale.
+    tile_size = int(os.environ.get("STREAKMIND_YOLO_TILE_SIZE", "416"))
     stride = int(os.environ.get("STREAKMIND_YOLO_STRIDE", str(tile_size // 2)))
 
     if max(h_img, w_img) <= tile_size:
@@ -870,12 +877,14 @@ def get_detector_statuses() -> list[dict]:
     # YOLO variants
     _yolo_entries = [
         {
+            # id kept as "streakmind_yolo" for backward compat with UI / env
+            # config; the underlying model is now the Run 17 Atwood YOLO11s-OBB.
             "id":      "streakmind_yolo",
-            "name":    "YOLO-OBB - GTImages",
-            "dataset": "GTImages",
+            "name":    "YOLO-OBB - Atwood",
+            "dataset": "Atwood Run17 (400px zscore)",
             "weights": Path(os.environ.get(
                 "STREAKMIND_YOLO_WEIGHTS",
-                str(root / "weights" / "streakmind_yolo_real" / "run" / "weights" / "best.pt"),
+                str(root / "weights" / "yolo_run17" / "run_cpu_subset3k" / "weights" / "best.pt"),
             )),
         },
     ]
