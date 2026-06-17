@@ -37,6 +37,14 @@ MODELS: list[tuple[str, str]] = [
     ("vits_window_v5",   "results/window_v5/vits_window_v5/pf85/geometry_eval.json"),
     ("vits_window_v6",   "results/window_v6/vits_window_v6/pf85/geometry_eval.json"),
     ("vits_window_v7",   "results/window_v7/vits_window_v7/pf85/geometry_eval.json"),
+    ("vits_window_v8",   "results/window_v8/vits_window_v8/pf85/geometry_eval.json"),
+    ("vitb_window_v8",   "results/window_v8/vitb_window_v8/pf85/geometry_eval.json"),
+    # v9 loss ablation (ViT-S, 5 loss modes)
+    ("v9_focal_dice",    "results/window_v9/vits_v9_focal_dice/pf85/geometry_eval.json"),
+    ("v9_asl_dice",      "results/window_v9/vits_v9_asl_dice/pf85/geometry_eval.json"),
+    ("v9_focal_cldice",  "results/window_v9/vits_v9_focal_cldice/pf85/geometry_eval.json"),
+    ("v9_tversky",       "results/window_v9/vits_v9_tversky/pf85/geometry_eval.json"),
+    ("v9_asl_cldice",    "results/window_v9/vits_v9_asl_cldice/pf85/geometry_eval.json"),
     ("yolo_streakmind",  "results/streakmind_yolo_real/balanced_v1/pf85/geometry_eval.json"),
     ("yolo_run17_cpu",   "results/yolo_run17_cpu/balanced_v1/bestf1_conf20/geometry_eval.json"),
 ]

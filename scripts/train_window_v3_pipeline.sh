@@ -27,6 +27,7 @@ export PYTORCH_ENABLE_MPS_FALLBACK=1
 cd "$REPO"; mkdir -p "$OUT"
 
 LR=1e-3; BATCH=32; POSW=20; GEOMW=0.25; HIDDEN=256; SCHED=cosine
+CACHE_ROOT=/Volumes/External/argus_caches  # keep off internal drive
 TRAIN_ANN=$DSROOT/train_atwood_synth_window_v3/annotation.json
 VAL_ANN=$DSROOT/val_atwood_window_v3/annotation.json
 
@@ -99,10 +100,10 @@ run_arm () {
 }
 
 echo "=== Window-v3 training | $(date) | lr=$LR posw=$POSW hidden=$HIDDEN $SCHED ==="
-run_arm vits_window_v3 small "$VITS_W" ~/argus_vits_window_v3_cache 40
-run_arm vitb_window_v3 base  "$VITB_W" ~/argus_vitb_window_v3_cache 80
+run_arm vits_window_v3 small "$VITS_W" "$CACHE_ROOT/vits_window_v3" 40
+run_arm vitb_window_v3 base  "$VITB_W" "$CACHE_ROOT/vitb_window_v3" 80
 
 echo "=== Window-v3 training complete | $(date) ==="
 echo "    ViT-S: $WEIGHTS/vits_window_v3/history.json | eval $OUT/vits_window_v3/pf85"
 echo "    ViT-B: $WEIGHTS/vitb_window_v3/history.json | eval $OUT/vitb_window_v3/pf85"
-echo "    caches kept: ~/argus_vits_window_v3_cache ~/argus_vitb_window_v3_cache"
+echo "    Feature caches at $CACHE_ROOT — safe to delete after eval"

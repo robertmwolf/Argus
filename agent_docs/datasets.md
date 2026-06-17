@@ -40,96 +40,101 @@ rich FITS headers including NORAD ID, full TLE elements, object name, and
 atmospheric data. New capture nights are added as additional subdirectories.
 
 **Naming convention:** Each night is a subdirectory named `Img_YYYYMMDD_Atwood/`
-containing `Streak_NORADID_HHMMSS.fits` files. Unlike the original GTImages
-night, BrentImages FITS files do **not** include ASTAP `.wcs`/`.ini` plate
-solution sidecars.
+containing `Streak_NORADID_HHMMSS.fits` files.
 
 **Location:** `/Volumes/External/TrainingData/raw/BrentImages/`
 
-### Current nights
+### Annotation format
 
-| Directory | Date | Frames | NORAD IDs | Annotation status |
-|---|---|---|---|---|
-| `Img_20260412_Atwood/` | 2026-04-12 | 759 | 68 | In review cleanup: 596 labeled, 38 true negatives, 115 rejected unusable, 1 pending among existing FITS rows |
-| `Img_20260515_Atwood/` | 2026-05-15 | 300 | 39 | Partially annotated: 204 labeled, 27 current negatives, 69 pending `Reject=2` |
-| `Geo_20260520_Atwood/` | 2026-05-20 | 16 | 1 | Reviewed: 11 labeled, 5 rejected unusable |
-| `Img_20260527_Atwood/` | 2026-05-27 | 809 | 70 | Holdout prepared: 507 labeled, 25 true negatives, 109 rejected unusable, 168 pending |
-| `Img_20260528_Atwood/` | 2026-05-28 | 499 | 41 | Holdout prepared: 175 labeled, 18 true negatives, 5 rejected unusable, 301 pending |
+The canonical annotation format for all BrentImages nights is **COCO-extended
+JSON** stored as `brentimages_annotations.json` in each night directory. This is
+the single source of truth — no other annotation files (`.strk`, suggestions
+JSON, etc.) are maintained.
 
-The `Img_20260412_Atwood/` night is the original GTImages dataset — it has
-ASTAP plate solutions and fully pixel-annotated `.strk` files from SkyTrack.
-Subsequent nights (starting with `Img_20260515_Atwood/`) have rich FITS
-headers but no plate solutions; `.strk` stubs are generated from headers and
-pixel coordinates are filled in via the manual annotation workflow.
+Each image entry carries:
+- `blank: true` — human confirmed no streak present
+- `rejected: true` / `exclude_reason: "rejected_unusable"` — frame unusable (satellite out of frame, cosmic ray, etc.)
+- `needs_review: true` — annotation was seeded from SkyTrack auto-detection and has not yet been human-confirmed
 
-**Key statistics (Img_20260412_Atwood — reviewed status as of 2026-05-28):**
-- 596 usable labeled streak images (reject=0)
-- 38 confirmed no-streak images (reject=−1)
-- 115 rejected unusable images (reject=5) — do not train/evaluate
-- 1 pending image (reject=2)
-- 68 unique NORAD IDs (79% Starlink; also Meteor-M2, Yaogan, Cosmos, Iridium)
-- Streak lengths: median 624 px, p10=373 px, p90=1003 px (mostly long streaks)
+Each annotation carries an `obb` dict (`cx, cy, w, h, angle_deg`) plus a
+`segmentation` polygon. `h` is the drawn streak width in pixels (not fixed).
 
-**Key statistics (Img_20260515_Atwood — partially annotated):**
-- 204 streak images, 204 annotations (`brentimages_20260515.json`)
-- 27 old no-streak candidates archived under
-  `archive/legacy_cleanup_20260528/brentimages_20260515_negatives.NEEDS_REVIEW.json`;
-  review against `.strk` labels before using as true negatives
-- 69 pending images (`Reject=2`) — do not train/evaluate until reviewed
-- 39 unique NORAD IDs
-- Streak lengths: mean 725 px, median 687 px, min 215 px, max 1404 px (long + medium)
-- **Not yet merged into any training split** — available as a clean holdout for out-of-distribution evaluation or future training expansion
+### Current nights (status as of 2026-06-16)
 
-**Key statistics (new holdout nights — reviewed status as of 2026-05-29):**
-- `Img_20260527_Atwood`: 507 positive images, 559 annotations, 25 reviewed
-  negatives, 109 rejected unusable, 168 still pending
-- `Img_20260528_Atwood`: 175 positive images, 185 annotations, 18 reviewed
-  negatives, 5 rejected unusable, 301 still pending
-- Prepared holdout files:
-  `data/annotations/atwood_20260527.json`,
-  `data/annotations/atwood_20260527_negatives.json`,
-  `data/annotations/atwood_20260528.json`, and
-  `data/annotations/atwood_20260528_negatives.json`
-- Both sessions are listed in `data/sessions/manifest.yaml` as
-  `split: holdout` and must stay out of training until zero-shot evaluation
-  reports are recorded.
-- **Run 4 zero-shot evaluation (2026-05-29):** OBB results available in
-  `results/zero_shot_run4_mmdet_atwood_20260527_*/` and
-  `results/zero_shot_run4_mmdet_atwood_20260528_*/`.
-  Centerline results in `results/run4_centerline_zeroshot_20260527/`.
-  Once the full results are reviewed, these sessions may be promoted to `split: train`
-  for Run 5.
+| Directory | FITS | With streaks | Blanks | Rejected | Pending review |
+|---|---|---|---|---|---|
+| `Img_20260412_Atwood/` | 759 | 597 | 38 | 115 | 9 not yet in JSON |
+| `Img_20260515_Atwood/` | 300 | 250 | 27 | 23 | 0 — fully reviewed |
+| `Img_20260527_Atwood/` | 809 | 507 | 25 | 109 | 168 unreviewed |
+| `Img_20260528_Atwood/` | 499 | 175 | 18 | 5 | 301 unreviewed |
 
-**Role in ARGUS:**
-- **Negative examples:** no-streak images fill the negative-example gap in SatStreaks
-- **Cross-ID benchmark:** every annotated image has a known NORAD ID
-- **Supplemental training:** fold labeled images alongside SatStreaks; BrentImages
-  alone lacks short streaks and scene diversity
+### Annotation tool — `scripts/annotate.py`
 
-### Workflow for a new Atwood capture night (same scope)
+All BrentImages annotation is done through `scripts/annotate.py`. It reads
+FITS files directly and writes COCO JSON only.
+
+**Launching for a BrentImages night:**
+```bash
+python scripts/annotate.py \
+    --night-dir /Volumes/External/TrainingData/raw/BrentImages/Img_YYYYMMDD_Atwood
+```
+
+This automatically:
+- Writes to `<night-dir>/brentimages_annotations.json` (creates or resumes)
+- If `.strk` files are present (SkyTrack output), seeds existing detections as
+  orange `needs_review` OBBs for human confirmation
+- If no `.strk` files (already cleaned up), loads FITS directly for fresh annotation
+- Jumps to the first unreviewed image on launch
+
+**Keybindings:**
+
+| Key | Action |
+|---|---|
+| `Right` / `D` / `Space` | Next image |
+| `Left` / `A` | Previous image |
+| `C` | **Confirm** — accept the displayed OBB(s) as-is, mark reviewed, advance |
+| `B` | Mark blank (no streak), advance |
+| `R` | Reject unusable, advance |
+| `Delete` / `Backspace` | Delete selected OBB |
+| `P` | Toggle pending-only filter (shows only unreviewed images) |
+| `S` | Save now |
+| `Q` | Quit and save |
+| `Esc` | Cancel pending click |
+| `I` | Copy current image to Demo Images folder |
+
+**OBB drawing:** click streak START → click streak END. Adjust the Width slider
+before clicking for streak cross-section width. Multiple OBBs per image are
+supported.
+
+**SkyTrack review mode:** When a night has `.strk` files with auto-detected
+coordinates, those OBBs appear in **orange** with a "NEEDS REVIEW" banner.
+- `C` — OBB looks correct, confirm and advance
+- `Del` then redraw — OBB is wrong, replace it
+- `B` — SkyTrack detected a streak but the frame is actually blank
+
+Any manual edit (draw or delete) also clears the `needs_review` flag. Just
+navigating past an image without acting leaves it in the pending queue.
+
+**Pending filter workflow:** Press `P` to enable pending-only mode. The progress
+counter in the top bar shows `Done: N visible, M / total`. Images with
+`needs_review` OBBs count as pending even though they already have annotations.
+
+### Workflow for a new Atwood capture night
 
 ```bash
-# 1. Generate .strk stubs from FITS headers (one per NORAD ID, Reject=2 pending):
-python scripts/generate_brentimages_strk.py \
+# 1. Annotate with the tool (creates brentimages_annotations.json):
+python scripts/annotate.py \
     --night-dir /Volumes/External/TrainingData/raw/BrentImages/Img_YYYYMMDD_Atwood
 
-# 2. Manually annotate pixel coordinates using the annotation tool:
-#    Reject=0 for streak present, Reject=-1 for true no-streak negative,
-#    Reject=5 for rejected/unusable (do not train/evaluate).
-python scripts/annotate.py \
-    --night-dir /Volumes/External/TrainingData/raw/BrentImages/Img_YYYYMMDD_Atwood \
-    --hough-preset brentimages \
-    --no-suggestions
-
-# 3. Export reviewed usable frames to zero-shot holdout JSONs:
+# 2. Export to zero-shot holdout JSONs once annotation is complete:
 python scripts/prepare_atwood_holdout.py \
     --input /Volumes/External/TrainingData/raw/BrentImages/Img_YYYYMMDD_Atwood/brentimages_annotations.json \
     --session-id atwood_YYYYMMDD \
     --mirror-external
 
-# 4. Add the new session to the manifest as split: holdout.
+# 3. Add the new session to data/sessions/manifest.yaml as split: holdout.
 
-# 5. Run zero-shot evaluation before promoting the session to train:
+# 4. Run zero-shot evaluation before promoting to train:
 python scripts/zero_shot_eval.py \
     --annotation data/annotations/atwood_YYYYMMDD.json \
     --negatives data/annotations/atwood_YYYYMMDD_negatives.json \
@@ -138,21 +143,15 @@ python scripts/zero_shot_eval.py \
     --label "Atwood YYYYMMDD (zero-shot)"
 ```
 
-**Notes on `generate_brentimages_strk.py`:**
-- Reads NORAD ID, TLE elements, site info, and DATE-OBS directly from FITS headers
-- GPBSTAR header uses a non-standard value format; the script calls
-  `hdul.verify('silentfix')` to handle this transparently
-- All OBS rows are written with Reject=2 so `convert_gtimages.py` skips them
-  until pixel coordinates are annotated
-- Re-running with `--force` overwrites existing stubs
+If SkyTrack has already written `.strk` files into the night directory, step 1
+will seed those auto-detections as `needs_review` OBBs — press `P` to work
+through only the flagged images, then `C` to confirm or redraw as needed.
 
-**Convert fully-annotated night to COCO JSON** (same command for all nights):
-```bash
-python scripts/convert_gtimages.py \
-    --strk-dir /Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood \
-    --output /Volumes/External/TrainingData/annotations/gtimages.json \
-    --negatives-output /Volumes/External/TrainingData/annotations/gtimages_negatives.json
-```
+**Role in ARGUS:**
+- **Negative examples:** blank/rejected frames fill the negative-example gap
+- **Cross-ID benchmark:** every annotated image has a known NORAD ID in its FITS header
+- **Supplemental training:** fold labeled images alongside other sources; BrentImages
+  alone lacks short streaks and scene diversity
 
 ---
 

@@ -22,9 +22,11 @@ OUT=$REPO/results/window_v4
 export PYTORCH_ENABLE_MPS_FALLBACK=1
 cd "$REPO"; mkdir -p "$OUT"
 
+CACHE_ROOT=/Volumes/External/argus_caches  # keep off internal drive
+
 # Reuse v3 feature caches — dataset and backbone features are identical.
-VITS_CACHE=~/argus_vits_window_v3_cache
-VITB_CACHE=~/argus_vitb_window_v3_cache
+VITS_CACHE=$CACHE_ROOT/vits_window_v3
+VITB_CACHE=$CACHE_ROOT/vitb_window_v3
 
 # Focal loss hyperparameters
 FOCAL_GAMMA=2.0

@@ -18,7 +18,7 @@ Usage:
         --image-dir /path/to/fits \\
         --output data/annotations/my_dataset.json
 
-    # BrentImages FITS night with .strk write-back:
+    # BrentImages FITS night (COCO JSON is the only write target):
     python scripts/annotate.py \\
         --night-dir /Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood
 
@@ -28,6 +28,7 @@ Keybindings:
     Left  / A           — previous image
     B                   — mark as blank (no streak), advance to next
     R                   — reject unusable, advance to next
+    C                   — confirm SkyTrack annotation as-is, advance to next
     Delete / BackSpace  — delete selected OBB
     S                   — save now
     Q                   — quit and save
@@ -59,6 +60,7 @@ CANVAS_H = 820
 COLORS = ["#00ff88", "#ff6644", "#44aaff", "#ffdd00", "#ff44ff"]
 SEL_COLOR = "#ffffff"
 BLANK_COLOR = "#ff4444"
+UNREVIEWED_COLOR = "#ffaa00"
 OBB_LINE_WIDTH = 2
 DEFAULT_WIDTH = 10
 DEFAULT_STRK_WIDTH = 16.0
@@ -375,7 +377,44 @@ def load_night_frames(night_dir: pathlib.Path) -> list[dict]:
 
 
 def seed_coco_from_strk(coco: dict[str, Any], frames: list[dict], source_name: str) -> None:
-    """Populate COCO state from existing BrentImages .strk decisions."""
+    """Populate COCO state from existing BrentImages .strk decisions.
+
+    All decisions seeded from .strk files are marked needs_review=True because
+    SkyTrack coordinates are auto-detected and have not been human-verified.
+    The annotator's C key (confirm) or any manual edit clears this flag.
+
+    Also retroactively flags images already present in the COCO JSON that were
+    seeded in a previous session (recognisable because their annotations still
+    carry strk_path in attributes, meaning no human ever replaced them).
+    """
+    # --- retroactively flag previously-seeded images that were never confirmed ---
+    anns_by_image: dict[int, list[dict]] = {}
+    for ann in coco.get("annotations", []):
+        anns_by_image.setdefault(ann["image_id"], []).append(ann)
+
+    for img in coco.get("images", []):
+        if "needs_review" in img:
+            continue  # already has an explicit flag — respect it
+        if img.get("rejected"):
+            continue  # human-rejected; leave alone
+        if not img.get("strk_path"):
+            continue  # not from a .strk seed; skip
+
+        img_anns = anns_by_image.get(img["id"], [])
+        # Human-drawn OBBs never carry strk_path in attributes.
+        # If every annotation still has strk_path, no human has touched this image.
+        has_human_ann = any(
+            not ann.get("attributes", {}).get("strk_path") for ann in img_anns
+        )
+        if has_human_ann:
+            continue  # human already reviewed and replaced annotations
+
+        # SkyTrack-seeded blank or annotation that was never confirmed.
+        img["needs_review"] = True
+        for ann in img_anns:
+            ann.setdefault("attributes", {})["needs_review"] = True
+
+    # --- seed new frames not yet in the COCO JSON ---
     existing = {img["file_name"] for img in coco.get("images", [])}
     max_img_id = max((img["id"] for img in coco.get("images", [])), default=0)
     max_ann_id = max((ann["id"] for ann in coco.get("annotations", [])), default=0)
@@ -384,6 +423,14 @@ def seed_coco_from_strk(coco: dict[str, Any], frames: list[dict], source_name: s
         fname = str(frame["path"])
         if fname in existing:
             continue
+
+        is_unusable = (
+            frame.get("reject") not in ("0", "-1", "2")
+            or frame.get("comment") == UNUSABLE_REJECT_COMMENT
+        )
+        # Only needs_review for non-unusable frames — unusable ones are just skipped.
+        needs_review = not is_unusable
+
         max_img_id += 1
         coco["images"].append({
             "id": max_img_id,
@@ -398,18 +445,9 @@ def seed_coco_from_strk(coco: dict[str, Any], frames: list[dict], source_name: s
             "frame_in_pass": frame.get("frame_in_pass", 0),
             "pass_idx": frame.get("pass_idx", 0),
             "blank": frame.get("reject") == "-1",
-            "rejected": (
-                frame.get("reject") not in ("0", "-1", "2")
-                or frame.get("comment") == UNUSABLE_REJECT_COMMENT
-            ),
-            "exclude_reason": (
-                "rejected_unusable"
-                if (
-                    frame.get("reject") not in ("0", "-1", "2")
-                    or frame.get("comment") == UNUSABLE_REJECT_COMMENT
-                )
-                else ""
-            ),
+            "rejected": is_unusable,
+            "needs_review": needs_review,
+            "exclude_reason": "rejected_unusable" if is_unusable else "",
         })
         existing.add(fname)
 
@@ -431,60 +469,12 @@ def seed_coco_from_strk(coco: dict[str, Any], frames: list[dict], source_name: s
                 "iscrowd": 0,
                 "segmentation": [[coord for corner in obb_corners(**obb) for coord in corner]],
                 "obb": {k: round(v, 2) for k, v in obb.items()},
-                "attributes": {"source": source_name, "strk_path": str(frame["strk_path"])},
+                "attributes": {
+                    "source": source_name,
+                    "strk_path": str(frame["strk_path"]),
+                    "needs_review": True,
+                },
             })
-
-
-def write_coco_to_strk(coco: dict[str, Any], frames: list[dict]) -> None:
-    """Write unified annotator COCO decisions back into BrentImages .strk files."""
-    image_by_file = {img["file_name"]: img for img in coco.get("images", [])}
-    anns_by_image: dict[int, list[dict]] = {}
-    for ann in coco.get("annotations", []):
-        anns_by_image.setdefault(ann["image_id"], []).append(ann)
-
-    line_cache: dict[pathlib.Path, list[str]] = {}
-    for frame in frames:
-        img = image_by_file.get(str(frame["path"]))
-        if img is None:
-            continue
-
-        strk_path = frame["strk_path"]
-        lines = line_cache.setdefault(strk_path, load_strk_lines(strk_path))
-        anns = anns_by_image.get(img["id"], [])
-
-        if img.get("rejected"):
-            line_cache[strk_path] = update_strk_obs(
-                lines, frame["filename"], 0, 0, 0, 0, UNUSABLE_REJECT_CODE,
-                frame["jd"], frame["exposure"], frame["gain"],
-            )
-            continue
-        if img.get("blank"):
-            line_cache[strk_path] = update_strk_obs(
-                lines, frame["filename"], 0, 0, 0, 0, "-1",
-                frame["jd"], frame["exposure"], frame["gain"],
-            )
-            continue
-        if not anns:
-            line_cache[strk_path] = update_strk_obs(
-                lines, frame["filename"], 0, 0, 0, 0, "2",
-                frame["jd"], frame["exposure"], frame["gain"],
-            )
-            continue
-
-        obb = anns[0]["obb"]
-        angle = math.radians(obb["angle_deg"])
-        half_width = obb["w"] / 2
-        x1 = round(obb["cx"] - math.cos(angle) * half_width, 1)
-        y1 = round(obb["cy"] - math.sin(angle) * half_width, 1)
-        x2 = round(obb["cx"] + math.cos(angle) * half_width, 1)
-        y2 = round(obb["cy"] + math.sin(angle) * half_width, 1)
-        line_cache[strk_path] = update_strk_obs(
-            lines, frame["filename"], x1, y1, x2, y2, "0",
-            frame["jd"], frame["exposure"], frame["gain"],
-        )
-
-    for strk_path, lines in line_cache.items():
-        write_strk_lines(strk_path, lines)
 
 
 # ---- main application --------------------------------------------------------
@@ -503,6 +493,13 @@ class AnnotationApp(tk.Tk):
         self.title("ARGUS Streak Annotator")
         self.configure(bg="#1a1a2e")
         self.resizable(True, True)
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        w = min(CANVAS_W + 40, sw - 80)
+        h = min(CANVAS_H + 140, sh - 80)
+        x = (sw - w) // 2
+        y = (sh - h) // 2
+        self.geometry(f"{w}x{h}+{x}+{y}")
 
         self.all_images = images
         self.images = images
@@ -524,6 +521,8 @@ class AnnotationApp(tk.Tk):
         self._pending_a: tuple[float, float] | None = None
         self._selected_obb_idx: int | None = None
         self._img_obbs: list[dict] = []
+        # parallel list: True = OBB came from SkyTrack and hasn't been confirmed
+        self._img_obbs_needs_review: list[bool] = []
 
         # display cache
         self._photo: ImageTk.PhotoImage | None = None
@@ -604,6 +603,7 @@ class AnnotationApp(tk.Tk):
             ("[D]  ▶",        self._next),
             ("Blank  [B]",    self._mark_blank),
             ("Reject  [R]",   self._mark_rejected),
+            ("Confirm  [C]",  self._confirm_review),
             ("Cancel  [Esc]", self._cancel_pending),
             ("Delete  [Del]", self._delete_selected),
             ("Save  [S]",     self._save),
@@ -645,6 +645,7 @@ class AnnotationApp(tk.Tk):
         self.bind("<Escape>",    lambda _: self._cancel_pending())
         self.bind("<b>",         lambda _: self._mark_blank())
         self.bind("<r>",         lambda _: self._mark_rejected())
+        self.bind("<c>",         lambda _: self._confirm_review())
         self.bind("<s>",         lambda _: self._save())
         self.bind("<q>",         lambda _: self._quit())
         self.bind("<p>",         lambda _: self._toggle_pending_only())
@@ -678,12 +679,21 @@ class AnnotationApp(tk.Tk):
 
     # ---- image loading -------------------------------------------------------
 
+    def _image_needs_review(self, img_id: int) -> bool:
+        for img in self.coco["images"]:
+            if img["id"] == img_id:
+                return bool(img.get("needs_review"))
+        return False
+
     def _reviewed_file_names(self) -> set[str]:
-        """Return image file names that already have a final review decision."""
+        """Return image file names that have a final human-confirmed decision."""
         annotated_ids = {a["image_id"] for a in self.coco["annotations"]}
         reviewed: set[str] = set()
         for img in self.coco["images"]:
-            if img["id"] in annotated_ids or img.get("blank") or img.get("rejected"):
+            if img.get("needs_review"):
+                # SkyTrack-seeded data pending human confirmation — not reviewed yet.
+                continue
+            if img.get("rejected") or img.get("blank") or img["id"] in annotated_ids:
                 reviewed.add(img["file_name"])
         return reviewed
 
@@ -712,6 +722,7 @@ class AnnotationApp(tk.Tk):
             self._pil_img = Image.new("RGB", (1200, 800), (30, 30, 50))
             self._photo = None
             self._img_obbs = []
+            self._img_obbs_needs_review = []
             self._pending_a = None
             self._selected_obb_idx = None
             self.canvas.delete("all")
@@ -771,9 +782,10 @@ class AnnotationApp(tk.Tk):
         self.pan_y = (ch - self._pil_img.height * self.zoom) / 2
 
         img_id = self._get_or_create_image_id(entry)
-        self._img_obbs = [
-            ann["obb"] for ann in self.coco["annotations"]
-            if ann["image_id"] == img_id
+        anns = [a for a in self.coco["annotations"] if a["image_id"] == img_id]
+        self._img_obbs = [ann["obb"] for ann in anns]
+        self._img_obbs_needs_review = [
+            bool(ann.get("attributes", {}).get("needs_review")) for ann in anns
         ]
 
         self._pending_a = None
@@ -865,25 +877,43 @@ class AnnotationApp(tk.Tk):
         self.canvas.delete("pending")
         self.canvas.delete("blank_label")
         self.canvas.delete("reject_label")
+        self.canvas.delete("review_banner")
 
         img_id = self._get_or_create_image_id(self.images[self.idx])
+        cw = self.canvas.winfo_width() or CANVAS_W
+
         if self._is_rejected(img_id):
-            cw = self.canvas.winfo_width() or CANVAS_W
             self.canvas.create_text(
                 cw // 2, 30, text="REJECTED UNUSABLE (not training/eval)",
                 fill="#88aaff", font=("Helvetica", 16, "bold"), tags="reject_label",
             )
             return
         if self._is_blank(img_id):
-            cw = self.canvas.winfo_width() or CANVAS_W
             self.canvas.create_text(
                 cw // 2, 30, text="✗  CONFIRMED BLANK (no streak)",
                 fill=BLANK_COLOR, font=("Helvetica", 16, "bold"), tags="blank_label",
             )
             return
 
+        # Show review banner when any OBB (or the image itself) needs review.
+        if self._image_needs_review(img_id):
+            self.canvas.create_text(
+                cw // 2, 22,
+                text="⚠  SKYTRACK AUTO-DETECTION — verify OBBs then C to confirm  |  B = blank  |  Del = redraw",
+                fill=UNREVIEWED_COLOR, font=("Helvetica", 13, "bold"), tags="review_banner",
+            )
+
         for i, obb in enumerate(self._img_obbs):
-            color = SEL_COLOR if i == self._selected_obb_idx else COLORS[i % len(COLORS)]
+            unreviewed = (
+                i < len(self._img_obbs_needs_review) and self._img_obbs_needs_review[i]
+            )
+            if i == self._selected_obb_idx:
+                color = SEL_COLOR
+            elif unreviewed:
+                color = UNREVIEWED_COLOR
+            else:
+                color = COLORS[i % len(COLORS)]
+
             corners = obb_corners(obb["cx"], obb["cy"], obb["w"], obb["h"], obb["angle_deg"])
             pts = self._corners_to_canvas(corners)
             self.canvas.create_polygon(
@@ -893,7 +923,8 @@ class AnnotationApp(tk.Tk):
             r = 4
             self.canvas.create_oval(cx - r, cy - r, cx + r, cy + r,
                                     outline=color, fill=color, tags="confirmed")
-            self.canvas.create_text(cx + 8, cy - 8, text=f"#{i + 1}",
+            label = f"#{i + 1}" + (" ?" if unreviewed else "")
+            self.canvas.create_text(cx + 8, cy - 8, text=label,
                                     fill=color, font=("Helvetica", 9), tags="confirmed")
 
         if self._pending_a is not None:
@@ -948,6 +979,8 @@ class AnnotationApp(tk.Tk):
         img_id = self._get_or_create_image_id(self.images[self.idx])
         cur_blank = self._is_blank(img_id)
         cur_rejected = self._is_rejected(img_id)
+        cur_needs_review = self._image_needs_review(img_id)
+
         count_text = (
             "REJECT"
             if cur_rejected
@@ -963,8 +996,14 @@ class AnnotationApp(tk.Tk):
 
         if cur_rejected:
             hint, color = "REJECTED — press R to undo", "#88aaff"
+        elif cur_blank and cur_needs_review:
+            hint = "SkyTrack: blank — C to confirm, or draw streak if wrong"
+            color = UNREVIEWED_COLOR
         elif cur_blank:
             hint, color = "BLANK — press B to undo", BLANK_COLOR
+        elif cur_needs_review:
+            hint = "SkyTrack OBB (orange) — C to confirm  |  Del+redraw to fix  |  B if blank"
+            color = UNREVIEWED_COLOR
         elif self._pending_a is not None:
             hint, color = "→ Click streak END", "#88ffcc"
         else:
@@ -1013,6 +1052,29 @@ class AnnotationApp(tk.Tk):
 
     # ---- annotation actions --------------------------------------------------
 
+    def _clear_needs_review(self, img_id: int) -> None:
+        """Clear the needs_review flag from an image and all its annotations."""
+        for img in self.coco["images"]:
+            if img["id"] == img_id:
+                img.pop("needs_review", None)
+                break
+        for ann in self.coco["annotations"]:
+            if ann["image_id"] == img_id:
+                ann.get("attributes", {}).pop("needs_review", None)
+        self._img_obbs_needs_review = [False] * len(self._img_obbs)
+
+    def _confirm_review(self) -> None:
+        """Accept the current SkyTrack OBBs as-is, mark image reviewed, advance."""
+        if not self.images:
+            return
+        entry = self.images[self.idx]
+        img_id = self._get_or_create_image_id(entry)
+        self._clear_needs_review(img_id)
+        self._autosave()
+        self._redraw()
+        self._update_labels()
+        self._next()
+
     def _mark_blank(self) -> None:
         """Toggle blank (no streak) status for the current image and advance."""
         entry = self.images[self.idx]
@@ -1024,20 +1086,20 @@ class AnnotationApp(tk.Tk):
             a for a in self.coco["annotations"] if a["image_id"] != img_id
         ]
         self._img_obbs = []
+        self._img_obbs_needs_review = []
 
         for img in self.coco["images"]:
             if img["id"] == img_id:
                 img["blank"] = not currently_blank
                 img["rejected"] = False
                 img.pop("exclude_reason", None)
+                img.pop("needs_review", None)
                 break
 
         self._autosave()
         if not currently_blank:
-            # Newly blanked — advance to next
             self._next()
         else:
-            # Un-blanked — stay and redraw
             self._redraw()
             self._update_labels()
 
@@ -1051,11 +1113,13 @@ class AnnotationApp(tk.Tk):
             a for a in self.coco["annotations"] if a["image_id"] != img_id
         ]
         self._img_obbs = []
+        self._img_obbs_needs_review = []
 
         for img in self.coco["images"]:
             if img["id"] == img_id:
                 img["rejected"] = not currently_rejected
                 img["blank"] = False
+                img.pop("needs_review", None)
                 if currently_rejected:
                     img.pop("exclude_reason", None)
                 else:
@@ -1105,6 +1169,7 @@ class AnnotationApp(tk.Tk):
                 img["blank"] = False
                 img["rejected"] = False
                 img.pop("exclude_reason", None)
+                img.pop("needs_review", None)
                 break
         self.coco["annotations"] = [
             a for a in self.coco["annotations"] if a["image_id"] != img_id
@@ -1126,11 +1191,15 @@ class AnnotationApp(tk.Tk):
                 "obb": obb,
                 "attributes": {"source": self.source_name},
             })
+        # Any edit clears the needs_review state — the human has engaged with this image.
+        self._img_obbs_needs_review = [False] * len(self._img_obbs)
 
     def _delete_selected(self) -> None:
         if self._selected_obb_idx is None or not self._img_obbs:
             return
         self._img_obbs.pop(self._selected_obb_idx)
+        if self._selected_obb_idx < len(self._img_obbs_needs_review):
+            self._img_obbs_needs_review.pop(self._selected_obb_idx)
         self._selected_obb_idx = None
         self._commit_obbs()
         self._draw_overlays()
@@ -1169,6 +1238,7 @@ class AnnotationApp(tk.Tk):
             else:
                 obb = endpoints_to_obb(x1, y1, x2, y2, float(self.width_var.get()))
                 self._img_obbs.append({k: round(v, 2) for k, v in obb.items()})
+                self._img_obbs_needs_review.append(False)
                 self._commit_obbs()
                 self._pending_a = None
                 self._selected_obb_idx = len(self._img_obbs) - 1
@@ -1238,7 +1308,8 @@ def main() -> None:
     parser.add_argument(
         "--night-dir", type=pathlib.Path, default=None,
         help="BrentImages night directory containing FITS files and .strk stubs. "
-             "When set, annotations are also written back to .strk files.",
+             "Annotations are written to brentimages_annotations.json in that directory; "
+             ".strk files are read for metadata only and are not modified.",
     )
     parser.add_argument(
         "--output", type=pathlib.Path,
@@ -1280,32 +1351,40 @@ def main() -> None:
         parser.error("Provide exactly one of --image-dir or --night-dir")
 
     strk_frames: list[dict] = []
-    strk_save_hook: Callable[[dict[str, Any]], None] | None = None
 
     if args.night_dir:
         if args.output == pathlib.Path("data/annotations/streak_annotations.json"):
             args.output = args.night_dir / "brentimages_annotations.json"
         log.info("Loading BrentImages night from %s", args.night_dir)
-        try:
-            strk_frames = load_night_frames(args.night_dir)
-        except FileNotFoundError as exc:
-            log.error("%s", exc)
-            sys.exit(1)
-        images = strk_frames
-        log.info(
-            "Loaded %d frames across %d passes",
-            len(images),
-            max((f["pass_idx"] for f in images), default=-1) + 1,
-        )
-        if args.review_reject:
-            review_codes = {code.strip() for code in args.review_reject.split(",") if code.strip()}
-            images = [frame for frame in images if str(frame.get("reject", "")).strip() in review_codes]
+        has_strk = any(args.night_dir.glob("*.strk"))
+        if has_strk:
+            try:
+                strk_frames = load_night_frames(args.night_dir)
+            except FileNotFoundError as exc:
+                log.error("%s", exc)
+                sys.exit(1)
+            images = strk_frames
             log.info(
-                "Review filter Reject in %s: %d frames",
-                ",".join(sorted(review_codes)),
+                "Loaded %d frames across %d passes",
                 len(images),
+                max((f["pass_idx"] for f in images), default=-1) + 1,
             )
-        strk_save_hook = lambda coco: write_coco_to_strk(coco, strk_frames)
+            if args.review_reject:
+                review_codes = {code.strip() for code in args.review_reject.split(",") if code.strip()}
+                images = [frame for frame in images if str(frame.get("reject", "")).strip() in review_codes]
+                log.info(
+                    "Review filter Reject in %s: %d frames",
+                    ",".join(sorted(review_codes)),
+                    len(images),
+                )
+        else:
+            log.info("No .strk files found — loading FITS directly from directory")
+            try:
+                images = load_from_dir(args.night_dir)
+                log.info("Loaded %d images", len(images))
+            except FileNotFoundError as exc:
+                log.error("%s", exc)
+                sys.exit(1)
     else:
         log.info("Loading image list from %s", args.image_dir)
         try:
@@ -1329,41 +1408,48 @@ def main() -> None:
     annotated_ids = {a["image_id"] for a in coco["annotations"]}
     blank_ids = {img["id"] for img in coco["images"] if img.get("blank")}
     rejected_ids = {img["id"] for img in coco["images"] if img.get("rejected")}
-    already_done = len(annotated_ids | blank_ids | rejected_ids)
-    if already_done:
-        log.info("Resuming — %d images already reviewed (%d blanks, %d rejected)",
-                 already_done, len(blank_ids), len(rejected_ids))
+    needs_review_ids = {img["id"] for img in coco["images"] if img.get("needs_review")}
+    already_done = len(annotated_ids | blank_ids | rejected_ids) - len(needs_review_ids)
+    if already_done > 0:
+        log.info(
+            "Resuming — %d images human-reviewed, %d SkyTrack-seeded pending review",
+            already_done, len(needs_review_ids),
+        )
 
     # Determine start index (--start-at is 1-based; 0 means auto)
     if args.start_at > 0:
         start_idx = args.start_at - 1
     else:
-        # Jump to first unannotated, unskipped image
+        # Jump to first image that needs human attention
+        img_needs_review = {img["file_name"] for img in coco["images"] if img.get("needs_review")}
         done_fnames = {
             img["file_name"] for img in coco["images"]
-            if img["id"] in annotated_ids or img.get("blank") or img.get("rejected")
+            if not img.get("needs_review")
+            and (img["id"] in annotated_ids or img.get("blank") or img.get("rejected"))
         }
         start_idx = 0
         for i, entry in enumerate(images):
-            if str(entry["path"]) not in done_fnames:
+            fname = str(entry["path"])
+            if fname in img_needs_review or fname not in done_fnames:
                 start_idx = i
                 break
 
     app = AnnotationApp(images, coco, args.output,
                         source_name=source_name,
-                        demo_dir=args.demo_dir, save_hook=strk_save_hook)
+                        demo_dir=args.demo_dir)
     app._load_image(start_idx)
     app.mainloop()
 
     save_annotations(coco, args.output)
-    if strk_save_hook is not None:
-        strk_save_hook(coco)
     n_ann = len(coco["annotations"])
     n_img = len({a["image_id"] for a in coco["annotations"]})
     n_blank = sum(1 for img in coco["images"] if img.get("blank"))
     n_rejected = sum(1 for img in coco["images"] if img.get("rejected"))
-    log.info("Done. %d OBBs across %d images, %d blanks, %d rejected → %s",
-             n_ann, n_img, n_blank, n_rejected, args.output)
+    n_pending = sum(1 for img in coco["images"] if img.get("needs_review"))
+    log.info(
+        "Done. %d OBBs across %d images, %d blanks, %d rejected, %d pending review → %s",
+        n_ann, n_img, n_blank, n_rejected, n_pending, args.output,
+    )
 
 
 if __name__ == "__main__":

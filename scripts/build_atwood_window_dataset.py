@@ -48,6 +48,16 @@ uses window-local obbs). This builder makes the REAL-window path do the same:
    what v3 negatives now represent.  Corpus negatives remain but their count is
    reduced proportionally so total neg fraction stays ≈ 0.42.
 
+## v5 changes
+
+4. **Hard negative mining**: ``--hard-negs-json`` points to the JSON output of
+   ``scripts/mine_hard_negatives.py``.  These are 400×400 tiles where the
+   trained vits_window_v4 model fires with peak > 0.85 but no GT annotation
+   exists — the exact FP patterns that inflate false positives.  Up to
+   ``n_total_negs // 3`` hard negatives are added to the negative pool (after
+   random shuffle and cap), with the remaining 2/3 split between corpus and
+   frame-bg as before.
+
 ## Output (per agent_docs/dataset_naming.md)
 
 Self-contained, content-named, versioned directories under TrainingData root:
@@ -119,6 +129,8 @@ def main() -> None:
                    help="must match the cacher's --neg-tiles-per-image")
     p.add_argument("--bg-per-frame", type=int, default=3,
                    help="(v3+) background windows sampled per annotated training frame")
+    p.add_argument("--hard-negs-json", default="",
+                   help="(v5+) path to hard_negatives_*.json from mine_hard_negatives.py")
     p.add_argument("--seed", type=int, default=18)
     p.add_argument("--limit", type=int, default=0,
                    help="smoke test: cap positive windows (0 = all)")
@@ -286,17 +298,38 @@ def main() -> None:
                         "w": NEG_WIN, "h": NEG_WIN})
         return out
 
+    # v5+: load mined hard negatives (400×400 FP-prone tiles from vits_window_v4).
+    hard_negs_pool: list[dict] = []
+    if args.hard_negs_json and args.version >= 5:
+        hn_path = Path(args.hard_negs_json)
+        if hn_path.exists():
+            hard_negs_pool = json.loads(hn_path.read_text())
+            rng.shuffle(hard_negs_pool)
+            logger.info("Hard negatives pool: %d tiles from %s", len(hard_negs_pool), hn_path)
+        else:
+            logger.warning("--hard-negs-json path not found: %s (ignored)", hn_path)
+
     # v3: frame_bg can exceed the neg budget if there are many annotated frames
     # (e.g. 879 frames × 3 bg_per_frame = 2637 but budget is ~561 windows).
     # Cap frame_bg at half the total neg budget so corpus still contributes;
     # shuffle first so the cap is a random subset rather than the first N frames.
+    # v5/v7+: reserve up to 1/3 of the neg budget for hard negatives.
+    # v6 experiment raised this to 1/2 — caused precision regression; reverted for v7+.
+    hard_neg_frac = 2 if args.version == 6 else 3  # denominator: 1/2 (v6 only) vs 1/3
     train_frame_bg_all = plan_frame_bg(train_w)
     n_train_total = neg_count(train_w)
-    n_frame_bg_cap = n_train_total // 2
+    if hard_negs_pool:
+        n_hard_train = min(len(hard_negs_pool), n_train_total // hard_neg_frac)
+        train_hard_negs = list(hard_negs_pool[:n_hard_train])
+        n_remaining = n_train_total - n_hard_train
+    else:
+        train_hard_negs = []
+        n_remaining = n_train_total
+    n_frame_bg_cap = n_remaining // 2
     rng.shuffle(train_frame_bg_all)
     train_frame_bg = train_frame_bg_all[:n_frame_bg_cap]
-    n_train_corpus = n_train_total - len(train_frame_bg)
-    train_negs = plan_negs(train_w, n_train_corpus) + train_frame_bg
+    n_train_corpus = n_remaining - len(train_frame_bg)
+    train_negs = plan_negs(train_w, n_train_corpus) + train_frame_bg + train_hard_negs
 
     val_frame_bg_all = plan_frame_bg(val_w)
     n_val_total = neg_count(val_w)
@@ -306,8 +339,8 @@ def main() -> None:
     n_val_corpus = n_val_total - len(val_frame_bg)
     val_negs = plan_negs(val_w, n_val_corpus) + val_frame_bg
 
-    logger.info("Negative-sky windows: train=%d (%d corpus + %d frame-bg)  val=%d (%d corpus + %d frame-bg)",
-                len(train_negs), n_train_corpus, len(train_frame_bg),
+    logger.info("Negative-sky windows: train=%d (%d corpus + %d frame-bg + %d hard-neg)  val=%d (%d corpus + %d frame-bg)",
+                len(train_negs), n_train_corpus, len(train_frame_bg), len(train_hard_negs),
                 len(val_negs), n_val_corpus, len(val_frame_bg))
 
     # ---- Materialise crops -> NPY, emit COCO with relative file_names ----
@@ -367,13 +400,16 @@ def main() -> None:
 
     for dir_, name, imgs, anns in [(train_dir, train_name, tr_imgs, tr_anns),
                                    (val_dir, val_name, va_imgs, va_anns)]:
+        prov = {"builder": "scripts/build_atwood_window_dataset.py",
+                "source": args.source, "seed": args.seed, "version": args.version,
+                "norm": "per-frame zscore (3-sigma clip) applied at build time; cacher must use --norm-mode none",
+                "obb_frame": "window-local (crop materialised; tile_origin=[0,0])"}
+        if args.hard_negs_json:
+            prov["hard_negs_json"] = args.hard_negs_json
+            prov["n_hard_negs_train"] = len(train_hard_negs)
         out = {"images": imgs, "annotations": anns,
                "categories": [{"id": 1, "name": "streak"}],
-               "provenance": {"builder": "scripts/build_atwood_window_dataset.py",
-                              "source": args.source, "seed": args.seed,
-                              "version": args.version,
-                              "norm": "per-frame zscore (3-sigma clip) applied at build time; cacher must use --norm-mode none",
-                              "obb_frame": "window-local (crop materialised; tile_origin=[0,0])"}}
+               "provenance": prov}
         (dir_ / "annotation.json").write_text(json.dumps(out))
         b = Counter(_band(a["streak_length_px"]) for a in anns)
         ann_ids = {a["image_id"] for a in anns}
