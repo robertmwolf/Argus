@@ -63,10 +63,31 @@ Progress:
 
 ## Next Steps
 
-### Run 17 — YOLO11s-OBB detector (ready to train, 2026-06-10)
+### Run 17 — YOLO11s-OBB detector (COMPLETE 2026-06-16 — works on CPU, MPS broken)
 
-**Goal:** Train a YOLO11s-OBB streak detector on the Run 15 distribution (real Atwood
-FITS + synthetic short/medium NPY) for fast single-stage inference.
+**Outcome:** A working model exists at
+`weights/yolo_run17/run_cpu_subset3k/weights/best.pt`. It beats the old
+`streakmind_yolo_real` on every axis at conf ≤ 0.20 (short recall 11%→100%,
+angle err 42°→4°, best F1 0.30→0.49 on val_balanced_v1), but stays behind the
+heatmap leaders (run15_vits R=0.987). Train/eval/sweep via
+`scripts/train_yolo_obb.sh`, `scripts/evaluate_yolo_obb_on_val.py`,
+`scripts/sweep_yolo_conf.py`.
+
+> 🔴 **CRITICAL: train on `device=cpu`, NOT `mps`.** OBB training is numerically
+> broken on Apple MPS in ultralytics 8.4.46 — a 25-tile overfit hits mAP 0.95 on
+> CPU but **diverges to mAP 0 on MPS** (both AdamW and SGD; cls_loss never drops,
+> the model emits 0 detections). All three original MPS attempts produced a dead
+> model. The MPS `batch_idx.cpu().unique()` patch in loss.py is necessary but NOT
+> sufficient. `scripts/train_yolo_obb.sh` now defaults to cpu and warns on mps.
+
+> **Data-bound, not epoch-bound.** The CPU model trained on a 3k-tile subset
+> (`train_atwood_tiled_t400_n3k_v1.txt`) and plateaued by epoch 20: a +30-epoch
+> warm-restart continuation did NOT improve val_balanced_v1 (best F1 0.49→0.48,
+> angle 4.4°→5.1°, mild overfit). To improve, train the full 21k-tile set on a
+> **CUDA box** (CPU full set ≈150 h, infeasible) — more CPU epochs are wasted.
+
+**Goal (original):** Train a YOLO11s-OBB streak detector on the Run 15 distribution
+(real Atwood FITS + synthetic short/medium NPY) for fast single-stage inference.
 
 **Dataset:** `/Volumes/External/TrainingData/yolo_run17_dataset/`
 - 103,516 PNG tiles (400px, zscore→uint8 3ch) + DOTA polygon OBB labels
@@ -76,25 +97,37 @@ FITS + synthetic short/medium NPY) for fast single-stage inference.
 
 **Pretrained weights:** `weights/yolo11s-obb.pt` (move from repo root after first run)
 
-**Training command (run from repo root):**
+**Training command (run from repo root):** use the script — it stages to SSD,
+trains, and cleans up. It defaults to `device=cpu` (mps is broken, see banner).
 ```bash
-# Stage images to internal SSD first for speed (~10GB, fits in 100GB budget)
-python scripts/stage_yolo_dataset_ssd.py   # TODO: create this helper
+# Full run (defaults: device=cpu, train_10pct_bg.txt, 20 epochs)
+nohup bash scripts/train_yolo_obb.sh --epochs=20 > /tmp/yolo_run17_train.log 2>&1 &
 
-# Then train
-nohup /Users/robert/miniconda3/envs/satid/bin/python -c "
-from ultralytics import YOLO
-model = YOLO('weights/yolo11s-obb.pt')
-model.train(
-    task='obb',
-    data='/tmp/yolo_run17_ssd.yaml',      # points to /tmp/yolo_run17/images/
-    imgsz=416, epochs=50, batch=4, device='mps', workers=2,
-    cos_lr=True, degrees=10, hsv_s=0, hsv_h=0,
-    project='weights/yolo_run17', name='run',
-    exist_ok=True, patience=15, save_period=5, cache=True,
-)
-" > /tmp/yolo_run17_train.log 2>&1 &
+# CPU-feasible subset run (what produced the working model):
+YOLO_OUT_NAME=run_cpu_subset3k YOLO_TRAIN_LIST=train_atwood_tiled_t400_n3k_v1.txt \
+  nohup bash scripts/train_yolo_obb.sh --epochs=20 > /tmp/yolo_run17_train.log 2>&1 &
+
+# Continue/warm-restart an existing checkpoint for more epochs:
+#   bash scripts/train_yolo_obb.sh --epochs=30 --continue-from=/abs/path/to/last.pt
+# Env: YOLO_DEVICE (default cpu), YOLO_TRAIN_LIST, YOLO_OUT_NAME.
 ```
+The script restores the proven recipe: `warmup_bias_lr=0.1`, `amp=False`,
+`degrees=0.0` (rotation aug corrupts thin-streak OBB positives). On a CUDA box,
+set `YOLO_DEVICE=cuda` and use the full `train_10pct_bg.txt` list.
+
+**Eval (run from repo root):**
+```bash
+python scripts/evaluate_yolo_obb_on_val.py \
+  --weights weights/yolo_run17/run_cpu_subset3k/weights/best.pt \
+  --annotations data/annotations/val_balanced_v1.json \
+  --output results/yolo_run17_cpu/balanced_v1/sweep/predictions_conf05.json --conf 0.05
+python scripts/sweep_yolo_conf.py \
+  --predictions results/yolo_run17_cpu/balanced_v1/sweep/predictions_conf05.json \
+  --annotations data/annotations/val_balanced_v1.json \
+  --output results/yolo_run17_cpu/balanced_v1/sweep/sweep.json
+```
+Best operating point: **conf=0.20** (F1 0.490). conf=0.15 strictly dominates the
+old model; conf=0.50 → high precision (0.87).
 
 **Critical setup notes (do not skip):**
 
@@ -120,11 +153,13 @@ model.train(
 
 4. **workers=0 causes ~4× slowdown** vs workers=2 on MPS. Use workers=2.
 
-**Expected performance:** ~80 min/epoch on M3 MPS with SSD staging + workers=2 + cache=True.
-20 epochs ≈ 27h. Consider running 50 epochs overnight.
+**Expected performance (CPU):** ~40 min/epoch for the 3k subset on M3 CPU
+(~14h/20 epochs). The full 21k set on CPU is ~8h/epoch ≈ 150h — not viable;
+use a CUDA box for the full set. (MPS would be ~80 min/epoch but is broken — see banner.)
 
-**Success gate:** mAP50 > 0.50 on val set. Compare short/medium/long recall against Run 15
-ViT-S heatmap baseline (short=0%, medium=8.3%, long=20.9%).
+**Result vs gate:** original gate was mAP50 > 0.50; the 3k-subset CPU model reached
+mAP50 0.30 (data-limited, see banner). On val_balanced_v1 at conf=0.20: R=0.799,
+P=0.353, short=1.00, angle=4.4° — already beats the old streakmind on every axis.
 
 **Cleanup after training:**
 - Move `yolo11s-obb.pt` from repo root → `weights/yolo11s-obb.pt`
