@@ -14,5 +14,5 @@ sqlalchemy[asyncio]==2.0.30
 asyncpg==0.29.0
 aiosqlite==0.20.0
 pydantic==2.7.0
-python-multipart==0.0.27
+python-multipart==0.0.31
 python-dotenv==1.2.2
