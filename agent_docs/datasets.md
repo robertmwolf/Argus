@@ -62,6 +62,45 @@ by `<data-root>/<file_name>`. If a scratch copy is absent, reading from durable
 storage remains valid. Staging can therefore be repeated safely; files whose
 sizes already match are skipped unless `--refresh` is supplied.
 
+## Current external drive layout (`/Volumes/External/TrainingData`)
+
+This is the live `ARGUS_DATA_ROOT`. The structure after the June 2026 cleanup:
+
+```
+TrainingData/
+  raw/
+    BrentImages/                  # Source FITS from Atwood Observatory (ongoing)
+      Img_20260412_Atwood/        # Each batch has its own COCO annotation JSON
+      Img_20260515_Atwood/        # containing reviewed streak endpoints (OBBs)
+      Img_20260527_Atwood/
+      Img_20260528_Atwood/
+      Geo_20260520_Atwood/
+      20260530_Atwood/
+  annotations/
+    all_train_run17_merged.json   # Merged source annotation (input to dataset builder)
+    val_balanced_v1.json          # Standard eval annotation — used by all pipelines
+    hard_negatives_vits_window_v4.json  # Mined FP tiles from vits_window_v4
+    hard_negatives_vits_window_v5.json  # Mined FP tiles from vits_window_v5 (t=0.85)
+    hard_negatives_vits_window_v5_t075.json  # Same, looser threshold
+  train_atwood_synth_window_v9/   # Active training dataset (83 GB, self-contained NPY tiles)
+  val_atwood_window_v9/           # Active validation dataset (5.6 GB)
+  val_atwood_near_ctx_t400_c4_v1/ # Specialized near-context eval set (2.6 GB)
+```
+
+**Ground truth lives in the per-batch COCO JSONs** inside each `BrentImages/` subfolder.
+`all_train_run17_merged.json` is a derived merge of those files and can be regenerated.
+
+**Window datasets are self-contained.** Each `train_atwood_synth_window_vN/` directory
+contains pre-rendered float32 `.npy` tile crops (already per-frame z-score normalized)
+plus an `annotation.json` with relative paths. Synthetic short-streak tiles are rendered
+from BrentImages FITS at build time and stored alongside real tiles — they do not
+reference any external synthetic source directory. Build with
+`scripts/build_atwood_window_dataset.py --source annotations/all_train_run17_merged.json`.
+
+**Feature caches are ephemeral.** Training pipelines build a ViT feature cache, train,
+then delete the cache. Eval pipelines build a heatmap cache, evaluate, then delete it.
+Do not store durable data under `/Volumes/External/argus_caches/`.
+
 ## Feature-cache lifecycle
 
 Raw-file staging and model feature caching are separate layers:
