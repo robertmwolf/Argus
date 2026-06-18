@@ -2,7 +2,7 @@
 
 import torch
 
-from inference.vits_heatmap_detector import _centerline_head_state
+from inference.heatmap_detector_base import _centerline_head_state
 
 
 def test_centerline_head_state_normalizes_keys_and_drops_extra_channels() -> None:

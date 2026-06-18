@@ -29,8 +29,9 @@ from typing import Any
 
 import numpy as np
 
-from inference.vits_heatmap_detector import _load_model, _filter_peak_topk
-from inference.convnext_heatmap_detector import (
+from inference.heatmap_detector_base import (
+    _load_model,
+    _filter_peak_topk,
     _run_single_tile,
     _run_single_tile_probs,
     _remap_detection,

@@ -20,7 +20,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from eval.streak_metrics import evaluate_segments
-from inference.convnext_heatmap_detector import _component_to_segment
+from inference.heatmap_detector_base import _component_to_segment
 from inference.device import get_device
 from models.plain_dinov3.streak_heatmap import (
     ConvNeXtStreakHeatmap,

@@ -46,10 +46,9 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from inference.convnext_heatmap_detector import _run_single_tile_probs
+from inference.heatmap_detector_base import _load_model, _run_single_tile_probs
 from inference.fits_loader import FITSLoader, apply_norm
 from inference.tiled_pipeline import tile_image
-from inference.vits_heatmap_detector import _load_model
 
 logger = logging.getLogger(__name__)
 

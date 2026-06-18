@@ -51,11 +51,8 @@ def get_detector_statuses() -> list[dict]:
     """Return availability metadata for endpoint heatmap detectors."""
     statuses: list[dict] = []
     getters: list[tuple[str, str, str]] = [
-        ("inference.vits_heatmap_detector", "get_vits_heatmap_status", "vits_heatmap"),
-        ("inference.vitb_heatmap_detector", "get_vitb_heatmap_status", "vitb_heatmap"),
-        ("inference.vits_window_v4_detector", "get_vits_v4_heatmap_status", "vits_heatmap_v4"),
-        ("inference.vitb_window_v4_detector", "get_vitb_v4_heatmap_status", "vitb_heatmap_v4"),
         ("inference.vits_window_v9_detector", "get_vits_v9_heatmap_status", "vits_heatmap_v9"),
+        ("inference.vitb_window_v10_detector", "get_vitb_v10_heatmap_status", "vitb_heatmap_v10"),
     ]
     import importlib
     for module_name, function_name, detector_id in getters:
@@ -75,18 +72,12 @@ def get_detector_statuses() -> list[dict]:
 
 def _detector_runners() -> dict[str, tuple[Callable[[np.ndarray], tuple[list[dict], np.ndarray | None]], str, str]]:
     """Return detector callables with their normalization configuration."""
-    from inference.vitb_heatmap_detector import run_vitb_heatmap_detector_and_heatmap
-    from inference.vitb_window_v4_detector import run_vitb_v4_heatmap_detector_and_heatmap
-    from inference.vits_heatmap_detector import run_vits_heatmap_detector_and_heatmap
-    from inference.vits_window_v4_detector import run_vits_v4_heatmap_detector_and_heatmap
     from inference.vits_window_v9_detector import run_vits_v9_heatmap_detector_and_heatmap
+    from inference.vitb_window_v10_detector import run_vitb_v10_heatmap_detector_and_heatmap
 
     return {
-        "vits_heatmap": (run_vits_heatmap_detector_and_heatmap, "VITS_HEATMAP_NORM", "zscore"),
-        "vitb_heatmap": (run_vitb_heatmap_detector_and_heatmap, "VITB_HEATMAP_NORM", "zscore"),
-        "vits_heatmap_v4": (run_vits_v4_heatmap_detector_and_heatmap, "VITS_V4_HEATMAP_NORM", "zscore"),
-        "vitb_heatmap_v4": (run_vitb_v4_heatmap_detector_and_heatmap, "VITB_V4_HEATMAP_NORM", "zscore"),
         "vits_heatmap_v9": (run_vits_v9_heatmap_detector_and_heatmap, "VITS_V9_HEATMAP_NORM", "zscore"),
+        "vitb_heatmap_v10": (run_vitb_v10_heatmap_detector_and_heatmap, "VITB_V10_HEATMAP_NORM", "zscore"),
     }
 
 

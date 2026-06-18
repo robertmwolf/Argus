@@ -89,7 +89,7 @@ def mine_frame(
     """
     from astropy.io import fits as _fits
 
-    from inference.convnext_heatmap_detector import _run_single_tile_probs
+    from inference.heatmap_detector_base import _run_single_tile_probs
     from inference.fits_loader import _normalise_zscore
     from inference.tiled_pipeline import tile_image
 
@@ -154,7 +154,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
     # --- Load model ---
-    from inference.vits_heatmap_detector import _load_model
+    from inference.heatmap_detector_base import _load_model
     ckpt_path = Path(args.checkpoint)
     if not ckpt_path.exists():
         logger.error("Checkpoint not found: %s", ckpt_path)
