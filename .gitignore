@@ -25,8 +25,6 @@ venv/
 ENV/
 
 # Data — never check in raw FITS or large archives
-data/milan/
-data/frigate/
 data/cache/
 data/GTImages/*.fits
 data/GTImages/*.fit
@@ -49,6 +47,11 @@ results/*/predictions.json
 results/**/predictions.json
 results/**/*predictions.json
 results/**/*.bbox.json
+# Threshold-sweep prediction dumps (predictions_t070.json etc.) — regenerable
+results/**/predictions_t*.json
+# Per-threshold metrics files — summary geometry_eval.json is enough
+results/**/metrics_t*.json
+results/**/metrics_placeholder.json
 # Claude Code dev artifacts
 .claude/launch.json
 .claude/scheduled_tasks.lock

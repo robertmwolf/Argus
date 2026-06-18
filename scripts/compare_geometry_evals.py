@@ -65,8 +65,6 @@ def load_row(name: str, path: str) -> dict | None:
     t3 = d.get("tier3_refined_geometry")
     pb = t1["per_band"]
     n_gt = t1["n_gt"]
-    n_found = t1["n_found"]
-
     # T3 is valid only when images were loaded (improvement != 0.0 OR model has 0 recall)
     t3_valid = False
     t3_stale = False
@@ -182,11 +180,11 @@ def main() -> None:
         else:
             rows.append(row)
 
-    print(f"\nGeometry evaluation on val_balanced_v1.json  (threshold=0.70, peak_floor=0.85)\n")
+    print("\nGeometry evaluation on val_balanced_v1.json  (threshold=0.70, peak_floor=0.85)\n")
     print_table(rows, args.md)
-    print(f"\nT1 = Tier 1 detection (did model find the streak?)  Rcl=recall  Prec=precision")
-    print(f"T2 = Raw model output geometry (no post-processing)")
-    print(f"T3 = After Radon angle + endpoint refinement (n/a if --images-dir not provided)")
+    print("\nT1 = Tier 1 detection (did model find the streak?)  Rcl=recall  Prec=precision")
+    print("T2 = Raw model output geometry (no post-processing)")
+    print("T3 = After Radon angle + endpoint refinement (n/a if --images-dir not provided)")
 
 
 if __name__ == "__main__":

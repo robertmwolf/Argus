@@ -17,7 +17,7 @@ PYTHON=/Users/robert/miniconda3/envs/satid/bin/python
 REPO=/Users/robert/Argus
 WEIGHTS=$REPO/weights
 DATA=/Volumes/External/TrainingData
-BAL_ANN=$REPO/data/annotations/val_balanced_v1.json
+BAL_ANN=/Volumes/External/TrainingData/annotations/val_balanced_v1.json
 OUT=$REPO/results/window_v10
 export PYTORCH_ENABLE_MPS_FALLBACK=1
 cd "$REPO"; mkdir -p "$OUT"
@@ -61,8 +61,7 @@ $PYTHON training/train_dinov3_heatmap_cached.py \
   --train-cache "$VITB_CACHE/train" --val-cache "$VITB_CACHE/val" \
   --work-dir "$WEIGHTS/$TAG" \
   --epochs 80 --lr "$LR" --batch-size "$BATCH" \
-  --hidden-channels "$HIDDEN" \
-  --lr-scheduler "$SCHED" --num-workers 0 \
+  --hidden-channels "$HIDDEN" --lr-scheduler "$SCHED" --num-workers 0 \
   --early-stopping-patience "$EARLY_STOP" \
   --loss-mode asl_cldice \
   --asl-gamma-neg 4.0 --asl-gamma-pos 0.0 --asl-margin 0.05 --cldice-iters 3
