@@ -1,7 +1,6 @@
 # ARGUS Datasets
 
-ARGUS uses FITS observations from Atwood Observatory, Frigate, and other reviewed
-sources, plus selected synthetic centerline examples. A canonical annotation has
+ARGUS uses FITS observations from Atwood Observatory plus selected synthetic centerline examples. A canonical annotation has
 `x1`, `y1`, `x2`, and `y2` in the coordinate frame of its referenced image.
 
 Historical source files may encode annotations differently. Dataset loaders and
