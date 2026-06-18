@@ -50,8 +50,8 @@ training runtime.
   installs fall back to source builds, which are brittle on Linux and not a
   viable native-Windows path for this project.
 - **Training results must remain comparable.**  ARGUS is research software with
-  recorded DINOv3/YOLO/classical baselines.  Major upgrades to PyTorch,
-  Ultralytics, Albumentations, Astropy, Photutils, or OpenCV can change model
+  recorded DINOv3/classical baselines.  Major upgrades to PyTorch,
+  Albumentations, Astropy, Photutils, or OpenCV can change model
   behaviour, augmentation semantics, image processing, or numerical outputs.
   Those upgrades need benchmark notes, not drive-by version changes.
 
@@ -64,9 +64,8 @@ the documented requirements lanes in several ways:
 
 - `torch==2.11.0` and `torchvision==0.26.0` are installed locally, while the
   documented Mac/Linux baseline still uses PyTorch 2.2 where appropriate.
-- `albumentations==2.0.8`, `spacetrack==1.4.0`, `ultralytics==8.4.46`, and
-  `pydantic==2.13.3` are installed locally, while the requirements files pin
-  older versions.
+- `albumentations==2.0.8`, `spacetrack==1.4.0`, and `pydantic==2.13.3` are
+  installed locally, while the requirements files pin older versions.
 - Both `opencv-python` and `opencv-python-headless` are installed locally, and
   `cv2` imports from the headless package.  Production/API installs should keep
   only the headless package unless a GUI dependency is deliberately needed.
@@ -91,7 +90,7 @@ Use separate upgrade lanes instead of a single "latest" sweep:
 - **Medium risk:** API/runtime patch updates such as FastAPI, SQLAlchemy,
   Uvicorn, requests, Pillow, and boto3.  These still require API tests and an
   upload/inference smoke test.
-- **High risk:** Python, NumPy, PyTorch, torchvision, mmcv, mmdet, Ultralytics,
+- **High risk:** Python, NumPy, PyTorch, torchvision, mmcv, mmdet,
   Albumentations, Astropy, Photutils, OpenCV, `sep`, and `astride`.  Upgrade
   these only in a dedicated branch with environment notes, import checks, unit
   tests, and benchmark comparison.
@@ -101,7 +100,7 @@ Minimum acceptance for a high-risk dependency upgrade:
 1. Build a fresh environment using the target platform install path.
 2. Run `python -m pip check`.
 3. Verify imports for `torch`, `torchvision`, `mmcv.ops`, `mmdet`, `numpy`,
-   `cv2`, `sep`, `astride`, `astropy`, `fastapi`, and `ultralytics`.
+   `cv2`, `sep`, `astride`, `astropy`, and `fastapi`.
 4. Run the offline pytest suite.
 5. Run at least one API/inference smoke test.
 6. Re-run the relevant evaluation benchmark if preprocessing, training,

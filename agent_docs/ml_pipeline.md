@@ -10,8 +10,7 @@
 
 Phase 0 (classical ASTRiDE baseline, `src/`) is complete.
 This document covers the ML replacement: a Co-DINO transformer detector
-fine-tuned on satellite streak data, replacing YOLO-OBB with a
-higher-accuracy oriented bounding box model.
+fine-tuned on satellite streak data.
 
 ---
 

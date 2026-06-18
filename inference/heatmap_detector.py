@@ -1,9 +1,7 @@
 """DINOv3 orientation-centerline heatmap detector integration.
 
-This module exposes the no-OBB heatmap model as an ARGUS detector.  Native
-geometry is a line segment; an ``obb`` compatibility projection is also emitted
-so the existing pipeline, WCS, database, and grouping code can consume the
-detector before those layers become line-native.
+This module exposes the orientation-centerline heatmap model as an ARGUS
+endpoint detector.
 """
 
 from __future__ import annotations
@@ -215,21 +213,6 @@ def _trace_segment_from_heat(
     return start, end
 
 
-def _line_to_obb(start: _Point, end: _Point, width_px: float) -> dict[str, float]:
-    """Project a line segment into a minimal OBB-compatible dict."""
-    dx = end.x - start.x
-    dy = end.y - start.y
-    length = math.hypot(dx, dy)
-    angle = math.degrees(math.atan2(dy, dx)) % 180.0 if length > 0 else 0.0
-    return {
-        "cx": float((start.x + end.x) * 0.5),
-        "cy": float((start.y + end.y) * 0.5),
-        "w": float(length),
-        "h": float(width_px),
-        "angle_deg": float(angle),
-    }
-
-
 def _load_heatmap_model(
     checkpoint_path: Path,
     weights_override: str | None,
@@ -309,7 +292,6 @@ def _run_heatmap_centerline_detector_core(
     radon_step_degrees = float(os.environ.get("HEATMAP_RADON_STEP_DEGREES", "0.5"))
     min_length_px = float(os.environ.get("HEATMAP_MIN_LENGTH_PX", "16.0"))
     extension_px = float(os.environ.get("HEATMAP_EXTENSION_PX", "8.0"))
-    compat_width_px = float(os.environ.get("HEATMAP_OBB_COMPAT_WIDTH_PX", "6.0"))
     n_bins = int(train_args.get("orientation_bins", 18))
 
     h_native, w_native = array.shape[:2]
@@ -376,30 +358,23 @@ def _run_heatmap_centerline_detector_core(
                 continue
         native_start = _Point(input_start.x * w_native / image_size, input_start.y * h_native / image_size)
         native_end = _Point(input_end.x * w_native / image_size, input_end.y * h_native / image_size)
-        obb = _line_to_obb(native_start, native_end, compat_width_px)
+        length = math.hypot(native_end.x - native_start.x, native_end.y - native_start.y)
+        angle = math.degrees(
+            math.atan2(native_end.y - native_start.y, native_end.x - native_start.x)
+        ) % 180.0
         confidence = float(heat[component].max())
         proposals.append(
             {
-                "bbox": [
-                    float(min(native_start.x, native_end.x)),
-                    float(min(native_start.y, native_end.y)),
-                    float(max(native_start.x, native_end.x)),
-                    float(max(native_start.y, native_end.y)),
-                ],
                 "confidence": confidence,
                 "method": "dinov3_heatmap_centerline",
-                "geometry_type": "line_segment",
-                "line_segment": {
-                    "x1": float(native_start.x),
-                    "y1": float(native_start.y),
-                    "x2": float(native_end.x),
-                    "y2": float(native_end.y),
-                    "angle_deg": float(obb["angle_deg"]),
-                    "length_px": float(obb["w"]),
-                },
-                "obb_compat": dict(obb),
-                "obb": dict(obb),
-                "streak_length_px": float(obb["w"]),
+                "x1": float(native_start.x),
+                "y1": float(native_start.y),
+                "x2": float(native_end.x),
+                "y2": float(native_end.y),
+                "cx": float((native_start.x + native_end.x) * 0.5),
+                "cy": float((native_start.y + native_end.y) * 0.5),
+                "angle_deg": float(angle),
+                "streak_length_px": float(length),
                 "heatmap": {
                     "component_id": int(label_id),
                     "score": confidence,
@@ -421,20 +396,12 @@ def _run_heatmap_centerline_detector_core(
 def _remap_heatmap_proposal(prop: dict[str, Any], x0: int, y0: int) -> dict[str, Any]:
     """Shift a tile-local heatmap proposal into full-image coordinates."""
     prop = dict(prop)
-    b = prop["bbox"]
-    prop["bbox"] = [b[0] + x0, b[1] + y0, b[2] + x0, b[3] + y0]
-    ls = prop.get("line_segment")
-    if ls:
-        prop["line_segment"] = {
-            **ls,
-            "x1": ls["x1"] + x0, "y1": ls["y1"] + y0,
-            "x2": ls["x2"] + x0, "y2": ls["y2"] + y0,
-        }
-    obb = prop.get("obb")
-    if obb:
-        new_obb = {**obb, "cx": obb["cx"] + x0, "cy": obb["cy"] + y0}
-        prop["obb"] = new_obb
-        prop["obb_compat"] = new_obb
+    prop["x1"] += x0
+    prop["y1"] += y0
+    prop["x2"] += x0
+    prop["y2"] += y0
+    prop["cx"] += x0
+    prop["cy"] += y0
     return prop
 
 
@@ -445,7 +412,8 @@ def _run_tiled_heatmap_centerline(array: np.ndarray) -> list[dict[str, Any]]:
     (default 0.5) from env vars.  Falls back to single-shot when the image fits
     in one tile.
     """
-    from inference.tiled_pipeline import tile_image, _torchvision_nms, _numpy_nms
+    from inference.tiled_pipeline import tile_image
+    from inference.postprocess import nms_detections
 
     native_tile_size = int(os.environ.get("HEATMAP_NATIVE_TILE_SIZE", "2560"))
     overlap = float(os.environ.get("HEATMAP_TILE_OVERLAP", "0.5"))
@@ -464,38 +432,23 @@ def _run_tiled_heatmap_centerline(array: np.ndarray) -> list[dict[str, Any]]:
     if len(all_proposals) <= 1:
         return all_proposals
 
-    # Deduplicate overlapping proposals from adjacent tiles.
-    # Heatmap bbox is [x1,y1,x2,y2]; convert to [x,y,w,h] for NMS helper.
-    preds_xywh = [
-        {
-            "bbox": [p["bbox"][0], p["bbox"][1],
-                     p["bbox"][2] - p["bbox"][0], p["bbox"][3] - p["bbox"][1]],
-            "score": float(p["confidence"]),
-            "category_id": 1,
-        }
-        for p in all_proposals
-    ]
-    try:
-        kept_indices = _torchvision_nms(preds_xywh, iou_threshold=0.3)
-    except Exception:
-        kept_indices = _numpy_nms(preds_xywh, iou_threshold=0.3)
+    kept = nms_detections(all_proposals)
 
     logger.debug(
         "Tiled heatmap: %d raw proposals → %d after NMS",
-        len(all_proposals), len(kept_indices),
+        len(all_proposals), len(kept),
     )
-    return [all_proposals[i] for i in kept_indices]
+    return kept
 
 
 def run_heatmap_centerline_detector(array: np.ndarray) -> list[dict[str, Any]]:
-    """Run the no-OBB heatmap detector; discard the heat array.
+    """Run the endpoint heatmap detector; discard the heat array.
 
     Args:
         array: uint8 or float image array with shape ``(H, W, 3)``.
 
     Returns:
-        Pipeline-compatible detections.  Native geometry lives in
-        ``line_segment``; ``obb`` is a compatibility projection.
+        Pipeline-compatible endpoint detections.
     """
     return _run_tiled_heatmap_centerline(array)
 

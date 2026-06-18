@@ -41,11 +41,7 @@ from PIL import Image
 from scipy import ndimage
 
 from inference.device import get_device
-from models.plain_dinov3.streak_heatmap import (
-    ConvNeXtStreakHeatmap,
-    decode_geometry,
-    imagenet_normalize,
-)
+from models.plain_dinov3.streak_heatmap import ConvNeXtStreakHeatmap, imagenet_normalize
 
 logger = logging.getLogger(__name__)
 
@@ -131,21 +127,16 @@ def _component_to_segment(
     mask: np.ndarray,
     score_map: np.ndarray,
     patch_size: int,
-    geometry_map: np.ndarray | None,
     image_size: int,
 ) -> dict[str, Any] | None:
     """Fit a line segment to a connected heatmap component via PCA.
 
-    Returns a dict with both the new endpoint fields (x1, y1, x2, y2) and a
-    backward-compat obb sub-dict derived from the segment geometry.
+    Returns endpoint geometry and confidence metadata.
 
     Args:
         mask: Boolean mask of active feature-map pixels for this component.
         score_map: Per-pixel probability map from the heatmap head.
         patch_size: Feature-map patch stride in source pixels.
-        geometry_map: Optional 4-channel geometry prediction (cos2, sin2,
-            length_norm, width_norm).  When present, overrides PCA angle and
-            length.
         image_size: Square canvas side length (used to de-normalise geometry).
 
     Returns:
@@ -160,23 +151,9 @@ def _component_to_segment(
     vals, vecs = np.linalg.eigh(cov)
     order = np.argsort(vals)[::-1]
     major = vecs[:, order[0]]
-    minor = vecs[:, order[1]]
     rel = pts - center
     length = max(float((rel @ major).ptp()) + patch_size, patch_size)
-    width  = max(float((rel @ minor).ptp()) + patch_size, patch_size)
     angle  = math.degrees(math.atan2(float(major[1]), float(major[0]))) % 180.0
-
-    if geometry_map is not None:
-        geom = geometry_map[:, mask]
-        if geom.shape[1] > 0:
-            cos2, sin2 = float(geom[0].mean()), float(geom[1].mean())
-            if abs(cos2) + abs(sin2) > 1e-3:
-                angle = (0.5 * math.degrees(math.atan2(sin2, cos2))) % 180.0
-                # Recompute major axis unit vector from refined angle
-                rad = math.radians(angle)
-                major = np.array([math.cos(rad), math.sin(rad)], dtype=np.float32)
-            length = max(float(geom[2].mean()) * image_size, patch_size)
-            width  = max(float(geom[3].mean()) * image_size, patch_size)
 
     # Compute endpoints from centre + half-length along major axis
     half = length / 2.0
@@ -193,19 +170,10 @@ def _component_to_segment(
         # clears the threshold. Used by the detector's peak-floor / top-K filter.
         "peak_confidence": float(score_map[mask].max()),
         "streak_length_px": length,
-        # Backward-compat OBB derived from segment geometry
-        "obb": {
-            "cx": float(center[0]),
-            "cy": float(center[1]),
-            "w":  length,
-            "h":  max(width, 3.0),
-            "angle_deg": angle,
-        },
+        "cx": float(center[0]),
+        "cy": float(center[1]),
+        "angle_deg": angle,
     }
-
-
-# Keep old name as an alias for any external callers
-_component_to_obb = _component_to_segment
 
 
 def _run_single_tile(
@@ -215,7 +183,7 @@ def _run_single_tile(
     device: torch.device,
     threshold: float,
     min_pixels: int,
-    use_geometry: bool = True,
+    use_geometry: bool = False,
 ) -> list[dict[str, Any]]:
     """Run detector on one tile; return detections in tile-local coordinates."""
     if array.ndim == 2:
@@ -227,11 +195,6 @@ def _run_single_tile(
         output   = model(imagenet_normalize(img_tensor))
         logits   = output[:, :1]
         probs    = torch.sigmoid(logits)[0, 0].cpu().numpy().astype(np.float32)
-        geometry = (
-            decode_geometry(output[:, 1:5])[0].cpu().numpy()
-            if use_geometry and output.shape[1] >= 5
-            else None
-        )
 
     patch_size = 16  # ConvNeXt stage-2 stride equals ViT-S/16 patch stride
     binary = probs >= threshold
@@ -242,32 +205,27 @@ def _run_single_tile(
         mask = labels == label_id
         if int(mask.sum()) < min_pixels:
             continue
-        det = _component_to_segment(mask, probs, patch_size, geometry, image_size)
+        det = _component_to_segment(mask, probs, patch_size, image_size)
         if det is None:
             continue
-        obb = det["obb"]
-        # Unscale OBB centre and dimensions from letterbox canvas to tile-local pixels
-        obb["cx"]  = (obb["cx"] - pad_x) / scale
-        obb["cy"]  = (obb["cy"] - pad_y) / scale
-        obb["w"]  /= scale
-        obb["h"]  /= scale
-        det["streak_length_px"] = float(obb["w"])
-        # Unscale explicit endpoints
+        # Unscale endpoints from letterbox canvas to tile-local pixels.
         det["x1"] = (det["x1"] - pad_x) / scale
         det["y1"] = (det["y1"] - pad_y) / scale
         det["x2"] = (det["x2"] - pad_x) / scale
         det["y2"] = (det["y2"] - pad_y) / scale
-        cx, cy = obb["cx"], obb["cy"]
-        hw, hh = obb["w"] / 2, obb["h"] / 2
+        from inference.streak_segment import apply_segment_geometry
+        apply_segment_geometry(det)
         detections.append({
-            "bbox":             [cx - hw, cy - hh, cx + hw, cy + hh],
             "confidence":       det["confidence"],
+            "peak_confidence":  det["peak_confidence"],
             "method":           "convnext_heatmap",
             "x1":               det["x1"],
             "y1":               det["y1"],
             "x2":               det["x2"],
             "y2":               det["y2"],
-            "obb":              obb,
+            "cx":               det["cx"],
+            "cy":               det["cy"],
+            "angle_deg":        det["angle_deg"],
             "streak_length_px": det["streak_length_px"],
         })
     return detections
@@ -350,15 +308,9 @@ def _run_tile_batch_full(
             output = model(imagenet_normalize(batch))
             logits = output[:, :1]
             probs_np = torch.sigmoid(logits).cpu().numpy().astype(np.float32)  # (N,1,hf,wf)
-            if use_geometry and output.shape[1] >= 5:
-                geom_np = decode_geometry(output[:, 1:5]).cpu().numpy()  # (N,4,hf,wf)
-            else:
-                geom_np = None
 
         for j, (_, x0, y0, th, tw, scale, pad_x, pad_y) in enumerate(chunk):
             probs = probs_np[j, 0]
-            geometry = geom_np[j] if geom_np is not None else None
-
             # Detections
             binary = probs >= threshold
             labels, n_labels = ndimage.label(binary)
@@ -367,27 +319,21 @@ def _run_tile_batch_full(
                 mask = labels == label_id
                 if int(mask.sum()) < min_pixels:
                     continue
-                det = _component_to_segment(mask, probs, patch_size, geometry, image_size)
+                det = _component_to_segment(mask, probs, patch_size, image_size)
                 if det is None:
                     continue
-                obb = det["obb"]
-                obb["cx"] = (obb["cx"] - pad_x) / scale
-                obb["cy"] = (obb["cy"] - pad_y) / scale
-                obb["w"] /= scale
-                obb["h"] /= scale
-                det["streak_length_px"] = float(obb["w"])
                 det["x1"] = (det["x1"] - pad_x) / scale
                 det["y1"] = (det["y1"] - pad_y) / scale
                 det["x2"] = (det["x2"] - pad_x) / scale
                 det["y2"] = (det["y2"] - pad_y) / scale
-                cx, cy = obb["cx"], obb["cy"]
-                hw, hh = obb["w"] / 2, obb["h"] / 2
+                from inference.streak_segment import apply_segment_geometry
+                apply_segment_geometry(det)
                 dets.append({
-                    "bbox": [cx - hw, cy - hh, cx + hw, cy + hh],
                     "confidence": det["confidence"],
+                    "peak_confidence": det["peak_confidence"],
                     "method": "convnext_heatmap",
                     "x1": det["x1"], "y1": det["y1"], "x2": det["x2"], "y2": det["y2"],
-                    "obb": obb,
+                    "cx": det["cx"], "cy": det["cy"], "angle_deg": det["angle_deg"],
                     "streak_length_px": det["streak_length_px"],
                 })
 
@@ -416,21 +362,12 @@ def _rescale_detections(dets: list[dict[str, Any]], scale: float) -> list[dict[s
     out = []
     for det in dets:
         det = dict(det)
-        b = det["bbox"]
-        det["bbox"] = [b[0] * scale, b[1] * scale, b[2] * scale, b[3] * scale]
-        obb = dict(det["obb"])
-        obb["cx"] *= scale
-        obb["cy"] *= scale
-        obb["w"]  *= scale
-        obb["h"]  *= scale
-        det["obb"] = obb
-        if "streak_length_px" in det:
-            det["streak_length_px"] = det["streak_length_px"] * scale
-        if "x1" in det:
-            det["x1"] = det["x1"] * scale
-            det["y1"] = det["y1"] * scale
-            det["x2"] = det["x2"] * scale
-            det["y2"] = det["y2"] * scale
+        det["x1"] *= scale
+        det["y1"] *= scale
+        det["x2"] *= scale
+        det["y2"] *= scale
+        from inference.streak_segment import apply_segment_geometry
+        apply_segment_geometry(det)
         out.append(det)
     return out
 
@@ -447,16 +384,12 @@ def _remap_detection(det: dict[str, Any], x0: int, y0: int) -> dict[str, Any]:
         Detection dict with all coordinate fields shifted by (x0, y0).
     """
     det = dict(det)
-    b = det["bbox"]
-    det["bbox"] = [b[0] + x0, b[1] + y0, b[2] + x0, b[3] + y0]
-    obb = {**det["obb"], "cx": det["obb"]["cx"] + x0, "cy": det["obb"]["cy"] + y0}
-    det["obb"] = obb
-    # Shift explicit endpoints when present
-    if "x1" in det:
-        det["x1"] = det["x1"] + x0
-        det["y1"] = det["y1"] + y0
-        det["x2"] = det["x2"] + x0
-        det["y2"] = det["y2"] + y0
+    det["x1"] += x0
+    det["y1"] += y0
+    det["x2"] += x0
+    det["y2"] += y0
+    from inference.streak_segment import apply_segment_geometry
+    apply_segment_geometry(det)
     return det
 
 
@@ -472,8 +405,7 @@ def run_convnext_heatmap_detector(array: np.ndarray) -> list[dict[str, Any]]:
         array: uint8 RGB array, shape ``(H, W, 3)``.
 
     Returns:
-        Pipeline-compatible detection dicts with ``obb``, ``confidence``,
-        ``bbox``, ``streak_length_px``, and ``method`` keys.
+        Endpoint detections with confidence, length, and method metadata.
     """
     checkpoint = _default_checkpoint()
     if not checkpoint.exists():
@@ -509,7 +441,8 @@ def run_convnext_heatmap_detector(array: np.ndarray) -> list[dict[str, Any]]:
         logger.debug("ConvNeXt heatmap (single shot): %d detection(s)", len(dets))
         return dets
 
-    from inference.tiled_pipeline import tile_image, _torchvision_nms, _numpy_nms
+    from inference.tiled_pipeline import tile_image
+    from inference.postprocess import nms_detections
 
     all_dets: list[dict[str, Any]] = []
     for tile, x0, y0 in tile_image(array, native_tile_size, tile_overlap):
@@ -520,20 +453,6 @@ def run_convnext_heatmap_detector(array: np.ndarray) -> list[dict[str, Any]]:
         logger.debug("ConvNeXt heatmap (tiled): %d detection(s)", len(all_dets))
         return all_dets
 
-    preds_xywh = [
-        {
-            "bbox":        [d["bbox"][0], d["bbox"][1],
-                            d["bbox"][2] - d["bbox"][0], d["bbox"][3] - d["bbox"][1]],
-            "score":       float(d["confidence"]),
-            "category_id": 1,
-        }
-        for d in all_dets
-    ]
-    try:
-        kept = _torchvision_nms(preds_xywh, iou_threshold=0.3)
-    except Exception:
-        kept = _numpy_nms(preds_xywh, iou_threshold=0.3)
-
-    result = [all_dets[i] for i in kept]
+    result = nms_detections(all_dets)
     logger.debug("ConvNeXt heatmap (tiled): %d raw → %d after NMS", len(all_dets), len(result))
     return result

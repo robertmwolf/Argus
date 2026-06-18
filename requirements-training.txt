@@ -2,7 +2,7 @@
 #
 # Install after the platform-specific PyTorch + MMDetection stack documented in
 # agent_docs/dependencies.md. This file adds dataset conversion, augmentation,
-# YOLO baseline training, benchmarking, and experiment utilities.
+# benchmarking, and experiment utilities.
 
 -r requirements-inference.txt
 

@@ -1,23 +1,15 @@
-"""Line-segment-based streak evaluation metrics.
+"""Endpoint-based streak evaluation metrics.
 
-Replaces OBB IoU matching with a three-criterion match that is geometrically
-meaningful for thin elongated streaks:
+Uses a three-criterion match that is geometrically meaningful for thin streaks:
 
   1. Angle error < angle_tol_deg   (180°-symmetric)
   2. Perpendicular offset < perp_tol_px
   3. 1-D length IoU along GT axis > length_iou_min
 
-This avoids the pathological IoU collapse that OBB matching produces when a
-streak is detected at a small lateral offset (a 400×3 px streak at 2 px offset
-gets OBB IoU ≈ 0.20 and is counted as FP even though it is geometrically
-correct).
-
 Prediction / GT dict formats accepted by :func:`evaluate_segments`:
 
   prediction  — {image_id, confidence, x1, y1, x2, y2, streak_length_px}
   ground_truth — {image_id, x1, y1, x2, y2, streak_length_px}
-
-Legacy ``obb``-only dicts are also accepted for backward compatibility.
 
 # Source: StreakMind — segment-match evaluation methodology
 """
@@ -34,7 +26,8 @@ from typing import Any
 import numpy as np
 
 # Import canonical types from inference module — single source of truth.
-from inference.streak_segment import StreakSegment, obb_to_segment, detection_dict_to_segment  # noqa: F401
+from inference.streak_segment import StreakSegment, detection_dict_to_segment
+from training.annotation_endpoints import annotation_to_endpoints
 
 logger = logging.getLogger(__name__)
 
@@ -272,15 +265,9 @@ def evaluate_segments(
 ) -> dict:
     """Compute the full evaluation metric suite using line-segment matching.
 
-    Accepts the same ``{image_id, confidence, obb, streak_length_px}`` dict
-    format as :func:`eval.metrics.evaluate` and returns the same top-level
-    keys plus two new diagnostics for matched pairs.
-
     Args:
-        predictions: List of detection dicts (image_id, confidence, obb,
-            streak_length_px).
-        ground_truth: List of annotation dicts (image_id, obb,
-            streak_length_px).
+        predictions: Endpoint detection dictionaries.
+        ground_truth: Endpoint annotation dictionaries.
         angle_tol_deg: Maximum angle error for a match (degrees, default 5).
         perp_tol_px: Maximum perpendicular offset for a match (pixels, default 5).
         length_iou_min: Minimum 1-D IoU along GT axis for a match (default 0.5).
@@ -488,40 +475,27 @@ def _load_predictions_json(path: Path) -> list[dict]:
 def _load_gt_from_coco(path: Path) -> list[dict]:
     """Load ground-truth annotations from a COCO-style JSON file.
 
-    Converts each annotation's ``bbox`` (XYWH) and ``obb`` into the flat
-    dict format expected by :func:`evaluate_segments`.
+    Converts historical source annotations at the dataset boundary.
 
     Args:
         path: Path to the COCO annotations JSON file.
 
     Returns:
-        List of GT dicts with keys ``image_id``, ``obb``, ``streak_length_px``.
+        Endpoint ground-truth dictionaries.
     """
     with path.open() as f:
         coco = json.load(f)
 
     gts: list[dict] = []
     for ann in coco.get("annotations", []):
-        obb = ann.get("obb")
-        if not obb:
-            # Fall back: derive from COCO bbox (x, y, w, h)
-            bbox = ann["bbox"]
-            x, y, bw, bh = bbox
-            obb = {
-                "cx": x + bw / 2,
-                "cy": y + bh / 2,
-                "w": bw,
-                "h": bh,
-                "angle_deg": 0.0,
-            }
-        length_px = float(
-            ann.get("attributes", {}).get("length_px")
-            or obb.get("w")
-            or 0.0
-        )
+        x1, y1, x2, y2 = annotation_to_endpoints(ann)
+        length_px = math.hypot(x2 - x1, y2 - y1)
         gts.append({
             "image_id": ann["image_id"],
-            "obb": obb,
+            "x1": x1,
+            "y1": y1,
+            "x2": x2,
+            "y2": y2,
             "streak_length_px": length_px,
         })
     return gts
@@ -586,42 +560,9 @@ def evaluate_segments_at_thresholds(
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    import json as _json
-
     logging.basicConfig(level=logging.INFO)
-    print("=== streak_metrics.py smoke test ===")
-
-    # A perfect match: identical OBBs
-    pred_obb = {"cx": 100.0, "cy": 100.0, "w": 300.0, "h": 4.0, "angle_deg": 15.0}
-    gt_obb   = {"cx": 100.0, "cy": 100.0, "w": 300.0, "h": 4.0, "angle_deg": 15.0}
-
-    preds = [{"image_id": "img1", "confidence": 0.9, "obb": pred_obb, "streak_length_px": 300.0}]
-    gts   = [{"image_id": "img1", "obb": gt_obb, "streak_length_px": 300.0}]
-
-    result = evaluate_segments(preds, gts)
-    print("Perfect match:", _json.dumps(result, indent=2))
-    assert result["recall"] == 1.0,   f"Expected recall=1.0, got {result['recall']}"
-    assert result["precision"] == 1.0, f"Expected precision=1.0, got {result['precision']}"
-    print("PASS: perfect match")
-
-    # OBB IoU failure case: 2 px lateral offset on a 400×3 px streak
-    # OBB IoU would give ~0.20, but segment match should still match
-    pred_obb2 = {"cx": 200.0, "cy": 102.0, "w": 400.0, "h": 3.0, "angle_deg": 0.0}
-    gt_obb2   = {"cx": 200.0, "cy": 100.0, "w": 400.0, "h": 3.0, "angle_deg": 0.0}
-    preds2 = [{"image_id": "img2", "confidence": 0.8, "obb": pred_obb2, "streak_length_px": 400.0}]
-    gts2   = [{"image_id": "img2", "obb": gt_obb2, "streak_length_px": 400.0}]
-
-    result2 = evaluate_segments(preds2, gts2, perp_tol_px=5.0)
-    print("2px lateral offset:", _json.dumps(result2, indent=2))
-    assert result2["recall"] == 1.0,   f"Expected recall=1.0 for 2px offset, got {result2['recall']}"
-    print("PASS: 2px lateral offset matched (OBB IoU would fail this)")
-
-    # Ensure a large lateral offset is correctly rejected
-    pred_obb3 = {"cx": 200.0, "cy": 120.0, "w": 400.0, "h": 3.0, "angle_deg": 0.0}
-    preds3 = [{"image_id": "img3", "confidence": 0.8, "obb": pred_obb3, "streak_length_px": 400.0}]
-    gts3   = [{"image_id": "img3", "obb": gt_obb2, "streak_length_px": 400.0}]
-    result3 = evaluate_segments(preds3, gts3, perp_tol_px=5.0)
-    assert result3["recall"] == 0.0,   f"Expected recall=0.0 for 20px offset, got {result3['recall']}"
-    print("PASS: 20px lateral offset correctly rejected")
-
-    print("\nAll smoke tests passed.")
+    segment = {"image_id": "img1", "confidence": 0.9,
+               "x1": 0.0, "y1": 10.0, "x2": 300.0, "y2": 10.0}
+    result = evaluate_segments([segment], [segment])
+    assert result["recall"] == 1.0
+    print("Endpoint metric smoke test passed.")

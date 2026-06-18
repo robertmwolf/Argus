@@ -442,9 +442,8 @@ that gap:
 Recommendation: do not remove OpenMMLab. Keep this code only if its simpler
 training story is valuable for future experiments, but the replacement path
 should pivot to a stronger detection formulation such as a DETR/RT-DETR-style
-plain PyTorch detector, a YOLO-OBB baseline, or another architecture with a
-proper matching/object-detection loss instead of continuing to tune this
-heatmap-plus-local-box head.
+plain PyTorch detector or another architecture with a proper matching/object-
+detection loss instead of continuing to tune this heatmap-plus-local-box head.
 
 ### Archive Status
 

@@ -61,48 +61,6 @@ streaks into noise. Z-score preserves relative contrast.
 
 ---
 
-## Module 2: `training/convert_labels.py`
-
-### Function: `convert_yolo_obb_to_coco`
-
-```python
-def convert_yolo_obb_to_coco(
-    yolo_label_dir: str,
-    fits_dir: str,
-    output_json: str
-) -> None:
-    """Convert YOLO OBB label files to COCO JSON.
-
-    YOLO OBB format (per line): class cx cy w h angle_deg
-      - cx, cy, w, h normalized 0–1
-      - angle_deg in degrees (not normalized)
-
-    COCO JSON output:
-      images: [{id, file_name, width, height}]
-      annotations: [{
-        id, image_id, category_id,
-        bbox: [x1, y1, w, h],   ← axis-aligned, denormalized pixels
-        area: float,
-        obb: [cx, cy, w, h, angle_deg],  ← denormalized pixels, stored in extra field
-        iscrowd: 0
-      }]
-      categories: [{"id": 0, "name": "streak"}]
-
-    Prints summary: total images, total streaks,
-      streak length distribution (min / mean / max / p75 px)
-    """
-```
-
-### Test file: `tests/test_convert_labels.py`
-- [ ] Output JSON parses without error and has `images`, `annotations`, `categories`
-- [ ] Category list is `[{"id": 0, "name": "streak"}]`
-- [ ] Each annotation has an `obb` field with 5 values
-- [ ] `bbox` values are pixel-space (not 0–1 normalized)
-- [ ] Empty label directory → valid COCO JSON with zero annotations
-- [ ] Prints summary statistics to stdout
-
----
-
 ## Module 3: `training/dataset.py`
 
 ### Class: `FITSStreakDataset(torch.utils.data.Dataset)`
@@ -182,16 +140,10 @@ No augmentations — return raw normalized image only.
 
 ## Phase 1 Gate
 
-Before starting Phase 2, verify both:
+Before starting Phase 2, verify:
 
 ```bash
-# 1. COCO conversion produces valid output
-python training/convert_labels.py \
-  --yolo-labels data/annotations/yolo/ \
-  --fits-dir data/raw/ \
-  --output data/annotations/train.json
-
-# 2. Dataset iterates cleanly
+# Dataset iterates cleanly
 python training/dataset.py data/annotations/train.json
 # Expected: prints first item shape + target keys, no errors
 

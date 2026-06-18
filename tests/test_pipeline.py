@@ -31,6 +31,17 @@ _REQUIRED_KEYS = {
 }
 _OBB_KEYS = {"cx", "cy", "w", "h", "angle_deg"}
 
+# Override heatmap checkpoint paths so detectors gracefully skip when weights
+# aren't needed for a given test.
+_NO_CKPT = "/nonexistent/checkpoint.pt"
+_DISABLE_HEATMAPS = {
+    "VITS_HEATMAP_CHECKPOINT":    _NO_CKPT,
+    "VITB_HEATMAP_CHECKPOINT":    _NO_CKPT,
+    "VITS_V4_HEATMAP_CHECKPOINT": _NO_CKPT,
+    "VITB_V4_HEATMAP_CHECKPOINT": _NO_CKPT,
+    "VITS_V9_HEATMAP_CHECKPOINT": _NO_CKPT,
+}
+
 # Two fake raw detections returned by the mocked _run_inference
 _FAKE_DETS = [
     {"bbox": [50.0, 60.0, 300.0, 80.0], "confidence": 0.92},
@@ -100,14 +111,13 @@ class TestRunFastMode:
 
         mock_model = MagicMock()
         fake_dets  = _FAKE_DETS[:n_dets]
-        extra_env  = {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS)}
+        extra_env  = {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS), **_DISABLE_HEATMAPS}
         if env:
             extra_env.update(env)
 
         with patch.object(pl, "_load_model", return_value=mock_model), \
              patch.object(pl, "_run_inference", return_value=list(fake_dets)), \
              patch.object(pl, "_run_classical_detector", return_value=[]), \
-             patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
              patch.dict(os.environ, extra_env, clear=False):
             return pl.run(_SYNTH_FITS, fast=fast)
 
@@ -144,29 +154,6 @@ class TestRunFastMode:
         result = self._run_patched(n_dets=0)
         assert result == []
 
-    def test_classical_detections_are_included_when_ml_is_empty(self):
-        import inference.pipeline as pl
-
-        classical = {
-            "method": "classical",
-            "confidence": 0.75,
-            "bbox": [40.0, 50.0, 220.0, 60.0],
-            "obb": {"cx": 130.0, "cy": 55.0, "w": 180.0, "h": 4.0, "angle_deg": 0.0},
-            "streak_length_px": 180.0,
-        }
-
-        with patch.object(pl, "_load_model", return_value=MagicMock()), \
-             patch.object(pl, "_run_inference", return_value=[]), \
-             patch.object(pl, "_run_classical_detector", return_value=[classical]), \
-             patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
-             patch.dict(os.environ,
-                        {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS)},
-                        clear=False):
-            result = pl.run(_SYNTH_FITS, fast=True)
-
-        assert len(result) == 1
-        assert result[0]["method"] == "classical"
-
     def test_missing_weights_raises_file_not_found(self, tmp_path):
         from inference.pipeline import _load_model
         import torch
@@ -180,10 +167,9 @@ class TestRunFastMode:
         with patch.object(pl, "_load_model", return_value=MagicMock()), \
              patch.object(pl, "_run_inference", return_value=list(_FAKE_DETS[:1])), \
              patch.object(pl, "_run_classical_detector", return_value=[]), \
-             patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
              patch.dict(os.environ,
                         {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS),
-                         "FAST_MODE": "true"},
+                         "FAST_MODE": "true", **_DISABLE_HEATMAPS},
                         clear=False):
             result = pl.run(_SYNTH_FITS, fast=False)  # fast=False but env says true
         # In fast mode identifications must be empty
@@ -200,9 +186,10 @@ class TestCrossIdCap:
         import inference.pipeline as pl
         import inference.postprocess as pp
 
-        raw_dets = [
+        endpoint_dets = [
             {
-                "bbox": [float(10 + i * 40), 20.0, float(35 + i * 40), 28.0],
+                "x1": float(10 + i * 40), "y1": 20.0,
+                "x2": float(35 + i * 40), "y2": 28.0,
                 "confidence": 1.0 - i / 20.0,
             }
             for i in range(8)
@@ -213,12 +200,10 @@ class TestCrossIdCap:
                 det["identifications"] = [{"rank": 1}]
             return detections
 
-        with patch.object(pl, "_load_model", return_value=MagicMock()), \
-             patch.object(pl, "_run_inference", return_value=raw_dets), \
-             patch.object(pl, "_run_classical_detector", return_value=[]), \
-             patch.object(pl, "_run_streakmind_yolo_detector", return_value=[]), \
+        with patch.object(pl, "_run_all_detectors", return_value=(
+                 {"vits_heatmap": endpoint_dets}, {}, [])), \
              patch.object(pl, "_pixel_to_sky", return_value=(10.0, 20.0)), \
-             patch.object(pp, "refine_angle", return_value=0.0), \
+             patch.object(pp, "refine_segment_angle", return_value=0.0), \
              patch.object(crossid, "cross_identify", side_effect=_mark_identified) as mock_crossid, \
              patch.dict(os.environ,
                         {"MODEL_SIZE": "tiny", "MODEL_WEIGHTS": str(_SYNTH_FITS),

@@ -404,34 +404,22 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
         db_t0 = time.perf_counter()
         async with session_factory() as session:
             for det_dict in detections:
-                obb = det_dict.get("obb") or {}
-                bbox = det_dict.get("bbox") or [None, None, None, None]
                 det = Detection(
                     id=str(uuid.uuid4()),
                     observation_id=job_id,
                     method=det_dict.get("method") or "ml",
                     confidence=float(det_dict.get("confidence", 0.0)),
-                    bbox_x1=bbox[0] if len(bbox) > 0 else None,
-                    bbox_y1=bbox[1] if len(bbox) > 1 else None,
-                    bbox_x2=bbox[2] if len(bbox) > 2 else None,
-                    bbox_y2=bbox[3] if len(bbox) > 3 else None,
-                    obb_cx=obb.get("cx"),
-                    obb_cy=obb.get("cy"),
-                    obb_w=obb.get("w"),
-                    obb_h=obb.get("h"),
-                    obb_angle_deg=obb.get("angle_deg"),
                     streak_length_px=det_dict.get("streak_length_px"),
                     streak_id=det_dict.get("streak_id"),
                     ra_tip1_deg=det_dict.get("ra_tip1_deg"),
                     dec_tip1_deg=det_dict.get("dec_tip1_deg"),
                     ra_tip2_deg=det_dict.get("ra_tip2_deg"),
                     dec_tip2_deg=det_dict.get("dec_tip2_deg"),
-                    # Segment endpoints (present for heatmap detectors)
                     x1=det_dict.get("x1"),
                     y1=det_dict.get("y1"),
                     x2=det_dict.get("x2"),
                     y2=det_dict.get("y2"),
-                    angle_deg=obb.get("angle_deg"),
+                    angle_deg=det_dict.get("angle_deg"),
                 )
                 session.add(det)
                 await session.flush()
@@ -715,13 +703,12 @@ def _render_png(
         draw = ImageDraw.Draw(img, "RGBA")
 
         for det in detections:
-            bbox = det.get("bbox")
-            if bbox and len(bbox) == 4:
+            if all(det.get(key) is not None for key in ("x1", "y1", "x2", "y2")):
                 conf = det.get("confidence", 1.0)
                 alpha = int(conf * 200)
-                draw.rectangle(
-                    [bbox[0], bbox[1], bbox[2], bbox[3]],
-                    outline=(0, 220, 255, alpha),
+                draw.line(
+                    [det["x1"], det["y1"], det["x2"], det["y2"]],
+                    fill=(0, 220, 255, alpha),
                     width=2,
                 )
 
@@ -951,20 +938,11 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
                 "method": "unified",
                 "confidence": unified_conf,
                 "photo_taken_at": obs.obs_epoch,
-                "bbox": [primary.bbox_x1, primary.bbox_y1, primary.bbox_x2, primary.bbox_y2],
-                "obb": {
-                    "cx": primary.obb_cx,
-                    "cy": primary.obb_cy,
-                    "w": primary.obb_w,
-                    "h": primary.obb_h,
-                    "angle_deg": primary.obb_angle_deg,
-                },
                 "streak_length_px": primary.streak_length_px,
                 "ra_tip1_deg": primary.ra_tip1_deg,
                 "dec_tip1_deg": primary.dec_tip1_deg,
                 "ra_tip2_deg": primary.ra_tip2_deg,
                 "dec_tip2_deg": primary.dec_tip2_deg,
-                # Segment endpoints (null for legacy rows / classical detectors)
                 "x1": primary.x1,
                 "y1": primary.y1,
                 "x2": primary.x2,

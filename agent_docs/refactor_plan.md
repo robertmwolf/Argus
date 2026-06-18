@@ -284,8 +284,8 @@ boundary explicitly in `docs/architecture.md`.
 
 Option B (add `DETECTOR=classical|dino` env var to the API) is ~4 hours and
 only needed if side-by-side comparison through the UI is specifically required.
-The eval benchmark already handles DINO vs YOLO comparison; the classical path
-is covered by `eval/benchmark.py` through its direct API.
+The eval benchmark covers the classical path through `eval/benchmark.py`'s
+direct API.
 
 **Effort for Option A:** 30 minutes.
 

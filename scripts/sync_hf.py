@@ -40,7 +40,7 @@ WEIGHTS_DIR = REPO_ROOT / "weights"
 EXTERNAL_ANNOTATIONS = Path("/Volumes/External/TrainingData/annotations")
 
 # Explicit allowlist — only current/active weights.
-# Superseded runs (8–12, run_plain_dinov3, streakmind_yolo, yolo_run17) are excluded.
+# Superseded runs (8–12, run_plain_dinov3) are excluded.
 WEIGHTS_INCLUDE = [
     # Production heatmap detector
     "run15_vits/best.pt",

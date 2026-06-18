@@ -1,8 +1,4 @@
-"""Radon-based angle refinement and oriented bounding-box NMS for ARGUS.
-
-Post-processes raw axis-aligned detections from DINO into oriented bounding
-boxes (OBBs) with sub-degree angle precision, then suppresses duplicate
-detections via rotated-IoU NMS.
+"""Endpoint-based refinement, suppression, and grouping for ARGUS.
 
 CPU-only: skimage.transform.radon and Shapely are not GPU-accelerated.
 This is expected — do not attempt to move these operations to MPS or CUDA.
@@ -103,28 +99,15 @@ def _seg_1d_iou(
 def _det_endpoints(det: dict) -> tuple[float, float, float, float] | None:
     """Return (x1, y1, x2, y2) from a detection dict.
 
-    Prefers native endpoint fields; falls back to deriving from obb.
-
     Args:
         det: Detection dict.
 
     Returns:
-        Tuple (x1, y1, x2, y2) or None if neither source is available.
+        Tuple (x1, y1, x2, y2) or None when an endpoint is absent.
     """
-    import math as _math
     if all(k in det for k in ("x1", "y1", "x2", "y2")):
         return float(det["x1"]), float(det["y1"]), float(det["x2"]), float(det["y2"])
-    obb = det.get("obb")
-    if obb is None:
-        return None
-    cx = float(obb.get("cx", 0))
-    cy = float(obb.get("cy", 0))
-    half = float(obb.get("w", 0)) / 2.0
-    rad = _math.radians(float(obb.get("angle_deg", 0)))
-    cos_r = _math.cos(rad)
-    sin_r = _math.sin(rad)
-    return (cx - half * cos_r, cy - half * sin_r,
-            cx + half * cos_r, cy + half * sin_r)
+    return None
 
 
 def _segment_suppress(
@@ -137,7 +120,7 @@ def _segment_suppress(
     """Return True if two detections should be mutually suppressed by segment NMS.
 
     Args:
-        det_a: First detection dict (must have x1/y1/x2/y2 or obb).
+        det_a: First endpoint detection dictionary.
         det_b: Second detection dict.
         angle_tol: Maximum angle error in degrees.
         perp_tol: Maximum perpendicular offset in pixels.
@@ -197,53 +180,15 @@ def _segment_group_match(
 
 
 # ---------------------------------------------------------------------------
-# OBB construction
-# ---------------------------------------------------------------------------
-
-def bbox_to_obb(bbox: list[float], angle_deg: float) -> dict:
-    """Convert an axis-aligned bounding box and streak angle to an OBB dict.
-
-    The OBB is centred on the bbox midpoint.  The *w* (long) axis is the
-    extent of the bbox projected onto the streak direction; *h* (short) axis
-    is the perpendicular extent — an estimate of streak width.
-
-    Args:
-        bbox: [x1, y1, x2, y2] axis-aligned box in pixel coordinates.
-        angle_deg: Streak orientation in degrees (0–180).
-
-    Returns:
-        Dict with keys: cx, cy, w, h, angle_deg.
-    """
-    x1, y1, x2, y2 = bbox
-    cx = (x1 + x2) / 2.0
-    cy = (y1 + y2) / 2.0
-    bw = abs(x2 - x1)
-    bh = abs(y2 - y1)
-
-    theta = math.radians(angle_deg % 180.0)
-    cos_t = abs(math.cos(theta))
-    sin_t = abs(math.sin(theta))
-
-    # Extent along the Radon-refined streak axis (angle_deg must not change here —
-    # flipping it by 90° would cause extend_obb_to_streak_extent to scan
-    # perpendicular to the streak and miss all bright pixels).
-    w = bw * cos_t + bh * sin_t
-    # Extent perpendicular to the streak axis (approximates streak width)
-    h = bw * sin_t + bh * cos_t
-
-    return {"cx": cx, "cy": cy, "w": w, "h": h, "angle_deg": angle_deg}
-
-
-# ---------------------------------------------------------------------------
 # Radon angle refinement
 # ---------------------------------------------------------------------------
 
-def refine_angle(
+def refine_segment_angle(
     image_crop: np.ndarray,
-    obb: dict,
+    initial_angle: float,
     angle_search_range: float = 15.0,
 ) -> float:
-    """Refine OBB angle using the Radon transform on the streak crop.
+    """Refine a segment angle using the Radon transform on the streak crop.
 
     Searches a narrow angular window around DINO's initial estimate.
     The Radon sinogram column with maximum variance corresponds to the
@@ -252,23 +197,21 @@ def refine_angle(
 
     CPU-only — skimage.transform.radon is numpy-backed.
 
-    # Source: StreakMind — Radon angle refinement for OBB streaks
+    # Source: StreakMind — Radon angle refinement for streaks
     # Ref: agent_docs/argus_phases.md
 
     Args:
         image_crop: Greyscale or 3-channel uint8/float32 crop centred on the
             streak.  If 3-channel, the mean across channels is used.
-        obb: Detection OBB dict {cx, cy, w, h, angle_deg}.
+        initial_angle: Initial segment angle in degrees.
         angle_search_range: ±degrees around DINO's predicted angle to search.
-            Must be ≥ 0.  If 0, returns obb['angle_deg'] unchanged.
+            Must be ≥ 0. If 0, returns the initial angle unchanged.
 
     Returns:
         Refined angle in degrees in the range [0, 180).
     """
     # Import here so CPU-only module is not loaded until needed
     from skimage.transform import radon  # type: ignore[import]
-
-    initial_angle = obb.get("angle_deg", 0.0)
 
     if angle_search_range <= 0:
         return float(initial_angle % 180.0)
@@ -283,8 +226,7 @@ def refine_angle(
         return float(initial_angle % 180.0)
 
     # Downsample large crops before Radon to keep runtime bounded.
-    # DINO bboxes scaled back from a low-resolution inference pass (e.g. 256 px
-    # on a 6k-pixel sensor) produce crops of 2000–3000 px; Radon on these with
+    # Large source-image crops can be 2000–3000 px; Radon on these with
     # 360 angles takes many minutes on CPU.  512 px preserves sub-degree
     # angular precision while keeping Radon runtime under ~1 s.
     _MAX_RADON_SIDE = 512
@@ -346,41 +288,42 @@ def refine_angle(
 
 
 # ---------------------------------------------------------------------------
-# Streak extent — extend OBB endpoints to the true streak tips
+# Streak extent — extend endpoints to the true streak tips
 # ---------------------------------------------------------------------------
 
-def extend_obb_to_streak_extent(
+def extend_segment_to_streak_extent(
     array: np.ndarray,
-    obb: dict,
+    detection: dict,
     sample_halfwidth: int = 8,
     threshold_sigma: float = 3.0,
     _gray: "np.ndarray | None" = None,
     _threshold: float | None = None,
 ) -> dict:
-    """Extend OBB w/cx/cy so endpoints cover the full streak, not just the bbox.
+    """Extend a detection's endpoints to cover the full visible streak.
 
-    DINO bboxes often capture only a portion of a long streak.  This function
-    traces the streak axis across the full image and finds where the signal
-    drops to background level, then returns an updated OBB with corrected
-    centre and long-axis length.
+    This function traces the streak axis across the full image and finds where
+    the signal drops to background level.
 
     Args:
         array: uint8 (H, W, 3) or (H, W) image array from FITSLoader.
-        obb: OBB dict {cx, cy, w, h, angle_deg} — modified copy is returned.
+        detection: Endpoint detection dictionary.
         sample_halfwidth: Half-width of the perpendicular sampling strip.
-            Must be large enough to cover the typical offset between the bbox
-            centre and the actual streak axis — default 8 px.
+            Must cover the typical offset between the segment midpoint and
+            actual streak axis.
         threshold_sigma: Multiplier on std above the image median.  Set higher
             than the mean-based default (1.5) because we use the strip maximum
             rather than the mean; default 3.0 keeps the background false-positive
             rate below ~2 % for a 17-pixel strip.
 
     Returns:
-        Updated OBB dict with corrected cx, cy, w.  h and angle_deg unchanged.
+        Updated endpoint detection dictionary.
     """
-    cx = obb["cx"]
-    cy = obb["cy"]
-    angle_rad = math.radians(obb["angle_deg"])
+    from inference.streak_segment import apply_segment_geometry
+    result = dict(detection)
+    apply_segment_geometry(result)
+    cx = result["cx"]
+    cy = result["cy"]
+    angle_rad = math.radians(result["angle_deg"])
     cos_a = math.cos(angle_rad)
     sin_a = math.sin(angle_rad)
 
@@ -416,11 +359,11 @@ def extend_obb_to_streak_extent(
     # Vectorised strip sampling: build a (n_t × n_s) index grid covering all
     # positions along the streak axis at once, then take the per-row max.
     # Using max-per-strip (rather than mean) lets a 1–2 px wide streak clear
-    # the threshold even when the bbox centre is offset from the streak axis.
+    # the threshold even when the segment midpoint is offset from the streak axis.
     _t = np.arange(t_lo, t_hi, 1.0)
     if _t.size == 0:
-        logger.debug("extend_obb: t-range empty — OBB unchanged")
-        return dict(obb)
+        logger.debug("extend_segment: axis range empty — segment unchanged")
+        return result
 
     _s = np.arange(-sample_halfwidth, sample_halfwidth + 1)  # (n_s,)
     _xc = cx + _t * cos_a  # (n_t,)
@@ -439,14 +382,14 @@ def extend_obb_to_streak_extent(
     bright_idx = np.where(_strip_max > threshold)[0]
 
     if bright_idx.size == 0:
-        logger.debug("extend_obb: no bright pixels found along axis — OBB unchanged")
-        return dict(obb)
+        logger.debug("extend_segment: no bright pixels found — segment unchanged")
+        return result
 
     # Group bright t values into contiguous runs (gap tolerance = 5 px).
     # bright_idx indexes into _t which steps by 1 px, so an index gap equals
     # a t gap.  Vectorised: find where consecutive index gaps exceed tolerance,
     # then build run (start, end) pairs without a Python loop.
-    # Then select the run that contains t=0 (the OBB centre is guaranteed to
+    # Then select the run that contains t=0 (the segment midpoint is expected to
     # lie on the streak), falling back to the longest run if t=0 is not bright.
     # This prevents isolated noise spikes beyond the streak from inflating w.
     gap_tolerance = 5.0
@@ -461,12 +404,12 @@ def extend_obb_to_streak_extent(
             for s, e in zip(_rs, _re)
         ]
 
-    # Prefer the run that straddles t=0 (OBB centre on the streak).
+    # Prefer the run that straddles t=0 (segment midpoint on the streak).
     # Fallback: pick the longest run globally (original behaviour), but
     # guard against jumping to a distant unrelated feature (star, cosmic
     # ray) by rejecting the result when the implied centre shift exceeds
-    # max(obb_w, 150) px.  Shifts within that window allow the function
-    # to extend a partially-detected streak whose OBB centre is slightly
+    # max(segment length, 150) px. Shifts within that window allow the function
+    # to extend a partially detected streak whose midpoint is slightly
     # off-axis, while blocking jumps of hundreds of pixels to a star.
     centre_runs = [(s, e) for s, e in runs if s <= 0.0 <= e]
     if centre_runs:
@@ -474,169 +417,36 @@ def extend_obb_to_streak_extent(
     else:
         t_start, t_end = max(runs, key=lambda r: r[1] - r[0])
         centre_shift = abs((t_start + t_end) / 2.0)
-        max_shift = max(float(obb.get("w", 0.0)), 150.0)
+        max_shift = max(float(result["streak_length_px"]), 150.0)
         if centre_shift > max_shift:
             logger.debug(
-                "extend_obb: fallback centre shift %.0f px exceeds limit %.0f px "
-                "(likely a distant star/artefact) — OBB unchanged",
+                "extend_segment: fallback centre shift %.0f px exceeds limit %.0f px",
                 centre_shift, max_shift,
             )
-            return dict(obb)
+            return result
 
     new_w   = t_end - t_start
-    if new_w < float(obb["w"]):
+    if new_w < float(result["streak_length_px"]):
         logger.debug(
-            "extend_obb: candidate run would shrink OBB %.0f→%.0f px; keeping original",
-            obb["w"], new_w,
+            "extend_segment: candidate run would shrink %.0f→%.0f px; keeping original",
+            result["streak_length_px"], new_w,
         )
-        return dict(obb)
+        return result
 
     new_cx  = cx + (t_start + t_end) / 2.0 * cos_a
     new_cy  = cy + (t_start + t_end) / 2.0 * sin_a
 
     logger.debug(
-        "extend_obb: t=[%.0f, %.0f]  old_w=%.0f→new_w=%.0f  "
+        "extend_segment: t=[%.0f, %.0f]  old_length=%.0f→new_length=%.0f  "
         "cx=(%.1f→%.1f)  cy=(%.1f→%.1f)",
-        t_start, t_end, obb["w"], new_w, cx, new_cx, cy, new_cy,
+        t_start, t_end, result["streak_length_px"], new_w, cx, new_cx, cy, new_cy,
     )
-    return {**obb, "cx": new_cx, "cy": new_cy, "w": new_w}
-
-
-# ---------------------------------------------------------------------------
-# Rotated-IoU NMS
-# ---------------------------------------------------------------------------
-
-def _obb_to_polygon(obb: dict):  # returns shapely.Polygon
-    """Convert an OBB dict to a Shapely Polygon (rotated rectangle).
-
-    Args:
-        obb: Dict with keys cx, cy, w, h, angle_deg.
-
-    Returns:
-        shapely.geometry.Polygon representing the four corners of the OBB.
-    """
-    from shapely.geometry import Polygon  # type: ignore[import]
-
-    cx = obb["cx"]
-    cy = obb["cy"]
-    w = obb["w"]
-    h = obb["h"]
-    theta = math.radians(obb["angle_deg"])
-    cos_t = math.cos(theta)
-    sin_t = math.sin(theta)
-
-    hw = w / 2.0
-    hh = h / 2.0
-
-    # Four corners in local OBB frame, rotated to image frame
-    corners = [
-        (cx + hw * cos_t - hh * sin_t, cy + hw * sin_t + hh * cos_t),
-        (cx - hw * cos_t - hh * sin_t, cy - hw * sin_t + hh * cos_t),
-        (cx - hw * cos_t + hh * sin_t, cy - hw * sin_t - hh * cos_t),
-        (cx + hw * cos_t + hh * sin_t, cy + hw * sin_t - hh * cos_t),
-    ]
-    return Polygon(corners)
-
-
-def _rotated_iou(obb_a: dict, obb_b: dict) -> float:
-    """Compute intersection-over-union for two OBBs using Shapely.
-
-    Args:
-        obb_a: First OBB dict {cx, cy, w, h, angle_deg}.
-        obb_b: Second OBB dict {cx, cy, w, h, angle_deg}.
-
-    Returns:
-        IoU in [0, 1].  Returns 0.0 if either polygon is degenerate.
-    """
-    try:
-        poly_a = _obb_to_polygon(obb_a)
-        poly_b = _obb_to_polygon(obb_b)
-        if not poly_a.is_valid or not poly_b.is_valid:
-            return 0.0
-        intersection = poly_a.intersection(poly_b).area
-        if intersection == 0.0:
-            return 0.0
-        union = poly_a.area + poly_b.area - intersection
-        return float(intersection / union) if union > 0 else 0.0
-    except Exception as exc:  # pragma: no cover
-        logger.debug("rotated IoU failed: %s", exc)
-        return 0.0
-
-
-def _rotated_iom(obb_a: dict, obb_b: dict) -> float:
-    """Compute intersection-over-minimum for two OBBs using Shapely.
-
-    Unlike IoU, IoM is robust to partial detections and perpendicular offsets
-    on thin elongated streaks.  A short detection that is fully contained within
-    a longer detection of the same streak scores IoM ≈ 1.0 but IoU ≈ 0.2 — IoU
-    would wrongly split them into different streak groups.
-
-    Args:
-        obb_a: First OBB dict {cx, cy, w, h, angle_deg}.
-        obb_b: Second OBB dict {cx, cy, w, h, angle_deg}.
-
-    Returns:
-        intersection / min(area_a, area_b) in [0, 1].  Returns 0.0 if either
-        polygon is degenerate or has zero area.
-    """
-    try:
-        poly_a = _obb_to_polygon(obb_a)
-        poly_b = _obb_to_polygon(obb_b)
-        if not poly_a.is_valid or not poly_b.is_valid:
-            return 0.0
-        min_area = min(poly_a.area, poly_b.area)
-        if min_area <= 0.0:
-            return 0.0
-        intersection = poly_a.intersection(poly_b).area
-        return float(intersection / min_area)
-    except Exception as exc:  # pragma: no cover
-        logger.debug("rotated IoM failed: %s", exc)
-        return 0.0
-
-
-def _angle_delta_deg(a: float, b: float) -> float:
-    """Return the smallest angle difference for 180°-symmetric streaks."""
-    diff = abs(float(a) - float(b)) % 180.0
-    return min(diff, 180.0 - diff)
-
-
-def _interval_gap(a0: float, a1: float, b0: float, b1: float) -> float:
-    """Return the gap between two 1-D intervals, or 0 when they overlap."""
-    return max(0.0, max(min(a0, a1), min(b0, b1)) - min(max(a0, a1), max(b0, b1)))
-
-
-def _collinear_streak_match(
-    obb_a: dict,
-    obb_b: dict,
-    angle_threshold_deg: float = 15.0,
-    perpendicular_threshold_px: float = 40.0,
-    max_gap_px: float = 900.0,
-) -> bool:
-    """Return True when two non-overlapping OBBs look like same-line fragments."""
-    if _angle_delta_deg(obb_a.get("angle_deg", 0.0), obb_b.get("angle_deg", 0.0)) > angle_threshold_deg:
-        return False
-
-    theta = math.radians(float(obb_a.get("angle_deg", 0.0)))
-    cos_a = math.cos(theta)
-    sin_a = math.sin(theta)
-    perp_x = -sin_a
-    perp_y = cos_a
-
-    dx = float(obb_b["cx"]) - float(obb_a["cx"])
-    dy = float(obb_b["cy"]) - float(obb_a["cy"])
-    perpendicular_distance = abs(dx * perp_x + dy * perp_y)
-    if perpendicular_distance > perpendicular_threshold_px:
-        return False
-
-    t_b = dx * cos_a + dy * sin_a
-    half_a = float(obb_a.get("w", 0.0)) / 2.0
-    half_b = float(obb_b.get("w", 0.0)) / 2.0
-    gap = _interval_gap(-half_a, half_a, t_b - half_b, t_b + half_b)
-    dynamic_gap = min(
-        max_gap_px,
-        max(120.0, 2.0 * max(float(obb_a.get("w", 0.0)), float(obb_b.get("w", 0.0)))),
-    )
-    return gap <= dynamic_gap
+    half = new_w / 2.0
+    result["x1"] = new_cx - half * cos_a
+    result["y1"] = new_cy - half * sin_a
+    result["x2"] = new_cx + half * cos_a
+    result["y2"] = new_cy + half * sin_a
+    return apply_segment_geometry(result)
 
 
 def nms_detections(
@@ -651,12 +461,8 @@ def nms_detections(
       2. Perpendicular offset < 8 px
       3. 1-D IoU along the kept detection's axis > 0.3
 
-    For detections that have only an ``obb`` and no ``x1/y1/x2/y2`` fields
-    (classical detector output), endpoints are derived from the OBB.
-
     Args:
-        detections: List of detection dicts, each containing an 'obb' key
-            and/or 'x1/y1/x2/y2' endpoint keys, plus a 'confidence' key.
+        detections: Endpoint detection dictionaries with confidence scores.
         iou_threshold: Unused — kept for API compatibility.  The segment
             criteria are always applied at fixed tolerances.
 
@@ -733,26 +539,16 @@ def group_detections(
 ) -> list[dict]:
     """Group overlapping detections by streak without suppressing any.
 
-    Detections whose OBBs overlap above *iou_threshold* (IoU) **or**
-    *iom_threshold* (IoMin = intersection / min-area) are assigned the same
-    ``streak_id`` (1-based int).  All detections are returned — nothing is
-    suppressed — so callers can display one row per (streak, method) pair.
-
-    IoMin is the primary signal here.  For thin elongated streaks, IoU is a
-    poor match metric: a 3 px perpendicular offset on a 5×500 px streak drops
-    IoU to ~0.25, far below any useful threshold.  IoMin instead asks "does
-    30 % of the smaller detection lie inside the larger?" — robust to partial
-    detections and small lateral offsets between methods.
+    Endpoint segments with compatible angle, perpendicular offset, and
+    projected overlap are assigned the same ``streak_id``.
 
     Within each group, detections are ordered by confidence descending.
     Groups themselves are ordered by the confidence of their best detection.
 
     Args:
-        detections: Detection dicts, each with 'obb' and 'confidence' keys.
-        iou_threshold: OBB IoU threshold above which two detections are
-            considered the same streak (kept for same-size detection pairs).
-        iom_threshold: OBB IoMin threshold above which two detections are
-            considered the same streak (handles partial/offset detections).
+        detections: Endpoint detection dictionaries.
+        iou_threshold: Retained for call compatibility; unused.
+        iom_threshold: Retained for call compatibility; unused.
 
     Returns:
         All input detections with a 'streak_id' int field added.
@@ -777,24 +573,12 @@ def group_detections(
             # unrelated detections.
             continue
         det_i = sorted_dets[i]
-        obb_i = det_i.get("obb")
         for j in range(i + 1, n):
             if group_id[j] != -1:
                 continue
             det_j = sorted_dets[j]
-            obb_j = det_j.get("obb")
-            # Primary: segment-based grouping (works for both new and legacy dets)
             if _segment_group_match(det_i, det_j):
                 group_id[j] = group_id[i]
-                continue
-            # Fallback for legacy detections that have only an OBB
-            if obb_i is not None and obb_j is not None:
-                if (
-                    _rotated_iou(obb_i, obb_j) > iou_threshold
-                    or _rotated_iom(obb_i, obb_j) > iom_threshold
-                    or _collinear_streak_match(obb_i, obb_j)
-                ):
-                    group_id[j] = group_id[i]
 
     for det, gid in zip(sorted_dets, group_id):
         det["streak_id"] = gid + 1  # 1-based for display
@@ -809,43 +593,24 @@ def group_detections(
     return sorted_dets
 
 
-def _obb_aspect_ratio(obb: dict) -> float:
-    """Return the long/short axis ratio of an OBB.
-
-    Args:
-        obb: Dict with keys w (long axis) and h (short axis).
-
-    Returns:
-        w / h, or 1.0 when h is zero.
-    """
-    w = float(obb.get("w", 0.0))
-    h = float(obb.get("h", 1.0))
-    return w / max(h, 1e-6)
-
-
 def fuse_group_geometries(detections: list[dict]) -> list[dict]:
-    """Fuse each grouped streak's fragment OBBs into one endpoint-spanning OBB.
+    """Fuse each grouped streak's fragments into one endpoint segment.
 
     ``group_detections`` assigns a shared ``streak_id`` to detections that
     likely belong to the same physical streak. This helper makes the group draw
     as one streak by projecting every member's endpoints onto the longest
-    member's axis, then writing the fused OBB back to every member in the group.
+    member's axis, then writing the fused endpoints to every group member.
     Single-member groups are left unchanged.
 
-    Geometry primary selection prefers tight oriented OBBs (aspect ratio ≥ 5)
-    over loose axis-aligned boxes.  When a classical detector fires alongside DINO,
-    DINO's axis-aligned bbox may be very large while a classical OBB is narrow.
-    Using the tight OBB as the axis seed produces more accurate fused geometry.
-
     Args:
-        detections: Detection dicts with ``streak_id``, ``obb``, and confidence.
+        detections: Endpoint detections with ``streak_id`` and confidence.
 
     Returns:
-        The same list with grouped OBB geometry updated in place.
+        The same list with grouped endpoint geometry updated in place.
     """
     groups: dict[object, list[dict]] = {}
     for det in detections:
-        if det.get("obb") is None:
+        if _det_endpoints(det) is None:
             continue
         groups.setdefault(det.get("streak_id"), []).append(det)
 
@@ -853,28 +618,11 @@ def fuse_group_geometries(detections: list[dict]) -> list[dict]:
         if len(group) < 2:
             continue
 
-        # Prefer the highest-confidence member that has native endpoints.
-        # Fall back to the longest OBB when no member has endpoints.
-        primary_with_seg = [d for d in group if all(k in d for k in ("x1", "y1", "x2", "y2"))]
-        if primary_with_seg:
-            primary = max(primary_with_seg, key=lambda d: d.get("confidence", 0.0))
-            ep = _det_endpoints(primary)
-            assert ep is not None
-            px1, py1, px2, py2 = ep
-            axis_angle = math.atan2(py2 - py1, px2 - px1)
-        else:
-            # Legacy path: use longest tight OBB as axis seed
-            _OBB_AR_THRESHOLD = 5.0
-            primary = max(
-                group,
-                key=lambda d: (
-                    1 if _obb_aspect_ratio((d.get("obb") or {})) >= _OBB_AR_THRESHOLD else 0,
-                    float((d.get("obb") or {}).get("w", 0.0)),
-                    d.get("confidence", 0.0),
-                ),
-            )
-            base_obb = primary.get("obb") or {}
-            axis_angle = math.radians(float(base_obb.get("angle_deg", 0.0)))
+        primary = max(group, key=lambda d: d.get("confidence", 0.0))
+        ep = _det_endpoints(primary)
+        assert ep is not None
+        px1, py1, px2, py2 = ep
+        axis_angle = math.atan2(py2 - py1, px2 - px1)
 
         cos_a = math.cos(axis_angle)
         sin_a = math.sin(axis_angle)
@@ -888,15 +636,12 @@ def fuse_group_geometries(detections: list[dict]) -> list[dict]:
         oy = (ep_primary[1] + ep_primary[3]) / 2.0
 
         t_values: list[float] = []
-        widths: list[float] = []
         for det in group:
             ep = _det_endpoints(det)
             if ep is None:
                 continue
             for px, py in ((ep[0], ep[1]), (ep[2], ep[3])):
                 t_values.append((px - ox) * cos_a + (py - oy) * sin_a)
-            obb = det.get("obb") or {}
-            widths.append(float(obb.get("h", 3.0)))
 
         if not t_values:
             continue
@@ -911,22 +656,14 @@ def fuse_group_geometries(detections: list[dict]) -> list[dict]:
         fused_x2 = fused_cx + (fused_length / 2.0) * cos_a
         fused_y2 = fused_cy + (fused_length / 2.0) * sin_a
         fused_angle = math.degrees(axis_angle) % 180.0
-        fused_h = max(float(np.median(widths)) if widths else 3.0, 3.0)
-
-        fused_obb = {
-            "cx": fused_cx,
-            "cy": fused_cy,
-            "w": fused_length,
-            "h": fused_h,
-            "angle_deg": fused_angle,
-        }
-
         for det in group:
-            det["obb"] = dict(fused_obb)
             det["x1"] = fused_x1
             det["y1"] = fused_y1
             det["x2"] = fused_x2
             det["y2"] = fused_y2
+            det["cx"] = fused_cx
+            det["cy"] = fused_cy
+            det["angle_deg"] = fused_angle
             det["streak_length_px"] = fused_length
 
     return detections
@@ -960,7 +697,7 @@ def classify_detection_quality(
     # Ref: examples/streak_live.inc, line 295–323
 
     Args:
-        det: Detection dict with keys: obb, confidence, streak_length_px,
+        det: Endpoint detection with confidence, streak_length_px,
              ra_tip1_deg, dec_tip1_deg, ra_tip2_deg, dec_tip2_deg.
         image_shape: (height, width) of the source image in pixels.
         edge_margin_px: Pixels from any edge that counts as "on the edge".
@@ -971,26 +708,11 @@ def classify_detection_quality(
         Integer quality flag (0–4).  See QUALITY_* constants.
     """
     h_img, w_img = image_shape
-    obb = det.get("obb") or {}
-
     # --- Edge check (flag 1) -------------------------------------------------
-    # Prefer native endpoint fields; fall back to OBB-derived endpoints.
-    if all(k in det for k in ("x1", "y1", "x2", "y2")):
-        tip1_x = float(det["x1"])
-        tip1_y = float(det["y1"])
-        tip2_x = float(det["x2"])
-        tip2_y = float(det["y2"])
-    else:
-        cx = float(obb.get("cx", 0))
-        cy = float(obb.get("cy", 0))
-        half = float(obb.get("w", 0)) / 2.0
-        angle_rad = math.radians(float(obb.get("angle_deg", 0)))
-        cos_a = math.cos(angle_rad)
-        sin_a = math.sin(angle_rad)
-        tip1_x = cx - half * cos_a
-        tip1_y = cy - half * sin_a
-        tip2_x = cx + half * cos_a
-        tip2_y = cy + half * sin_a
+    tip1_x = float(det["x1"])
+    tip1_y = float(det["y1"])
+    tip2_x = float(det["x2"])
+    tip2_y = float(det["y2"])
 
     m = edge_margin_px
     edge_contacts: list[str] = []
@@ -1053,17 +775,16 @@ if __name__ == "__main__":
         if 0 <= px < w and 0 <= py < h:
             img[py, px] += 500.0
 
-    obb = {"cx": 64.0, "cy": 64.0, "w": 110.0, "h": 4.0, "angle_deg": 50.0}
-    refined = refine_angle(img.astype(np.uint8), obb, angle_search_range=20.0)
-    print(f"True angle: {true_angle}°  DINO initial: {obb['angle_deg']}°  Refined: {refined:.1f}°")
+    refined = refine_segment_angle(img.astype(np.uint8), 50.0, angle_search_range=20.0)
+    print(f"True angle: {true_angle}°  Initial: 50.0°  Refined: {refined:.1f}°")
     assert abs(refined - true_angle) <= 5.0, f"Refinement too far off: {refined:.1f}°"
     print("refine_angle smoke-test passed.")
 
     # NMS smoke-test: two heavily overlapping detections
     dets = [
-        {"confidence": 0.9, "obb": {"cx": 64, "cy": 64, "w": 80, "h": 5, "angle_deg": 45}},
-        {"confidence": 0.6, "obb": {"cx": 65, "cy": 65, "w": 80, "h": 5, "angle_deg": 45}},
-        {"confidence": 0.8, "obb": {"cx": 200, "cy": 200, "w": 80, "h": 5, "angle_deg": 10}},
+        {"confidence": 0.9, "x1": 36, "y1": 36, "x2": 92, "y2": 92},
+        {"confidence": 0.6, "x1": 37, "y1": 37, "x2": 93, "y2": 93},
+        {"confidence": 0.8, "x1": 160, "y1": 193, "x2": 240, "y2": 207},
     ]
     kept = nms_detections(dets, iou_threshold=0.5)
     print(f"NMS: {len(dets)} → {len(kept)} (expected 2)")

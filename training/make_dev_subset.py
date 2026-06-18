@@ -1,7 +1,7 @@
 """Build the 50-image annotated dev subset for local training.
 
-Generates synthetic FITS images with known streak positions, writes YOLO OBB
-label files, and produces data/annotations/dev_subset.json in COCO format.
+Generates synthetic FITS images with known streak positions and produces
+data/annotations/dev_subset.json in COCO format.
 
 Subset composition (matches agent_docs/assistant_guide.md spec):
   20 images  — no streak (background only)
@@ -141,10 +141,7 @@ def _make_one(
     obs_time: datetime | None = None,
     seed: int | None = None,
 ) -> dict | None:
-    """Generate one synthetic FITS file and optional YOLO OBB label.
-
-    Returns streak metadata dict or None (blank image).
-    """
+    """Generate one synthetic FITS file. Returns streak metadata dict or None."""
     if obs_time is None:
         obs_time = datetime(2024, 4, 2, 2, 0, 0, tzinfo=timezone.utc)
 
@@ -173,18 +170,6 @@ def _make_one(
     hdr["SITEELEV"] = 280.0
     _make_wcs_header(hdr, width, height)
     hdu.writeto(str(fits_path), overwrite=True)
-
-    # Write YOLO OBB label file
-    label_path = output_dir / (Path(filename).stem + ".txt")
-    if has_streak and streak_meta is not None:
-        cx_n = streak_meta["cx"] / width
-        cy_n = streak_meta["cy"] / height
-        w_n  = streak_meta["w"]  / width
-        h_n  = streak_meta["h"]  / height
-        with open(label_path, "w") as f:
-            f.write(f"0 {cx_n:.6f} {cy_n:.6f} {w_n:.6f} {h_n:.6f} {streak_meta['angle_deg']:.4f}\n")
-    else:
-        label_path.write_text("")  # empty label for blank image
 
     logger.debug("Wrote %s (streak=%s)", fits_path.name, has_streak)
     return streak_meta
@@ -241,7 +226,7 @@ def build_dev_subset(
     """Generate all 50 images and write data/annotations/dev_subset.json.
 
     Args:
-        fits_dir: Directory to write FITS and label .txt files.
+        fits_dir: Directory to write FITS files.
         annotations_path: Output COCO JSON path.
         width: Image width in pixels.
         height: Image height in pixels.

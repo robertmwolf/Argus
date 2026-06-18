@@ -490,7 +490,7 @@ def _plate_scale_from_det(det: dict) -> float | None:
     """Derive plate scale (arcsec/pixel) from a detection's geometry.
 
     Computes the angular separation between the two tips and divides by the
-    OBB long axis (streak length in pixels).  Only valid when both tips have
+    endpoint length in pixels. Only valid when both tips have
     sky coordinates and the streak is long enough to give a reliable estimate.
 
     Args:
@@ -503,12 +503,10 @@ def _plate_scale_from_det(det: dict) -> float | None:
     dec1 = det.get("dec_tip1_deg")
     ra2  = det.get("ra_tip2_deg")
     dec2 = det.get("dec_tip2_deg")
-    obb  = det.get("obb")
-
-    if None in (ra1, dec1, ra2, dec2) or obb is None:
+    if None in (ra1, dec1, ra2, dec2):
         return None
 
-    length_px = float(obb.get("w", 0))
+    length_px = float(det.get("streak_length_px", 0))
     if length_px < 10.0:
         return None
 

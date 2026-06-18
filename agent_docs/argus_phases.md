@@ -372,7 +372,7 @@ IoU note: ground-truth streaks are ~3 px wide; DINO outputs axis-aligned bboxes.
 synthetic streaks score correctly against DINO predictions.
 
 ### `eval/benchmark.py`
-Head-to-head: DINO vs YOLO11-OBB baseline on same test split.
+Benchmark DINO and classical detectors on the test split.
 Output markdown table + save per-image results to `eval/results/`.
 
 **Batch inference API** — the benchmark loads the DINO model once before the
@@ -391,21 +391,19 @@ for img_info in coco["images"]:
 
 Target metrics (from StreakMind paper):
 - DINO Swin-L: ≥94% precision, ≥97% recall
-- YOLO baseline: reference comparison
 
 ### Local dev results: `results/phase8_benchmark.json`
 Recorded 2026-05-05. Swin-T, 50 epochs, 50-image synthetic dev subset, 256×256px, CPU.
 
-| Metric | DINO Swin-T | YOLO11-OBB | Target |
-|--------|-------------|------------|--------|
-| mAP@0.5 | 65.7% | 36.0% | — |
-| Precision | 66.7% | 63.2% | ≥94% |
-| Recall | 73.3% | 40.0% | ≥97% |
-| F1 | 69.8% | 49.0% | — |
-| Angle error | 29.6°* | 0.66° | — |
+| Metric | DINO Swin-T | Target |
+|--------|-------------|--------|
+| mAP@0.5 | 65.7% | — |
+| Precision | 66.7% | ≥94% |
+| Recall | 73.3% | ≥97% |
+| F1 | 69.8% | — |
+| Angle error | 29.6°* | — |
 
 *DINO angle is Radon-refined in fast mode; cross-ID and DB writes are skipped.
-YOLO angle is real (OBB corner-point output).
 
 ### Phase E results: `results/phase_e/phase_e_comparison_test.json`
 Recorded 2026-05-15. Evaluation on held-out `test.json` (full merged dataset).
@@ -414,13 +412,7 @@ Recorded 2026-05-15. Evaluation on held-out `test.json` (full merged dataset).
 |-------|-----|---------|---------|-------|
 | Co-DINO Swin-T | 0.149 | 0.190 | 0.167 | full merged dataset |
 | DINOv3 ViT-B (Phase C²) | 0.580 | **0.740** | 0.606 | frozen backbone, full dataset, 4 epochs |
-| YOLO11n-OBB (full dataset) | 0.561† | 0.673† | 0.574† | 15 epochs, 3 023 images → 14 385 tiles, Mac M3 CPU; P=57% R=85% F1=68% |
 | DINOv3 ViT-L (Phase D) | TBD | TBD | TBD | pending workstation run |
-
-†YOLO metrics are from YOLO's native tiled val split (2 881 tiles, 604 source images),
-not the full-image COCO test.json evaluated above.  The two evaluation protocols
-are not directly comparable — tiled IoU matching inflates mAP relative to full-image GT.
-`weights/run_full_yolo_obb/run/weights/best.pt` (5.4 MB), best at epoch 13/15.
 
 DINOv3 ViT-B (frozen) outperforms Swin-T by +0.55 mAP@0.5 on a fair comparison (same data, test split).
 Phase D (ViT-L, 50 epochs) is the definitive production run targeting ≥94% precision / ≥97% recall.
@@ -466,25 +458,21 @@ unreliable confidence magnitudes, also set its `confidence_ceiling`. Do not conv
 ASTRiDE back into a normal weighted detector.
 
 ### Ensemble v2 benchmark: `results/ensemble_benchmark_20260526/`
-Recorded 2026-05-26. Full three-set benchmark after updating detector profiles,
-adding per-band reliability weights, and preferring YOLO's tight OBBs in geometry
-fusion. Script: `scripts/run_ensemble_benchmark.py`. IoU threshold 0.50.
-P/R/F1 reported at conf ≥ 0.30. mAP computed on unfiltered predictions.
+Recorded 2026-05-26. Full three-set benchmark after updating detector profiles
+and adding per-band reliability weights. Script: `scripts/run_ensemble_benchmark.py`.
+IoU threshold 0.50. P/R/F1 reported at conf ≥ 0.30. mAP computed on unfiltered predictions.
 
 **SatStreaks test (308 images, in-distribution):**
 
 | Method | mAP@0.50 | P @0.30 | R @0.30 | F1 @0.30 |
 |--------|:--------:|:-------:|:-------:|:--------:|
 | DINOv3 ViT-B Multisource | **0.091** | **26.5 %** | **26.6 %** | **26.6 %** |
-| YOLO-OBB GTImages (single-pass) | 0.017 | 7.5 % | 10.4 % | 8.7 % |
 | ASTRiDE | — (JPEG, skipped) | — | — | — |
 | **Unified Ensemble v2** | 0.079 | 24.1 % | 26.6 % | 25.3 % |
 
-**
 | Method | mAP@0.50 | P @0.30 | R @0.30 | F1 @0.30 |
 |--------|:--------:|:-------:|:-------:|:--------:|
 | DINOv3 ViT-B Multisource | **0.083** | **25.4 %** | **24.9 %** | **25.2 %** |
-| YOLO-OBB GTImages (single-pass) | 0.016 | 7.4 % | 9.6 % | 8.4 % |
 | ASTRiDE | — (JPEG, skipped) | — | — | — |
 | **Unified Ensemble v2** | 0.072 | 23.0 % | 24.9 % | 23.9 % |
 
@@ -493,7 +481,6 @@ P/R/F1 reported at conf ≥ 0.30. mAP computed on unfiltered predictions.
 | Method | mAP@0.50 | R @0.30 | Notes |
 |--------|:--------:|:-------:|-------|
 | DINOv3 ViT-B Multisource | 0.002 | 2.3 % | GT OBBs are tight (h≈16 px); IoU vs loose DINO boxes ≈ 0 |
-| YOLO-OBB GTImages | 0.000 | 0.0 % | Single-pass 8192 px loses tile-scale detail |
 | ASTRiDE | 0.001 | 2.3 % | 604 detections/image (capped at 50); essentially random recall |
 | **Unified Ensemble v2** | 0.002 | 2.3 % | Same as DINO; ASTRiDE noise absorbed |
 
@@ -506,16 +493,11 @@ purpose-built overlap metric for thin-streak GT.
 
 **Key findings:**
 
-1. **DINOv3 is the strongest individual model** — 5–6× higher mAP than YOLO
-   on both evaluatable sets; generalises well zero-shot to 2. **Unified Ensemble v2 is marginally worse than DINO alone** (mAP 0.079 vs
+1. **Unified Ensemble v2 is marginally worse than DINO alone** (mAP 0.079 vs
    0.091 on SatStreaks). The corroboration weighting is slightly downgrading
    valid DINO detections instead of boosting them.
-3. **YOLO-OBB is weak at single-pass 8 192 px** — the model was trained on
-   640 px tiles; running full-frame loses the scale at which it learned.
-   Re-enabling tiled inference (STREAKMIND_YOLO_TILE_SIZE=640) should recover
-   the ~80 % medium-streak recall seen in the per-detector analysis.
-4. **ASTRiDE contributes nothing** — cannot run on JPEG inputs (SatStreaks,
-      maximum confidence boost is capped at 4 %. **Disabled by default** as of
+2. **ASTRiDE contributes nothing** — cannot run on JPEG inputs (SatStreaks);
+   maximum confidence boost is capped at 4 %. **Disabled by default** as of
    2026-05-26 (`_ASTRIDE_ENABLED_BY_DEFAULT = False` in `inference/pipeline.py`).
    Re-enable with `ARGUS_ENABLE_ASTRIDE=1`.
 
@@ -526,8 +508,6 @@ were set from a single-run analysis and have not been validated against held-out
 data. The ensemble will not outperform the best individual model until the weights
 are calibrated. Recommended next steps:
 
-- Re-enable YOLO tiled inference and re-run the benchmark to get accurate
-  per-band recall numbers for YOLO (especially medium streaks 150–400 px).
 - Run a grid search or Bayesian optimisation over `band_weights` in
   `DETECTOR_PROFILES` targeting F1 on the validation split.
 - Consider replacing the fixed F-beta weighting with a learned isotonic

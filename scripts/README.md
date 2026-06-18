@@ -40,7 +40,7 @@ path for older commands and active runs.
 |---|---:|---|---|
 | `convert_gtimages.py` | Active | Converts GTImages `.strk`/FITS metadata into COCO-style annotations. | Covered by tests. |
 | `merge_annotations.py` | Active | Builds current SatStreaks + GTImages train/val/test splits. | Main split builder in README. |
-| `merge_fits_annotations.py` | Provenance | Merges FITS-native annotation sources such as GTImages + Frigate. | Supports StreakMindYOLO comparison artifacts. |
+| `merge_fits_annotations.py` | Provenance | Merges FITS-native annotation sources such as GTImages + Frigate. | |
 | `prepare_atwood_holdout.py` | Active | Exports reviewed Atwood annotator output into positive and negative COCO holdout files. | Use before `zero_shot_eval.py`; excludes rejected and still-pending frames. |
 | `augment_gtimages_synthetic.py` | Provenance | Builds real and synthetic GTImages tracks for StreakMind reproduction. | Keep with methodology/results provenance. |
 | `augment_short_medium.py` | Provenance | Generates short/medium synthetic augmentation data. | Experiment-specific; archive only after outputs and rationale are captured elsewhere. |
@@ -49,9 +49,6 @@ path for older commands and active runs.
 
 | Script | Status | Purpose | Notes |
 |---|---:|---|---|
-| `train_yolo_full.sh` | Active | Trains/evaluates full-dataset YOLO11-OBB baseline. | Documented in README; integrated with inference when weights exist. |
-| `train_compare_streakmind_yolo.py` | Provenance | Python driver for StreakMindYOLO methodology comparison tracks. | Produces results under `results/streakmind_yolo/`. |
-| `train_streakmind_comparison.sh` | Provenance | Shell orchestration for the StreakMindYOLO comparison workflow. | Keep while methodology/results are active. |
 | `evaluate_dino_checkpoint.py` | Active | Evaluates a DINO checkpoint with project metrics. | Useful for ad hoc checkpoint checks. |
 | `phase_e_compare.py` | Active | Head-to-head DINOv3 vs Swin-T comparison table/JSON. | Documented in training handoff. |
 ## Plain DINOv3 Spike Scripts

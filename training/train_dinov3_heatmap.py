@@ -17,7 +17,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from inference.device import get_device
-from models.plain_dinov3.streak_heatmap import DINOv3StreakHeatmap, decode_geometry, imagenet_normalize
+from models.plain_dinov3.streak_heatmap import DINOv3StreakHeatmap, imagenet_normalize
 from training.dinov3_heatmap_dataset import StreakHeatmapDataset, collate_heatmap_batch
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,6 @@ def _run_epoch(
     optimizer: torch.optim.Optimizer | None,
     device: torch.device,
     pos_weight: float,
-    geometry_weight: float,
 ) -> dict[str, float]:
     training = optimizer is not None
     model.train(training)
@@ -48,22 +47,14 @@ def _run_epoch(
     for batch in loader:
         image = imagenet_normalize(batch["image"].to(device))
         target = batch["heatmap"].to(device)
-        geometry = batch["geometry"].to(device)
         output = model(image)
-        logits = output[:, :1]
-        geom_pred = decode_geometry(output[:, 1:5])
+        logits = output
         if logits.shape[-2:] != target.shape[-2:]:
             target = F.interpolate(target, size=logits.shape[-2:], mode="nearest")
-            geometry = F.interpolate(geometry, size=logits.shape[-2:], mode="nearest")
 
         bce = F.binary_cross_entropy_with_logits(logits, target, pos_weight=pos_weight_tensor)
         dice_loss = 1.0 - _dice_score(logits, target)
-        mask = target.expand_as(geometry) > 0
-        if bool(mask.any()):
-            geom_loss = F.smooth_l1_loss(geom_pred[mask], geometry[mask])
-        else:
-            geom_loss = torch.zeros((), device=device)
-        loss = bce + dice_loss + geometry_weight * geom_loss
+        loss = bce + dice_loss
 
         if training:
             optimizer.zero_grad(set_to_none=True)
@@ -90,7 +81,6 @@ def main() -> int:
     parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--pos-weight", type=float, default=20.0)
-    parser.add_argument("--geometry-weight", type=float, default=0.25)
     parser.add_argument("--max-samples", type=int, default=None)
     parser.add_argument("--num-workers", type=int, default=0)
     parser.add_argument("--smoke-test", action="store_true")
@@ -135,9 +125,9 @@ def main() -> int:
     best_dice = -1.0
     history: list[dict[str, float | int]] = []
     for epoch in range(1, args.epochs + 1):
-        train_metrics = _run_epoch(model, train_loader, optimizer, device, args.pos_weight, args.geometry_weight)
+        train_metrics = _run_epoch(model, train_loader, optimizer, device, args.pos_weight)
         with torch.no_grad():
-            val_metrics = _run_epoch(model, val_loader, None, device, args.pos_weight, args.geometry_weight)
+            val_metrics = _run_epoch(model, val_loader, None, device, args.pos_weight)
         row = {
             "epoch": epoch,
             "train_loss": train_metrics["loss"],

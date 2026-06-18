@@ -461,7 +461,7 @@ class TestPlateScaleFromDet:
         det = {
             "ra_tip1_deg": 0.0, "dec_tip1_deg": 0.0,
             "ra_tip2_deg": 1.0, "dec_tip2_deg": 0.0,
-            "obb": {"cx": 1800.0, "cy": 1800.0, "w": 3600.0, "h": 5.0, "angle_deg": 0.0},
+            "streak_length_px": 3600.0,
         }
         scale = _plate_scale_from_det(det)
         assert scale == pytest.approx(1.0, rel=1e-3)
@@ -470,18 +470,18 @@ class TestPlateScaleFromDet:
         from inference.crossid import _plate_scale_from_det
         det = {"ra_tip1_deg": None, "dec_tip1_deg": None,
                "ra_tip2_deg": None, "dec_tip2_deg": None,
-               "obb": {"w": 200.0}}
+               "streak_length_px": 200.0}
         assert _plate_scale_from_det(det) is None
 
     def test_too_short_streak_returns_none(self):
-        """OBB width < 10 px → cannot derive a reliable plate scale."""
+        """Segments shorter than 10 px cannot provide a reliable plate scale."""
         from inference.crossid import _plate_scale_from_det
         det = {"ra_tip1_deg": 0.0, "dec_tip1_deg": 0.0,
                "ra_tip2_deg": 0.01, "dec_tip2_deg": 0.0,
-               "obb": {"cx": 50.0, "cy": 50.0, "w": 5.0, "h": 5.0, "angle_deg": 0.0}}
+               "streak_length_px": 5.0}
         assert _plate_scale_from_det(det) is None
 
-    def test_missing_obb_returns_none(self):
+    def test_missing_length_returns_none(self):
         from inference.crossid import _plate_scale_from_det
         det = {"ra_tip1_deg": 0.0, "dec_tip1_deg": 0.0,
                "ra_tip2_deg": 1.0, "dec_tip2_deg": 0.0}

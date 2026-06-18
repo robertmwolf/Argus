@@ -80,9 +80,8 @@ def _default_checkpoint() -> Path:
 def _load_model(checkpoint_path: Path) -> tuple[Any, int, torch.device, bool]:
     """Load and cache the ViT-S heatmap model.
 
-    Returns (model, image_size, device, use_geometry).  use_geometry is False
-    when the checkpoint was trained without geometry loss (geometry_weight=0),
-    which prevents untrained head outputs from corrupting OBB angles.
+    Returns (model, image_size, device, use_geometry). Legacy multi-channel
+    checkpoints are loadable, but only their centerline heatmap is consumed.
     """
     device = get_device()
     cache_key = str(checkpoint_path.resolve())
@@ -110,12 +109,14 @@ def _load_model(checkpoint_path: Path) -> tuple[Any, int, torch.device, bool]:
 
     hidden      = int(ckpt.get("args", {}).get("hidden_channels", 256))
     in_channels = int(ckpt["in_channels"])
-    head = HeatmapHead(in_channels, hidden)
-    head.load_state_dict(ckpt["head"])
+    head_state = ckpt["head"]
+    out_channels = int(head_state["4.weight"].shape[0])
+    head = HeatmapHead(in_channels, hidden, out_channels=out_channels)
+    head.load_state_dict(head_state)
     backbone.head = head.net.to(device)
     backbone.eval()
 
-    use_geometry = float(ckpt.get("args", {}).get("geometry_weight", 0.0)) > 0.0
+    use_geometry = False
     result = (backbone, image_size, device, use_geometry)
     _MODEL_CACHE[cache_key] = result
     return result
@@ -148,8 +149,7 @@ def run_vits_heatmap_detector(
         checkpoint: Override checkpoint path (else uses env var / default).
 
     Returns:
-        Pipeline-compatible detection dicts with ``obb``, ``confidence``,
-        ``bbox``, ``streak_length_px``, and ``method`` keys.
+        Endpoint detections with confidence, length, and method metadata.
     """
     ckpt_path = Path(checkpoint) if checkpoint else _default_checkpoint()
     threshold        = float(os.environ.get("VITS_HEATMAP_THRESHOLD", "0.5"))

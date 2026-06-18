@@ -20,8 +20,6 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from inference.device import get_device
-from models.plain_dinov3.streak_heatmap import decode_geometry
-
 logger = logging.getLogger(__name__)
 
 
@@ -43,15 +41,14 @@ class CachedHeatmapDataset(Dataset):
         return {
             "features": sample["features"].float(),
             "heatmap": sample["heatmap"].float(),
-            "geometry": sample.get("geometry", torch.zeros((4, *sample["heatmap"].shape[-2:]))).float(),
             "image_id": torch.tensor(sample["image_id"], dtype=torch.int64),
         }
 
 
 class HeatmapHead(nn.Module):
-    """Small convolutional heatmap and geometry head for cached DINOv3 features."""
+    """Small convolutional endpoint-centerline head for cached features."""
 
-    def __init__(self, in_channels: int, hidden_channels: int = 256, out_channels: int = 5) -> None:
+    def __init__(self, in_channels: int, hidden_channels: int = 256, out_channels: int = 1) -> None:
         super().__init__()
         self.net = nn.Sequential(
             nn.Conv2d(in_channels, hidden_channels, kernel_size=1),
@@ -69,7 +66,6 @@ def _collate(batch: list[dict[str, Any]]) -> dict[str, torch.Tensor]:
     return {
         "features": torch.stack([item["features"] for item in batch]),
         "heatmap": torch.stack([item["heatmap"] for item in batch]),
-        "geometry": torch.stack([item["geometry"] for item in batch]),
         "image_id": torch.stack([item["image_id"] for item in batch]),
     }
 
@@ -226,10 +222,6 @@ class LossConfig:
     # clDice
     cldice_iters: int = 3
 
-    # geometry head
-    geometry_weight: float = 0.25
-
-
 # ── Training loop ─────────────────────────────────────────────────────────────
 
 def _run_epoch(
@@ -250,13 +242,10 @@ def _run_epoch(
     for batch in loader:
         features = batch["features"].to(device)
         target = batch["heatmap"].to(device)
-        geometry = batch["geometry"].to(device)
         output = head(features)
-        logits = output[:, :1]
-        geom_pred = decode_geometry(output[:, 1:5])
+        logits = output
         if logits.shape[-2:] != target.shape[-2:]:
             target = F.interpolate(target, size=logits.shape[-2:], mode="nearest")
-            geometry = F.interpolate(geometry, size=logits.shape[-2:], mode="nearest")
 
         mode = loss_cfg.mode
         if mode == "focal_dice":
@@ -281,13 +270,7 @@ def _run_epoch(
 
         seg_loss = 1.0 - seg_score
 
-        mask = target.expand_as(geometry) > 0
-        if bool(mask.any()):
-            geom_loss = F.smooth_l1_loss(geom_pred[mask], geometry[mask])
-        else:
-            geom_loss = torch.zeros((), device=device)
-
-        loss = heatmap_loss + seg_loss + loss_cfg.geometry_weight * geom_loss
+        loss = heatmap_loss + seg_loss
 
         if training:
             optimizer.zero_grad(set_to_none=True)
@@ -386,7 +369,6 @@ def main() -> int:
                         help="Soft-skeleton iterations for clDice. Default 3 (appropriate "
                              "for 28×28 feature maps; increase for higher-res heatmaps).")
 
-    parser.add_argument("--geometry-weight", type=float, default=0.25)
 
     args = parser.parse_args()
 
@@ -405,7 +387,6 @@ def main() -> int:
         asl_margin=args.asl_margin,
         tversky_alpha=args.tversky_alpha,
         cldice_iters=args.cldice_iters,
-        geometry_weight=args.geometry_weight,
     )
 
     train_ds = CachedHeatmapDataset(args.train_cache)

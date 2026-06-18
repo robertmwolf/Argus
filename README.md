@@ -6,8 +6,7 @@ and identification in FITS telescope images.  The primary detector is a
 **DINOv3 ViT-S/16 heatmap model** (Run 15 — trained on Atwood Observatory FITS
 at 400 px native tiles, z-score normalisation) that produces tiled probability
 maps which are stitched into line-segment detections.  ASTRiDE provides a
-classical corroboration signal on raw FITS input.  An optional YOLO-OBB detector
-(`streakmind_yolo`) is activated when its weights are present.
+classical corroboration signal on raw FITS input.
 
 Detections are merged across tiles and detectors by grouping overlapping or
 collinear segments and fusing them into a single streak-level line segment plus a
@@ -52,8 +51,8 @@ including exact parameters, design rationale, and reproducible algorithm descrip
 
 **Summary:** FITS → Z-score normalisation → tiled inference at 400 px (50 % overlap) →
 ViT-S/16 heatmap probabilities stitched into full-image map → line-segment extraction
-(threshold sweep, collinear stitch with growth-ratio guard) → optional ASTRiDE +
-YOLO-OBB passes → per-detector NMS → cross-detector grouping (rotated-IoU ≥ 0.5,
+(threshold sweep, collinear stitch with growth-ratio guard) → optional ASTRiDE pass →
+per-detector NMS → cross-detector grouping (rotated-IoU ≥ 0.5,
 IoMin ≥ 0.3, or collinear-fragment match) → grouped-geometry fusion to outer
 endpoints → ASTRiDE-only confidence lowering → Unified Confidence Score → SGP4
 cross-identification → FastAPI + React canvas.
@@ -260,7 +259,7 @@ object unidentified (`unknown`) rather than querying Space-Track at runtime.
 ## Running Locally (Dev)
 
 Run the API directly with the satid conda environment. The satid env has torch,
-mmdet, ultralytics, and all ML packages installed.
+mmdet, and all ML packages installed.
 
 ### Detector inventory
 
@@ -270,7 +269,6 @@ ARGUS runs detectors in parallel. Each is activated as described:
 |---|---|---|---|
 | DINOv3 ViT-S/16 HeatMap (Run 15) | `vits_heatmap` | always (primary ML detector) | `weights/run15_vits/best.pt` |
 | ASTRiDE classical | `astride` | **opt-in**: `ARGUS_ENABLE_ASTRIDE=1` | — |
-| YOLO-OBB GTImages | `streakmind_yolo` | when weights are present | `weights/streakmind_yolo_real/run/weights/best.pt` |
 | ViT-S OBB Run 5 | `dinov3_vits_run5` | `ARGUS_MODEL_CONFIGS` only | `weights/run5_vits_mmdet/best_coco_bbox_mAP_epoch_15.pth` |
 
 The `vits_heatmap` detector is the primary production path.  It was trained on
@@ -299,7 +297,7 @@ Remove the variable entirely to fall back to the single model set by `MODEL_SIZE
 
 Open `http://localhost:5173`, upload a FITS file.  In the results canvas:
 - **Cyan** lines = ViT-S heatmap detections (`vits_heatmap`)
-- **Amber** lines = ASTRiDE / YOLO classical detections
+- **Amber** lines = ASTRiDE classical detections
 - Toggle the **Heatmap** overlay button to view the raw probability sidecar
 
 Use the **Filters** panel to slide confidence thresholds per-method and isolate

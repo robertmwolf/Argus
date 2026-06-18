@@ -331,7 +331,6 @@ weighted_score = (
         ↓
 [Optional parallel detectors — inference/pipeline.py]
    ASTRiDE (ARGUS_ENABLE_ASTRIDE=1): classical σ-threshold contour detection on raw FITS
-   YOLO-OBB (streakmind_yolo): when weights/streakmind_yolo_real/ present
         ↓
 [inference/postprocess.py — StreakGrouping + UCS]
    Per-detector NMS (rotated-IoU)
@@ -352,7 +351,7 @@ weighted_score = (
         ↓
 [API response / Frontend display]
    Line-segment canvas rendering; heatmap overlay toggle; detection table
-   Cyan = vits_heatmap; Amber = ASTRiDE / YOLO
+   Cyan = vits_heatmap; Amber = ASTRiDE
 ```
 
 ## Service Deployment Roadmap

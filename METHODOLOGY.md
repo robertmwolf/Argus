@@ -130,9 +130,6 @@ split (~2,460 JPEG/PNG images), BrentImages Night 1 (~277 images), BrentImages N
 (204 annotated + 27 negative images), and tiled Frigate crops (558 positive tiles +
 159 negative tiles). Total: **3,971 images, 3,816 streak annotations**.
 
-YOLO is trained exclusively on tiled 640 px crops derived from SatStreaks (3,023 source
-images producing ~14,385 tiles).
-
 ### 2.4 Dataset Comparability Note
 
 Results from ARGUS are **not directly comparable** to results from StreakMind or
@@ -145,11 +142,6 @@ ASTRiDE without the following caveats:
 | Test set size | 308 images / 308 streaks | 110 real streaks | No |
 | Mean streak length | ≫ 1,000 px (92% are long) | 203.5 px | No |
 | Multi-frame association | No | Yes | Design difference |
-
-YOLO metrics within ARGUS are also not directly comparable to DINOv3 metrics:
-YOLO is evaluated on its native tiled validation split (604 source images → ~2,881
-tiles), whereas DINOv3 is evaluated on the full-image COCO test set. Tiled IoU
-matching inflates mAP relative to full-image evaluation.
 
 ASTRiDE cannot be meaningfully evaluated on JPEG exports because JPEG compression
 alters the pixel distribution that its sigma-threshold contour detection relies on.
@@ -165,11 +157,10 @@ Absence of ASTRiDE results on the SatStreaks test set is expected, not a gap.
 |---|---|---|---|
 | DINOv3 ViT-S/16 HeatMap | `vits_heatmap` | **Primary (active)** | Run 15, 400 px tiles, zscore norm |
 | ASTRiDE | `astride` | Active (opt-in) | `ARGUS_ENABLE_ASTRIDE=1` |
-| YOLO-OBB GTImages | `streakmind_yolo` | Active when weights present | Optional |
 | DINOv3 ViT-B / DINO-DETR | `dinov3_vitb*` | **Superseded** | Still in registry for comparison; no active weights |
 | OpenCV connected-components | `opencv` | **Removed** | Code present but not wired; eliminated from pipeline |
 
-Sections §3.1–§3.4 below document the historical detectors.  Section §3.5 documents
+Sections §3.1–§3.3 below document the historical detectors.  Section §3.4 documents
 the current production detector.
 
 ### 3.1 ASTRiDE — Phase 0 Classical Baseline
@@ -236,54 +227,14 @@ star halos and noise rather than genuine streaks. This detector contributes more
 meaningfully on raw FITS images (uncompressed, 16-bit) where the top-0.5%
 threshold correctly isolates only the brightest structures.
 
-### 3.3 YOLO11n-OBB
-
-**Implementation:** Ultralytics YOLO11 with Oriented Bounding Box (OBB) head
-**Variants:**
-- **Full dataset** (`weights/run_full_yolo_obb/run/weights/best.pt`, ~5.4 MB) — active when weights file is present; reported as the primary YOLO result
-- **Dev subset** (`weights/yolo_tiled/run/weights/best.pt`) — fallback; lower performance, not reported in headline results
-
-**Training (full dataset):**
-- Training images: 3,023 source images from SatStreaks train split, tiled to
-  640 × 640 px with overlap → approximately 14,385 tiles
-- 15 epochs; best checkpoint at epoch 13
-- Hardware: Apple M3 CPU (~9 hours)
-
-**Validation (full dataset, tiled protocol):**
-
-| Metric | Value |
-|--------|-------|
-| mAP@0.5 | 67.3% |
-| mAP@0.75 | 57.4% |
-| Precision | 57.2% |
-| Recall | 84.6% |
-| F1 | 68.2% |
-
-> **Protocol note:** These metrics are from YOLO's native tiled validation split
-> (604 source images → ~2,881 tiles at 640 px) using the same tiling scheme as
-> training. Tiled IoU matching inflates mAP relative to full-image evaluation. The
-> YOLO numbers are **not directly comparable** to the DINOv3 or UCS results in §7,
-> which use the full-image COCO protocol.
-
-**Relationship to StreakMind:** StreakMind (arXiv 2605.03429) also uses YOLO11 OBB
-as its detection backbone. The architectures are similar; the key differences are:
-
-- ARGUS trains on JPEG/PNG exports; StreakMind trains on raw FITS.
-- StreakMind adds inter-frame association to reject single-frame spurious detections.
-- StreakMind's training set includes explicit no-streak (background-only) images;
-  ARGUS's YOLO training set does not.
-- StreakMind evaluates at IoU = 0.8; ARGUS at IoU = 0.5.
-
-Direct comparison of P/R numbers is not valid (see §2.4).
-
-### 3.4 DINOv3 ViT-B/16 + DINO-DETR (Primary ML Detector)
+### 3.3 DINOv3 ViT-B/16 + DINO-DETR (Primary ML Detector)
 
 **Config:** `models/dino/streak_dinov3_vitb_400px.py`
 **Checkpoint:** `weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth` (pending clean retrain)
 **API model ID:** `dinov3_vitb_multisource` ("DINOv3 Base - Multi-source")
 **When active:** Always (primary detector)
 
-#### 3.4.1 Backbone: DINOv3 ViT-B/16
+#### 3.3.1 Backbone: DINOv3 ViT-B/16
 
 **Naming clarification:** ARGUS refers to this model internally as "DINOv3".
 The active checkpoint is Meta's DINOv3 ViT-B/16 LVD-1689M backbone loaded
@@ -313,7 +264,7 @@ of streak patches vs. background patches = **0.095** (gate: > 0.05 → PASS). Th
 confirms that the frozen backbone separates streak and background semantics before
 any task-specific fine-tuning.
 
-#### 3.4.2 PatchToPyramid Adapter
+#### 3.3.2 PatchToPyramid Adapter
 
 DINOv3 ViT is isotropic — it produces flat feature maps at a single stride (H/16,
 W/16), not a feature pyramid. The Deformable DETR neck requires multi-scale
@@ -333,7 +284,7 @@ DINOv3 ViT-B/16
 
 Trainable parameters in adapter: ~4 M (1×1 convolutions only).
 
-#### 3.4.3 DINO-DETR Detection Head
+#### 3.3.3 DINO-DETR Detection Head
 
 **Reference:** Zhang et al. 2022 (arXiv 2203.03605), ICCV 2023.
 
@@ -354,7 +305,7 @@ DINO-DETR extends DETR with three key innovations:
 | Confidence threshold | 0.05 (default; configurable via `CONFIDENCE_THRESHOLD`) |
 | Trainable parameters | ~40 M (adapter + head; backbone contributes 0) |
 
-#### 3.4.4 Training Protocol
+#### 3.3.4 Training Protocol
 
 | Run | Config | Data | Epochs | Hardware | mAP@0.5 | Status |
 |-----|--------|------|--------|----------|---------|--------|
@@ -375,7 +326,7 @@ Archived pilot runs and their associated artifacts have been removed from this r
 BrentImages Night 2 low recall is a resolution artefact (15.6× downscale); tiled
 inference is expected to resolve this on the clean retrain.
 
-#### 3.4.5 Co-DINO Context
+#### 3.3.5 Co-DINO Context
 
 Co-DINO (Zong et al. 2022, arXiv 2211.12860) collaborative hybrid training
 (auxiliary ATSS + Faster R-CNN heads with one-to-many label assignments) was used
@@ -385,7 +336,7 @@ directly without Co-DINO auxiliary heads. The Swin-T/Co-DINO path is retained in
 the repository for ablation reference; its benchmark result (mAP@0.5 = 0.19) is
 included in §8.
 
-#### 3.4.6 Test-Time Augmentation (TTA)
+#### 3.3.6 Test-Time Augmentation (TTA)
 
 When `TTA_ENABLED=true`, inference also runs on horizontal and vertical flips;
 bounding boxes are mapped back to original coordinates before postprocessing.
@@ -831,8 +782,7 @@ ASTRiDE is excluded from non-ASTRiDE corroboration and divergence terms so it
 cannot drag down a corroborated ML/OpenCV detection.
 Instead, if a streak group contains at least one non-ASTRiDE detector, ASTRiDE can
 raise the final score by at most `0.04 × best_astride_conf`, bounded at 0.99 and
-never below the non-ASTRiDE result. For example, YOLO OBB confidence
-0.86 plus ASTRiDE confidence 0.99 yields approximately 0.90.
+never below the non-ASTRiDE result.
 
 ### 5.3 Detector Profiles
 
@@ -841,7 +791,6 @@ Current `DETECTOR_PROFILES` from `inference/confidence.py`:
 | Key | Detector | Precision | Recall | F-0.5 weight | Ceiling | Source |
 |-----|----------|-----------|--------|--------------|---------|--------|
 | `tiny` | DINO Swin-T | 0.667 | 0.733 | 0.690 | None | Phase 8 measured |
-| `yolo` | YOLO11-OBB | 0.632 | 0.400 | 0.556 | None | Phase 8 measured |
 | `dinov3_vitb` | DINOv3 ViT-B | 0.80 | 0.78 | 0.793 | None | **Estimated** from mAP@0.5=0.74; update post Phase D |
 | `dinov3_vitl` | DINOv3 ViT-L | 0.85 | 0.82 | 0.842 | None | **Estimated** Phase D target |
 | `large` | DINO Swin-L | 0.75 | 0.75 | 0.750 | None | **Estimated** pre-Phase D |
@@ -897,9 +846,6 @@ area ground-truth polygons.
 
 ### 6.3 Caveats
 
-- YOLO is evaluated on its own tiled val split (604 source images, ~2,881 640 px
-  tiles), not the 308-image COCO test set. The two protocols are not directly
-  comparable.
 - ASTRiDE is not evaluated (JPEG test set; see §3.1).
 - The test set is 92% long streaks (≥ 1,000 px). Short and medium F1 values of
   0% reflect this distribution, not detection capability at those lengths.
@@ -939,14 +885,10 @@ Benchmark: 308 images, 308 GT streaks, SatStreaks JPEG test set, 2026-05-16.
 |----------|----------|----------:|-------:|---:|---------:|---------:|--------:|
 | **Unified Confidence Score** | COCO full-image | **29.9%** | 72.1% | **42.3%** | 40.6% | 31.8% | 742 |
 | DINOv3 ViT-B (epoch 10) | COCO full-image | 9.3% | **89.3%** | 16.8% | **75.5%** | **59.4%** | 2,969 |
-| YOLO11n-OBB full | YOLO tiled val† | 57.2% | 84.6% | 68.2% | 67.3% | 57.4% | — |
 | OpenCV connected-comp | COCO full-image | 1.4% | 1.0% | 1.1% | 0.01% | 0.01% | 223 |
 | ASTRiDE | JPEG (not applicable) | — | — | — | — | — | — |
 | DINOv3 ViT-L (Phase D) | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
 | Co-DINO Swin-T (archived) | COCO full-image | — | — | — | 19.0% | 16.7% | — |
-
-† YOLO evaluated on tiled val split — not directly comparable to COCO full-image
-evaluation above.
 
 ### 7.2 Confusion Matrices (IoU ≥ 0.5)
 
@@ -1036,7 +978,6 @@ length, this corresponds to 0.03 px displacement.
 | **Co-DINO** (Zong et al. 2022) | ResNet-50 / ViT-L | COCO 2017 | COCO 2017 | AP-based | AP-based | — | COCO AP | 51.2 AP (R50), 66.0 AP (ViT-L); initialised ARGUS archived Swin-T path |
 | **DINOv3** (Meta AI model distribution) | ViT-B/16 | LVD-1689M | — | — | — | — | — | Used as ARGUS frozen backbone; exact publication/model-card citation pending |
 | **ARGUS DINOv3 ViT-B (Run 2)** | DINOv3 ViT-B/16 (frozen) | SatStreaks + BrentImages N1+2 + Frigate (3,971 images) | SatStreaks test (308 JPEG) | 71.2% | 72.4% | 71.8% | 0.5 | mAP@0.5 = 75.5%; `dinov3_vitb_multisource` |
-| **ARGUS YOLO11n-OBB full** | YOLO11 nano OBB | SatStreaks (3,023 tiled 640 px) | YOLO tiled val† | 57.2% | 84.6% | 68.2% | 0.5 | †Tiled protocol; not comparable to full-image eval |
 | **ARGUS Ensemble (UCS)** | 5-detector ensemble | — | SatStreaks test (308 JPEG) | 29.9% | 72.1% | 42.3% | 0.5 | F1 = 49% on long streaks; 742 grouped predictions |
 | **Co-DINO Swin-T** (archived) | Swin-T | Full merged | SatStreaks test | — | — | — | 0.5 | mAP@0.5 = 0.19; baseline before DINOv3 integration |
 
@@ -1058,16 +999,16 @@ on higher-contrast JPEG data.
 
 **ARGUS vs. StreakMind (arXiv 2605.03429)**
 
-Both systems use YOLO11 OBB as a detection component. The architectures diverge
-significantly beyond that:
+StreakMind uses YOLO11 OBB as its detection backbone. ARGUS uses a DINOv3 ViT-S/16
+heatmap as its primary detector. The architectures diverge significantly:
 
 - StreakMind adds inter-frame association across multiple exposures, rejecting
   single-frame spurious detections. This is the key precision lever that ARGUS
   currently lacks.
-- ARGUS uses a 5-detector ensemble with IoMin grouping to raise precision from
+- ARGUS uses a multi-detector ensemble with IoMin grouping to raise precision from
   single-frame evidence alone.
-- StreakMind's training set is 2,335 raw FITS images; ARGUS's YOLO training uses
-  3,023 JPEG/PNG source images.
+- StreakMind's training set is 2,335 raw FITS images; ARGUS uses 3,971 JPEG/PNG
+  source images.
 - StreakMind evaluates at IoU = 0.8 on 110 raw FITS streaks (mean length 203.5 px);
   ARGUS evaluates at IoU = 0.5 on 308 JPEG streaks (92% ≥ 1,000 px).
 
@@ -1075,10 +1016,6 @@ StreakMind reports P = 94%, R = 97%; ARGUS reports P = 29.9%, R = 72.1%.
 **These numbers cannot be directly compared** (see §2.4). A fair comparison would
 require evaluating both systems on the same test set, with the same IoU threshold,
 in the same image domain.
-
-> **Correction to README:** The original README described StreakMind as
-> "DINO-DETR-based." This is incorrect. StreakMind (arXiv 2605.03429) uses
-> YOLO11 OBB as its detection backbone, not DINO-DETR.
 
 **ARGUS vs. DINO-DETR / Co-DINO / DINOv3**
 
@@ -1104,7 +1041,6 @@ epochs, full dataset) — +0.55 above the Co-DINO Swin-T baseline (mAP@0.5 = 0.1
 | Test set size | 308 images / 308 streaks | 110 real streaks | No — different statistical power |
 | Streak length dist. | 92% ≥ 1,000 px | Mean 203.5 px | No — ARGUS dominated by long streaks; StreakMind includes many short |
 | Multi-frame association | No | Yes | Design difference — StreakMind can reject single-frame FPs |
-| Evaluated detector | 5-detector ensemble | YOLO11 OBB | Different design |
 | Training domain | JPEG/PNG | Raw FITS | No — different distribution for background and noise |
 
 **Conclusion:** Direct numerical comparison of ARGUS and StreakMind P/R figures
@@ -1136,10 +1072,6 @@ is required.
 are designed for raw FITS pixel distributions. Their contributions are understated
 by the current JPEG benchmark. Evaluation on BrentImages raw FITS would give a more
 representative picture.
-
-**YOLO evaluation protocol:** The YOLO tiled validation split is not comparable to
-the COCO full-image protocol. No fair head-to-head between YOLO and DINOv3 exists
-in the current benchmark.
 
 **DINOv3 ViT-L pending (Phase D):** All results in this document use the ViT-B
 backbone. The larger ViT-L (300 M parameters, RTX 5070 Ti) may yield substantially
@@ -1199,15 +1131,7 @@ The following steps reproduce the headline benchmark results recorded in
    This checkpoint is not distributed with the repository; it must be trained
    locally (see `docs/training_methods.md`) or obtained from the ARGUS authors.
 
-5. Obtain the YOLO11n-OBB full-dataset checkpoint:
-   `weights/run_full_yolo_obb/run/weights/best.pt` (~5.4 MB).
-   This can be reproduced by running:
-   ```bash
-   bash scripts/train_yolo_full.sh
-   ```
-   (~9 hours on Apple M3 CPU, ~30 minutes on GPU).
-
-6. Run the benchmark evaluation:
+5. Run the benchmark evaluation:
    ```bash
    MODEL_WEIGHTS=weights/run_clean_vitb_nodm/best_coco_bbox_mAP_epoch_15.pth \
    MODEL_SIZE=dinov3_vitb_multisource USE_DEV_SUBSET=false \
@@ -1217,13 +1141,11 @@ The following steps reproduce the headline benchmark results recorded in
        --output results/repro_benchmark.json
    ```
 
-7. Verify results match `results/multi_method_benchmark.json`.
+6. Verify results match `results/multi_method_benchmark.json`.
 
 **What is and is not reproducible without re-training:**
-- DINOv3 ViT-B, OpenCV, and UCS results: reproducible by running step 6 with the
+- DINOv3 ViT-B, OpenCV, and UCS results: reproducible by running step 5 with the
   provided checkpoint.
-- YOLO tiled val metrics: require re-running `yolo val` on the YOLO tiled split
-  (not the COCO eval above); reproducible by re-training with `scripts/train_yolo_full.sh`.
 - ASTRiDE results: require raw FITS input; not reproducible on the SatStreaks JPEG
   test set.
 
@@ -1255,99 +1177,3 @@ SatStreaks Dataset (2024). Towards Supervised Learning for Delineating Satellite
 Streaks from Astronomical Images. *Computer and Robot Vision (CRV 2024)*.
 https://github.com/jijup/SatStreaks
 
----
-
-## 12. Raw FITS YOLO-OBB Methodology-Matched Comparison (May 2026)
-
-### 12.1 Motivation
-
-Section 8 established that direct comparison of ARGUS and StreakMind P/R figures
-is invalid across five incomparable factors. This section describes a methodology-
-matched comparison: training YOLO11n-OBB on raw BrentImages FITS (same image domain
-as StreakMind) and evaluating at both IoU=0.5 and IoU=0.8 on a held-out BrentImages
-test split.
-
-### 12.2 Experiment Design
-
-**Four training tracks** (each 15 epochs, YOLO11n-OBB):
-
-| Track | Training data | Purpose |
-|---|---|---|
-| `real_only` | BrentImages real annotations | Baseline |
-| `paper_long` | BrentImages real + synthetic long streaks | Match StreakMind's long-streak distribution |
-| `adapted` | BrentImages real + synthetic medium streaks | Match BrentImages' own length distribution |
-| `gtimages_plus_frigate` | BrentImages real + Frigate background frames | Background diversity |
-
-**Evaluation:** held-out BrentImages test split (66 images, 57 streak annotations;
-median length 636px, 89% long >400px).
-
-**IoU thresholds:** 0.5 (ARGUS standard) and 0.8 (StreakMind's threshold).
-
-### 12.3 Phase 1 Results — 640px Uniform Tiling (Baseline)
-
-| Track | P | R | F1 | Angle error | IoU=0.8 F1 |
-|---|---:|---:|---:|---:|---:|
-| real_only | 9.3% | 17.5% | 12.2% | 54° | 0.0% |
-| paper_long | 10.9% | 33.3% | 16.4% | 43° | 0.0% |
-| adapted | 9.0% | 19.3% | 12.3% | 57° | 0.0% |
-| gtimages_plus_frigate | 15.3% | 29.8% | 20.2% | 48° | ~0% |
-| **StreakMind** (ref) | 94% | 97% | 95.5% | — | 95.5% |
-
-**Root cause of low IoU=0.8:** 640px tiles clip 636px median streaks across tile
-boundaries during training. The model learns from partial streak fragments, causing
-mean angle error of 43–57°. Even at IoU=0.5, thin OBBs require angle accuracy to
-within ~10° for polygon IoU ≥ 0.5; 50° error produces near-zero IoU for 16px-wide
-streaks.
-
-Key finding: `paper_long` (long-streak synthetics) nearly doubles recall vs
-`real_only`, confirming that training distribution alignment with the test set
-length distribution is critical.
-
-### 12.4 Phase 2 Results — 1280px Streak-Centered Crops
-
-Three fixes applied to address the Phase 1 root causes:
-
-1. **Larger tiles (1280px):** All test streaks (max 1269px) now fit in a single
-   training tile — no more tile-boundary clipping.
-2. **Streak-centered crops:** Each annotation generates one tile centered on the
-   streak, guaranteeing the model trains on the complete streak.
-3. **Overlapping inference stride (640px):** At evaluation, 50% overlap ensures
-   complete streaks are captured in at least one tile.
-
-**Phase 2 results (in progress — paper_long/adapted/gtimages_plus_frigate pending):**
-
-| Track | P | R | F1 | Angle error | IoU=0.8 F1 |
-|---|---:|---:|---:|---:|---:|
-| real_only | 52.1% | 43.9% | 47.6% | 32° | 0.0% |
-
-F1 improved ~4× and angle error reduced by 40% vs Phase 1. IoU=0.8 remains 0%
-because 32° residual angle error still produces near-zero Shapely OBB IoU for
-16px-wide streaks. IoU=0.8 requires angle precision ~5°.
-
-**Medium-streak regression (known issue):** Medium streaks (150–400px, 5 of 57 GT)
-dropped from 80% recall (640px) to 0% (1280px). Root cause: medium streaks occupy
-only ~20% of a 1280px tile; the model under-trained on this scale regresses box
-dimensions to ~11px (near-point) instead of ~262px, and confidence falls below the
-0.25 inference threshold. The model correctly localises the streak centre (cx/cy
-within 20px) but fails to fit the full extent.
-
-**Planned follow-up:** Re-evaluate all Phase 2 tracks with `--conf 0.10` after
-training completes. This will capture medium-streak detections (conf 0.12–0.14
-observed) at the cost of more false positives. The `adapted` track (synthetic
-medium streaks in training) should naturally raise confidence for medium targets
-without threshold lowering.
-
-### 12.5 Why StreakMind Achieves IoU=0.8
-
-StreakMind's F1=95.5% at IoU=0.8 is explained by:
-
-1. **Ephemeris-derived labels:** Streak annotations come from tracked-satellite
-   ephemeris, giving sub-pixel endpoint accuracy and thus correct angles.
-2. **No tile-boundary clipping:** La Sagra frames are processed at a scale where
-   streaks fit within single inference windows.
-3. **2,335 training frames** vs our 469 BrentImages frames — 5× more data.
-4. **In-domain test set:** StreakMind tests on its own observatory's data (La
-   Sagra), eliminating site/instrument generalisation as a factor.
-
-Direct numerical comparison of ARGUS Phase 2 vs StreakMind remains approximate
-(different site, instrument, and sky background diversity).

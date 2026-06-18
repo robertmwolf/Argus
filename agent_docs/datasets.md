@@ -258,7 +258,7 @@ print(result[0]['OBJECT_NAME'])  # Should print: ISS (ZARYA)
 
 ---
 
-## 4. SatStreaks Dataset (Annotated, for DINO/YOLO Training)
+## 4. SatStreaks Dataset (Annotated, for DINO Training)
 
 **What it is:** 3,073 densely annotated real images of satellite streaks
 from Hubble Space Telescope (114,607 images scanned via citizen science)
@@ -270,7 +270,7 @@ Includes processed PNG/JPEG images and segmentation masks.
 Delineating Satellite Streaks from Astronomical Images"
 
 **Note:** These are not FITS files — they are processed PNG/JPEG.
-Use for DINO/YOLO training only, not Phase 1 FITS parsing.
+Use for DINO training only, not Phase 1 FITS parsing.
 
 ARGUS converts SatStreaks masks into detector annotations during split merge:
 

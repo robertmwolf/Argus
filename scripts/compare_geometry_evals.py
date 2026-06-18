@@ -45,8 +45,7 @@ MODELS: list[tuple[str, str]] = [
     ("v9_focal_cldice",  "results/window_v9/vits_v9_focal_cldice/pf85/geometry_eval.json"),
     ("v9_tversky",       "results/window_v9/vits_v9_tversky/pf85/geometry_eval.json"),
     ("v9_asl_cldice",    "results/window_v9/vits_v9_asl_cldice/pf85/geometry_eval.json"),
-    ("yolo_streakmind",  "results/streakmind_yolo_real/balanced_v1/pf85/geometry_eval.json"),
-    ("yolo_run17_cpu",   "results/yolo_run17_cpu/balanced_v1/bestf1_conf20/geometry_eval.json"),
+    ("vitb_v10_asl_cldice", "results/window_v10/vitb_v10_asl_cldice/pf85/geometry_eval.json"),
 ]
 
 

@@ -62,12 +62,6 @@ def _patch_torch_load_weights_only() -> None:
 _patch_torch_load_weights_only()
 
 # ---------------------------------------------------------------------------
-# Module-level caches
-# ---------------------------------------------------------------------------
-
-_yolo_model_cache: dict = {}
-
-# ---------------------------------------------------------------------------
 # Constants / defaults
 # ---------------------------------------------------------------------------
 
@@ -466,88 +460,6 @@ def _run_tiled_dino_inference(
     return result
 
 
-def _run_streakmind_yolo_detector(
-    array: "np.ndarray",
-    confidence_threshold: float = 0.25,
-) -> list[dict]:
-    """Run the YOLO11s-OBB streak detector (Run 17, Atwood 400px zscore).
-
-    Loads weights from ``STREAKMIND_YOLO_WEIGHTS`` or the Run 17 CPU-trained
-    model. Returns detections with method ``"streakmind_yolo"`` (id kept for
-    backward compat) so the web UI can surface them. Input ``array`` is expected
-    zscore-normalised uint8, matching the model's training distribution.
-    """
-    import numpy as np
-
-    root = Path(__file__).resolve().parent.parent
-    weights = Path(
-        os.environ.get(
-            "STREAKMIND_YOLO_WEIGHTS",
-            # CPU-trained YOLO11s-OBB (Run 17, Atwood 400px zscore). Replaces the
-            # old streakmind_yolo_real (yolo11n/GTImages): beats it on every axis
-            # at conf<=0.20 (short recall 11%->100%, angle 42deg->4deg). MPS
-            # training is broken — see agent_docs/assistant_guide.md.
-            str(root / "weights" / "yolo_run17" / "run_cpu_subset3k" / "weights" / "best.pt"),
-        )
-    )
-    if not weights.exists():
-        logger.debug("StreakMindYOLO weights not found at %s; skipping", weights)
-        return []
-
-    try:
-        from ultralytics import YOLO  # type: ignore[import]
-    except ImportError:
-        logger.debug("ultralytics not installed; skipping StreakMindYOLO")
-        return []
-
-    cache_key = str(weights)
-    if cache_key not in _yolo_model_cache:
-        _yolo_model_cache[cache_key] = YOLO(str(weights))
-    yolo = _yolo_model_cache[cache_key]
-
-    h_img, w_img = array.shape[:2]
-    # 416 matches the model's training tile scale (400px tiles, imgsz=416).
-    # Feeding 640px tiles shrinks streaks relative to the trained scale.
-    tile_size = int(os.environ.get("STREAKMIND_YOLO_TILE_SIZE", "416"))
-    stride = int(os.environ.get("STREAKMIND_YOLO_STRIDE", str(tile_size // 2)))
-
-    if max(h_img, w_img) <= tile_size:
-        tile_list = [(array, 0, 0)]
-    else:
-        tile_list = []
-        for y0 in range(0, h_img, stride):
-            for x0 in range(0, w_img, stride):
-                x1 = min(x0 + tile_size, w_img)
-                y1 = min(y0 + tile_size, h_img)
-                tile = array[y0:y1, x0:x1]
-                if tile.shape[0] < 32 or tile.shape[1] < 32:
-                    continue
-                tile_list.append((tile, x0, y0))
-
-    detections: list[dict] = []
-    for tile, x_off, y_off in tile_list:
-        for result in yolo(tile, verbose=False, conf=confidence_threshold):
-            if result.obb is None:
-                continue
-            for box, conf in zip(result.obb.xywhr, result.obb.conf):
-                cx, cy, bw, bh, angle_rad = box.tolist()
-                cx += x_off
-                cy += y_off
-                angle_deg = float(angle_rad) * 180.0 / math.pi
-                half_w, half_h = bw / 2.0, bh / 2.0
-                detections.append({
-                    "bbox": [cx - half_w, cy - half_h, cx + half_w, cy + half_h],
-                    "confidence": float(conf),
-                    "method": "streakmind_yolo",
-                    "obb": {"cx": cx, "cy": cy, "w": bw, "h": bh, "angle_deg": angle_deg},
-                    "streak_length_px": float(max(bw, bh)),
-                })
-
-    logger.debug("StreakMindYOLO: %d raw detections above threshold %.2f",
-                 len(detections), confidence_threshold)
-    return detections
-
-
 def _run_vits_heatmap_detector(array: "np.ndarray") -> list[dict]:
     """Run the ViT-S/16 heatmap detector (Run 15, 400px tiles, zscore norm).
 
@@ -705,56 +617,12 @@ def load_model(
 # ---------------------------------------------------------------------------
 
 def resolve_model_specs() -> list[dict]:
-    """Return normalized DINO model specs from ARGUS_MODEL_CONFIGS or MODEL_SIZE fallback.
+    """Return no box-detector specs.
 
     Returns:
-        List of dicts with keys: id, size, weights, label, dataset.
-        Safe to call without loading any model or weights.
+        Empty list. ARGUS production inference is endpoint-heatmap only.
     """
-    import json as _json
-
-    raw = os.environ.get("ARGUS_MODEL_CONFIGS", "")
-    root = Path(__file__).resolve().parent.parent
-    if raw:
-        specs = _json.loads(raw)
-        result = []
-        for s in specs:
-            w = Path(s["weights"])
-            weights_str = str(w if w.is_absolute() else root / w)
-            result.append({
-                "id":        s["id"],
-                "size":      s["size"],
-                "weights":   weights_str,
-                "label":     s.get("label", s["id"]),
-                "dataset":   s.get("dataset", ""),
-                "norm_mode": s.get("norm_mode", ""),  # '' → use ARGUS_NORM / pipeline default
-            })
-        return result
-
-    # Single-model fallback
-    model_size = os.environ.get("MODEL_SIZE", "tiny")
-    weights_env = os.environ.get("MODEL_WEIGHTS", "")
-    _dinov3_defaults: dict[str, Path] = {
-        "dinov3_vitb":             root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
-        "dinov3_vitl":             root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
-    }
-    _meta: dict[str, tuple[str, str, str]] = {
-        # (label, dataset, norm_mode)
-        "tiny":                    ("DINO Swin-Tiny",              "SatStreaks",         "zscore"),
-        "large":                   ("DINO Swin-Large",             "SatStreaks",         "zscore"),
-        "dinov3_vitb":             ("DINOv3 ViT-B",                "SatStreaks+GTImages", "autostretch"),
-        "dinov3_vitl":             ("DINOv3 ViT-L",                "SatStreaks+GTImages", "autostretch"),
-        "dinov3_vitb_multisource": ("DINOv3 Base - Multi-source",  "SatStreaks+GTImages", "autostretch"),
-    }
-    label, dataset, norm_mode = _meta.get(model_size, (model_size, "", ""))
-    if weights_env:
-        weights_str = weights_env
-    elif model_size in _dinov3_defaults:
-        weights_str = str(_dinov3_defaults[model_size])
-    else:
-        weights_str = str(root / "weights" / f"dino_{model_size}.pth")
-    return [{"id": model_size, "size": model_size, "weights": weights_str,
-             "label": label, "dataset": dataset, "norm_mode": norm_mode}]
+    return []
 
 
 def load_models() -> list[tuple[Any, Any, dict]]:
@@ -796,31 +664,6 @@ def get_detector_statuses() -> list[dict]:
     """
     statuses: list[dict] = []
     root = Path(__file__).resolve().parent.parent
-
-    # All registered DINO variants — show everything, active or not.
-    seen_ids: set[str] = set()
-    for entry in _model_registry():
-        seen_ids.add(entry["id"])
-        weight_ok = Path(entry["weights"]).exists()
-        statuses.append({
-            "id":      entry["id"],
-            "name":    entry["label"],
-            "type":    "ml",
-            "dataset": entry["dataset"],
-            "status":  "active" if weight_ok else "no_weights",
-        })
-
-    # Any extra models injected via ARGUS_MODEL_CONFIGS that aren't in the registry.
-    for spec in resolve_model_specs():
-        if spec["id"] not in seen_ids:
-            weight_ok = Path(spec["weights"]).exists()
-            statuses.append({
-                "id":      spec["id"],
-                "name":    spec["label"],
-                "type":    "ml",
-                "dataset": spec["dataset"],
-                "status":  "active" if weight_ok else "no_weights",
-            })
 
     # ViT-S/16 heatmap detector (Run 15, primary ML detector)
     try:
@@ -885,29 +728,6 @@ def get_detector_statuses() -> list[dict]:
             "type":    "ml",
             "dataset": "Atwood window_v9",
             "status":  "unavailable",
-        })
-
-    # YOLO variants
-    _yolo_entries = [
-        {
-            # id kept as "streakmind_yolo" for backward compat with UI / env
-            # config; the underlying model is now the Run 17 Atwood YOLO11s-OBB.
-            "id":      "streakmind_yolo",
-            "name":    "YOLO-OBB - Atwood",
-            "dataset": "Atwood Run17 (400px zscore)",
-            "weights": Path(os.environ.get(
-                "STREAKMIND_YOLO_WEIGHTS",
-                str(root / "weights" / "yolo_run17" / "run_cpu_subset3k" / "weights" / "best.pt"),
-            )),
-        },
-    ]
-    for entry in _yolo_entries:
-        statuses.append({
-            "id":      entry["id"],
-            "name":    entry["name"],
-            "type":    "ml",
-            "dataset": entry["dataset"],
-            "status":  "active" if Path(entry["weights"]).exists() else "no_weights",
         })
 
     return statuses
@@ -1083,12 +903,6 @@ def _run_all_detectors(
                 )
 
         _heatmap_sidecar: dict[str, "np.ndarray"] = {}
-
-        # Secondary detectors
-        if _enabled("streakmind_yolo"):
-            tasks[pool.submit(_timed_detector, "streakmind_yolo", _run_streakmind_yolo_detector, array, confidence_threshold)] = "streakmind_yolo"
-        else:
-            results["streakmind_yolo"] = []
 
         if _enabled("vits_heatmap"):
             # Run 15 was trained on zscore-normalised FITS data.  Re-normalise
@@ -1413,45 +1227,17 @@ def run_with_array(
         # sensor images (~6 k px) are not crushed to ~30 px before detection.
         image_size = max(dev_config["image_size"], _MIN_INFERENCE_IMAGE_SIZE)
 
-    # Resolve which DINO model(s) to run:
-    #  - models (plural) is the preferred multi-model path from load_models()
-    #  - model (singular) is the legacy single-model path from load_model()
-    #  - if neither is given, load inline from MODEL_SIZE env
+    # Only endpoint heatmap models are active. The optional arguments remain in
+    # the signature temporarily so external callers fail softly during upgrade.
     if models is not None:
-        _models_with_specs = models
+        if models:
+            logger.warning("Ignoring deprecated box-detector models argument")
+        _models_with_specs = []
     elif model is not None:
-        _spec = {"id": model_size, "size": model_size, "label": model_size, "dataset": ""}
-        if inference_device is None:
-            inference_device = device
-        _models_with_specs = [(model, inference_device, _spec)]
+        logger.warning("Ignoring deprecated box-detector model argument")
+        _models_with_specs = []
     else:
-        # Load inline — same logic as load_model() but embedded here for the
-        # legacy single-image call path (e.g. CLI eval scripts).
-        config_path = _select_config(model_size)
-        if weights_env:
-            weights_path = Path(weights_env)
-        else:
-            root = Path(__file__).resolve().parent.parent
-            _dinov3_inline: dict[str, Path] = {
-                "dinov3_vitb":             root / "weights" / "dinov3_vitb_augmented" / "best_coco_bbox_mAP_epoch_10.pth",
-                "dinov3_vitl":             root / "weights" / "run_5070ti_dinov3_vitl" / "best_coco_bbox_mAP_epoch_50.pth",
-            }
-            if model_size in _dinov3_inline:
-                weights_path = _dinov3_inline[model_size]
-            else:
-                weights_path = root / "weights" / f"dino_{model_size}.pth"
-
-        # DINO multi-scale deformable attention exceeds MPS's 4 GB per-allocation
-        # limit.  Force CPU on Mac until a memory-efficient MPS path is available.
-        import torch as _torch
-        inference_device = device
-        if device.type == "mps" and not _torch.cuda.is_available():
-            inference_device = _torch.device("cpu")
-            logger.debug("MPS device detected — forcing DINO inference to CPU")
-
-        model = _load_model(config_path, weights_path, inference_device)
-        _meta = {"id": model_size, "size": model_size, "label": model_size, "dataset": ""}
-        _models_with_specs = [(model, inference_device, _meta)]
+        _models_with_specs = []
 
     # Run all detectors (DINO variants + classical) in parallel.
     all_det_results, _heatmap_sidecar, _dual_norm_ids = _run_all_detectors(
@@ -1496,19 +1282,19 @@ def run_with_array(
         inference_ms, len(raw_dets), tta_enabled, confidence_threshold,
     )
 
-    # --- 3. Postprocess: angle refinement + OBB (full or raw-mode) -----------
+    # --- 3. Postprocess endpoint segments (full or raw-mode) -----------------
     t2 = time.perf_counter()
     import numpy as np
     from inference.postprocess import (
-        bbox_to_obb, classify_detection_quality,
-        refine_angle, extend_obb_to_streak_extent,
+        classify_detection_quality,
+        refine_segment_angle, extend_segment_to_streak_extent,
         nms_detections, group_detections, fuse_group_geometries,
     )
+    from inference.streak_segment import apply_segment_geometry
 
     h_img = array.shape[0]
     w_img = array.shape[1]
 
-    streakmind_yolo_dets = all_det_results.get("streakmind_yolo", [])
     heatmap_dets = (
         all_det_results.get("vits_heatmap", [])
         + all_det_results.get("vitb_heatmap", [])
@@ -1518,27 +1304,9 @@ def run_with_array(
     )
 
     if raw_mode:
-        # Raw mode: no Radon, no extent tracing, no NMS, no grouping.
-        # Every detection from every model is an independent unique streak.
-        for det in raw_dets:
-            if det.get("obb") is None:
-                seed_angle = _angle_from_bbox(det["bbox"])
-                det["obb"] = bbox_to_obb(det["bbox"], seed_angle)
-            det["streak_length_px"] = float(det["obb"]["w"])
-
-        for det in classical_dets:
-            if det.get("obb"):
-                det.setdefault("streak_length_px", float(det["obb"]["w"]))
-            elif det.get("bbox"):
-                seed_angle = _angle_from_bbox(det["bbox"])
-                det["obb"] = bbox_to_obb(det["bbox"], seed_angle)
-                det["streak_length_px"] = float(det["obb"]["w"])
-
-        detections = (
-            raw_dets + classical_dets
-            + streakmind_yolo_dets + heatmap_dets
-        )
+        detections = heatmap_dets
         for idx, det in enumerate(detections):
+            apply_segment_geometry(det)
             det["streak_id"] = idx + 1
 
     else:
@@ -1554,52 +1322,39 @@ def run_with_array(
             "RADON_ANGLE_SEARCH_RANGE",
             str(_DEFAULT_RADON_ANGLE_SEARCH_RANGE),
         ))
-        all_ml_dets = (
-            raw_dets + classical_dets
-            + streakmind_yolo_dets + heatmap_dets
-        )
+        all_ml_dets = heatmap_dets
         for det in all_ml_dets:
-            seed_angle = (
-                det["obb"]["angle_deg"] if det.get("obb")
-                else _angle_from_bbox(det["bbox"])
-            )
+            apply_segment_geometry(det)
             if fast:
-                # Skip Radon refinement and extent tracing in fast mode.
-                det["obb"] = det.get("obb") or bbox_to_obb(det["bbox"], seed_angle)
-                det["streak_length_px"] = float(det["obb"]["w"])
+                continue
             else:
-                x1, y1, x2, y2 = det["bbox"]
-                px1 = max(0, int(math.floor(x1)))
-                py1 = max(0, int(math.floor(y1)))
-                px2 = min(w_img, int(math.ceil(x2)))
-                py2 = min(h_img, int(math.ceil(y2)))
+                padding = 20
+                px1 = max(0, int(math.floor(min(det["x1"], det["x2"]))) - padding)
+                py1 = max(0, int(math.floor(min(det["y1"], det["y2"]))) - padding)
+                px2 = min(w_img, int(math.ceil(max(det["x1"], det["x2"]))) + padding)
+                py2 = min(h_img, int(math.ceil(max(det["y1"], det["y2"]))) + padding)
                 crop = array[py1:py2, px1:px2]
-                initial_obb = det["obb"] if det.get("obb") else bbox_to_obb(det["bbox"], seed_angle)
-                angle = refine_angle(crop, initial_obb, angle_search_range=angle_range)
-                # For heatmap line-segment detections the native obb already has the
-                # correct cx/cy (midpoint of traced segment) and Radon-refined angle.
-                if det.get("geometry_type") == "line_segment" and det.get("obb"):
-                    obb = {**det["obb"], "angle_deg": angle}
-                else:
-                    obb = bbox_to_obb(det["bbox"], angle)
-                obb = extend_obb_to_streak_extent(
-                    array, obb,
+                angle = refine_segment_angle(
+                    crop, det["angle_deg"], angle_search_range=angle_range
+                )
+                half = det["streak_length_px"] / 2.0
+                radians = math.radians(angle)
+                det["x1"] = det["cx"] - half * math.cos(radians)
+                det["y1"] = det["cy"] - half * math.sin(radians)
+                det["x2"] = det["cx"] + half * math.cos(radians)
+                det["y2"] = det["cy"] + half * math.sin(radians)
+                det.update(extend_segment_to_streak_extent(
+                    array, det,
                     _gray=_gray_f32,
                     _threshold=_extent_threshold,
                     sample_halfwidth=15,
-                )
-                det["obb"] = obb
-                det["streak_length_px"] = float(obb["w"])
+                ))
 
-        raw_dets             = nms_detections(raw_dets,             iou_threshold=0.5)
-        classical_dets       = nms_detections(classical_dets,       iou_threshold=0.5)
-        streakmind_yolo_dets  = nms_detections(streakmind_yolo_dets,  iou_threshold=0.5)
-        heatmap_dets          = nms_detections(heatmap_dets,          iou_threshold=0.5)
+        raw_dets       = nms_detections(raw_dets,       iou_threshold=0.5)
+        classical_dets = nms_detections(classical_dets, iou_threshold=0.5)
+        heatmap_dets   = nms_detections(heatmap_dets,   iou_threshold=0.5)
 
-        combined = (
-            raw_dets + classical_dets
-            + streakmind_yolo_dets + heatmap_dets
-        )
+        combined = heatmap_dets
         detections = group_detections(combined, iou_threshold=0.5)
         detections = fuse_group_geometries(detections)
 
@@ -1609,19 +1364,8 @@ def run_with_array(
 
     # --- 4. WCS: pixel → sky coordinates (both streak endpoints) ------------
     for det in detections:
-        obb = det["obb"]
-        cx, cy = obb["cx"], obb["cy"]
-        half   = obb["w"] / 2.0
-        angle_rad = math.radians(obb["angle_deg"])
-        cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
-
-        tip1_x = cx - half * cos_a
-        tip1_y = cy - half * sin_a
-        tip2_x = cx + half * cos_a
-        tip2_y = cy + half * sin_a
-
-        det["ra_tip1_deg"],  det["dec_tip1_deg"]  = _pixel_to_sky(tip1_x, tip1_y, wcs)
-        det["ra_tip2_deg"],  det["dec_tip2_deg"]  = _pixel_to_sky(tip2_x, tip2_y, wcs)
+        det["ra_tip1_deg"], det["dec_tip1_deg"] = _pixel_to_sky(det["x1"], det["y1"], wcs)
+        det["ra_tip2_deg"], det["dec_tip2_deg"] = _pixel_to_sky(det["x2"], det["y2"], wcs)
 
         # Quality flag — assigned after sky coords are available
         det["quality_flag"] = classify_detection_quality(
@@ -1708,22 +1452,6 @@ def run_with_array(
         "[load=%.0fms  infer=%.0fms  post=%.0fms  crossid=%.0fms]",
         len(detections), fits_load_ms, inference_ms, postprocess_ms, crossid_ms,
     )
-
-    # Ensure every detection has x1/y1/x2/y2 set. Heatmap detectors set these
-    # natively; classical detectors produce OBB-only dicts so we
-    # derive the endpoints here as a universal backfill.
-    import math as _math
-    for _det in detections:
-        if _det.get("x1") is None:
-            _obb = _det.get("obb") or {}
-            _cx  = float(_obb.get("cx") or 0)
-            _cy  = float(_obb.get("cy") or 0)
-            _hw  = float(_obb.get("w") or 0) / 2.0
-            _rad = _math.radians(float(_obb.get("angle_deg") or 0))
-            _det["x1"] = _cx - _hw * _math.cos(_rad)
-            _det["y1"] = _cy - _hw * _math.sin(_rad)
-            _det["x2"] = _cx + _hw * _math.cos(_rad)
-            _det["y2"] = _cy + _hw * _math.sin(_rad)
 
     return detections, array, _heatmap_sidecar
 

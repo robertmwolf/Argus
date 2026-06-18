@@ -7,6 +7,3 @@
 
 -r requirements-api.txt
 
-# YOLO ensemble inference. This is kept out of requirements-api.txt so the
-# lightweight API service does not pull in an ML stack.
-ultralytics==8.2.0

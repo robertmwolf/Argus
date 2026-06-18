@@ -101,7 +101,7 @@ class DINOv3StreakHeatmap(nn.Module):
         model_size: str = "base",
         weights: str | Path = "weights/dinov3_vitb16_lvd1689m.pth",
         hidden_channels: int = 256,
-        out_channels: int = 5,
+        out_channels: int = 1,
         freeze_backbone: bool = True,
     ) -> None:
         """Initialise the model.
@@ -110,7 +110,7 @@ class DINOv3StreakHeatmap(nn.Module):
             model_size: ``base`` or ``large``.
             weights: Local DINOv3 checkpoint.
             hidden_channels: Width of the trainable heatmap head.
-            out_channels: 1 heatmap channel plus 4 geometry channels by default.
+            out_channels: Number of endpoint-centerline heatmap channels.
             freeze_backbone: Keep True for the initial spike.
         """
         super().__init__()
@@ -144,8 +144,7 @@ class DINOv3StreakHeatmap(nn.Module):
             x: Float tensor, shape ``(B, 3, H, W)``, already ImageNet-normalised.
 
         Returns:
-            Tensor, shape ``(B, 5, H/16, W/16)`` by default. Channel 0 is the
-            heatmap logit; channels 1-4 are geometry predictions.
+            Tensor, shape ``(B, 1, H/16, W/16)`` by default.
         """
         feats = self.extract_features(x)
         return self.head(feats)
@@ -313,7 +312,7 @@ class ConvNeXtStreakHeatmap(nn.Module):
         weights: str | Path = "weights/dinov3_convnext_small_pretrain_lvd1689m.pth",
         extract_stage: int = 3,
         hidden_channels: int = 256,
-        out_channels: int = 5,
+        out_channels: int = 1,
         freeze_backbone: bool = True,
     ) -> None:
         """Initialise the model.
@@ -325,7 +324,7 @@ class ConvNeXtStreakHeatmap(nn.Module):
                 Stage 2 gives 384 ch at H/16 (same stride as ViT-S/16);
                 stage 3 gives 768 ch at H/32 (full backbone, default).
             hidden_channels: Width of the trainable heatmap head.
-            out_channels: 1 heatmap channel plus 4 geometry channels by default.
+            out_channels: Number of endpoint-centerline heatmap channels.
             freeze_backbone: Keep True for standard frozen-backbone training.
         """
         super().__init__()
@@ -382,8 +381,7 @@ class ConvNeXtStreakHeatmap(nn.Module):
             x: Float tensor, shape ``(B, 3, H, W)``, already ImageNet-normalised.
 
         Returns:
-            Tensor, shape ``(B, out_channels, H', W')``. Channel 0 is the
-            heatmap logit; channels 1-4 are geometry predictions.
+            Tensor, shape ``(B, out_channels, H', W')``.
         """
         return self.head(self.extract_features(x))
 
