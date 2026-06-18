@@ -59,14 +59,25 @@ Each image entry carries:
 Each annotation carries an `obb` dict (`cx, cy, w, h, angle_deg`) plus a
 `segmentation` polygon. `h` is the drawn streak width in pixels (not fixed).
 
-### Current nights (status as of 2026-06-16)
+### Current nights (status as of 2026-06-18)
 
-| Directory | FITS | With streaks | Blanks | Rejected | Pending review |
-|---|---|---|---|---|---|
-| `Img_20260412_Atwood/` | 759 | 597 | 38 | 115 | 9 not yet in JSON |
-| `Img_20260515_Atwood/` | 300 | 250 | 27 | 23 | 0 — fully reviewed |
-| `Img_20260527_Atwood/` | 809 | 507 | 25 | 109 | 168 unreviewed |
-| `Img_20260528_Atwood/` | 499 | 175 | 18 | 5 | 301 unreviewed |
+Rejected/unusable frames have been removed from disk and JSON. Only annotated
+(streak present) and blank (confirmed empty) frames remain.
+
+| Directory | FITS | Annotated | Blank | OBBs | Short (<400px) | Medium (400–1000px) | Long (>1000px) |
+|---|---|---|---|---|---|---|---|
+| `Img_20260412_Atwood/` | 635 | 597 | 38 | 597 | 83 | 457 | 57 |
+| `Img_20260515_Atwood/` | 277 | 250 | 27 | 258 | 30 | 193 | 35 |
+| `Img_20260527_Atwood/` | 700 | 673 | 27 | 737 | 15 | 244 | 478 |
+| `Img_20260528_Atwood/` | 489 | 463 | 26 | 483 | 5 | 27 | 451 |
+| `20260530_Atwood/` | 295 | 255 | 40 | 288 | 185 | 91 | 12 |
+| `Geo_20260520_Atwood/` | 11 | 11 | 0 | 53 | 33 | 13 | 7 |
+| **Total** | **2,407** | **2,249** | **158** | **2,416** | **351 (15%)** | **1,025 (42%)** | **1,040 (43%)** |
+
+All six nights are fully reviewed. Streak length uses the OBB major axis (`w`)
+in full-frame pixel coordinates (6248×4176). Short band is dominated by
+`20260530_Atwood` and `Geo_20260520_Atwood`; long band is dominated by
+`Img_20260527_Atwood` and `Img_20260528_Atwood` (fast-moving LEO passes).
 
 ### Annotation tool — `scripts/annotate.py`
 
@@ -317,13 +328,16 @@ Test split: `/Volumes/External/TrainingData/annotations/test_external_abs.json`
 Built by `scripts/build_training_json.py` from `data/sessions/manifest.yaml`.
 SatStreaks excluded per policy above.
 
-| Source | Images | Annotations | Band coverage |
+| Source | Images | OBBs | Band coverage |
 |---|---|---|---|
-| Atwood Night 1 (`gtimages.json`) | 578 + 91 neg | 578 | Medium + long (802–1540px) |
-| Atwood Night 2 (`brentimages_20260515.json`) | 204 | 204 | Medium + long |
-| Atwood Geo (`geo_20260520.json`) | 11 | 11 | Long (geostationary) |
-| Frigate diversity (`frigate_diversity.json`) | 250 | 251 | Short only (~20–80px in tile) |
-| **Total** | **1,134** | **1,044** | Short + medium + long; SatStreaks excluded |
+| `Img_20260412_Atwood/` | 597 + 38 blank | 597 | Medium + long |
+| `Img_20260515_Atwood/` | 250 + 27 blank | 258 | Medium + long |
+| `Img_20260527_Atwood/` | 673 + 27 blank | 737 | Long-dominant |
+| `Img_20260528_Atwood/` | 463 + 26 blank | 483 | Long-dominant |
+| `20260530_Atwood/` | 255 + 40 blank | 288 | Short-dominant |
+| `Geo_20260520_Atwood/` | 11 | 53 | Short + long (geostationary) |
+| Frigate diversity | 250 | 251 | Short only (~20–80px in tile) |
+| **Total** | **2,499 + 158 blank** | **2,667** | Short + medium + long; SatStreaks excluded |
 
 Rebuild:
 ```bash
