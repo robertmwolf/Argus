@@ -1,0 +1,83 @@
+{
+  "perp_threshold_px": 10.0,
+  "tier1_detection": {
+    "n_gt": 239,
+    "n_found": 233,
+    "n_false_positives": 263,
+    "detection_recall": 0.9749,
+    "detection_precision": 0.4698,
+    "per_band": {
+      "short": {
+        "n_gt": 9,
+        "n_found": 8,
+        "recall": 0.8889
+      },
+      "medium": {
+        "n_gt": 50,
+        "n_found": 48,
+        "recall": 0.96
+      },
+      "long": {
+        "n_gt": 180,
+        "n_found": 177,
+        "recall": 0.9833
+      }
+    }
+  },
+  "tier2_raw_geometry": {
+    "n_pairs": 233,
+    "angle_err_deg": {
+      "mean": 0.479,
+      "median": 0.205,
+      "p90": 1.002
+    },
+    "endpoint_err_px": {
+      "mean": 18.393,
+      "median": 14.517,
+      "p90": 24.727
+    },
+    "per_band": {
+      "short": {
+        "n_pairs": 8,
+        "angle_err_deg": {
+          "mean": 4.588,
+          "median": 4.371,
+          "p90": 7.027
+        },
+        "endpoint_err_px": {
+          "mean": 16.382,
+          "median": 14.296,
+          "p90": 23.219
+        }
+      },
+      "medium": {
+        "n_pairs": 48,
+        "angle_err_deg": {
+          "mean": 0.71,
+          "median": 0.558,
+          "p90": 1.386
+        },
+        "endpoint_err_px": {
+          "mean": 16.645,
+          "median": 14.413,
+          "p90": 18.245
+        }
+      },
+      "long": {
+        "n_pairs": 177,
+        "angle_err_deg": {
+          "mean": 0.231,
+          "median": 0.154,
+          "p90": 0.503
+        },
+        "endpoint_err_px": {
+          "mean": 18.958,
+          "median": 14.517,
+          "p90": 25.446
+        }
+      }
+    }
+  },
+  "tier3_refined_geometry": null,
+  "date_recorded": "2026-06-17T03:07:10Z"
+}

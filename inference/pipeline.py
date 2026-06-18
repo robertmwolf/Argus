@@ -874,6 +874,19 @@ def get_detector_statuses() -> list[dict]:
             "status":  "unavailable",
         })
 
+    # ViT-S/16 heatmap detector (window_v9 asl_cldice)
+    try:
+        from inference.vits_window_v9_detector import get_vits_v9_heatmap_status
+        statuses.append(get_vits_v9_heatmap_status())
+    except ImportError:
+        statuses.append({
+            "id":      "vits_heatmap_v9",
+            "name":    "DINOv3 ViT-S HeatMap v9 (asl_cldice)",
+            "type":    "ml",
+            "dataset": "Atwood window_v9",
+            "status":  "unavailable",
+        })
+
     # YOLO variants
     _yolo_entries = [
         {
@@ -1239,6 +1252,45 @@ def _run_all_detectors(
         else:
             results["vitb_heatmap_v4"] = []
 
+        if _enabled("vits_heatmap_v9"):
+            _vits_v9_norm = os.environ.get("VITS_V9_HEATMAP_NORM", "zscore").lower()
+            if raw_array_f32 is not None and default_norm_mode and default_norm_mode != _vits_v9_norm:
+                from inference.fits_loader import apply_norm as _apply_norm_vits_v9
+                _vits_v9_array = _apply_norm_vits_v9(raw_array_f32, _vits_v9_norm)
+            else:
+                _vits_v9_array = array
+
+            def _vits_v9_heatmap_task_with_sidecar(arr: "np.ndarray") -> list[dict]:
+                from inference.vits_window_v9_detector import run_vits_v9_heatmap_detector_and_heatmap
+                from inference.tiled_pipeline import stitch_collinear_fragments
+                dets, heat = run_vits_v9_heatmap_detector_and_heatmap(arr)
+                if heat is not None:
+                    _heatmap_sidecar["vits_heatmap_v9"] = heat
+                if len(dets) > 1:
+                    max_gap    = float(os.environ.get("VITS_V9_HEATMAP_STITCH_MAX_GAP", "200"))
+                    max_growth = float(os.environ.get("VITS_V9_HEATMAP_STITCH_MAX_GROWTH_RATIO", "3.0"))
+                    stitch_in = [
+                        {**d,
+                         "bbox":  [d["bbox"][0], d["bbox"][1],
+                                   d["bbox"][2] - d["bbox"][0],
+                                   d["bbox"][3] - d["bbox"][1]],
+                         "score": float(d["confidence"])}
+                        for d in dets
+                    ]
+                    stitched = stitch_collinear_fragments(stitch_in, max_gap_px=max_gap,
+                                                          max_growth_ratio=max_growth)
+                    dets = []
+                    for s in stitched:
+                        x, y, w, h = s["bbox"]
+                        dets.append({**s,
+                                     "bbox":       [x, y, x + w, y + h],
+                                     "confidence": s.get("confidence", s.get("score", 0.0))})
+                return dets
+
+            tasks[pool.submit(_timed_detector, "vits_heatmap_v9", _vits_v9_heatmap_task_with_sidecar, _vits_v9_array)] = "vits_heatmap_v9"
+        else:
+            results["vits_heatmap_v9"] = []
+
         for f in as_completed(tasks):
             key = tasks[f]
             try:
@@ -1462,6 +1514,7 @@ def run_with_array(
         + all_det_results.get("vitb_heatmap", [])
         + all_det_results.get("vits_heatmap_v4", [])
         + all_det_results.get("vitb_heatmap_v4", [])
+        + all_det_results.get("vits_heatmap_v9", [])
     )
 
     if raw_mode:
