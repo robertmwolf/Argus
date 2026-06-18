@@ -10,6 +10,21 @@
 - Env namespace: `VITS_V9_*` (see `.env`)
 - Eval: 0.979 recall / 0.918 precision on `val_balanced_v1.json` (t=0.70, pf=0.85)
 
+## Weight setup
+
+Download the published Hugging Face bundle after creating the Python environment:
+
+```bash
+python scripts/sync_hf.py --download --weights-only --weights-dir weights
+```
+
+The public `lonewolfman22/argus-weights` repository currently provides the
+DINOv3 backbone files and the `run15_vits` and `run17_vitb` heads. It does not
+provide `vits_v9_asl_cldice/best.pt`; production-v9 inference additionally
+requires a separately supplied checkpoint configured with
+`VITS_V9_HEATMAP_CHECKPOINT`. Use `hf auth login` or `HF_TOKEN` only when Hub
+authentication is required.
+
 See `docs/loss_ablation_v9_v10_postmortem.md` for full methodology and conclusions.
 
 ---

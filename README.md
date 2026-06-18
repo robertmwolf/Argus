@@ -40,6 +40,23 @@ python -m pip check
 Copy `.env.example` to `.env` and fill in Space-Track credentials before starting
 the API. **Never commit `.env`.**
 
+Download the published model weights from
+[`lonewolfman22/argus-weights`](https://huggingface.co/lonewolfman22/argus-weights):
+
+```bash
+python scripts/sync_hf.py --download --weights-only --weights-dir weights
+```
+
+The repository is public, so setup normally requires no Hugging Face token. If
+authentication is required, run `hf auth login` or export `HF_TOKEN` first.
+The download includes the DINOv3 backbone weights and the published `run15_vits`
+and `run17_vitb` heads. It does not currently include the production
+`weights/vits_v9_asl_cldice/best.pt` head; supply that checkpoint separately and
+set `VITS_V9_HEATMAP_CHECKPOINT` in `.env` when production-v9 inference is needed.
+
+Weights are stored under the gitignored `weights/` directory and must never be
+committed.
+
 Start the API:
 
 ```bash

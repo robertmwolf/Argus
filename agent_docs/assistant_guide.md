@@ -78,6 +78,19 @@ See `agent_docs/datasets.md` for the path-resolution and staging contract.
 
 The usual local environment is `/Users/robert/miniconda3/envs/satid`.
 
+After creating the environment, retrieve the published Hugging Face weights:
+
+```bash
+python scripts/sync_hf.py --download --weights-only --weights-dir weights
+```
+
+The public bundle requires no token under normal conditions. If authentication
+is required, use `hf auth login` or `HF_TOKEN`. The current bundle contains the
+DINOv3 backbones plus the `run15_vits` and `run17_vitb` heads, but not
+`weights/vits_v9_asl_cldice/best.pt`. Do not claim production-v9 readiness unless
+that checkpoint is supplied separately through `VITS_V9_HEATMAP_CHECKPOINT`.
+Never commit downloaded weights.
+
 ```bash
 /Users/robert/miniconda3/envs/satid/bin/python -m pytest tests/ -q
 ```
