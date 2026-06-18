@@ -15,8 +15,8 @@ authors:
     orcid: ""
 repository-code: "https://github.com/robertmwolf/Argus"
 license: AGPL-3.0-or-later
-date-released: "2026-05-02"
-version: "0.1.0"
+date-released: "2026-06-18"
+version: "0.2.0"
 keywords:
   - satellite identification
   - streak detection
