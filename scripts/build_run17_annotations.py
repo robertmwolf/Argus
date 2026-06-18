@@ -23,7 +23,6 @@ from __future__ import annotations
 import json
 import logging
 import re
-import sys
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")

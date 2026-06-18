@@ -108,7 +108,7 @@ def main() -> int:
         Path(args.skip_list).parent.mkdir(parents=True, exist_ok=True)
         Path(args.skip_list).write_text(json.dumps(bad, indent=2))
         print(f"\nSkip-list written → {args.skip_list}")
-        print(f"To build clean annotation:")
+        print("To build clean annotation:")
         print(f"  python scripts/screen_fits_files.py "
               f"--annotations {args.annotations} "
               f"--skip-list {args.skip_list} "

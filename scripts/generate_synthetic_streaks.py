@@ -119,9 +119,6 @@ def _render_streak(
     dy = YY - cy
     # parallel projection along streak direction
     d_par = dx * cos_θ + dy * sin_θ
-    # perpendicular distance
-    d_perp = -dx * sin_θ + dy * cos_θ
-
     # clip to streak length (streak doesn't extend beyond endpoints)
     d_par_clipped = np.clip(d_par, -half, half)
     # distance from the nearest point on the segment

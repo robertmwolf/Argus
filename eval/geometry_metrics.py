@@ -67,7 +67,6 @@ def evaluate_geometry(
     predictions: list[dict],
     ground_truth: list[dict],
     perp_threshold_px: float = DEFAULT_PERP_THRESHOLD_PX,
-    image_arrays: dict[str, np.ndarray] | None = None,
 ) -> dict[str, Any]:
     """Evaluate detection, angle, and endpoint accuracy.
 
@@ -75,8 +74,6 @@ def evaluate_geometry(
         predictions: Endpoint prediction dictionaries.
         ground_truth: Endpoint annotation dictionaries.
         perp_threshold_px: Maximum centerline offset for matching.
-        image_arrays: Reserved for a future endpoint-refinement tier.
-
     Returns:
         Tiered metrics compatible with existing result comparison tooling.
     """
@@ -136,7 +133,6 @@ def main() -> int:
     parser.add_argument("--annotations", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--perp-threshold-px", type=float, default=DEFAULT_PERP_THRESHOLD_PX)
-    parser.add_argument("--images-dir", type=Path, help="Reserved; refinement is endpoint-native only")
     args = parser.parse_args()
     metrics = evaluate_geometry(
         _load_predictions(args.predictions),

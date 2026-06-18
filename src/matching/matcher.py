@@ -12,7 +12,7 @@ import math
 from dataclasses import dataclass
 from datetime import datetime
 
-from src.detection.classical_detector import StreakDetection
+from src.detection.streak import StreakDetection
 from src.ingest.fits_parser import FITSImage
 from src.matching.scorer import aggregate_score, gaussian_score
 
@@ -92,7 +92,7 @@ def _resolve_direction_delta(observed_pa: float, predicted_pa: float) -> float:
     # Source: ARGUS architecture — streak direction ambiguity resolution
     # Ref: agent_docs/architecture.md
 
-    ASTRiDE assigns start/end arbitrarily, so the observed PA carries an
+    Endpoint order is arbitrary, so the observed PA carries an
     implicit 180° ambiguity.  We test both orientations against the
     SGP4-predicted direction and take the smaller delta.
 
@@ -213,7 +213,6 @@ def match(
 
 
 if __name__ == "__main__":
-    import sys
     logging.basicConfig(level=logging.INFO)
     print("matcher.py: import match() and pass a StreakDetection + candidate list.")
     print("See tests/test_matcher.py for usage examples.")

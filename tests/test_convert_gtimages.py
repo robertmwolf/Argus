@@ -223,8 +223,8 @@ class TestFitsDimensions:
 
 class TestConvert:
     def test_labeled_images_count(self, tmp_path):
-        fits1 = _write_fits(tmp_path / "good1.fits")
-        fits2 = _write_fits(tmp_path / "good2.fits")
+        _write_fits(tmp_path / "good1.fits")
+        _write_fits(tmp_path / "good2.fits")
         _write_strk(tmp_path / "48381.strk", [_usable_row("good1.fits"), _usable_row("good2.fits")])
         labeled, _ = convert(tmp_path, tmp_path / "out.json")
         assert len(labeled["images"]) == 2

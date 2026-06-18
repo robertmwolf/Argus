@@ -25,6 +25,8 @@ const METHOD_ACCENT = {
   ml:                        'accent-cyan-400',
 }
 
+const DEFAULT_CONF_THRESHOLD = 0.2
+
 export default function FilterPanel({
   detections,
   methodThresholds,
@@ -61,7 +63,7 @@ export default function FilterPanel({
       {/* Per-method sliders */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2.5">
         {methods.map(method => {
-          const pct = Math.round((methodThresholds[method] ?? 0) * 100)
+          const pct = Math.round((methodThresholds[method] ?? DEFAULT_CONF_THRESHOLD) * 100)
           const label = METHOD_LABELS[method] ?? method
           const accent = METHOD_ACCENT[method] ?? 'accent-slate-400'
           return (

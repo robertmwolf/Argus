@@ -67,35 +67,10 @@ def _find_astap() -> str | None:
     return shutil.which("astap")
 
 
-def _fov_from_header(header: Any) -> float | None:
-    """Estimate the horizontal field of view in degrees from FITS keywords.
-
-    Uses FOCALLEN (mm), XPIXSZ (µm), NAXIS1 (pixels), and the small-angle
-    approximation: plate_scale = pixel_size / focal_length × 206265 arcsec/px.
-
-    Args:
-        header: astropy FITS Header or dict-like.
-
-    Returns:
-        Horizontal FOV in degrees, or None when required keywords are absent.
-    """
-    try:
-        focallen = float(header.get("FOCALLEN") or 0)
-        xpixsz = float(header.get("XPIXSZ") or 0)
-        naxis1 = int(header.get("NAXIS1") or 0)
-        if focallen > 0 and xpixsz > 0 and naxis1 > 0:
-            plate_scale_arcsec = (xpixsz * 1e-3 / focallen) * 206265.0
-            return naxis1 * plate_scale_arcsec / 3600.0
-    except (TypeError, ValueError):
-        pass
-    return None
-
-
 def solve(
     fits_path: Path,
     ra_deg: float | None = None,
     dec_deg: float | None = None,
-    fov_deg: float | None = None,
     search_radius_deg: float = _DEFAULT_SEARCH_RADIUS_DEG,
     downsample: int = _DEFAULT_DOWNSAMPLE,
     timeout: int = _DEFAULT_TIMEOUT_S,
@@ -113,8 +88,6 @@ def solve(
             ``_HINT_SEARCH_RADIUS_DEG`` unless *search_radius_deg* is given
             explicitly.
         dec_deg: Dec hint in degrees.
-        fov_deg: Horizontal field-of-view hint in degrees.  Omit to let ASTAP
-            auto-detect from the image dimensions.
         search_radius_deg: Sky search radius passed to ASTAP (``-r``).
         downsample: Image downsample factor (``-z``); 2 is a good default for
             large sensor images.
@@ -253,8 +226,8 @@ def solve(
 def solve_from_header(fits_path: Path, header: Any) -> WCS | None:
     """Plate-solve *fits_path* using pointing hints extracted from its header.
 
-    Reads ``RA``, ``DEC``, ``FOCALLEN``, ``XPIXSZ``, and ``NAXIS1`` from
-    *header* and passes them to :func:`solve` as hints.  When ``RA``/``DEC``
+    Reads ``RA`` and ``DEC`` from *header* and passes them to :func:`solve` as
+    hints.  When ``RA``/``DEC``
     are present the search radius is automatically tightened to
     ``_HINT_SEARCH_RADIUS_DEG`` degrees.
 
@@ -278,7 +251,6 @@ def solve_from_header(fits_path: Path, header: Any) -> WCS | None:
         fits_path,
         ra_deg=_flt("RA"),
         dec_deg=_flt("DEC"),
-        fov_deg=_fov_from_header(header),
     )
 
 

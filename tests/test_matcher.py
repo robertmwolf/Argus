@@ -1,12 +1,11 @@
 """Tests for src/matching/matcher.py."""
 
 from datetime import datetime, timezone
-from dataclasses import dataclass
 
 import pytest
 
 from src.matching.matcher import match, CandidateMatch, _resolve_direction_delta
-from src.detection.classical_detector import StreakDetection
+from src.detection.streak import StreakDetection
 from src.ingest.fits_parser import FITSImage
 import numpy as np
 from astropy.io import fits as astrofits
@@ -23,13 +22,6 @@ def _make_detection(
         y_start=100.0,
         x_end=200.0,
         y_end=150.0,
-        x_center=150.0,
-        y_center=125.0,
-        angle_deg=45.0,
-        length_px=111.8,
-        width_px=2.0,
-        shape_factor=50.0,
-        area_px=200.0,
         ra_start=9.9,
         dec_start=19.9,
         ra_end=10.1,

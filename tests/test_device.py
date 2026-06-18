@@ -2,7 +2,7 @@
 
 import os
 from contextlib import contextmanager
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 import torch

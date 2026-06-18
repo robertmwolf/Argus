@@ -12,7 +12,7 @@ line segment defined by `x1`, `y1`, `x2`, and `y2`.
   confidence, and cross-identification
 - `eval/geometry_metrics.py`: canonical segment evaluator
 - `db/`, `api/`, `frontend/`: persistence and product surface
-- `src/`: classical detection and satellite matching components
+- `src/`: FITS ingestion, astrometry, and satellite matching components
 
 Historical source annotations are normalized once by
 `training.annotation_endpoints`. Working annotations, predictions, database
@@ -20,23 +20,36 @@ records, API payloads, and UI rendering all use endpoints.
 
 ## Local development
 
+Create the Python environment from the repository root:
+
 ```bash
+conda env create -f environment.yml
 conda activate satid
-uvicorn api.main:app --reload --port 8000
+python -m pip check
 ```
 
-In a second terminal:
+The environment file is the tested macOS development path. CUDA users should
+instead create a Python 3.11 environment, install the PyTorch build recommended
+for their CUDA platform, and then install `requirements-dev.txt` with pip.
+
+Start the API:
+
+```bash
+python -m uvicorn api.main:app --reload --port 8000
+```
+
+In a second terminal, using Node.js 20.19+ or 22.12+:
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
 ## Tests
 
 ```bash
-/Users/robert/miniconda3/envs/satid/bin/python -m pytest tests/ -q
+python -m pytest tests/ -q
 ```
 
 Tests are offline and do not require production checkpoints or Space-Track

@@ -27,7 +27,6 @@ import argparse
 import logging
 import pathlib
 from collections import defaultdict
-from datetime import datetime, timezone
 
 from astropy.io import fits
 from astropy.time import Time

@@ -41,7 +41,6 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -172,7 +171,6 @@ def download_bundle(file_entry: dict, dest_dir: Path) -> Path:
     client = _get_client()
     _rate_limit()
 
-    chunk_size = 256 * 1024  # 256 KiB
     bytes_written = 0
     last_reported = 0
 

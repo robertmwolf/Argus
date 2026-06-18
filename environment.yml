@@ -1,5 +1,5 @@
-# Minimal ARGUS conda environment. PyTorch is platform-specific and should be
-# installed before the pip requirements described in README.md.
+# Tested macOS ARGUS development environment. See README.md for the manual
+# installation path when a platform-specific CUDA build of PyTorch is needed.
 name: satid
 channels:
   - defaults

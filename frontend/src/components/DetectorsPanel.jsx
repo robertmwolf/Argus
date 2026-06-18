@@ -166,7 +166,7 @@ export default function DetectorsPanel({ onSelectionChange, fastMode = false, on
             </tr>
           </thead>
           <tbody>
-            {detectors.map((det, i) => {
+            {detectors.map((det) => {
               const isActive = det.status === 'active'
               const isChecked = selected?.has(det.id) ?? false
               return (

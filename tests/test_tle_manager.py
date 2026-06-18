@@ -9,7 +9,6 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
-import pytest
 
 _OBS_TIME_HIST = datetime(2024, 4, 2, 2, 55, 24, tzinfo=timezone.utc)
 
@@ -79,14 +78,12 @@ class TestHistoricalTrack:
                 "src.matching.tle_manager.query_tles_for_epoch_drift",
                 return_value=_FAKE_ROWS,
             ) as mock_broad:
-                with patch("src.matching.tle_manager.query_latest_tles") as mock_latest:
-                    rows = manager.get_tles(_OBS_TIME_HIST, epoch_window_days=3)
+                rows = manager.get_tles(_OBS_TIME_HIST, epoch_window_days=3)
 
         assert rows[0]["norad_id"] == _FAKE_ROWS[0]["norad_id"]
         assert rows[0]["tle_search_mode"] == "broad_epoch"
-        assert rows[0]["epoch_search_window_days"] == 30
+        assert rows[0]["epoch_search_window_days"] == 60
         mock_broad.assert_called_once()
-        mock_latest.assert_not_called()
 
     def test_historical_miss_logs_bootstrap_instruction(self, caplog):
         """A miss after broad/current fallbacks logs a clear operator diagnostic."""
@@ -96,20 +93,17 @@ class TestHistoricalTrack:
         manager = TLECatalogManager()
         with patch("src.matching.tle_manager.query_tles_for_window", return_value=[]):
             with patch("src.matching.tle_manager.query_tles_for_epoch_drift", return_value=[]):
-                with patch("src.matching.tle_manager.query_latest_tles", return_value=[]):
-                    with patch.object(manager, "_refresh_current_catalog"):
-                        with patch("src.matching.tle_manager.get_latest_coverage_time", return_value=datetime.now(tz=timezone.utc)):
-                            with caplog.at_level(logging.WARNING, logger="src.matching.tle_manager"):
-                                manager.get_tles(_OBS_TIME_HIST, epoch_window_days=3)
+                with caplog.at_level(logging.WARNING, logger="src.matching.tle_manager"):
+                    manager.get_tles(_OBS_TIME_HIST, epoch_window_days=3)
 
         assert any("bootstrap" in r.message.lower() for r in caplog.records)
 
 
 # ---------------------------------------------------------------------------
-# Live track — broad/current fallbacks on miss
+# Recent observations use the same local-only lookup
 # ---------------------------------------------------------------------------
 
-class TestLiveTrack:
+class TestRecentObservations:
     @staticmethod
     def _recent_time(hours_ago: float = 1.0) -> datetime:
         return datetime.now(tz=timezone.utc) - timedelta(hours=hours_ago)
@@ -128,77 +122,23 @@ class TestLiveTrack:
         assert rows[0]["norad_id"] == _FAKE_ROWS[0]["norad_id"]
         assert rows[0]["tle_search_mode"] == "normal"
 
-    def test_miss_with_stale_current_data_triggers_refresh_and_uses_latest(self):
-        """If broad search misses and fresh data is stale, current catalog refresh runs."""
-        from src.matching.tle_manager import TLECatalogManager
-
-        manager = TLECatalogManager()
-        with patch(
-            "src.matching.tle_manager.query_tles_for_window",
-            return_value=[],
-        ):
-            with patch("src.matching.tle_manager.query_tles_for_epoch_drift", return_value=[]):
-                with patch("src.matching.tle_manager.get_latest_coverage_time", return_value=None):
-                    with patch.object(manager, "_refresh_current_catalog") as mock_refresh:
-                        with patch("src.matching.tle_manager.query_latest_tles", return_value=_FAKE_ROWS):
-                            rows = manager.get_tles(self._recent_time(), epoch_window_days=1)
-
-        mock_refresh.assert_called_once()
-        assert rows[0]["tle_search_mode"] == "current_fallback"
-
-    def test_miss_with_fresh_current_data_skips_refresh_but_uses_latest(self):
-        """Fresh current data is reused without a network refresh."""
-        from src.matching.tle_manager import TLECatalogManager
-
-        manager = TLECatalogManager()
-        recent_refresh = datetime.now(tz=timezone.utc) - timedelta(minutes=30)
-        with patch("src.matching.tle_manager.query_tles_for_window", return_value=[]):
-            with patch("src.matching.tle_manager.query_tles_for_epoch_drift", return_value=[]):
-                with patch("src.matching.tle_manager.get_latest_coverage_time", return_value=recent_refresh):
-                    with patch.object(manager, "_refresh_current_catalog") as mock_refresh:
-                        with patch("src.matching.tle_manager.query_latest_tles", return_value=_FAKE_ROWS):
-                            rows = manager.get_tles(self._recent_time(), epoch_window_days=1)
-
-        mock_refresh.assert_not_called()
-        assert rows[0]["tle_search_mode"] == "current_fallback"
-
-    def test_miss_still_empty_after_refresh_returns_empty(self):
-        """If all fallback sources are empty, get_tles returns []."""
+    def test_miss_returns_empty_without_network_fallback(self):
+        """A recent miss remains local-only and returns an empty catalog."""
         from src.matching.tle_manager import TLECatalogManager
 
         manager = TLECatalogManager()
         with patch("src.matching.tle_manager.query_tles_for_window", return_value=[]):
             with patch("src.matching.tle_manager.query_tles_for_epoch_drift", return_value=[]):
-                with patch("src.matching.tle_manager.get_latest_coverage_time", return_value=None):
-                    with patch.object(manager, "_refresh_current_catalog"):
-                        with patch("src.matching.tle_manager.query_latest_tles", return_value=[]):
-                            rows = manager.get_tles(self._recent_time(), epoch_window_days=1)
+                rows = manager.get_tles(self._recent_time(), epoch_window_days=1)
 
         assert rows == []
 
 
 # ---------------------------------------------------------------------------
-# Threshold boundary
+# Datetime normalization
 # ---------------------------------------------------------------------------
 
-class TestLiveThresholdBoundary:
-    def test_exactly_at_threshold_is_historical(self):
-        """obs_time exactly at live threshold still follows safe fallback path."""
-        from src.matching.tle_manager import TLECatalogManager, _LIVE_THRESHOLD_HOURS
-
-        manager = TLECatalogManager()
-        exactly_at_threshold = (
-            datetime.now(tz=timezone.utc) - timedelta(hours=_LIVE_THRESHOLD_HOURS)
-        )
-        with patch("src.matching.tle_manager.query_tles_for_window", return_value=[]):
-            with patch("src.matching.tle_manager.query_tles_for_epoch_drift", return_value=[]):
-                with patch("src.matching.tle_manager.get_latest_coverage_time", return_value=None):
-                    with patch("src.matching.tle_manager.query_latest_tles", return_value=[]):
-                        with patch.object(manager, "_refresh_current_catalog") as mock_refresh:
-                            manager.get_tles(exactly_at_threshold, epoch_window_days=1)
-
-        mock_refresh.assert_called_once()
-
+class TestDatetimeNormalization:
     def test_naive_obs_time_is_made_utc_aware(self):
         """A naive datetime is treated as UTC without raising an exception."""
         from src.matching.tle_manager import TLECatalogManager
@@ -207,8 +147,6 @@ class TestLiveThresholdBoundary:
         naive = datetime(2024, 4, 2, 2, 55, 24)  # no tzinfo
         with patch("src.matching.tle_manager.query_tles_for_window", return_value=[]):
             with patch("src.matching.tle_manager.query_tles_for_epoch_drift", return_value=[]):
-                with patch("src.matching.tle_manager.query_latest_tles", return_value=[]):
-                    with patch.object(manager, "_refresh_current_catalog"):
-                        rows = manager.get_tles(naive, epoch_window_days=3)
+                rows = manager.get_tles(naive, epoch_window_days=3)
 
         assert rows == []

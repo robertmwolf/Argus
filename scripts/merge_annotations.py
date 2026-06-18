@@ -47,8 +47,6 @@ logger = logging.getLogger(__name__)
 # Paths
 # ---------------------------------------------------------------------------
 SATSTREAKS_LABELS  = Path("data/satstreaks/Data/labels.json")
-SATSTREAKS_IMG_DIR = Path("data/satstreaks/Data/Images")
-SATSTREAKS_MSK_DIR = Path("data/satstreaks/Data/Masks")
 GTIMAGES_JSON      = Path("data/annotations/gtimages.json")
 GTIMAGES_NEG_JSON  = Path("data/annotations/gtimages_negatives.json")
 FRIGATE_JSON       = Path("data/annotations/frigate_streaks.json")

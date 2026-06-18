@@ -45,7 +45,6 @@ from inference.device import get_device
 # Re-use the backbone-agnostic helpers from the ConvNeXt detector
 from inference.convnext_heatmap_detector import (
     _run_single_tile,
-    _run_single_tile_probs,
     _remap_detection,
     _rescale_detections,
     _run_tile_batch_full,
@@ -63,26 +62,6 @@ def _filter_peak_topk(dets: list[dict[str, Any]], peak_floor: float, top_k: int)
 
 
 _MODEL_CACHE: dict[str, tuple[Any, int, torch.device, bool]] = {}
-
-
-def _head_out_channels(head_state: dict[str, torch.Tensor]) -> int:
-    """Return the output width of a cached heatmap head state dict.
-
-    Checkpoints saved from ``HeatmapHead`` include the module prefix
-    (``net.4.weight``); older sequential-head checkpoints use ``4.weight``.
-    """
-    for key in ("net.4.weight", "4.weight"):
-        weight = head_state.get(key)
-        if weight is not None:
-            return int(weight.shape[0])
-    candidates = [
-        (key, value)
-        for key, value in head_state.items()
-        if key.endswith(".weight") and value.ndim == 4
-    ]
-    if not candidates:
-        raise ValueError("checkpoint heatmap head has no convolution weight")
-    return int(candidates[-1][1].shape[0])
 
 
 def _centerline_head_state(head_state: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:

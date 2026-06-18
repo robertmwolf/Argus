@@ -9,17 +9,14 @@ from __future__ import annotations
 
 import logging
 import math
-import sys
-from pathlib import Path
-
 import numpy as np
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS, FITSFixedWarning
 import warnings
 
-from src.detection.classical_detector import StreakDetection, detect_streaks
-from src.ingest.fits_parser import FITSImage, parse_fits
+from src.detection.streak import StreakDetection
+from src.ingest.fits_parser import FITSImage
 
 logger = logging.getLogger(__name__)
 
@@ -211,41 +208,3 @@ def _celestial_position_angle(
 
     pa_deg = math.degrees(math.atan2(x, y))
     return pa_deg % 360.0
-
-
-# ---------------------------------------------------------------------------
-# Standalone entry point
-# ---------------------------------------------------------------------------
-
-if __name__ == "__main__":
-    import time
-
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-
-    if len(sys.argv) != 2:
-        print("Usage: python plate_solver.py <path/to/image.fits>")
-        sys.exit(1)
-
-    fits_path = Path(sys.argv[1])
-    img = parse_fits(fits_path)
-    dets = detect_streaks(img)
-
-    if not dets:
-        print("No streaks detected.")
-        sys.exit(0)
-
-    solver = PlateSolver()
-    t0 = time.perf_counter()
-    for i, det in enumerate(dets, 1):
-        solver.solve(img, det)
-        elapsed = time.perf_counter() - t0
-        print(f"\n=== Streak #{i} (solved in {elapsed:.3f}s) ===")
-        print(f"  pixel center : ({det.x_center:.1f}, {det.y_center:.1f})")
-        print(f"  ra_center    : {det.ra_center}")
-        print(f"  dec_center   : {det.dec_center}")
-        print(f"  ra_start     : {det.ra_start}")
-        print(f"  dec_start    : {det.dec_start}")
-        print(f"  ra_end       : {det.ra_end}")
-        print(f"  dec_end      : {det.dec_end}")
-        print(f"  pos_angle    : {det.position_angle_deg}")
-        print(f"  ang_vel      : {det.angular_velocity_arcsec_s} arcsec/s")

@@ -33,6 +33,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 from fastapi import FastAPI, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
@@ -634,7 +635,7 @@ def _render_image_preview(data: bytes) -> bytes | None:
 def _render_png(
     fits_path: Path,
     detections: list[dict],
-    array: "np.ndarray | None" = None,
+    array: np.ndarray | None = None,
 ) -> bytes:
     """Render FITS data to a PNG with bounding box overlays.
 
@@ -649,7 +650,6 @@ def _render_png(
         PNG file bytes.
     """
     try:
-        import numpy as np
         from PIL import Image, ImageDraw
 
         if array is not None:
@@ -686,7 +686,7 @@ def _render_png(
 
 
 def _render_heatmap_png(
-    heat_array: "np.ndarray",
+    heat_array: np.ndarray,
     target_width: int | None,
     target_height: int | None,
 ) -> bytes | None:

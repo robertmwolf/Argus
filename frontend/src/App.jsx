@@ -10,6 +10,7 @@ import UploadZone from './components/UploadZone'
 
 const POLL_INTERVAL_MS = 2000
 const DEFAULT_CONF_THRESHOLD = 0.2
+const EMPTY_DETECTIONS = []
 
 export default function App() {
   const [jobId, setJobId] = useState(null)
@@ -18,7 +19,6 @@ export default function App() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const [highlightIndex, setHighlightIndex] = useState(null)
-  const [modelLabel, setModelLabel] = useState(null)
   const [spaceTrackDataRefreshedAt, setSpaceTrackDataRefreshedAt] = useState(null)
   const [headerObsEpoch, setHeaderObsEpoch] = useState(null)
   const [disabledStreaks, setDisabledStreaks] = useState(new Set())   // Set of displayDetections indices
@@ -32,7 +32,6 @@ export default function App() {
     fetch('/health')
       .then(r => r.json())
       .then(d => {
-        setModelLabel(d.model_label)
         setSpaceTrackDataRefreshedAt(d.space_track_data_refreshed_at ?? null)
       })
       .catch(() => {})
@@ -94,10 +93,7 @@ export default function App() {
   }, [jobId, jobStatus])
 
   useEffect(() => {
-    if (!jobId || jobStatus !== 'complete') {
-      setHeaderObsEpoch(null)
-      return
-    }
+    if (!jobId || jobStatus !== 'complete') return
 
     let cancelled = false
     const loadHeaderObsEpoch = async () => {
@@ -119,24 +115,6 @@ export default function App() {
       cancelled = true
     }
   }, [jobId, jobStatus])
-
-  // Seed each method's slider to DEFAULT_CONF_THRESHOLD when results first arrive.
-  // Only sets methods not yet explicitly configured so user adjustments survive re-polls.
-  useEffect(() => {
-    if (!result?.detections) return
-    const methods = [...new Set(
-      result.detections.flatMap(d =>
-        (d.sources ?? [{ method: d.method }]).map(s => s.method).filter(Boolean)
-      )
-    )]
-    setMethodThresholds(prev => {
-      const next = { ...prev }
-      for (const m of methods) {
-        if (!(m in next)) next[m] = DEFAULT_CONF_THRESHOLD
-      }
-      return next
-    })
-  }, [result])
 
   const handleThresholdChange = (method, value) => {
     setMethodThresholds(prev => ({ ...prev, [method]: value }))
@@ -186,12 +164,12 @@ export default function App() {
 
   const isProcessing = jobId && jobStatus && jobStatus !== 'complete' && jobStatus !== 'failed'
   const isComplete = result !== null
+  const resultDetections = result?.detections ?? EMPTY_DETECTIONS
 
   // One entry per streak, sorted by primary confidence descending.
   const displayDetections = useMemo(() => {
-    if (!result?.detections) return []
-    return [...result.detections].sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))
-  }, [result?.detections])
+    return [...resultDetections].sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))
+  }, [resultDetections])
 
   // Streaks that pass both the per-method threshold and are not manually disabled.
   const visibleSet = useMemo(() => {
@@ -199,7 +177,9 @@ export default function App() {
     displayDetections.forEach((det, idx) => {
       if (disabledStreaks.has(idx)) return
       const sources = det.sources ?? [{ method: det.method, confidence: det.confidence }]
-      const passes = sources.every(s => (s.confidence ?? 1) >= (methodThresholds[s.method] ?? 0))
+      const passes = sources.every(
+        s => (s.confidence ?? 1) >= (methodThresholds[s.method] ?? DEFAULT_CONF_THRESHOLD)
+      )
       if (passes) set.add(idx)
     })
     return set
@@ -292,7 +272,7 @@ export default function App() {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
               <div className="lg:col-span-2">
-                <ProcessingView jobId={jobId} status={jobStatus} />
+                <ProcessingView key={jobId} jobId={jobId} status={jobStatus} />
               </div>
               <div className="lg:col-span-1">
                 <FitsHeaderPanel jobId={jobId} />

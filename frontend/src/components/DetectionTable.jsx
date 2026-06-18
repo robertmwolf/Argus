@@ -8,8 +8,6 @@
  *   photoTakenAt   — observation DATE-OBS fallback from /api/result
  */
 
-import { useEffect, useState } from 'react'
-
 const METHOD_CONFIG = {
   unified:                   { label: 'Confidence Score',          cls: 'border-emerald-500/80 bg-emerald-900/50 text-emerald-300' },
   opencv:                    { label: 'OpenCV Morphological',      cls: 'border-orange-600/60 bg-orange-950/40 text-orange-300' },
@@ -101,23 +99,6 @@ function formatTleCurrency(best) {
 }
 
 export default function DetectionTable({ detections, visibleSet, highlightIndex, onRowClick, onToggleStreak, photoTakenAt }) {
-  const [headerPhotoDate, setHeaderPhotoDate] = useState(null)
-
-  useEffect(() => {
-    if (photoTakenAt) {
-      setHeaderPhotoDate(null)
-      return
-    }
-
-    const rows = Array.from(document.querySelectorAll('table tbody tr'))
-    const dateObsRow = rows.find((row) => {
-      const firstCell = row.children[0]?.textContent?.trim()
-      return firstCell === 'DATE-OBS'
-    })
-    const dateObs = dateObsRow?.children[1]?.textContent?.trim()
-    setHeaderPhotoDate(dateObs ? normaliseDateObs(dateObs) : null)
-  }, [photoTakenAt, detections])
-
   if (!detections || detections.length === 0) {
     return (
       <div className="rounded-xl border border-slate-700 px-4 py-8 text-center">
@@ -266,7 +247,7 @@ export default function DetectionTable({ detections, visibleSet, highlightIndex,
 
                   {/* Photo date */}
                   <td className="px-4 py-2.5 font-mono text-xs text-slate-400 whitespace-nowrap">
-                    {formatDateTime(best?.photo_taken_at ?? det.photo_taken_at ?? photoTakenAt ?? headerPhotoDate)}
+                    {formatDateTime(best?.photo_taken_at ?? det.photo_taken_at ?? photoTakenAt)}
                   </td>
 
                   {/* Best match name */}
@@ -316,11 +297,4 @@ export default function DetectionTable({ detections, visibleSet, highlightIndex,
       </div>
     </div>
   )
-}
-
-function normaliseDateObs(value) {
-  if (!value) return null
-  const raw = String(value).trim().replace(' ', 'T')
-  if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(raw)) return raw
-  return `${raw}Z`
 }

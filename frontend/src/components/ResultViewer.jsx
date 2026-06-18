@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 
 const SEGMENT_COLOUR = '#00DCFF'    // cyan  — DINOv3 / ML
 const HEATMAP_COLOUR = '#A3E635'    // lime  — DINOv3 heatmap centerline
-const CLASSICAL_COLOUR = '#F59E0B'  // amber  — OpenCV
 const HIGHLIGHT_COLOUR = '#FF6B35'  // orange — highlighted row
 
 // ---------------------------------------------------------------------------
@@ -115,12 +114,9 @@ function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
   // actual detector sources.
   const individualSources = (det.sources ?? [{ method: det.method }])
     .filter(s => s.method !== 'unified')
-  const isClassical = individualSources.length > 0 &&
-    individualSources.every(s => s.method === 'classical' || s.method === 'opencv')
   const isHeatmap = individualSources.length > 0 &&
     individualSources.every(s => s.method === 'vits_heatmap' || s.method === 'dinov3_heatmap_centerline')
   const colour = highlighted ? HIGHLIGHT_COLOUR
-    : isClassical ? CLASSICAL_COLOUR
     : isHeatmap ? HEATMAP_COLOUR
     : SEGMENT_COLOUR
   const alpha = highlighted ? 1.0 : 0.4 + conf * 0.6
@@ -163,7 +159,7 @@ export default function ResultViewer({
   const imgRef = useRef(null)
   const heatmapImgRef = useRef(null)
   const [imgLoaded, setImgLoaded] = useState(false)
-  const [heatmapLoaded, setHeatmapLoaded] = useState(false)
+  const [loadedHeatmap, setLoadedHeatmap] = useState(null)
   const [tooltip, setTooltip] = useState(null)
 
   useEffect(() => {
@@ -179,18 +175,17 @@ export default function ResultViewer({
   useEffect(() => {
     if (!jobId || !heatmapModel) {
       heatmapImgRef.current = null
-      setHeatmapLoaded(false)
       return
     }
     const img = new Image()
     img.src = `/api/heatmap/${jobId}?model=${heatmapModel}`
     img.onload = () => {
       heatmapImgRef.current = img
-      setHeatmapLoaded(true)
+      setLoadedHeatmap(`${jobId}:${heatmapModel}`)
     }
     img.onerror = () => {
       heatmapImgRef.current = null
-      setHeatmapLoaded(false)
+      setLoadedHeatmap(null)
     }
   }, [jobId, heatmapModel])
 
@@ -240,18 +235,15 @@ export default function ResultViewer({
       const hasEndpoints = det.x1 != null && det.y1 != null && det.x2 != null && det.y2 != null
       if (!hasEndpoints || !isVisible(i)) return
       const indSources = (det.sources ?? [{ method: det.method }]).filter(s => s.method !== 'unified')
-      const isClassical = indSources.length > 0 &&
-        indSources.every(s => s.method === 'classical' || s.method === 'opencv')
       const isHeatmap = indSources.length > 0 &&
         indSources.every(s => s.method === 'vits_heatmap' || s.method === 'dinov3_heatmap_centerline')
       const colour = i === highlightIndex ? HIGHLIGHT_COLOUR
-        : isClassical ? CLASSICAL_COLOUR
         : isHeatmap ? HEATMAP_COLOUR
         : SEGMENT_COLOUR
       const alpha = i === highlightIndex ? 1.0 : 0.4 + (det.confidence ?? 1) * 0.6
       drawLabel(ctx, det, i, colour, alpha, scaleX, scaleY)
     })
-  }, [imgLoaded, heatmapLoaded, heatmapModel, detections, visibleSet, highlightIndex, imageWidth, imageHeight])
+  }, [imgLoaded, loadedHeatmap, heatmapModel, detections, visibleSet, highlightIndex, imageWidth, imageHeight])
 
   const onMouseMove = (e) => {
     if (!canvasRef.current || !imgRef.current) return

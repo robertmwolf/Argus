@@ -5,7 +5,7 @@ All tests use an in-memory SQLite engine — no disk, no network.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 

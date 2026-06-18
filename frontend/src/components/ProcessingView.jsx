@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 const STATUS_LABEL = {
   queued:     'Queued — waiting for worker',
@@ -22,15 +22,11 @@ const CORNER_CLASSES = [
  */
 export default function ProcessingView({ jobId, status }) {
   const [previewOk, setPreviewOk] = useState(false)
-  const [previewSrc, setPreviewSrc] = useState(null)
-
-  useEffect(() => {
-    if (!jobId) return
-    // Cache-bust so we always get the latest (handles cases where
-    // preview is generated slightly after the upload response).
-    setPreviewSrc(`/api/preview/${jobId}?t=${Date.now()}`)
-    setPreviewOk(false)
-  }, [jobId])
+  // The parent keys this component by jobId, so this initializer runs once for
+  // each job and cache-busts previews generated just after upload.
+  const [previewSrc, setPreviewSrc] = useState(
+    () => jobId ? `/api/preview/${jobId}?t=${Date.now()}` : null
+  )
 
   return (
     <div className="relative overflow-hidden rounded-xl bg-slate-900 border border-slate-800">

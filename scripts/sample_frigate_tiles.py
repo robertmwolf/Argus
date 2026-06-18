@@ -76,7 +76,7 @@ def _bbox_features(bbox: list[float]) -> dict[str, float]:
     Returns:
         Dict with length_px, aspect_ratio, angle_deg.
     """
-    x, y, w, h = float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])
+    w, h = float(bbox[2]), float(bbox[3])
     length_px = math.hypot(w, h)
     # aspect_ratio: major / minor axis of the source annotation rectangle
     major = max(w, h)
@@ -111,7 +111,6 @@ def _tile_position(file_name: str) -> tuple[float, float]:
 def _fps(
     features: np.ndarray,
     n_select: int,
-    seed: int = 42,
 ) -> list[int]:
     """Greedy Furthest-Point Sampling (FPS) in normalised feature space.
 
@@ -121,8 +120,6 @@ def _fps(
     Args:
         features: Array of shape (N, D) — rows are tiles, cols are features.
         n_select: Number of tiles to select.
-        seed: Random seed for the initial point.
-
     Returns:
         List of selected row indices (length = min(n_select, N)).
     """
@@ -131,7 +128,6 @@ def _fps(
     if n_select == N:
         return list(range(N))
 
-    rng = np.random.default_rng(seed)
     selected: list[int] = []
 
     # Initialise: start from the point nearest the feature-space centroid
@@ -330,7 +326,7 @@ def main() -> None:
     # FPS selection
     # ---------------------------------------------------------------------------
     n_target = min(args.n_tiles, len(positive_imgs))
-    selected_indices = _fps(feat_norm, n_target, seed=args.seed)
+    selected_indices = _fps(feat_norm, n_target)
     selected_img_ids = {tile_features[i]["image_id"] for i in selected_indices}
 
     logger.info(

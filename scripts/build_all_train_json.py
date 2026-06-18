@@ -143,7 +143,8 @@ def main() -> None:
         len(frigate_tiled.get("annotations", [])),
     )
 
-    # Canonical training set (no     sources = [satstreaks, brent_n1_tiled, brent_n2_tiled, frigate_tiled]
+    # Canonical training set without synthetic domain-matched images.
+    sources = [satstreaks, brent_n1_tiled, brent_n2_tiled, frigate_tiled]
     merged = merge(sources)
     out = Path(
         os.environ.get("ARGUS_ALL_TRAIN_OUT", _ANN_DIR / "all_train_nodm_external_abs.json")

@@ -213,7 +213,6 @@ def _build_scheduler(
     args: argparse.Namespace,
 ) -> torch.optim.lr_scheduler.LRScheduler:
     total_steps = max(len(train_loader) * args.epochs, 1)
-    min_factor = args.min_lr / args.lr
     return torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer,
         T_max=total_steps,

@@ -26,7 +26,7 @@ import logging
 import os
 from pathlib import Path
 
-from huggingface_hub import HfApi, hf_hub_download, snapshot_download
+from huggingface_hub import HfApi, snapshot_download
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -121,7 +121,7 @@ def upload_annotations(api: HfApi) -> None:
     log.info("Annotations upload complete.")
 
 
-def download_weights(dest: Path, api: HfApi) -> None:
+def download_weights(dest: Path) -> None:
     """Download all weights from the model repo."""
     dest.mkdir(parents=True, exist_ok=True)
     log.info("Downloading %s → %s", WEIGHTS_REPO, dest)
@@ -134,7 +134,7 @@ def download_weights(dest: Path, api: HfApi) -> None:
     log.info("Weights download complete → %s", dest)
 
 
-def download_annotations(dest: Path, api: HfApi) -> None:
+def download_annotations(dest: Path) -> None:
     """Download annotation JSONs from the dataset repo.
 
     Downloads into dest/source/ and dest/derived/ matching the repo layout.
@@ -200,9 +200,9 @@ def main() -> None:
             upload_annotations(api)
     else:
         if do_weights:
-            download_weights(args.weights_dir, api)
+            download_weights(args.weights_dir)
         if do_annotations:
-            download_annotations(args.annotations_dir, api)
+            download_annotations(args.annotations_dir)
 
 
 if __name__ == "__main__":

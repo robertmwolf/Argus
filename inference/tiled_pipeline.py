@@ -81,12 +81,11 @@ def remap_predictions(
 
 def nms_predictions(
     predictions: list[dict[str, Any]],
-    iou_threshold: float = 0.5,
 ) -> list[dict[str, Any]]:
     """Suppress duplicate endpoint predictions."""
     for prediction in predictions:
         prediction.setdefault("confidence", prediction.get("score", 0.0))
-    return nms_detections(predictions, iou_threshold)
+    return nms_detections(predictions)
 
 
 def stitch_collinear_fragments(

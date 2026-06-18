@@ -82,31 +82,6 @@ def _truthy_env(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _header_float(header: fits.Header, key: str) -> float | None:
-    """Return a float header value, or None when absent/unparseable."""
-    val = header.get(key)
-    if val is None:
-        return None
-    try:
-        return float(val)
-    except (TypeError, ValueError):
-        return None
-
-
-def _has_plate_solve_hints(header: fits.Header) -> bool:
-    """Return True when ASTAP has enough header hints for a constrained solve."""
-    has_pointing = (
-        _header_float(header, "RA") is not None
-        and _header_float(header, "DEC") is not None
-    )
-    has_fov = (
-        _header_float(header, "FOCALLEN") is not None
-        and _header_float(header, "XPIXSZ") is not None
-        and header.get("NAXIS1") is not None
-    )
-    return has_pointing and has_fov
-
-
 def _should_attempt_plate_solve(header: fits.Header) -> bool:
     """Return True when ASTAP plate solving is explicitly enabled.
 
@@ -115,8 +90,6 @@ def _should_attempt_plate_solve(header: fits.Header) -> bool:
     because ASTAP is an external subprocess that adds ~10–60 s per image,
     which is unacceptable during training or batch evaluation.
 
-    Use _has_plate_solve_hints() separately to check whether a solve is
-    *possible* without committing to running it.
     """
     return _truthy_env("ARGUS_ENABLE_PLATE_SOLVE")
 

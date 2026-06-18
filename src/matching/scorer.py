@@ -7,10 +7,6 @@ score aggregation as specified in architecture.md.
 from __future__ import annotations
 
 import math
-import logging
-
-logger = logging.getLogger(__name__)
-
 # Weights for weighted_score aggregation
 _WEIGHT_POSITION = 0.35
 _WEIGHT_VELOCITY = 0.30
@@ -35,7 +31,6 @@ def gaussian_score(delta: float, sigma: float) -> float:
 
 def tle_age_penalty(
     age_hours: float,
-    orbit_type: str = "LEO",
     sigma_hours: float = 24.0,
 ) -> float:
     """Gaussian decay penalty for stale TLEs.
@@ -57,7 +52,6 @@ def tle_age_penalty(
 
     Args:
         age_hours: Hours elapsed since TLE epoch to observation time.
-        orbit_type: Reserved for future orbit-type-specific tuning.
         sigma_hours: Gaussian sigma controlling how fast the penalty decays.
             Use the default (24h) for normal-mode TLEs.  Pass a wider value
             (e.g. 168h) for broad-epoch fallback TLEs where a stale epoch is

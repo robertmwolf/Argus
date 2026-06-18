@@ -6,12 +6,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
-import pytest
 from astropy.io import fits
-from astropy.wcs import WCS
 
 from src.astrometry.plate_solver import PlateSolver, _celestial_position_angle
-from src.detection.classical_detector import StreakDetection
+from src.detection.streak import StreakDetection
 from src.ingest.fits_parser import FITSImage
 
 
@@ -80,23 +78,11 @@ def _make_streak(
     y_end: float = 500.0,
 ) -> StreakDetection:
     """Make a synthetic StreakDetection with no sky coords."""
-    import math
-    x_center = (x_start + x_end) / 2
-    y_center = (y_start + y_end) / 2
-    length_px = math.hypot(x_end - x_start, y_end - y_start)
-    angle_deg = math.degrees(math.atan2(y_end - y_start, x_end - x_start))
     return StreakDetection(
         x_start=x_start,
         y_start=y_start,
         x_end=x_end,
         y_end=y_end,
-        x_center=x_center,
-        y_center=y_center,
-        angle_deg=angle_deg,
-        length_px=length_px,
-        width_px=2.0,
-        shape_factor=0.1,
-        area_px=length_px * 2.0,
     )
 
 

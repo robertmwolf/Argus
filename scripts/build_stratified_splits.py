@@ -44,7 +44,6 @@ import argparse
 import json
 import logging
 import random
-import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -137,41 +136,6 @@ def _load_negatives(entry: dict) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Split assignment
 # ---------------------------------------------------------------------------
-
-def _assign_cells(
-    feature_rows: list[dict],
-) -> dict[int, tuple[str, str]]:
-    """Return annotation_id → (band, snr_class) mapping."""
-    return {
-        int(row["annotation_id"]): (row["band"], row["snr_class"])
-        for row in feature_rows
-    }
-
-
-def _image_cell(
-    image_id: int,
-    ann_ids: list[int],
-    cell_by_ann: dict[int, tuple[str, str]],
-) -> tuple[str, str]:
-    """Determine the stratification cell for an image.
-
-    For images with one annotation (the common case), use that annotation's
-    cell directly.  For images with multiple annotations (rare), use the
-    longest-streak annotation's cell — prefer 'long' band, then 'medium'.
-    """
-    cells = [cell_by_ann[aid] for aid in ann_ids if aid in cell_by_ann]
-    if not cells:
-        return ("unknown", "null")
-    if len(cells) == 1:
-        return cells[0]
-
-    # Multiple annotations: pick dominant by band priority
-    for priority_band in ("long", "medium", "short"):
-        for cell in cells:
-            if cell[0] == priority_band:
-                return cell
-    return cells[0]
-
 
 def _stratified_split(
     image_ids: list[int],
@@ -403,7 +367,6 @@ def main() -> None:
 
     # image_id (global, remapped) → cell
     img_id_to_cell: dict[int, tuple[str, str]] = {}
-    img_by_id: dict[int, dict] = {img["id"]: img for img in all_images}
 
     for img in all_images:
         fn = img["file_name"]

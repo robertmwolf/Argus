@@ -219,8 +219,8 @@ class TestCrossIdentifyKnownTle:
             cross_identify(dets, _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT, epoch_window_days=7)
         mock_fetch.assert_called_once_with(_OBS_TIME, 7, 0)
 
-    def test_broad_epoch_without_viable_match_tries_current_fallback(self):
-        """A populated broad catalog with only poor geometry still retries current data."""
+    def test_broad_epoch_without_viable_match_stays_local(self):
+        """Poor broad-window geometry does not trigger a network/current fallback."""
         from inference.crossid import cross_identify
 
         broad_catalog = [{
@@ -229,23 +229,7 @@ class TestCrossIdentifyKnownTle:
             "line2": _TEST_TLE_LINE2,
             "tle_search_mode": "broad_epoch",
         }]
-        current_catalog = [{
-            "name": "CURRENT-GOOD",
-            "line1": _ISS_LINE1,
-            "line2": _ISS_LINE2,
-            "tle_search_mode": "current_fallback",
-        }]
-
         def fake_propagate(name, *_args, **_kwargs):
-            if name == "CURRENT-GOOD":
-                return {
-                    "object_name": name,
-                    "norad_id": 25544,
-                    "predicted_ra": 10.0,
-                    "predicted_dec": 20.0,
-                    "tle_age_hours": 0.0,
-                    "tle_epoch": _OBS_TIME,
-                }
             return {
                 "object_name": name,
                 "norad_id": 44713,
@@ -262,14 +246,13 @@ class TestCrossIdentifyKnownTle:
             "dec_tip2_deg": 20.0,
         }]
         with patch("inference.crossid._fetch_tle_catalog", return_value=broad_catalog):
-            with patch("inference.crossid._fetch_current_tle_catalog", return_value=current_catalog) as mock_current:
-                with patch("inference.crossid._propagate_to_radec", side_effect=fake_propagate):
-                    result = cross_identify(dets, _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT)
+            with patch("inference.crossid._propagate_to_radec", side_effect=fake_propagate):
+                result = cross_identify(dets, _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT)
 
-        mock_current.assert_called_once_with(_OBS_TIME)
         best = result[0]["identifications"][0]
-        assert best["satellite_name"] == "CURRENT-GOOD"
-        assert best["tle_search_mode"] == "current_fallback"
+        assert best["satellite_name"] == "BROAD-BAD"
+        assert best["tle_search_mode"] == "broad_epoch"
+        assert best["confidence"] == 0.0
 
     def test_edge_clipped_single_tip_scores_against_exposure_endpoints(self):
         """One tip off-frame: score the known tip against t_start and t_end propagations."""

@@ -104,7 +104,6 @@ def filter_by_fov(
 
 
 if __name__ == "__main__":
-    import sys
     import logging
 
     logging.basicConfig(level=logging.INFO)

@@ -8,11 +8,8 @@ Inference path (get_tles) — DB only, no network calls ever:
     2. On insufficient coverage, widen to the broad epoch window (default ±60 d).
     3. On a miss, log a diagnostic and return empty.
 
-Catalog refresh is handled entirely by scheduled tasks outside the inference
-path (e.g. scripts/celestrak_client.py run by a cron/launchd job).  The
-helper methods get_current_fallback_tles, _refresh_current_catalog, and
-_try_celestrak_refresh exist for use by those tasks only and are never called
-from get_tles.
+Catalog refresh is handled entirely by explicit operator tasks outside the
+inference path (for example, ``scripts/update_tle_catalog.py``).
 
 Space-Track ``gp_history`` is **never** called at runtime.  It is a one-time
 download resource (per Space-Track API policy) and must only be used via
@@ -27,41 +24,21 @@ from datetime import datetime, timezone
 from typing import Any
 
 from src.matching.tle_store import (
-    get_last_coverage_time,
     get_latest_coverage_time,
-    query_latest_tles,
     query_tles_for_epoch_drift,
     query_tles_for_window,
-    record_coverage,
-    upsert_tles,
 )
 
 logger = logging.getLogger(__name__)
 
-# Observations newer than this are treated as "live" and eligible for a
-# CelesTrak refresh on a cache miss.  Beyond this window, current TLEs have
-# drifted too far for LEO objects (72 h ≈ MAX_TLE_AGE_HOURS for LEO).
-_LIVE_THRESHOLD_HOURS = 72.0
-
-_CELESTRAK_COVERAGE_TAG = "celestrak_refresh"
 _SPACETRACK_GP_COVERAGE_TAG = "spacetrack_gp_current"
-_CURRENT_REFRESH_TAGS = [_SPACETRACK_GP_COVERAGE_TAG, _CELESTRAK_COVERAGE_TAG, "gp_current"]
+_CURRENT_REFRESH_TAGS = [_SPACETRACK_GP_COVERAGE_TAG, "celestrak_refresh", "gp_current"]
 _BROAD_EPOCH_WINDOW_DAYS = 60
-_CURRENT_REFRESH_MAX_AGE_MINUTES = 45.0
 _MIN_NORMAL_CANDIDATES = 100
-_PRODUCTION_ENV_NAMES = {"prod", "production"}
 
 
 class TLECatalogManager:
-    """Two-track TLE catalog lookup with automatic live-edge refresh.
-
-    Attributes:
-        live_threshold_hours: Observations newer than this are eligible for a
-            CelesTrak refresh on a cache miss.
-    """
-
-    def __init__(self, live_threshold_hours: float = _LIVE_THRESHOLD_HOURS) -> None:
-        self.live_threshold_hours = live_threshold_hours
+    """Local-only TLE catalog lookup for inference."""
 
     def get_tles(
         self,
@@ -69,7 +46,7 @@ class TLECatalogManager:
         epoch_window_days: int = 3,
         min_mean_motion: float = 0,
     ) -> list[dict[str, Any]]:
-        """Return TLE records for *obs_time*, refreshing CelesTrak if needed.
+        """Return locally stored TLE records for *obs_time*.
 
         Args:
             obs_time: UTC observation time from the FITS header.
@@ -139,72 +116,9 @@ class TLECatalogManager:
         )
         return rows
 
-    def get_current_fallback_tles(
-        self,
-        obs_time: datetime,
-        min_mean_motion: float = 0,
-    ) -> list[dict[str, Any]]:
-        """Return latest current TLEs, refreshing if the catalog is stale.
-
-        This is used after the broad historical window produces no viable
-        propagated match.  In development the refresh source is Space-Track's
-        test GP endpoint; production uses the configured current-catalog path.
-
-        Args:
-            obs_time: UTC observation time from the FITS header.
-            min_mean_motion: Minimum mean_motion in rev/day.
-
-        Returns:
-            Current fallback TLE rows annotated with search metadata.
-        """
-        if obs_time.tzinfo is None:
-            obs_time = obs_time.replace(tzinfo=timezone.utc)
-
-        fresh_at = self._fresh_data_timestamp()
-        freshness_minutes = (
-            (datetime.now(tz=timezone.utc) - fresh_at).total_seconds() / 60.0
-            if fresh_at is not None else float("inf")
-        )
-
-        if freshness_minutes > _CURRENT_REFRESH_MAX_AGE_MINUTES:
-            self._refresh_current_catalog(obs_time)
-            fresh_at = self._fresh_data_timestamp()
-            freshness_minutes = (
-                (datetime.now(tz=timezone.utc) - fresh_at).total_seconds() / 60.0
-                if fresh_at is not None else float("inf")
-            )
-
-        current_rows = query_latest_tles(min_mean_motion)
-        if not current_rows:
-            return []
-
-        logger.info(
-            "Using latest current TLE catalog as fallback for obs_time=%s "
-            "(%d records; freshness=%.1f min)",
-            obs_time.isoformat(),
-            len(current_rows),
-            freshness_minutes,
-        )
-        rows = self._annotate_rows(current_rows, obs_time, 0, "current_fallback")
-        fresh_iso = fresh_at.isoformat().replace("+00:00", "Z") if fresh_at else None
-        for row in rows:
-            row["tle_data_fresh_at"] = fresh_iso
-        return rows
-
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
-
-    @staticmethod
-    def _is_development_env() -> bool:
-        """Return True when current-data refreshes should use Space-Track test."""
-        env_name = (
-            os.environ.get("ARGUS_ENV")
-            or os.environ.get("APP_ENV")
-            or os.environ.get("ENVIRONMENT")
-            or "development"
-        ).strip().lower()
-        return env_name not in _PRODUCTION_ENV_NAMES
 
     @staticmethod
     def _parse_epoch(value: Any) -> datetime | None:
@@ -258,91 +172,6 @@ class TLECatalogManager:
             or get_latest_coverage_time(min_record_count=1)
         )
 
-    def _refresh_current_catalog(self, obs_time: datetime) -> None:
-        """Refresh current TLE data, using Space-Track test in development."""
-        if self._is_development_env():
-            logger.info(
-                "Current TLE data is stale or absent — refreshing via Space-Track GP "
-                "test API for obs_time=%s",
-                obs_time.isoformat(),
-            )
-            try:
-                from src.matching.spacetrack_query import query_gp_current
-                records = query_gp_current()
-                inserted = upsert_tles(records, source="spacetrack_gp")
-                if records:
-                    record_coverage(
-                        _SPACETRACK_GP_COVERAGE_TAG,
-                        "Space-Track GP current refresh (development/test API)",
-                        len(records),
-                    )
-                logger.info(
-                    "Space-Track GP current refresh returned %d records (%d inserted)",
-                    len(records),
-                    inserted,
-                )
-            except Exception as exc:
-                logger.warning("Space-Track GP current refresh failed: %s", exc)
-            return
-
-        logger.info(
-            "Current TLE data is stale or absent — refreshing via production current catalog"
-        )
-        try:
-            from scripts.celestrak_client import fetch_and_upsert
-            fetch_and_upsert(force=False)
-        except Exception as exc:
-            logger.warning("Current catalog refresh failed: %s", exc)
-
-    def _try_celestrak_refresh(
-        self,
-        obs_time: datetime,
-        epoch_window_days: int,
-        min_mean_motion: float,
-    ) -> list[dict[str, Any]]:
-        """Attempt a CelesTrak refresh and re-query the local DB.
-
-        Respects the 2-hour cooldown encoded in :mod:`scripts.celestrak_client`.
-        On any network failure, logs a warning and returns empty rather than
-        propagating the exception into the inference path.
-
-        Args:
-            obs_time: UTC observation time (for the re-query after refresh).
-            epoch_window_days: Passed through to :func:`query_tles_for_window`.
-            min_mean_motion: Passed through to :func:`query_tles_for_window`.
-
-        Returns:
-            TLE rows after the refresh attempt (may still be empty).
-        """
-        last = get_last_coverage_time(_CELESTRAK_COVERAGE_TAG)
-        if last is not None:
-            cooldown_h = (datetime.now(tz=timezone.utc) - last).total_seconds() / 3600
-            if cooldown_h < 2.0:
-                logger.debug(
-                    "TLE miss (live) — CelesTrak cooldown active (%.1fh remaining); "
-                    "returning empty for obs_time=%s",
-                    2.0 - cooldown_h,
-                    obs_time.isoformat(),
-                )
-                return []
-
-        logger.info(
-            "TLE miss (live) — triggering CelesTrak refresh for obs_time=%s",
-            obs_time.isoformat(),
-        )
-        try:
-            from scripts.celestrak_client import fetch_and_upsert
-            fetch_and_upsert(force=False)
-        except Exception as exc:
-            logger.warning("CelesTrak refresh failed: %s", exc)
-            return []
-
-        rows = query_tles_for_window(obs_time, epoch_window_days, min_mean_motion)
-        logger.debug(
-            "Post-refresh query: %d records for obs_time=%s",
-            len(rows), obs_time.isoformat(),
-        )
-        return rows
 
 
 # ---------------------------------------------------------------------------

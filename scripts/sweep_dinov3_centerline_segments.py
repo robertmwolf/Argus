@@ -226,8 +226,6 @@ def main() -> int:
     # Build the set of unique extraction groups (threshold × min_pixels × consistency).
     # Radon refinement runs once per group per image; (min_line_support, min_radon_snr,
     # max_components) are applied as cheap numpy filters afterward.
-    from itertools import product as iproduct
-
     extraction_groups: list[tuple[float, float, int]] = sorted(
         {(cfg["threshold"], cfg["min_orientation_consistency"], cfg["min_component_pixels"])
          for cfg in config_order}

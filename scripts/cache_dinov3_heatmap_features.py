@@ -73,8 +73,6 @@ def _letterbox_array(array: np.ndarray, size: int) -> tuple[np.ndarray, float, f
 
 def _build_tile_targets(
     anns: list[dict[str, Any]],
-    tile_w: int,
-    tile_h: int,
     image_size: int,
     scale: float,
     pad_x: float,
@@ -255,7 +253,7 @@ def _cache_tiled(
                 ).cpu().to(torch.float16).squeeze(0)
 
             heatmap = _build_tile_targets(
-                tile_anns, tw, th, image_size, scale, pad_x, pad_y
+                tile_anns, image_size, scale, pad_x, pad_y
             )
 
             sample_id = img_id * 10000 + tile_idx

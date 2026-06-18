@@ -4,21 +4,17 @@ Does not hit Space-Track. Verifies that all modules wire together correctly
 with mock/synthetic inputs.
 """
 
-import math
 from datetime import datetime, timezone
-from unittest.mock import patch
 
 import numpy as np
 import pytest
 from astropy.io import fits as astrofits
-from astropy.wcs import WCS
 
-from src.detection.classical_detector import StreakDetection
+from src.detection.streak import StreakDetection
 from src.ingest.fits_parser import FITSImage
 from src.matching.matcher import match, CandidateMatch
 from src.matching.scorer import gaussian_score, aggregate_score
-from src.matching.spatial_filter import filter_by_fov, _angular_separation
-from src.matching.propagator import propagate
+from src.matching.spatial_filter import _angular_separation
 
 
 # ---------------------------------------------------------------------------
@@ -68,12 +64,6 @@ def _make_streak(ra=10.0, dec=20.0, vel=300.0, pa=45.0) -> StreakDetection:
     return StreakDetection(
         x_start=156.0, y_start=246.0,
         x_end=356.0, y_end=266.0,
-        x_center=256.0, y_center=256.0,
-        angle_deg=pa if pa is not None else 0.0,
-        length_px=200.0,
-        width_px=2.0,
-        shape_factor=100.0,
-        area_px=400.0,
         ra_start=ra_start, dec_start=dec,
         ra_end=ra_end, dec_end=dec,
         ra_center=ra, dec_center=dec,

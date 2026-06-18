@@ -320,7 +320,6 @@ def evaluate_segments(
 
     tp = sum(is_tp)
     fp = len(is_tp) - tp
-    fn = n_gt - tp
 
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     recall = tp / n_gt if n_gt > 0 else 0.0

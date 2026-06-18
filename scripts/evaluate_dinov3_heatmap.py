@@ -111,7 +111,7 @@ def _detections_from_feat_heatmap(
     """
     from scipy import ndimage as _ndimage
 
-    feat_h, feat_w = feat_probs.shape
+    feat_h = feat_probs.shape[0]
     binary = feat_probs >= threshold
     labels, n_labels = _ndimage.label(binary)
     detections: list[dict[str, Any]] = []

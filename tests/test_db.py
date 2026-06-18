@@ -4,14 +4,11 @@ import uuid
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import select
 
 from db.models import (
     Detection,
     Identification,
     Observation,
-    Tracklet,
-    TrackletDetection,
     get_engine,
     get_session_factory,
     init_db,
@@ -56,7 +53,7 @@ def _det_id() -> str:
 async def test_schema_creates_without_error(engine):
     """init_db() should create all tables on a fresh SQLite engine."""
     # If we reach here the fixture already ran init_db — just assert no error.
-    from sqlalchemy import inspect, text
+    from sqlalchemy import inspect
 
     async with engine.connect() as conn:
         table_names = await conn.run_sync(

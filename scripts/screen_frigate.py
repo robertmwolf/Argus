@@ -198,7 +198,6 @@ def _process_pair(args: tuple[int, Path, Path]) -> dict:
     idx, this_path, prev_path = args
 
     frame_num, ts = _parse_filename(this_path.stem)
-    _, prev_ts = _parse_filename(prev_path.stem)
 
     cur  = _load_gray_float(this_path)
     prev = _load_gray_float(prev_path)

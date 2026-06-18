@@ -451,7 +451,6 @@ def extend_segment_to_streak_extent(
 
 def nms_detections(
     detections: list[dict],
-    iou_threshold: float = 0.5,
 ) -> list[dict]:
     """Non-maximum suppression using segment-based three-criterion overlap.
 
@@ -463,9 +462,6 @@ def nms_detections(
 
     Args:
         detections: Endpoint detection dictionaries with confidence scores.
-        iou_threshold: Unused — kept for API compatibility.  The segment
-            criteria are always applied at fixed tolerances.
-
     Returns:
         Filtered list of detection dicts, ordered by confidence descending.
     """
@@ -534,8 +530,6 @@ def filter_peak_topk(
 
 def group_detections(
     detections: list[dict],
-    iou_threshold: float = 0.5,
-    iom_threshold: float = 0.3,
 ) -> list[dict]:
     """Group overlapping detections by streak without suppressing any.
 
@@ -547,9 +541,6 @@ def group_detections(
 
     Args:
         detections: Endpoint detection dictionaries.
-        iou_threshold: Retained for call compatibility; unused.
-        iom_threshold: Retained for call compatibility; unused.
-
     Returns:
         All input detections with a 'streak_id' int field added.
     """
@@ -853,7 +844,7 @@ if __name__ == "__main__":
         {"confidence": 0.6, "x1": 37, "y1": 37, "x2": 93, "y2": 93},
         {"confidence": 0.8, "x1": 160, "y1": 193, "x2": 240, "y2": 207},
     ]
-    kept = nms_detections(dets, iou_threshold=0.5)
+    kept = nms_detections(dets)
     print(f"NMS: {len(dets)} → {len(kept)} (expected 2)")
     assert len(kept) == 2
     assert kept[0]["confidence"] == 0.9

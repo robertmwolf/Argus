@@ -6,9 +6,6 @@
 
 # Core astronomy
 astropy==6.1.0
-photutils==1.13.0
-sep==1.2.1
-astride==0.3.2
 
 # Orbital mechanics
 sgp4==2.23
@@ -20,10 +17,9 @@ spacetrack==1.4.0
 opencv-python-headless==4.10.0.84
 scikit-image==0.24.0
 Pillow==12.2.0
-matplotlib==3.9.0  # imported by ASTRiDE
 
 # Data / compute
-# numpy MUST stay < 2.0: sep and astride are compiled against numpy 1.x ABI.
+# Keep NumPy below 2.0 until the astronomy stack is validated against NumPy 2.
 numpy==1.26.4
 scipy==1.13.1
 
