@@ -223,9 +223,13 @@ def _build_scheduler(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--train-annotations", default="data/annotations/train.json")
-    parser.add_argument("--val-annotations", default="data/annotations/val.json")
+    parser.add_argument("--train-annotations", required=True)
+    parser.add_argument("--val-annotations", required=True)
     parser.add_argument("--holdout-annotations", default=None)
+    parser.add_argument("--data-root", default=None,
+                        help="Durable dataset root (or set ARGUS_DATA_ROOT).")
+    parser.add_argument("--scratch-root", default=None,
+                        help="Optional staged local mirror (or set ARGUS_SCRATCH_ROOT).")
     parser.add_argument("--work-dir", default="weights/run_dinov3_orientation_centerline")
     parser.add_argument("--weights", default="weights/dinov3_vitb16_lvd1689m.pth")
     parser.add_argument("--model-size", choices=["small", "base", "large"], default="base")
@@ -290,6 +294,8 @@ def main() -> int:
         preserve_image_bit_depth=args.preserve_image_bit_depth,
         seed=args.seed,
         max_samples=args.max_train_samples,
+        data_root=args.data_root,
+        scratch_root=args.scratch_root,
     )
     val_ds = DINOv3OrientationCenterlineDataset(
         annotation_file=args.val_annotations,
@@ -308,6 +314,8 @@ def main() -> int:
         preserve_image_bit_depth=args.preserve_image_bit_depth,
         seed=args.seed,
         max_samples=args.max_val_samples,
+        data_root=args.data_root,
+        scratch_root=args.scratch_root,
     )
     pin_memory = device.type == "cuda"
     workers = args.workers if device.type != "mps" else 0

@@ -17,6 +17,8 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
+from training.data_paths import resolve_source_path
+
 logger = logging.getLogger(__name__)
 
 # Historical virtual tile path format:
@@ -60,6 +62,8 @@ class DINOv3OrientationCenterlineDataset(Dataset):
         preserve_image_bit_depth: bool = False,
         seed: int = 20260524,
         max_samples: int | None = None,
+        data_root: str | Path | None = None,
+        scratch_root: str | Path | None = None,
     ) -> None:
         """Initialise the dataset.
 
@@ -93,6 +97,8 @@ class DINOv3OrientationCenterlineDataset(Dataset):
         self.neighbor_bin_weight = neighbor_bin_weight
         self.second_neighbor_weight = second_neighbor_weight
         self.preserve_image_bit_depth = preserve_image_bit_depth
+        self.data_root = data_root
+        self.scratch_root = scratch_root
 
         coco = json.loads(self.annotation_file.read_text())
         self.images: list[dict[str, Any]] = list(coco.get("images", []))
@@ -285,18 +291,9 @@ class DINOv3OrientationCenterlineDataset(Dataset):
         return a[0] < b[2] and a[2] > b[0] and a[1] < b[3] and a[3] > b[1]
 
     def _resolve_image_path(self, file_name: str) -> Path:
-        raw_path = Path(file_name)
-        if raw_path.is_absolute():
-            return raw_path
-        candidates = [
-            self.annotation_file.parent / raw_path,
-            self.annotation_file.parent.parent / raw_path,
-            Path("data") / raw_path,
-        ]
-        for candidate in candidates:
-            if candidate.exists():
-                return candidate
-        return candidates[0]
+        return resolve_source_path(
+            file_name, self.annotation_file, self.data_root, self.scratch_root
+        )
 
     def _load_image(self, path: Path) -> np.ndarray:
         suffix = path.suffix.lower()

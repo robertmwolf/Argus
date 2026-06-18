@@ -48,7 +48,7 @@ Feature caches are created from endpoint annotation JSON:
 
 ```bash
 python scripts/cache_dinov3_heatmap_features.py \
-  --annotations data/annotations/train.json \
+  --annotations "$ARGUS_DATA_ROOT/annotations/train.json" \
   --output-dir /tmp/argus-cache \
   --backbone vits --image-size 400
 ```
@@ -59,7 +59,7 @@ must emit one centerline channel. Evaluate predictions with:
 ```bash
 python -m eval.geometry_metrics \
   --predictions results/<run>/predictions.json \
-  --annotations data/annotations/val.json \
+  --annotations "$ARGUS_DATA_ROOT/annotations/val.json" \
   --output results/<run>/geometry_eval.json
 ```
 

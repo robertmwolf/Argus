@@ -16,6 +16,7 @@ from torch.utils.data import Dataset
 
 from inference.fits_loader import FITSLoader, apply_norm
 from training.annotation_endpoints import annotation_to_endpoints
+from training.data_paths import resolve_source_path
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +31,16 @@ class StreakHeatmapDataset(Dataset):
         patch_size: int = 16,
         max_samples: int | None = None,
         norm_mode: str = "autostretch",
+        data_root: str | Path | None = None,
+        scratch_root: str | Path | None = None,
     ) -> None:
         """Initialise the endpoint heatmap dataset."""
         self.annotation_file = Path(annotation_file)
         self.image_size = image_size
         self.patch_size = patch_size
         self.norm_mode = norm_mode
+        self.data_root = data_root
+        self.scratch_root = scratch_root
         self.loader = FITSLoader()
 
         source = json.loads(self.annotation_file.read_text())
@@ -75,17 +80,9 @@ class StreakHeatmapDataset(Dataset):
 
     def _resolve_image_path(self, file_name: str) -> Path:
         """Resolve source image paths used by annotation manifests."""
-        raw_path = Path(file_name)
-        if raw_path.is_absolute():
-            return raw_path
-        candidates = [
-            self.annotation_file.parent / raw_path,
-            self.annotation_file.parent.parent / raw_path,
-            Path("data") / raw_path,
-        ]
-        if "/" not in file_name:
-            candidates.append(Path("data/GTImages") / raw_path)
-        return next((path for path in candidates if path.exists()), candidates[0])
+        return resolve_source_path(
+            file_name, self.annotation_file, self.data_root, self.scratch_root
+        )
 
     def _load_image(self, path: Path) -> np.ndarray:
         """Load and normalize a FITS, NPY, or ordinary image."""

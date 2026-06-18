@@ -48,6 +48,7 @@ from models.plain_dinov3.streak_heatmap import (
     imagenet_normalize,
 )
 from training.dinov3_heatmap_dataset import StreakHeatmapDataset, collate_heatmap_batch
+from training.data_paths import resolve_source_path
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +155,8 @@ def _cache_tiled(
     tile_overlap: float,
     max_samples: int | None,
     ann_dir: Path,
+    data_root: str | Path | None = None,
+    scratch_root: str | Path | None = None,
     min_area_fraction: float = 0.25,
     neg_tiles_per_image: int = 2,
     random_seed: int = 42,
@@ -189,14 +192,7 @@ def _cache_tiled(
         id_to_anns.setdefault(int(ann["image_id"]), []).append(ann)
 
     def _resolve(fname: str) -> Path:
-        raw = Path(fname)
-        if raw.is_absolute():
-            return raw
-        for base in [ann_dir, ann_dir.parent, Path("data")]:
-            p = (base / raw).resolve()
-            if p.exists():
-                return p
-        return ann_dir / raw
+        return resolve_source_path(fname, ann_dir / "manifest.json", data_root, scratch_root)
 
     def _segment_fraction_in_tile(ann: dict, x0: int, y0: int, ts: int) -> float:
         """Approximate the fraction of an annotated segment inside a tile."""
@@ -310,6 +306,10 @@ def main() -> int:
                              "(0-3, default 3 = full backbone at stride 32, 768 ch). "
                              "Stage 2 gives stride 16, 384 ch — same as ViT-S/16.")
     parser.add_argument("--image-size", type=int, default=384)
+    parser.add_argument("--data-root", default=None,
+                        help="Durable dataset root (or set ARGUS_DATA_ROOT).")
+    parser.add_argument("--scratch-root", default=None,
+                        help="Optional staged local mirror (or set ARGUS_SCRATCH_ROOT).")
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--max-samples", type=int, default=None)
     parser.add_argument("--num-workers", type=int, default=0)
@@ -344,7 +344,11 @@ def main() -> int:
     feature_dir = out_dir / "features"
     feature_dir.mkdir(parents=True, exist_ok=True)
 
-    ds = StreakHeatmapDataset(args.annotations, image_size=args.image_size, max_samples=args.max_samples, norm_mode=args.norm_mode)
+    ds = StreakHeatmapDataset(
+        args.annotations, image_size=args.image_size,
+        max_samples=args.max_samples, norm_mode=args.norm_mode,
+        data_root=args.data_root, scratch_root=args.scratch_root,
+    )
     loader = DataLoader(
         ds,
         batch_size=args.batch_size,
@@ -393,6 +397,8 @@ def main() -> int:
             tile_overlap=args.tile_overlap,
             max_samples=args.max_samples,
             ann_dir=Path(args.annotations).resolve().parent,
+            data_root=args.data_root,
+            scratch_root=args.scratch_root,
             min_area_fraction=args.min_area_fraction,
             neg_tiles_per_image=args.neg_tiles_per_image,
             norm_mode=args.norm_mode,

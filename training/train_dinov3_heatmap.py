@@ -71,8 +71,12 @@ def _run_epoch(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--train-annotations", default="data/annotations/train.json")
-    parser.add_argument("--val-annotations", default="data/annotations/val.json")
+    parser.add_argument("--train-annotations", required=True)
+    parser.add_argument("--val-annotations", required=True)
+    parser.add_argument("--data-root", default=None,
+                        help="Durable dataset root (or set ARGUS_DATA_ROOT).")
+    parser.add_argument("--scratch-root", default=None,
+                        help="Optional staged local mirror (or set ARGUS_SCRATCH_ROOT).")
     parser.add_argument("--weights", default="weights/dinov3_vitb16_lvd1689m.pth")
     parser.add_argument("--model-size", choices=["base", "large"], default="base")
     parser.add_argument("--work-dir", default="weights/run_plain_dinov3_heatmap")
@@ -102,8 +106,14 @@ def main() -> int:
     work_dir = Path(args.work_dir)
     work_dir.mkdir(parents=True, exist_ok=True)
 
-    train_ds = StreakHeatmapDataset(args.train_annotations, args.image_size, max_samples=args.max_samples, norm_mode=args.norm_mode)
-    val_ds = StreakHeatmapDataset(args.val_annotations, args.image_size, max_samples=args.max_samples, norm_mode=args.norm_mode)
+    dataset_options = {
+        "max_samples": args.max_samples,
+        "norm_mode": args.norm_mode,
+        "data_root": args.data_root,
+        "scratch_root": args.scratch_root,
+    }
+    train_ds = StreakHeatmapDataset(args.train_annotations, args.image_size, **dataset_options)
+    val_ds = StreakHeatmapDataset(args.val_annotations, args.image_size, **dataset_options)
     train_loader = DataLoader(
         train_ds,
         batch_size=args.batch_size,

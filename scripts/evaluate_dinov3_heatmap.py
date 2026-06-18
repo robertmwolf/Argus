@@ -257,7 +257,11 @@ def _eval_from_heatmap_cache(args: "argparse.Namespace") -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--annotations", default="data/annotations/test.json")
+    parser.add_argument("--annotations", required=True)
+    parser.add_argument("--data-root", default=None,
+                        help="Durable dataset root (or set ARGUS_DATA_ROOT).")
+    parser.add_argument("--scratch-root", default=None,
+                        help="Optional staged local mirror (or set ARGUS_SCRATCH_ROOT).")
     parser.add_argument("--checkpoint", default="weights/run_plain_dinov3_heatmap/best.pt")
     parser.add_argument("--weights", default=None, help="Override DINOv3 backbone weights from checkpoint args")
     parser.add_argument("--output", default="results/plain_dinov3_heatmap/metrics.json")
@@ -483,7 +487,14 @@ def main() -> int:
         return 0
     # --- End tiled path ---
 
-    ds = StreakHeatmapDataset(args.annotations, image_size=image_size, max_samples=args.max_samples, norm_mode=args.norm_mode)
+    ds = StreakHeatmapDataset(
+        args.annotations,
+        image_size=image_size,
+        max_samples=args.max_samples,
+        norm_mode=args.norm_mode,
+        data_root=args.data_root,
+        scratch_root=args.scratch_root,
+    )
     loader = DataLoader(ds, batch_size=args.batch_size, shuffle=False, collate_fn=collate_heatmap_batch)
 
     predictions: list[dict[str, Any]] = []

@@ -51,8 +51,28 @@ angle, perpendicular offset, along-track overlap, and endpoint error.
 - Materialized crops and tiles use local coordinates.
 - Never pair full-frame pixels with crop-local endpoints.
 - Keep train, validation, and test splits deterministic and leakage-free.
-- Treat `/Volumes/External/TrainingData` and generated `results/` as user data;
-  never delete or rewrite them unless explicitly requested.
+- Keep raw FITS, annotations, derived datasets, and feature caches outside the
+  repository. Do not create dataset symlinks under `data/`.
+- `ARGUS_DATA_ROOT` identifies the durable dataset tree, which may be on an
+  external drive. Annotation `file_name` values must be relative to this root;
+  legacy absolute paths are supported only when they are beneath it.
+- `ARGUS_SCRATCH_ROOT` identifies a disposable local mirror, normally under
+  `/tmp`. Active training, validation, feature caching, and heatmap evaluation
+  resolve files from scratch first and then fall back to the durable root.
+- Use `scripts/stage_dataset_files.py` with all train and validation manifests
+  to copy only referenced source files into scratch while preserving paths.
+  Never swap symlinks or rewrite manifests to point at temporary files.
+- Cached-feature training uses explicit `--train-cache` and `--val-cache`
+  directories. Copy durable feature caches to local scratch before training
+  when local I/O is required; do not place caches in the repository.
+- Never hard-code `/Volumes/...`, `/tmp/...`, or `data/annotations/...` in new
+  training and evaluation code. Accept `--data-root`/`--scratch-root`, or use
+  the corresponding environment configuration.
+- Treat the configured durable data root and generated `results/` as user data;
+  never delete or rewrite them unless explicitly requested. Scratch copies are
+  disposable only when the user or owning workflow explicitly authorizes cleanup.
+
+See `agent_docs/datasets.md` for the path-resolution and staging contract.
 
 ## Environment and tests
 
@@ -86,6 +106,6 @@ loading. Use `inference.device` for device selection; do not hard-code CUDA.
 # Endpoint geometry evaluation
 /Users/robert/miniconda3/envs/satid/bin/python -m eval.geometry_metrics \
   --predictions results/<run>/predictions.json \
-  --annotations data/annotations/<split>.json \
+  --annotations "$ARGUS_DATA_ROOT/annotations/<split>.json" \
   --output results/<run>/geometry_eval.json
 ```
