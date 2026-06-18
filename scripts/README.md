@@ -18,7 +18,7 @@ and TLE catalog maintenance.
 ## Operations
 
 - `bootstrap_tle_catalog.py`: initializes local historical TLE coverage.
-- `bootstrap_recent_tles.py`: performs explicit recent-catalog maintenance.
+- `bootstrap_recent_tles.py`: bootstraps recent coverage and repairs zero-record gaps.
 - `update_tle_catalog.py`: refreshes current catalog data.
 - `fetch_weights.sh`: retrieves checkpoints and training logs from a remote host.
 

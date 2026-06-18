@@ -30,6 +30,9 @@ Usage
     # Re-fetch days that are already in the DB:
     python scripts/bootstrap_recent_tles.py --force
 
+    # Re-fetch only coverage days that previously returned zero records:
+    python scripts/bootstrap_recent_tles.py --fill-gaps
+
     # Daily cron keep-up (fetches only yesterday; all earlier days cached):
     python scripts/bootstrap_recent_tles.py
 
@@ -63,8 +66,11 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+from collections.abc import Iterable
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+
+from sqlalchemy import text
 
 # Ensure project root is on the path when run directly.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -182,6 +188,65 @@ def fetch_day(
     return inserted
 
 
+def get_gap_dates(engine=None) -> list[date]:
+    """Return GP_History coverage dates whose fetch produced no records.
+
+    Args:
+        engine: Optional SQLAlchemy engine; defaults to the project default.
+
+    Returns:
+        Sorted calendar dates represented by zero-record coverage rows.
+    """
+    eng = engine or get_engine()
+    init_tle_tables(eng)
+    with eng.connect() as conn:
+        rows = conn.execute(
+            text(
+                "SELECT source_tag FROM tle_catalog_coverage "
+                "WHERE source_tag LIKE :tag_pattern AND record_count = 0 "
+                "ORDER BY source_tag"
+            ),
+            {"tag_pattern": f"{_TAG_PREFIX}%"},
+        ).fetchall()
+
+    gap_dates = []
+    for (source_tag,) in rows:
+        date_text = source_tag.removeprefix(_TAG_PREFIX)
+        try:
+            gap_dates.append(datetime.strptime(date_text, "%Y_%m_%d").date())
+        except ValueError:
+            logger.warning("Ignoring malformed GP_History coverage tag: %s", source_tag)
+    return gap_dates
+
+
+def fetch_days(
+    days: Iterable[date],
+    *,
+    force: bool = False,
+    engine=None,
+) -> int:
+    """Fetch a sequence of calendar days and continue past individual failures."""
+    eng = engine or get_engine()
+    day_list = list(days)
+    total_inserted = 0
+    for index, day in enumerate(day_list, start=1):
+        tag = _tag(day)
+        if not force and has_coverage(tag, eng):
+            print(f"  [{index}/{len(day_list)}] {day}: already loaded — skipping.")
+            continue
+
+        try:
+            inserted = fetch_day(day, force=force, engine=eng)
+        except Exception as exc:
+            logger.error("Failed to fetch day %s: %s — continuing.", day, exc)
+            print(f"  [{index}/{len(day_list)}] {day}: ERROR — {exc}")
+            continue
+
+        total_inserted += inserted
+        print(f"  [{index}/{len(day_list)}] {day}: {inserted:,} new records.")
+    return total_inserted
+
+
 def bootstrap(
     start: date,
     end: date,
@@ -218,24 +283,18 @@ def bootstrap(
         logger.info("Nothing to fetch — all days in range already covered.")
         return 0
 
-    total_inserted = 0
-    for i, d in enumerate(days):
-        tag = _tag(d)
-        if not force and has_coverage(tag, eng):
-            print(f"  [{i+1}/{total_days}] {d}: already loaded — skipping.")
-            continue
+    return fetch_days(days, force=force, engine=eng)
 
-        try:
-            inserted = fetch_day(d, force=force, engine=eng)
-        except Exception as exc:
-            logger.error("Failed to fetch day %s: %s — continuing.", d, exc)
-            print(f"  [{i+1}/{total_days}] {d}: ERROR — {exc}")
-            continue
 
-        total_inserted += inserted
-        print(f"  [{i+1}/{total_days}] {d}: {inserted:,} new records.")
-
-    return total_inserted
+def fill_gaps(*, engine=None) -> int:
+    """Re-fetch all GP_History coverage days recorded with zero records."""
+    eng = engine or get_engine()
+    gap_dates = get_gap_dates(eng)
+    logger.info("Found %d zero-record coverage days to re-fetch.", len(gap_dates))
+    if not gap_dates:
+        return 0
+    _warn_if_busy_time()
+    return fetch_days(gap_dates, force=True, engine=eng)
 
 
 def main() -> None:
@@ -261,6 +320,11 @@ def main() -> None:
         metavar="YYYY-MM-DD",
         help="First day to fetch (use with --end).",
     )
+    date_group.add_argument(
+        "--fill-gaps",
+        action="store_true",
+        help="Re-fetch only GP_History coverage days recorded with zero records.",
+    )
     parser.add_argument(
         "--end",
         type=lambda s: datetime.strptime(s, "%Y-%m-%d").date(),
@@ -284,6 +348,16 @@ def main() -> None:
         format="%(asctime)s  %(levelname)-8s  %(message)s",
         datefmt="%H:%M:%S",
     )
+
+    if args.fill_gaps:
+        if args.end:
+            parser.error("--end cannot be used with --fill-gaps.")
+        engine = get_engine()
+        init_tle_tables(engine)
+        print("\nSpace-Track GP_History gap repair")
+        total = fill_gaps(engine=engine)
+        print(f"\nDone. Total new TLE records inserted: {total:,}")
+        return
 
     today = datetime.now(tz=timezone.utc).date()
     yesterday = today - timedelta(days=1)
@@ -313,7 +387,6 @@ def main() -> None:
 
     engine = get_engine()
     init_tle_tables(engine)
-
     total = bootstrap(start, end, force=args.force, engine=engine)
 
     print(f"\nDone. Total new TLE records inserted: {total:,}")

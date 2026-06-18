@@ -79,6 +79,9 @@ python scripts/bootstrap_recent_tles.py --start 2026-01-01 --end 2026-04-30
 
 # Re-fetch already-cached days:
 python scripts/bootstrap_recent_tles.py --force
+
+# Re-fetch only days whose previous fetch returned zero records:
+python scripts/bootstrap_recent_tles.py --fill-gaps
 ```
 
 Coverage tags written: `gp_history_creation_YYYY_MM_DD` (one per day).
@@ -119,14 +122,14 @@ sqlite3 argus.db "
 **Fill gaps:**
 
 ```bash
-# Re-fetch all zero-record gap days from the production Space-Track API.
-# Reads credentials and ARGUS_ENV=production from .env automatically.
+# Re-fetch all zero-record gap days from the configured Space-Track API.
 # Safe to re-run — days already containing real data are untouched.
-python scripts/fill_tle_gaps.py
+ARGUS_ENV=production python scripts/bootstrap_recent_tles.py --fill-gaps
 ```
 
-`fill_tle_gaps.py` queries `tle_catalog_coverage` for `record_count=0` entries,
-calls `fetch_day(force=True)` for each, and updates the coverage record.
+The `--fill-gaps` mode queries `tle_catalog_coverage` for `record_count=0`
+entries, calls the same forced day-fetch path used by bootstrap, and updates the
+coverage record.
 It does **not** touch days that already have data, so it is safe to run at any
 time without re-fetching the full catalog.
 
@@ -312,7 +315,7 @@ provenance against the local catalog.
 | Tag | Source | Written by |
 |---|---|---|
 | `zip_YYYY` / `txt_YYYY` | Annual Space-Track zip bundle | `bootstrap_tle_catalog.py` |
-| `gp_history_creation_YYYY_MM_DD` | Space-Track GP_History by CREATION_DATE | `bootstrap_recent_tles.py` / `fill_tle_gaps.py` |
+| `gp_history_creation_YYYY_MM_DD` | Space-Track GP_History by CREATION_DATE | `bootstrap_recent_tles.py` |
 | `celestrak_refresh` | CelesTrak GP API (live edge) | `celestrak_client.py` / `TLECatalogManager` |
 | `gp_current` | Space-Track GP class (explicit maintenance) | `bootstrap_tle_catalog.py --update-current` |
 
