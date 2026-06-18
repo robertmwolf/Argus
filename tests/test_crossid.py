@@ -309,7 +309,6 @@ class TestCrossIdentifyKnownTle:
             "ra_tip1_deg": 0.0, "dec_tip1_deg": 0.0,
             "ra_tip2_deg": None, "dec_tip2_deg": None,
             "edge_clipped": True,
-            "obb": None,
             "streak_length_px": 500,
         }]
 
@@ -359,7 +358,6 @@ class TestCrossIdentifyKnownTle:
             "dec_tip2_deg": 0.0,
             "quality_flag": 1,
             "edge_clipped": True,
-            "obb": {"w": 3600.0},
             "streak_length_px": 3600.0,
         }]
 

@@ -316,21 +316,14 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
         # pipeline_run is patched in tests via unittest.mock.
         # Set FAST_MODE=true in the environment to skip Radon + cross-ID.
         try:
-            from inference.pipeline import load_model as pipeline_load_model
-            from inference.pipeline import resolve_model_specs
             from inference.pipeline import run_with_array as pipeline_run
         except ImportError as exc:
             raise RuntimeError(
-                "ML packages (torch/mmdet) are not installed in this environment. "
+                "ML packages are not installed in this environment. "
                 "Run the API directly with the satid conda env for inference, "
                 "or run the standalone GPU worker on a machine with the ML stack installed."
             ) from exc
 
-        dino_ids = {spec["id"] for spec in resolve_model_specs()}
-        should_run_dino = (
-            enabled_detectors is None
-            or bool(enabled_detectors & dino_ids)
-        )
         logger.info(
             "Processing job %s with enabled_detectors=%s",
             job_id,
@@ -343,39 +336,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
             "raw_mode": raw_mode,
             "fast": fast_mode,
         }
-        if should_run_dino:
-            multi_config_raw = os.environ.get("ARGUS_MODEL_CONFIGS", "")
-            if multi_config_raw:
-                # Multi-model path: load all models defined in ARGUS_MODEL_CONFIGS.
-                models_key = multi_config_raw
-                if (
-                    getattr(app.state, "pipeline_models", None) is None
-                    or getattr(app.state, "pipeline_models_key", None) != models_key
-                ):
-                    from inference.pipeline import load_models as pipeline_load_models
-                    loaded = await asyncio.to_thread(pipeline_load_models)
-                    app.state.pipeline_models = loaded
-                    app.state.pipeline_models_key = models_key
-                    app.state.model_loaded = True
-                pipeline_kwargs["models"] = app.state.pipeline_models
-            else:
-                # Single-model path: use MODEL_SIZE / MODEL_WEIGHTS env vars.
-                model_size = os.environ.get("MODEL_SIZE", "tiny")
-                weights_key = os.environ.get("MODEL_WEIGHTS", "")
-                model_key = f"{model_size}:{weights_key}"
-                if (
-                    app.state.pipeline_model is None
-                    or getattr(app.state, "pipeline_model_key", None) != model_key
-                ):
-                    model, inference_device = await asyncio.to_thread(pipeline_load_model)
-                    app.state.pipeline_model = model
-                    app.state.pipeline_device = inference_device
-                    app.state.pipeline_model_key = model_key
-                    app.state.model_loaded = True
-                pipeline_kwargs["model"] = app.state.pipeline_model
-                pipeline_kwargs["inference_device"] = app.state.pipeline_device
-        else:
-            pipeline_kwargs["models"] = []
+        pipeline_kwargs["models"] = []
 
         pipeline_t0 = time.perf_counter()
         detections, fits_array, heat_dict = await asyncio.to_thread(
@@ -387,7 +348,7 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
             "job_timing job_id=%s pipeline_ms=%.1f detections=%d",
             job_id, pipeline_ms, len(detections),
         )
-        app.state.model_loaded = app.state.model_loaded or should_run_dino
+        app.state.model_loaded = True
 
         png_bytes = await asyncio.to_thread(_render_png, tmp_path, detections, fits_array)
         await storage.save_image(job_id, png_bytes)

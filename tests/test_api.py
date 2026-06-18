@@ -249,8 +249,8 @@ async def test_full_upload_poll_result_cycle(client, tmp_path):
     fake_detection = {
         "method": "ml",
         "confidence": 0.92,
-        "bbox": [10.0, 20.0, 300.0, 40.0],
-        "obb": {"cx": 155.0, "cy": 30.0, "w": 295.0, "h": 12.0, "angle_deg": 5.0},
+        "x1": 10.0, "y1": 20.0, "x2": 300.0, "y2": 40.0,
+        "angle_deg": 3.945,
         "streak_length_px": 295.0,
         "ra_deg": 120.0,
         "dec_deg": -5.0,

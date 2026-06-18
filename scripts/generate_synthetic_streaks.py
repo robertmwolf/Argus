@@ -5,7 +5,7 @@ Reads negative tiles from an existing NPY-based annotation JSON, renders
 physically-motivated streaks (Gaussian PSF, realistic SNR, random geometry),
 and writes augmented NPY files + a new COCO annotation JSON.
 
-The output JSON can be merged with real positives via build_tiled_brentimages_json.py
+The output JSON can be merged with real endpoint annotations
 merge helpers, or passed directly to cache_dinov3_heatmap_features.py.
 
 Streak model
@@ -136,16 +136,7 @@ def _render_streak(
     return out
 
 
-# ── OBB / COCO annotation helpers ────────────────────────────────────────────
-
-def _obb_to_bbox(cx: float, cy: float, w: float, h: float, angle_deg: float):
-    """Axis-aligned bounding box of an OBB (COCO format: [x, y, width, height])."""
-    θ = math.radians(angle_deg)
-    cos_θ, sin_θ = abs(math.cos(θ)), abs(math.sin(θ))
-    aabb_w = w * cos_θ + h * sin_θ
-    aabb_h = w * sin_θ + h * cos_θ
-    return [cx - aabb_w / 2, cy - aabb_h / 2, aabb_w, aabb_h]
-
+# ── Endpoint annotation helper ───────────────────────────────────────────────
 
 def _make_annotation(
     ann_id: int,
@@ -154,23 +145,19 @@ def _make_annotation(
     cy: float,
     length: float,
     angle_deg: float,
-    box_half_width: float = 6.0,
 ) -> dict[str, Any]:
-    bbox = _obb_to_bbox(cx, cy, length, box_half_width * 2, angle_deg)
+    theta = math.radians(angle_deg)
+    half_dx = 0.5 * length * math.cos(theta)
+    half_dy = 0.5 * length * math.sin(theta)
     return {
         "id": ann_id,
         "image_id": img_id,
         "category_id": 1,
-        "bbox": bbox,
-        "area": float(bbox[2] * bbox[3]),
         "iscrowd": 0,
-        "obb": {
-            "cx": cx,
-            "cy": cy,
-            "w": length,
-            "h": box_half_width * 2,
-            "angle_deg": angle_deg,
-        },
+        "x1": cx - half_dx,
+        "y1": cy - half_dy,
+        "x2": cx + half_dx,
+        "y2": cy + half_dy,
         "attributes": {
             "synthetic": True,
             "length_px": length,

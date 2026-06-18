@@ -9,8 +9,8 @@
 #   requirements-training.txt   training/evaluation extras
 #   requirements-dev.txt        tests on top of training
 #
-# PyTorch, torchvision, mmengine, mmcv, and mmdet are intentionally omitted from
+# PyTorch and torchvision are intentionally omitted from
 # all requirements files because they require platform-specific wheel indexes.
-# Install them first using agent_docs/dependencies.md.
+# Install them first using the appropriate wheel index for the host.
 
 -r requirements-dev.txt

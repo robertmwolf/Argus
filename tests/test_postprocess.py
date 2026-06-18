@@ -109,7 +109,7 @@ def test_fuse_group_geometries_spans_outer_endpoints() -> None:
     assert fused[0]["streak_length_px"] == pytest.approx(120.0, rel=0.02)
     assert fused[0]["x1"] == pytest.approx(10.0, abs=1.0)
     assert fused[0]["x2"] == pytest.approx(130.0, abs=1.0)
-    assert "obb" not in fused[0]
+    assert set(fused[0]) >= {"x1", "y1", "x2", "y2"}
 
 
 def test_quality_good() -> None:

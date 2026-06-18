@@ -65,6 +65,42 @@ def _filter_peak_topk(dets: list[dict[str, Any]], peak_floor: float, top_k: int)
 _MODEL_CACHE: dict[str, tuple[Any, int, torch.device, bool]] = {}
 
 
+def _head_out_channels(head_state: dict[str, torch.Tensor]) -> int:
+    """Return the output width of a cached heatmap head state dict.
+
+    Checkpoints saved from ``HeatmapHead`` include the module prefix
+    (``net.4.weight``); older sequential-head checkpoints use ``4.weight``.
+    """
+    for key in ("net.4.weight", "4.weight"):
+        weight = head_state.get(key)
+        if weight is not None:
+            return int(weight.shape[0])
+    candidates = [
+        (key, value)
+        for key, value in head_state.items()
+        if key.endswith(".weight") and value.ndim == 4
+    ]
+    if not candidates:
+        raise ValueError("checkpoint heatmap head has no convolution weight")
+    return int(candidates[-1][1].shape[0])
+
+
+def _centerline_head_state(head_state: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+    """Normalize cached-head keys and retain only the centerline output channel."""
+    normalized = {
+        (key if key.startswith("net.") else f"net.{key}"): value
+        for key, value in head_state.items()
+    }
+    final_weight = normalized.get("net.4.weight")
+    if final_weight is None:
+        raise ValueError("checkpoint heatmap head is missing its final convolution")
+    normalized["net.4.weight"] = final_weight[:1].clone()
+    final_bias = normalized.get("net.4.bias")
+    if final_bias is not None:
+        normalized["net.4.bias"] = final_bias[:1].clone()
+    return normalized
+
+
 _DEFAULT_CHECKPOINT = (
     Path(__file__).resolve().parent.parent
     / "weights"
@@ -110,9 +146,9 @@ def _load_model(checkpoint_path: Path) -> tuple[Any, int, torch.device, bool]:
     hidden      = int(ckpt.get("args", {}).get("hidden_channels", 256))
     in_channels = int(ckpt["in_channels"])
     head_state = ckpt["head"]
-    out_channels = int(head_state["4.weight"].shape[0])
-    head = HeatmapHead(in_channels, hidden, out_channels=out_channels)
-    head.load_state_dict(head_state)
+    runtime_head_state = _centerline_head_state(head_state)
+    head = HeatmapHead(in_channels, hidden, out_channels=1)
+    head.load_state_dict(runtime_head_state)
     backbone.head = head.net.to(device)
     backbone.eval()
 

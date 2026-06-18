@@ -193,7 +193,7 @@ def apply_norm(raw_f32: np.ndarray, norm_mode: str) -> np.ndarray:
 
     Returns:
         uint8 3-channel array (H, W, 3) with all three channels identical
-        (grayscale replicated), ready to pass to an MMDetection model.
+        (grayscale replicated), ready to pass to a heatmap model.
     """
     mode = norm_mode.lower()
     if mode == "autostretch":

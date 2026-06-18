@@ -1,9 +1,8 @@
 # ARGUS shared runtime requirements.
 #
 # These packages are common to API, inference, and training environments.
-# PyTorch, torchvision, mmengine, mmcv, and mmdet are intentionally omitted:
-# install them first from the platform-specific wheel index documented in
-# agent_docs/dependencies.md.
+# PyTorch and torchvision are intentionally omitted:
+# install them first from the platform-specific wheel index for the host.
 
 # Core astronomy
 astropy==6.1.0
@@ -14,23 +13,19 @@ astride==0.3.2
 # Orbital mechanics
 sgp4==2.23
 skyfield==1.49
-spacetrack==0.14.0
+spacetrack==1.4.0
 
 # Image processing
 # Headless variant: safe in WSL2 and server environments.
 opencv-python-headless==4.10.0.84
 scikit-image==0.24.0
 Pillow==12.2.0
-shapely==2.0.4
+matplotlib==3.9.0  # imported by ASTRiDE
 
 # Data / compute
 # numpy MUST stay < 2.0: sep and astride are compiled against numpy 1.x ABI.
 numpy==1.26.4
 scipy==1.13.1
-pandas==2.2.2
 
 # Utilities
 requests==2.33.0
-python-dateutil==2.9.0
-tqdm==4.66.4
-click==8.1.7

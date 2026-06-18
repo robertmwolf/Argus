@@ -1,6 +1,6 @@
 """Endpoint-based refinement, suppression, and grouping for ARGUS.
 
-CPU-only: skimage.transform.radon and Shapely are not GPU-accelerated.
+CPU-only: image-space segment refinement is not GPU-accelerated.
 This is expected — do not attempt to move these operations to MPS or CUDA.
 """
 
@@ -591,6 +591,73 @@ def group_detections(
         n, next_id,
     )
     return sorted_dets
+
+
+def stitch_collinear_segments(
+    detections: list[dict],
+    angle_tol_deg: float = 10.0,
+    perpendicular_tol_px: float = 20.0,
+    max_gap_px: float = 200.0,
+    max_growth_ratio: float = 3.0,
+) -> list[dict]:
+    """Join nearby collinear fragments into endpoint segments.
+
+    Args:
+        detections: Endpoint detection dictionaries.
+        angle_tol_deg: Maximum orientation difference.
+        perpendicular_tol_px: Maximum lateral separation.
+        max_gap_px: Maximum along-axis gap between fragments.
+        max_growth_ratio: Maximum stitched length relative to member lengths.
+
+    Returns:
+        New detection list with compatible fragments merged.
+    """
+    from inference.streak_segment import apply_segment_geometry
+
+    pending = [apply_segment_geometry(dict(item)) for item in detections]
+    stitched: list[dict] = []
+    while pending:
+        base = pending.pop(0)
+        changed = True
+        while changed:
+            changed = False
+            for index, candidate in enumerate(pending):
+                if _seg_angle_error_deg(base["angle_deg"], candidate["angle_deg"]) > angle_tol_deg:
+                    continue
+                base_ep = _det_endpoints(base)
+                candidate_ep = _det_endpoints(candidate)
+                assert base_ep is not None and candidate_ep is not None
+                if _seg_perp_offset(*base_ep, *candidate_ep) > perpendicular_tol_px:
+                    continue
+                radians = math.radians(base["angle_deg"])
+                ux, uy = math.cos(radians), math.sin(radians)
+                origin_x, origin_y = base["cx"], base["cy"]
+                values = [
+                    (x - origin_x) * ux + (y - origin_y) * uy
+                    for x, y in (
+                        (base["x1"], base["y1"]), (base["x2"], base["y2"]),
+                        (candidate["x1"], candidate["y1"]),
+                        (candidate["x2"], candidate["y2"]),
+                    )
+                ]
+                base_interval = sorted(values[:2])
+                other_interval = sorted(values[2:])
+                gap = max(0.0, max(base_interval[0], other_interval[0]) - min(base_interval[1], other_interval[1]))
+                new_length = max(values) - min(values)
+                member_length = max(base["streak_length_px"], candidate["streak_length_px"])
+                if gap > max_gap_px or new_length > max_growth_ratio * member_length:
+                    continue
+                base["x1"] = origin_x + min(values) * ux
+                base["y1"] = origin_y + min(values) * uy
+                base["x2"] = origin_x + max(values) * ux
+                base["y2"] = origin_y + max(values) * uy
+                base["confidence"] = max(base.get("confidence", 0.0), candidate.get("confidence", 0.0))
+                apply_segment_geometry(base)
+                pending.pop(index)
+                changed = True
+                break
+        stitched.append(base)
+    return stitched
 
 
 def fuse_group_geometries(detections: list[dict]) -> list[dict]:

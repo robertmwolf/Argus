@@ -1,7 +1,7 @@
 """Train the plain PyTorch DINOv3 streak heatmap spike.
 
 This is intentionally independent of OpenMMLab. It is meant to test whether
-ARGUS can replace the MMDetection/DETR training path with a smaller model that
+ARGUS uses a compact model that
 is easier to run on native Windows and ordinary PyTorch environments.
 """
 

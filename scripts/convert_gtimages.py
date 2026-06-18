@@ -5,11 +5,10 @@ Each .strk file covers one tracked NORAD ID and lists per-image observations wit
 pixel-precise start/end streak coordinates, SNR metrics, and embedded TLE elements.
 
 This script produces two COCO JSON files:
-  - Primary: usable labeled images (reject=0) with OBB annotations
+  - Primary: usable labeled images (reject=0) with endpoint annotations
   - Negatives: images where no streak was found (reject=-1), annotations empty
 
-The OBB is constructed from start/end pixel coordinates as a tight rotated box
-of fixed width (derived from the streak's elongation field, floored at 10 px).
+The source start/end pixel coordinates are preserved as canonical geometry.
 
 Source: GTImages dataset, SkyTrack 1.9.8
 """
@@ -26,8 +25,7 @@ from astropy.io import fits
 
 logger = logging.getLogger(__name__)
 
-# Fixed half-width of the streak OBB perpendicular to the streak axis (pixels).
-# GTImages does not record a PSF width; 8 px is conservative for a 1.2"/px camera.
+# Half-width used only for the retained COCO source polygon metadata.
 _STREAK_HALF_WIDTH_PX = 8.0
 
 
@@ -122,9 +120,8 @@ def _obs_to_coco_annotation(
 ) -> dict[str, Any]:
     """Convert one usable observation to a COCO annotation dict.
 
-    The OBB is represented as a rotated bounding box stored in COCO's
-    ``segmentation`` field as a flat 8-element polygon [x1,y1,...,x4,y4]
-    and in a custom ``obb`` field as {cx, cy, w, h, angle_deg}.
+    Source endpoints are preserved directly. COCO rectangle fields remain only
+    as source-annotation metadata.
 
     Args:
         obs: Parsed observation dict from _parse_strk_file.
@@ -144,13 +141,13 @@ def _obs_to_coco_annotation(
     # Angle of the streak axis (degrees, measured from +X axis)
     angle_deg = math.degrees(math.atan2(dy, dx))
 
-    # OBB centre
+    # Source annotation rectangle retained for COCO compatibility.
     cx = (x0 + x1) / 2.0
     cy = (y0 + y1) / 2.0
     w = length
     h = _STREAK_HALF_WIDTH_PX * 2.0
 
-    # Four corners of the rotated box
+    # Four corners of the narrow source annotation polygon.
     cos_a = math.cos(math.radians(angle_deg))
     sin_a = math.sin(math.radians(angle_deg))
     hw, hh = w / 2.0, h / 2.0
@@ -178,13 +175,10 @@ def _obs_to_coco_annotation(
         "bbox": [bbox_x, bbox_y, bbox_w, bbox_h],
         "area": w * h,
         "iscrowd": 0,
-        "obb": {
-            "cx": cx,
-            "cy": cy,
-            "w": w,
-            "h": h,
-            "angle_deg": angle_deg,
-        },
+        "x1": float(x0),
+        "y1": float(y0),
+        "x2": float(x1),
+        "y2": float(y1),
         "attributes": {
             "norad_id": norad_id,
             "satellite_name": sat_name,

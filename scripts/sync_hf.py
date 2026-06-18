@@ -48,8 +48,6 @@ WEIGHTS_INCLUDE = [
     # Current experiment (ViT-B)
     "run17_vitb/best.pt",
     "run17_vitb/history.json",
-    # MMDet ViT-S OBB — still registered in pipeline.py
-    "run5_vits_mmdet/best_coco_bbox_mAP_epoch_15.pth",
     # DINOv3 pretrain backbones — required to load any of the above
     "dinov3_vits16_lvd1689m.pth",
     "dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth",

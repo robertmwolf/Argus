@@ -22,7 +22,7 @@ OUT=$REPO/results/window_v10
 export PYTORCH_ENABLE_MPS_FALLBACK=1
 cd "$REPO"; mkdir -p "$OUT"
 
-LR=1e-3; BATCH=32; GEOMW=0.25; HIDDEN=256; SCHED=cosine; EARLY_STOP=10
+LR=1e-3; BATCH=32; HIDDEN=256; SCHED=cosine; EARLY_STOP=10
 VITB_W=$WEIGHTS/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth
 CACHE_ROOT=/Volumes/External/argus_caches
 VITB_CACHE=$CACHE_ROOT/vitb_window_v10
@@ -61,7 +61,7 @@ $PYTHON training/train_dinov3_heatmap_cached.py \
   --train-cache "$VITB_CACHE/train" --val-cache "$VITB_CACHE/val" \
   --work-dir "$WEIGHTS/$TAG" \
   --epochs 80 --lr "$LR" --batch-size "$BATCH" \
-  --geometry-weight "$GEOMW" --hidden-channels "$HIDDEN" \
+  --hidden-channels "$HIDDEN" \
   --lr-scheduler "$SCHED" --num-workers 0 \
   --early-stopping-patience "$EARLY_STOP" \
   --loss-mode asl_cldice \
@@ -74,7 +74,7 @@ echo "── ViT-B cache deleted ── $(date)"
 
 # ── Step 4: Eval on val_balanced_v1 ──────────────────────────────────────────
 echo "── Step 4: Eval $TAG on val_balanced_v1 ── $(date)"
-BC=~/argus_${TAG}_balcache
+BC=/Volumes/External/argus_caches/${TAG}_balcache
 $PYTHON scripts/cache_heatmap_maps.py --annotations "$BAL_ANN" \
   --checkpoint "$WEIGHTS/$TAG/best.pt" --output-dir "$BC" --norm-mode zscore
 $PYTHON scripts/evaluate_dinov3_heatmap.py --tiled --stitch \

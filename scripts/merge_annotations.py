@@ -75,8 +75,8 @@ def _image_size(image_path: Path) -> tuple[int, int]:
         return img.size
 
 
-def _bbox_from_mask(mask_path: Path) -> tuple[list[float], float] | None:
-    """Derive a COCO bounding box from a SatStreaks segmentation mask.
+def _segment_from_mask(mask_path: Path) -> tuple[float, float, float, float] | None:
+    """Fit principal-axis endpoints to a SatStreaks segmentation mask.
 
     Source: SatStreaks — segmentation masks converted to detection boxes for
     DINO fine-tuning.
@@ -86,8 +86,7 @@ def _bbox_from_mask(mask_path: Path) -> tuple[list[float], float] | None:
         mask_path: Path to the binary/object mask image.
 
     Returns:
-        Tuple of ``([x, y, width, height], area)`` when the mask has foreground,
-        otherwise ``None``.
+        Fitted ``(x1, y1, x2, y2)`` or ``None`` for an empty mask.
     """
     with Image.open(mask_path) as mask_img:
         mask = np.asarray(mask_img.convert("L"))
@@ -96,14 +95,14 @@ def _bbox_from_mask(mask_path: Path) -> tuple[list[float], float] | None:
     if xs.size == 0 or ys.size == 0:
         return None
 
-    x_min = int(xs.min())
-    x_max = int(xs.max())
-    y_min = int(ys.min())
-    y_max = int(ys.max())
-    width = x_max - x_min + 1
-    height = y_max - y_min + 1
-    area = float((mask > 0).sum())
-    return [float(x_min), float(y_min), float(width), float(height)], area
+    points = np.column_stack((xs, ys)).astype(np.float64)
+    center = points.mean(axis=0)
+    _, _, axes = np.linalg.svd(points - center, full_matrices=False)
+    axis = axes[0]
+    along = (points - center) @ axis
+    start = center + along.min() * axis
+    end = center + along.max() * axis
+    return float(start[0]), float(start[1]), float(end[0]), float(end[1])
 
 def _load_satstreaks(
     labels_path: Path,
@@ -138,7 +137,7 @@ def _load_satstreaks(
         img_path = Path("data") / img_rel
 
         # SatStreaks doesn't provide image dimensions — use a placeholder.
-        # MMDetection will read actual dims at load time.
+        # The image loader reads actual dimensions at load time.
         mask_rel = entry.get("annotation", "")
         mask_path = Path("data/satstreaks/Data") / mask_rel if mask_rel else None
 
@@ -152,13 +151,12 @@ def _load_satstreaks(
             logger.debug("Skipping SatStreaks entry without mask: %s", filename)
             continue
 
-        bbox_area = _bbox_from_mask(mask_path)
-        if bbox_area is None:
+        segment = _segment_from_mask(mask_path)
+        if segment is None:
             logger.debug("Skipping SatStreaks image with empty mask: %s", mask_path)
             continue
-        bbox, area = bbox_area
+        x1, y1, x2, y2 = segment
         width, height = _image_size(img_path)
-        x, y, bw, bh = bbox
 
         images.append({
             "id": img_id,
@@ -172,9 +170,10 @@ def _load_satstreaks(
             "image_id": img_id,
             "category_id": 1,
             "iscrowd": 0,
-            "bbox": bbox,
-            "area": area,
-            "obb": [x + bw / 2.0, y + bh / 2.0, bw, bh, 0.0],
+            "x1": x1,
+            "y1": y1,
+            "x2": x2,
+            "y2": y2,
             "segmentation_mask": str(Path("satstreaks/Data") / mask_rel),
         })
         ann_id += 1

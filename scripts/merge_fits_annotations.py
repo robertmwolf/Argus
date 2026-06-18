@@ -165,7 +165,7 @@ def main() -> None:
         if not p.exists():
             raise SystemExit(
                 f"{label} annotation file not found: {p}\n"
-                f"  GTImages: run  python scripts/augment_gtimages_synthetic.py\n"
+                f"  GTImages: run  python scripts/convert_gtimages.py\n"
                 f"  Frigate:  run  python scripts/annotate_frigate.py"
             )
 

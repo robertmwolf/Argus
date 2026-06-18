@@ -1,7 +1,7 @@
 """ConvNeXt-S Stage-2 heatmap detector for the ARGUS pipeline.
 
 Loads the Run 5/6 frozen ConvNeXt-Small backbone + trained HeatmapHead and
-converts the output probability map to pipeline-compatible OBB detections.
+converts the output probability map to endpoint detections.
 
 Checkpoint format is the cached-head format produced by
 ``training/train_dinov3_heatmap_cached.py``.

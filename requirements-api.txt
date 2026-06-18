@@ -1,7 +1,7 @@
 # ARGUS API-only requirements.
 #
 # This is the lightweight HTTP/database service environment. It intentionally
-# excludes torch, MMDetection, Ultralytics, Albumentations, and benchmark/test
+# excludes torch, training augmentations, and benchmark/test
 # tooling. The API can enqueue work and serve metadata without carrying the
 # model-serving or training dependency surface.
 
@@ -15,5 +15,4 @@ asyncpg==0.29.0
 aiosqlite==0.20.0
 pydantic==2.7.0
 python-multipart==0.0.27
-boto3==1.34.0
 python-dotenv==1.2.2

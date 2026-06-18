@@ -1,4 +1,4 @@
-"""Sweep no-OBB centerline segment extraction settings for DINOv3 heatmaps.
+"""Sweep endpoint centerline segment extraction settings for DINOv3 heatmaps.
 
 This is the tuning companion to ``propose_dinov3_centerline_segments.py``.  It
 runs the model once per validation image, then evaluates multiple seed

@@ -1,4 +1,4 @@
-"""Propose no-OBB streak line segments from DINOv3 centerline heatmaps.
+"""Propose endpoint streak segments from DINOv3 centerline heatmaps.
 
 This script implements the post-training path for the heatmap spike:
 
@@ -51,7 +51,7 @@ class Point:
 
 @dataclass(frozen=True)
 class LineSegmentProposal:
-    """One no-OBB centerline proposal."""
+    """One endpoint centerline proposal."""
 
     component_id: int
     score: float

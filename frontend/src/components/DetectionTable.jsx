@@ -15,7 +15,6 @@ const METHOD_CONFIG = {
   opencv:                    { label: 'OpenCV Morphological',      cls: 'border-orange-600/60 bg-orange-950/40 text-orange-300' },
   dinov3_vitb:               { label: 'DINOv3 ViT-Base',          cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
   dinov3_heatmap_centerline: { label: 'DINOv3 Heatmap Centerline', cls: 'border-lime-500/70 bg-lime-950/40 text-lime-300' },
-  streakmind_yolo:           { label: 'YOLO-OBB - GTImages',      cls: 'border-fuchsia-500/70 bg-fuchsia-950/40 text-fuchsia-300' },
   ml:                        { label: 'ML',                        cls: 'border-cyan-600/60 bg-cyan-950/40 text-cyan-300' },
 }
 
@@ -175,11 +174,9 @@ export default function DetectionTable({ detections, visibleSet, highlightIndex,
               const best = det.identifications?.[0]
               const isHighlighted = idx === highlightIndex
               const isVisible = !visibleSet || visibleSet.has(idx)
-              const angleDeg = det.obb?.angle_deg
+              const angleDeg = det.angle_deg
               const sources = det.sources ?? [{ method: det.method, confidence: det.confidence }]
-              const obbMax = det.obb ? Math.max(det.obb.w ?? 0, det.obb.h ?? 0) : 0
-              const len = (det.streak_length_px != null && det.streak_length_px > obbMax * 0.1)
-                ? det.streak_length_px : obbMax
+              const len = det.streak_length_px ?? 0
 
               return (
                 <tr

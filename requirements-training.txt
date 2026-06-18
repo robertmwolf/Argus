@@ -1,16 +1,10 @@
 # ARGUS training and evaluation requirements.
 #
-# Install after the platform-specific PyTorch + MMDetection stack documented in
-# agent_docs/dependencies.md. This file adds dataset conversion, augmentation,
-# benchmarking, and experiment utilities.
+# Install after the platform-specific PyTorch stack. This file adds dataset
+# conversion and experiment utilities.
 
 -r requirements-inference.txt
 
-# Training data augmentation
-albumentations==1.4.3
-
-# Evaluation / visualization
-matplotlib==3.9.0
-
-# Data download
-zenodo_get==1.6.1
+# Dataset manifests and optional artifact synchronization
+PyYAML==6.0.3
+huggingface-hub==1.18.0

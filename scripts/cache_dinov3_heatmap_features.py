@@ -6,7 +6,7 @@ Full-image mode (default, --native-tile-size 0):
     Each image is letterboxed to ``--image-size`` and cached as one entry.
     Suitable for whole-frame inference, but medium streaks in large images
     (e.g. 6248 px Atwood) span <2 feature patches at 384 px — the model
-    learns blob detections and cannot produce tight OBBs.
+    learns blob detections and cannot resolve useful endpoints.
 
 Tiled mode (--native-tile-size N):
     Each image is partitioned into overlapping N×N px crops, each letterboxed
@@ -79,59 +79,36 @@ def _build_tile_targets(
     pad_x: float,
     pad_y: float,
     patch_size: int = 16,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """Build heatmap + geometry targets for one tile.
+) -> torch.Tensor:
+    """Build an endpoint-centerline heatmap target for one tile.
 
     Annotations are given in **full-image** coordinates; ``tile_x0`` /
     ``tile_y0`` have already been subtracted before this call so all ``cx/cy``
-    values are in tile-local pixels.
-
-    Returns:
-        (heatmap, geometry) tensors matching StreakHeatmapDataset conventions.
+    endpoints are in tile-local pixels.
     """
     grid = image_size // patch_size
     target = np.zeros((grid, grid), dtype=np.float32)
-    geom   = np.zeros((4, grid, grid), dtype=np.float32)
 
     yy, xx = np.mgrid[0:grid, 0:grid].astype(np.float32)
     px = (xx + 0.5) * patch_size
     py = (yy + 0.5) * patch_size
 
     for ann in anns:
-        obb = ann.get("obb")
-        if not obb:
-            continue
-        if isinstance(obb, dict):
-            cx   = float(obb["cx"])   * scale + pad_x
-            cy   = float(obb["cy"])   * scale + pad_y
-            w    = float(obb["w"])    * scale
-            h    = float(obb["h"])    * scale
-            adeg = float(obb.get("angle_deg", 0.0))
-        else:
-            cx   = float(obb[0]) * scale + pad_x
-            cy   = float(obb[1]) * scale + pad_y
-            w    = float(obb[2]) * scale
-            h    = float(obb[3]) * scale
-            adeg = float(obb[4])
-
-        length = max(w, h)
-        width  = max(min(w, h), patch_size)
-        angle  = math.radians(adeg)
+        from training.annotation_endpoints import annotation_to_endpoints
+        x1, y1, x2, y2 = annotation_to_endpoints(ann)
+        x1, y1 = x1 * scale + pad_x, y1 * scale + pad_y
+        x2, y2 = x2 * scale + pad_x, y2 * scale + pad_y
+        cx, cy = (x1 + x2) / 2.0, (y1 + y2) / 2.0
+        length = math.hypot(x2 - x1, y2 - y1)
+        angle = math.atan2(y2 - y1, x2 - x1)
         ux, uy = math.cos(angle), math.sin(angle)
 
         dx = px - cx; dy = py - cy
         along  = dx * ux + dy * uy
         across = np.abs(-dx * uy + dy * ux)
-        mask   = (np.abs(along) <= length / 2 + 8.0) & (across <= width / 2 + 8.0)
+        mask = (np.abs(along) <= length / 2 + 8.0) & (across <= patch_size / 2 + 8.0)
         target[mask] = 1.0
-        geom[0, mask] = math.cos(2.0 * angle)
-        geom[1, mask] = math.sin(2.0 * angle)
-        geom[2, mask] = min(length / image_size, 2.0)
-        geom[3, mask] = min(width  / image_size, 1.0)
-
-    geom[:, target <= 0] = 0.0
-    return torch.from_numpy(target).unsqueeze(0), torch.from_numpy(geom)
-
+    return torch.from_numpy(target).unsqueeze(0)
 
 def _load_image_array(path: Path, loader: FITSLoader, norm_mode: str = "autostretch") -> np.ndarray | None:
     suffix = path.suffix.lower()
@@ -150,7 +127,7 @@ def _load_image_array(path: Path, loader: FITSLoader, norm_mode: str = "autostre
                 return np.stack([raw, raw, raw], axis=-1)
             if norm_mode == "none":
                 # Crop already normalised at build time (e.g. per-frame zscore in
-                # build_atwood_window_dataset.py v2+). Clip to [-3, 3] for safety,
+                # a pre-normalized dataset). Clip to [-3, 3] for safety,
                 # scale to [0, 255] uint8 for the backbone's imagenet_normalize path.
                 clipped = np.clip(raw.astype(np.float32), -3.0, 3.0)
                 scaled = ((clipped + 3.0) / 6.0 * 255.0).astype(np.uint8)
@@ -184,10 +161,10 @@ def _cache_tiled(
 ) -> list[dict]:
     """Cache features by tiling each image, selecting only annotation-covered tiles.
 
-    Tile selection mirrors ``build_tiled_brentimages_json.py``:
+    Tile selection uses endpoint coverage:
 
-    * **Positive tiles** — included when ≥1 annotation bbox retains at least
-      ``min_area_fraction`` (default 25 %) of its original area after clipping
+    * **Positive tiles** — included when ≥1 annotated segment retains at least
+      ``min_area_fraction`` (default 25 %) of its original length after clipping
       to the tile.  This is checked *before* running the backbone so we never
       pay for tiles that carry no training signal.
     * **Negative tiles** — ``neg_tiles_per_image`` random tiles per image that
@@ -221,20 +198,15 @@ def _cache_tiled(
                 return p
         return ann_dir / raw
 
-    def _ann_area_in_tile(ann: dict, x0: int, y0: int, ts: int) -> float:
-        """Return fraction of annotation bbox visible inside the tile."""
-        bbox = ann.get("bbox")
-        if not bbox:
-            return 0.0
-        bx, by, bw, bh = float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])
-        orig_area = bw * bh
-        if orig_area <= 0:
-            return 0.0
-        x1 = max(bx, float(x0));  y1 = max(by, float(y0))
-        x2 = min(bx + bw, float(x0 + ts)); y2 = min(by + bh, float(y0 + ts))
-        if x2 <= x1 or y2 <= y1:
-            return 0.0
-        return (x2 - x1) * (y2 - y1) / orig_area
+    def _segment_fraction_in_tile(ann: dict, x0: int, y0: int, ts: int) -> float:
+        """Approximate the fraction of an annotated segment inside a tile."""
+        from training.annotation_endpoints import annotation_to_endpoints
+        x1, y1, x2, y2 = annotation_to_endpoints(ann)
+        t = np.linspace(0.0, 1.0, 101)
+        xs = x1 + t * (x2 - x1)
+        ys = y1 + t * (y2 - y1)
+        inside = (xs >= x0) & (xs <= x0 + ts) & (ys >= y0) & (ys <= y0 + ts)
+        return float(inside.mean())
 
     manifest: list[dict] = []
     for img_meta in images_meta:
@@ -256,7 +228,7 @@ def _cache_tiled(
                 ts = native_tile_size
                 qualifying = [
                     ann for ann in orig_anns
-                    if _ann_area_in_tile(ann, x0, y0, ts) >= min_area_fraction
+                    if _segment_fraction_in_tile(ann, x0, y0, ts) >= min_area_fraction
                 ]
                 if qualifying:
                     selected.append((tile, x0, y0, qualifying))
@@ -269,22 +241,13 @@ def _cache_tiled(
         for tile, x0, y0, qualifying_anns in selected:
             tw, th = tile.shape[1], tile.shape[0]
 
-            # Shift qualifying annotation OBBs to tile-local coordinates.
+            # Shift qualifying annotation endpoints to tile-local coordinates.
             tile_anns = []
             for ann in qualifying_anns:
-                obb = ann.get("obb")
-                if not obb:
-                    continue
-                cx_full = float(obb["cx"] if isinstance(obb, dict) else obb[0])
-                cy_full = float(obb["cy"] if isinstance(obb, dict) else obb[1])
-                local = dict(ann)
-                raw_obb = local["obb"]
-                if isinstance(raw_obb, dict):
-                    local["obb"] = {**raw_obb, "cx": cx_full - x0, "cy": cy_full - y0}
-                else:
-                    lo = list(raw_obb); lo[0] -= x0; lo[1] -= y0
-                    local["obb"] = lo
-                tile_anns.append(local)
+                from training.annotation_endpoints import annotation_to_endpoints
+                x1, y1, x2, y2 = annotation_to_endpoints(ann)
+                tile_anns.append({"x1": x1 - x0, "y1": y1 - y0,
+                                  "x2": x2 - x0, "y2": y2 - y0})
 
             canvas, scale, pad_x, pad_y = _letterbox_array(tile, image_size)
             img_tensor = (torch.from_numpy(canvas.astype(np.float32) / 255.0)
@@ -295,7 +258,7 @@ def _cache_tiled(
                     imagenet_normalize(img_tensor)
                 ).cpu().to(torch.float16).squeeze(0)
 
-            heatmap, geometry = _build_tile_targets(
+            heatmap = _build_tile_targets(
                 tile_anns, tw, th, image_size, scale, pad_x, pad_y
             )
 
@@ -305,12 +268,6 @@ def _cache_tiled(
                 {
                     "features":      features,
                     "heatmap":       heatmap.to(torch.float16),
-                    "center_heatmap": torch.zeros_like(heatmap, dtype=torch.float16),
-                    "box_target":    torch.zeros((6, features.shape[1], features.shape[2]),
-                                                 dtype=torch.float16),
-                    "box_mask":      torch.zeros((1, features.shape[1], features.shape[2]),
-                                                 dtype=torch.float16),
-                    "geometry":      geometry.to(torch.float16),
                     "image_id":      sample_id,
                     "orig_size":     [th, tw],
                     "letterbox":     [scale, pad_x, pad_y],
@@ -359,10 +316,10 @@ def main() -> int:
     parser.add_argument("--native-tile-size", type=int, default=0,
                         help="Tile the image into overlapping N×N px crops before "
                              "caching (0 = full-image letterbox, the old default). "
-                             "For Atwood 6248 px images use 400 (matching the OBB "
+                             "For Atwood 6248 px images use 400 (matching the endpoint "
                              "training data scale). Only tiles with ≥25 %% of any "
                              "annotation bbox visible are cached (same gate as "
-                             "build_tiled_brentimages_json.py). "
+                             "the source dataset builder). "
                              "Models trained on tiled caches MUST be evaluated with "
                              "--tiled in evaluate_dinov3_heatmap.py.")
     parser.add_argument("--tile-overlap", type=float, default=0.5,
@@ -464,10 +421,6 @@ def main() -> int:
             images = imagenet_normalize(batch["image"].to(device))
             features = model.extract_features(images).cpu().to(torch.float16)
             heatmaps = batch["heatmap"].cpu().to(torch.float16)
-            center_heatmaps = batch["center_heatmap"].cpu().to(torch.float16)
-            box_targets = batch["box_target"].cpu().to(torch.float16)
-            box_masks = batch["box_mask"].cpu().to(torch.float16)
-            geometries = batch["geometry"].cpu().to(torch.float16)
             image_ids = batch["image_id"].cpu().tolist()
             orig_sizes = batch["orig_size"].cpu().tolist()
             letterboxes = batch["letterbox"].cpu().tolist()
@@ -479,10 +432,6 @@ def main() -> int:
                     {
                         "features": features[i],
                         "heatmap": heatmaps[i],
-                        "center_heatmap": center_heatmaps[i],
-                        "box_target": box_targets[i],
-                        "box_mask": box_masks[i],
-                        "geometry": geometries[i],
                         "image_id": int(image_id),
                         "orig_size": orig_sizes[i],
                         "letterbox": letterboxes[i],

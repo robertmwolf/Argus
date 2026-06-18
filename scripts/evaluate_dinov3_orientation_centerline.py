@@ -1,4 +1,4 @@
-"""Evaluate DINOv3 orientation-centerline checkpoints without OBB conversion."""
+"""Evaluate DINOv3 orientation-centerline checkpoints as endpoint segments."""
 
 from __future__ import annotations
 

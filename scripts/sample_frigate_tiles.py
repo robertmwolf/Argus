@@ -78,7 +78,7 @@ def _bbox_features(bbox: list[float]) -> dict[str, float]:
     """
     x, y, w, h = float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])
     length_px = math.hypot(w, h)
-    # aspect_ratio: major / minor axis of bbox (same convention as Atwood OBB)
+    # aspect_ratio: major / minor axis of the source annotation rectangle
     major = max(w, h)
     minor = min(w, h)
     aspect_ratio = major / max(minor, 1e-6)

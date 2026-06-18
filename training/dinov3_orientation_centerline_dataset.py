@@ -19,8 +19,7 @@ from torch.utils.data import Dataset
 
 logger = logging.getLogger(__name__)
 
-# Virtual tile path format shared with training/transforms.py and
-# scripts/build_tiled_frigate_json.py:
+# Historical virtual tile path format:
 #   <real_stem>__tx<x0>_ty<y0>_ts<size>.<ext>
 # The loader detects this pattern, loads the *parent* file, and crops the
 # requested tile before any further processing.
@@ -417,30 +416,14 @@ class DINOv3OrientationCenterlineDataset(Dataset):
         return torch.from_numpy(target)
 
     def _parse_annotation(self, ann: dict[str, Any]) -> tuple[float, float, float, float, float] | None:
-        obb = ann.get("obb")
-        if obb:
-            if isinstance(obb, dict):
-                cx = float(obb["cx"])
-                cy = float(obb["cy"])
-                w = float(obb["w"])
-                h = float(obb["h"])
-                angle = math.radians(float(obb.get("angle_deg", 0.0)))
-            else:
-                cx = float(obb[0])
-                cy = float(obb[1])
-                w = float(obb[2])
-                h = float(obb[3])
-                angle = math.radians(float(obb[4]))
-            if h > w:
-                angle += math.pi / 2.0
-            return cx, cy, max(w, h), max(min(w, h), 1e-3), angle % math.pi
-
-        bbox = ann.get("bbox")
-        if not bbox:
+        from training.annotation_endpoints import annotation_to_endpoints
+        try:
+            x1, y1, x2, y2 = annotation_to_endpoints(ann)
+        except (KeyError, TypeError, ValueError):
             return None
-        x, y, w, h = (float(v) for v in bbox)
-        angle = 0.0 if w >= h else math.pi / 2.0
-        return x + w / 2.0, y + h / 2.0, max(w, h), max(min(w, h), 1e-3), angle
+        length = math.hypot(x2 - x1, y2 - y1)
+        angle = math.atan2(y2 - y1, x2 - x1) % math.pi
+        return (x1 + x2) / 2.0, (y1 + y2) / 2.0, length, self.centerline_width, angle
 
     def _line_intersects_input(
         self,

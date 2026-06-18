@@ -1,6 +1,6 @@
 """Plain PyTorch DINOv3 heatmap model for satellite streak detection.
 
-This module deliberately avoids MMDetection, MMEngine, and mmcv. It treats
+This module uses plain PyTorch and treats
 DINOv3 as a frozen feature encoder and trains a small convolutional head that
 predicts a low-resolution streak probability heatmap.
 
@@ -395,27 +395,3 @@ def imagenet_normalize(batch: torch.Tensor) -> torch.Tensor:
     mean = batch.new_tensor(_IMAGENET_MEAN).view(1, 3, 1, 1)
     std = batch.new_tensor(_IMAGENET_STD).view(1, 3, 1, 1)
     return (batch - mean) / std
-
-
-def decode_geometry(raw_geometry: torch.Tensor) -> torch.Tensor:
-    """Decode raw geometry channels to target scale.
-
-    Channels are: cos(2θ), sin(2θ), length/image_size, width/image_size.
-    """
-    angle_vec = torch.tanh(raw_geometry[:, 0:2])
-    length = 2.0 * torch.sigmoid(raw_geometry[:, 2:3])
-    width = torch.sigmoid(raw_geometry[:, 3:4])
-    return torch.cat([angle_vec, length, width], dim=1)
-
-
-def decode_box(raw_box: torch.Tensor) -> torch.Tensor:
-    """Decode raw direct-box channels to target scale.
-
-    Channels are: dx, dy, cos(2θ), sin(2θ), length/image_size,
-    width/image_size.
-    """
-    offset = 2.0 * torch.tanh(raw_box[:, 0:2])
-    angle_vec = torch.tanh(raw_box[:, 2:4])
-    length = 2.0 * torch.sigmoid(raw_box[:, 4:5])
-    width = torch.sigmoid(raw_box[:, 5:6])
-    return torch.cat([offset, angle_vec, length, width], dim=1)

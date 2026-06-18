@@ -234,7 +234,7 @@ class TestRealPostprocess:
         _require_real_images(real_fits_files)
         from src.ingest.fits_parser import parse_fits
         from src.detection.classical_detector import detect_streaks
-        from inference.postprocess import refine_angle
+        from inference.postprocess import refine_segment_angle
         streak_files = [p for p in real_fits_files if _has_streak_in_name(p)]
         if not streak_files:
             pytest.skip("No *streak* files in data/test/")
@@ -248,9 +248,8 @@ class TestRealPostprocess:
                 x2 = min(img.data.shape[1], int(max(det.x_start, det.x_end)) + margin)
                 y2 = min(img.data.shape[0], int(max(det.y_start, det.y_end)) + margin)
                 crop = img.data[y1:y2, x1:x2]
-                obb = {"angle_deg": det.angle_deg}
-                refined = refine_angle(crop, obb)
+                refined = refine_segment_angle(crop, det.angle_deg)
                 assert isinstance(refined, float), \
-                    f"{path.name}: refine_angle should return float, got {type(refined)}"
+                    f"{path.name}: refine_segment_angle should return float, got {type(refined)}"
                 assert 0.0 <= refined <= 180.0, \
                     f"{path.name}: refined angle {refined} outside [0, 180]"

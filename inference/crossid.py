@@ -1,6 +1,6 @@
 """Satellite ephemeris cross-identification for ARGUS inference detections.
 
-Cross-matches DINO OBB detections against Space-Track TLEs using SGP4
+Cross-matches endpoint detections against locally stored TLEs using SGP4
 propagation and Gaussian confidence scoring.
 
 Enhancements adapted from SkyTrack (colleague's pipeline):
@@ -981,14 +981,15 @@ if __name__ == "__main__":
         {
             "ra_tip1_deg": 83.82, "dec_tip1_deg": -5.39,
             "ra_tip2_deg": 83.85, "dec_tip2_deg": -5.41,
-            "obb": {"cx": 400, "cy": 300, "w": 120, "h": 4, "angle_deg": 30.0},
+            "x1": 348.0, "y1": 270.0, "x2": 452.0, "y2": 330.0,
             "streak_length_px": 120,
             "confidence": 0.9,
         },
         {
             "ra_tip1_deg": None, "dec_tip1_deg": None,
             "ra_tip2_deg": None, "dec_tip2_deg": None,
-            "obb": None, "streak_length_px": 0, "confidence": 0.5,
+            "x1": 0.0, "y1": 0.0, "x2": 0.0, "y2": 0.0,
+            "streak_length_px": 0, "confidence": 0.5,
         },
     ]
 

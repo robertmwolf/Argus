@@ -22,13 +22,12 @@ if str(_REPO_ROOT) not in sys.path:
 from eval.streak_metrics import evaluate_segments
 from inference.convnext_heatmap_detector import _component_to_segment
 from inference.device import get_device
-from inference.streak_segment import obb_to_segment
 from models.plain_dinov3.streak_heatmap import (
     ConvNeXtStreakHeatmap,
     DINOv3StreakHeatmap,
-    decode_geometry,
     imagenet_normalize,
 )
+from training.annotation_endpoints import annotation_to_endpoints
 from training.dinov3_heatmap_dataset import StreakHeatmapDataset, collate_heatmap_batch
 from training.train_dinov3_heatmap_cached import HeatmapHead
 
@@ -45,7 +44,6 @@ def heatmap_to_detections(
     min_pixels: int,
     image_size: int,
     letterbox: tuple[float, float, float],
-    geometry_map: np.ndarray | None = None,
 ) -> list[dict[str, Any]]:
     """Convert one heatmap to segment-based detection dicts (x1, y1, x2, y2)."""
     binary = probs >= threshold
@@ -56,7 +54,7 @@ def heatmap_to_detections(
         mask = labels == label_id
         if int(mask.sum()) < min_pixels:
             continue
-        det = _component_to_segment(mask, probs, patch_size, geometry_map, image_size)
+        det = _component_to_segment(mask, probs, patch_size, image_size)
         if det is None:
             continue
         # Unscale from letterbox canvas to source-tile pixels
@@ -68,8 +66,6 @@ def heatmap_to_detections(
             (det["x2"] - det["x1"]) ** 2 + (det["y2"] - det["y1"]) ** 2
         )
         det["image_id"] = image_id
-        # Drop the obb field — segment representation is canonical
-        det.pop("obb", None)
         detections.append(det)
     return detections
 
@@ -80,18 +76,7 @@ def coco_ground_truth(annotation_file: Path) -> list[dict[str, Any]]:
     gts: list[dict[str, Any]] = []
     for ann in coco.get("annotations", []):
         image_id = int(ann["image_id"])
-        # Prefer native x1/y1/x2/y2; derive from obb or bbox if needed
-        if all(k in ann for k in ("x1", "y1", "x2", "y2")):
-            x1, y1, x2, y2 = float(ann["x1"]), float(ann["y1"]), float(ann["x2"]), float(ann["y2"])
-        else:
-            obb = ann.get("obb")
-            if isinstance(obb, list):
-                obb = {"cx": obb[0], "cy": obb[1], "w": obb[2], "h": obb[3], "angle_deg": obb[4]}
-            elif not isinstance(obb, dict):
-                bx, by, bw, bh = ann["bbox"]
-                obb = {"cx": bx + bw / 2, "cy": by + bh / 2, "w": bw, "h": bh, "angle_deg": 0.0}
-            seg = obb_to_segment(obb, confidence=1.0, image_id=image_id)
-            x1, y1, x2, y2 = seg.x1, seg.y1, seg.x2, seg.y2
+        x1, y1, x2, y2 = annotation_to_endpoints(ann)
         length = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
         gts.append({
             "image_id": image_id,
@@ -134,24 +119,16 @@ def _detections_from_feat_heatmap(
         mask = labels == label_id
         if int(mask.sum()) < min_pixels:
             continue
-        # image_size arg only affects geometry decoding; we pass None for geometry
-        det = _component_to_segment(
-            mask, feat_probs, patch_size, None, feat_h * patch_size
-        )
+        det = _component_to_segment(mask, feat_probs, patch_size, feat_h * patch_size)
         if det is None:
             continue
-        obb = det["obb"]
-        hw, hh = obb["w"] / 2.0, obb["h"] / 2.0
         detections.append({
-            "bbox":             [obb["cx"] - hw, obb["cy"] - hh,
-                                 obb["cx"] + hw, obb["cy"] + hh],
             "confidence":       det["confidence"],
             "peak_confidence":  det.get("peak_confidence", det["confidence"]),
             "x1":               det["x1"],
             "y1":               det["y1"],
             "x2":               det["x2"],
             "y2":               det["y2"],
-            "obb":              obb,
             "streak_length_px": det["streak_length_px"],
             "method":           "vits_heatmap",
             "image_id":         image_id,
@@ -210,25 +187,16 @@ def _eval_from_heatmap_cache(args: "argparse.Namespace") -> int:
     logger.info("Loaded %d/%d heatmaps (%d missing)", len(heatmaps),
                 len(images_meta), n_missing)
 
-    from inference.tiled_pipeline import stitch_collinear_fragments as _stitch_frags
+    from inference.postprocess import stitch_collinear_segments as _stitch_frags
 
     def _stitch_dets(dets: list[dict]) -> list[dict]:
         if len(dets) <= 1:
             return dets
-        stitch_in = []
-        for d in dets:
-            x1, y1, x2, y2 = d["bbox"]
-            stitch_in.append({**d, "bbox": [x1, y1, x2 - x1, y2 - y1],
-                               "score": d["confidence"]})
-        stitched = _stitch_frags(stitch_in,
-                                 max_gap_px=args.stitch_max_gap,
-                                 max_growth_ratio=args.stitch_max_growth_ratio)
-        out = []
-        for s in stitched:
-            x, y, w, h = s["bbox"]
-            out.append({**s, "bbox": [x, y, x + w, y + h],
-                        "confidence": s.get("confidence", s.get("score", 0.0))})
-        return out
+        return _stitch_frags(
+            dets,
+            max_gap_px=args.stitch_max_gap,
+            max_growth_ratio=args.stitch_max_growth_ratio,
+        )
 
     def _detect_all(threshold: float) -> list[dict]:
         preds: list[dict] = []
@@ -322,8 +290,8 @@ def main() -> int:
                              "recall on large images. Only supported for convnext checkpoints.")
     parser.add_argument("--stitch", action="store_true",
                         help="Merge collinear tile fragments after per-image NMS "
-                             "(tiled mode only). Reconstructs OBB from merged bbox so "
-                             "IoU matching against full-extent GT annotations works.")
+                             "(tiled mode only). The merged segment spans the outer "
+                             "compatible endpoints.")
     parser.add_argument("--stitch-max-gap", type=float, default=200.0,
                         help="Max gap in px between collinear fragments to merge (default: 200).")
     parser.add_argument("--stitch-max-growth-ratio", type=float, default=3.0,
@@ -332,11 +300,6 @@ def main() -> int:
                         help="Annotation contains pre-tiled crops at the model's native tile size "
                              "(e.g. val_atwood_near_ctx_t400_c4_v1). Suppresses the image_size<600 "
                              "warning — tiles are already at training scale so letterbox is correct.")
-    parser.add_argument("--scales", type=int, nargs="+", default=None, metavar="PX",
-                        help="Run multi-scale inference at these native tile sizes (px) and "
-                             "merge via NMS.  Implies --tiled.  Example: --scales 1800 518 110. "
-                             "When omitted, falls back to single-scale tiling controlled by "
-                             "VITS_HEATMAP_NATIVE_TILE_SIZE / CONVNEXT_HEATMAP_NATIVE_TILE_SIZE.")
     parser.add_argument("--heatmap-cache", default=None, metavar="DIR",
                         help="Directory of pre-cached feature-resolution heatmaps produced by "
                              "scripts/cache_heatmap_maps.py.  When provided with --tiled, skips "
@@ -344,9 +307,6 @@ def main() -> int:
                              "from cached NPY probability maps in seconds.  The cache must have "
                              "been built with the same checkpoint and tiling params as this eval.")
     args = parser.parse_args()
-    if args.scales:
-        args.tiled = True  # --scales implies tiled
-
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
     # Fast path: load pre-cached heatmaps and sweep thresholds without GPU inference
@@ -371,8 +331,8 @@ def main() -> int:
         # POLICY: heatmap models trained on cached full-image features at ≤512 px
         # must be evaluated with --tiled when the target images are larger than the
         # cache image_size.  Without tiling, medium streaks (150–400 px native) span
-        # <2 feature patches in the resized image, producing blob OBBs that fail all
-        # IoU thresholds.  This is a measurement error, not a model failure.
+        # <2 feature patches in the resized image, producing poorly resolved
+        # segments. This is a measurement error, not a model failure.
         # The rule: if cache image_size < 600 px, always pass --tiled.
         if not args.tiled and not args.pretiled and image_size < 600:
             logger.warning(
@@ -412,19 +372,7 @@ def main() -> int:
     # --- Tiled path: delegate to pipeline detector (handles tiling + NMS) ---
     if args.tiled:
         import os as _os
-        if args.scales:
-            # Multi-scale: run at each requested tile size, merge via NMS
-            from inference.multiscale_detector import run_multiscale_detector as _ms_det
-            def _run_tiled(arr):  # type: ignore[misc]
-                return _ms_det(
-                    arr,
-                    checkpoint=Path(args.checkpoint),
-                    backbone=backbone,
-                    scales=args.scales,
-                    threshold=args.threshold,
-                    min_pixels=args.min_pixels,
-                )
-        elif backbone == "convnext":
+        if backbone == "convnext":
             _os.environ["CONVNEXT_HEATMAP_CHECKPOINT"] = args.checkpoint
             _os.environ["CONVNEXT_HEATMAP_THRESHOLD"]  = str(args.threshold)
             _os.environ["CONVNEXT_HEATMAP_MIN_PIXELS"] = str(args.min_pixels)
@@ -439,7 +387,7 @@ def main() -> int:
             logger.error("--tiled is only supported for convnext and vit checkpoints")
             return 1
 
-        from inference.tiled_pipeline import stitch_collinear_fragments as _stitch_frags
+        from inference.postprocess import stitch_collinear_segments as _stitch_frags
         from inference.fits_loader import FITSLoader as _FITSLoader, apply_norm as _apply_norm
         _os.environ["ARGUS_NORM"] = args.norm_mode  # match training normalization
         _fits_loader = _FITSLoader()
@@ -494,25 +442,12 @@ def main() -> int:
                 arr = arr[y0:y0 + crop_h, x0:x0 + crop_w]
             dets = _run_tiled(arr)
             if args.stitch and len(dets) > 1:
-                # stitch_collinear_fragments expects bbox=[x,y,w,h] and "score".
-                # Heatmap detectors return bbox=[x1,y1,x2,y2] with "confidence".
-                # OBB reconstruction for merged fragments is handled inside
-                # tiled_pipeline._merge() via _merge_obb().
                 n_before = len(dets)
-                stitch_in = []
-                for d in dets:
-                    x1, y1, x2, y2 = d["bbox"]
-                    stitch_in.append({**d,
-                                      "bbox": [x1, y1, x2 - x1, y2 - y1],
-                                      "score": d["confidence"]})
-                stitched = _stitch_frags(stitch_in, max_gap_px=args.stitch_max_gap,
-                                         max_growth_ratio=args.stitch_max_growth_ratio)
-                dets = []
-                for s in stitched:
-                    x, y, w, h = s["bbox"]
-                    dets.append({**s,
-                                 "bbox": [x, y, x + w, y + h],
-                                 "confidence": s.get("confidence", s.get("score", 0.0))})
+                dets = _stitch_frags(
+                    dets,
+                    max_gap_px=args.stitch_max_gap,
+                    max_growth_ratio=args.stitch_max_growth_ratio,
+                )
                 logger.debug("stitch img_id=%d  %d → %d", meta["id"], n_before, len(dets))
             for det in dets:
                 det["image_id"] = int(meta["id"])
@@ -558,9 +493,6 @@ def main() -> int:
             output = model(images)
             logits = output[:, :1]
             probs = torch.sigmoid(logits).cpu().numpy()
-            geometry = None
-            if output.shape[1] >= 5:
-                geometry = decode_geometry(output[:, 1:5]).cpu().numpy()
             image_ids = batch["image_id"].cpu().numpy().tolist()
             letterboxes = batch["letterbox"].cpu().numpy().tolist()
             for idx, (prob, image_id, letterbox) in enumerate(zip(probs[:, 0], image_ids, letterboxes)):
@@ -573,7 +505,6 @@ def main() -> int:
                         args.min_pixels,
                         image_size,
                         (float(letterbox[0]), float(letterbox[1]), float(letterbox[2])),
-                        geometry_map=None if geometry is None else geometry[idx],
                     )
                 )
 

@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
-const OBB_COLOUR = '#00DCFF'        // cyan  — DINOv3 / ML
+const SEGMENT_COLOUR = '#00DCFF'    // cyan  — DINOv3 / ML
 const HEATMAP_COLOUR = '#A3E635'    // lime  — DINOv3 heatmap centerline
-const STREAKMIND_COLOUR = '#E879F9' // fuchsia — StreakMindYOLO
 const CLASSICAL_COLOUR = '#F59E0B'  // amber  — OpenCV
 const HIGHLIGHT_COLOUR = '#FF6B35'  // orange — highlighted row
 
@@ -11,24 +10,9 @@ const HIGHLIGHT_COLOUR = '#FF6B35'  // orange — highlighted row
 // ---------------------------------------------------------------------------
 
 function streakEndpoints(det, scaleX, scaleY) {
-  // Prefer native endpoint fields (set by heatmap detectors from Run 15+).
-  // Fall back to OBB-derived endpoints for legacy DB rows.
-  if (det.x1 != null && det.y1 != null && det.x2 != null && det.y2 != null) {
-    return {
-      p1: { x: det.x1 * scaleX, y: det.y1 * scaleY },
-      p2: { x: det.x2 * scaleX, y: det.y2 * scaleY },
-    }
-  }
-  const obb = det.obb
-  const { cx, cy, w, h, angle_deg } = obb
-  const rad = (angle_deg * Math.PI) / 180
-  // Use the longer OBB dimension as the streak half-length.  For correctly
-  // processed detections w is the along-streak extent; for legacy DB rows
-  // where w/h may be the raw bbox extents, max() picks the right one.
-  const half = Math.max(w, h) / 2
   return {
-    p1: { x: (cx - half * Math.cos(rad)) * scaleX, y: (cy - half * Math.sin(rad)) * scaleY },
-    p2: { x: (cx + half * Math.cos(rad)) * scaleX, y: (cy + half * Math.sin(rad)) * scaleY },
+    p1: { x: det.x1 * scaleX, y: det.y1 * scaleY },
+    p2: { x: det.x2 * scaleX, y: det.y2 * scaleY },
   }
 }
 
@@ -74,14 +58,8 @@ function drawEndpoint(ctx, p, label, colour, alpha, radius) {
   ctx.restore()
 }
 
-function drawLabel(ctx, obb, index, colour, alpha, scaleX, scaleY) {
-  const { cx, cy, w, h, angle_deg } = obb
-  const rad = (angle_deg * Math.PI) / 180
-  // Use the rotation-aware top edge of the OBB so the badge sits above the
-  // actual visible streak regardless of angle.  Without this, a near-vertical
-  // or near-top-of-image streak places the badge off-screen (negative y).
-  const rotatedTopY = cy - (Math.abs(w * Math.sin(rad)) + Math.abs(h * Math.cos(rad))) / 2
-  const x = cx * scaleX
+function drawLabel(ctx, det, index, colour, alpha, scaleX, scaleY) {
+  const x = ((det.x1 + det.x2) / 2) * scaleX
 
   const label = String(index + 1)
   const fontSize = 11
@@ -92,7 +70,7 @@ function drawLabel(ctx, obb, index, colour, alpha, scaleX, scaleY) {
   const bh = fontSize + pad * 2
 
   // Clamp so the badge never goes above the canvas top edge.
-  const yIdeal = rotatedTopY * scaleY - 6
+  const yIdeal = Math.min(det.y1, det.y2) * scaleY - 6
   const y = Math.max(bh + 2, yIdeal)
 
   ctx.save()
@@ -129,10 +107,9 @@ function roundRect(ctx, x, y, w, h, r) {
 // ---------------------------------------------------------------------------
 
 function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
-  const { obb, confidence: conf = 1 } = det
+  const { confidence: conf = 1 } = det
   const hasEndpoints = det.x1 != null && det.y1 != null && det.x2 != null && det.y2 != null
-  const hasObb = obb && ![obb.cx, obb.cy, obb.w, obb.h, obb.angle_deg].some((v) => v == null)
-  if (!hasEndpoints && !hasObb) return
+  if (!hasEndpoints) return
 
   // Exclude the synthetic "unified" entry when deciding colour — only look at
   // actual detector sources.
@@ -140,15 +117,12 @@ function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
     .filter(s => s.method !== 'unified')
   const isClassical = individualSources.length > 0 &&
     individualSources.every(s => s.method === 'classical' || s.method === 'opencv')
-  const isStreakMind = individualSources.length > 0 &&
-    individualSources.every(s => s.method === 'streakmind_yolo')
   const isHeatmap = individualSources.length > 0 &&
     individualSources.every(s => s.method === 'vits_heatmap' || s.method === 'dinov3_heatmap_centerline')
   const colour = highlighted ? HIGHLIGHT_COLOUR
     : isClassical ? CLASSICAL_COLOUR
-    : isStreakMind ? STREAKMIND_COLOUR
     : isHeatmap ? HEATMAP_COLOUR
-    : OBB_COLOUR
+    : SEGMENT_COLOUR
   const alpha = highlighted ? 1.0 : 0.4 + conf * 0.6
   const endpointR = highlighted ? 5.5 : 4
   const lineWidth = highlighted ? 2.5 : 1.5
@@ -165,13 +139,13 @@ function drawDetection(ctx, det, index, highlighted, scaleX, scaleY) {
 // ---------------------------------------------------------------------------
 
 /**
- * ResultViewer — canvas overlay of detection OBBs on the result image.
+ * ResultViewer — canvas overlay of endpoint detections on the result image.
  *
  * Props:
  *   jobId            — UUID of the completed job
  *   detections       — array of detection dicts from /api/result
  *   highlightIndex   — index of the detection to highlight (or null)
- *   onHover(index)   — called when mouse enters an OBB (null = leave)
+ *   onHover(index)   — called when the pointer nears a segment (null = leave)
  *   heatmapModel     — detector model ID to overlay (e.g. 'vits_heatmap'), or
  *                      null to show no heatmap
  */
@@ -234,7 +208,7 @@ export default function ResultViewer({
     if (!imageWidth || !imageHeight) {
       console.warn(
         '[ResultViewer] imageWidth/imageHeight missing — falling back to preview dimensions.',
-        'If the FITS preview is downsampled, detection OBB coordinates will be off.',
+        'If the FITS preview is downsampled, endpoint coordinates will be off.',
         { imageWidth, imageHeight, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight },
       )
     }
@@ -263,28 +237,19 @@ export default function ResultViewer({
 
     // Labels always on top of everything
     detections.forEach((det, i) => {
-      const _hasEndpts = det.x1 != null && det.y1 != null && det.x2 != null && det.y2 != null
-      const _hasObb = det.obb && ![det.obb.cx, det.obb.cy, det.obb.w, det.obb.h, det.obb.angle_deg].some(v => v == null)
-      if ((!_hasEndpts && !_hasObb) || !isVisible(i)) return
+      const hasEndpoints = det.x1 != null && det.y1 != null && det.x2 != null && det.y2 != null
+      if (!hasEndpoints || !isVisible(i)) return
       const indSources = (det.sources ?? [{ method: det.method }]).filter(s => s.method !== 'unified')
       const isClassical = indSources.length > 0 &&
         indSources.every(s => s.method === 'classical' || s.method === 'opencv')
-      const isStreakMind = indSources.length > 0 &&
-        indSources.every(s => s.method === 'streakmind_yolo')
       const isHeatmap = indSources.length > 0 &&
         indSources.every(s => s.method === 'vits_heatmap' || s.method === 'dinov3_heatmap_centerline')
       const colour = i === highlightIndex ? HIGHLIGHT_COLOUR
         : isClassical ? CLASSICAL_COLOUR
-        : isStreakMind ? STREAKMIND_COLOUR
         : isHeatmap ? HEATMAP_COLOUR
-        : OBB_COLOUR
+        : SEGMENT_COLOUR
       const alpha = i === highlightIndex ? 1.0 : 0.4 + (det.confidence ?? 1) * 0.6
-      const _obbForLabel = _hasObb ? det.obb : {
-        cx: (det.x1 + det.x2) / 2, cy: (det.y1 + det.y2) / 2,
-        w: Math.sqrt((det.x2-det.x1)**2+(det.y2-det.y1)**2), h: 3,
-        angle_deg: Math.atan2(det.y2-det.y1, det.x2-det.x1)*180/Math.PI,
-      }
-      drawLabel(ctx, _obbForLabel, i, colour, alpha, scaleX, scaleY)
+      drawLabel(ctx, det, i, colour, alpha, scaleX, scaleY)
     })
   }, [imgLoaded, heatmapLoaded, heatmapModel, detections, visibleSet, highlightIndex, imageWidth, imageHeight])
 
@@ -300,15 +265,15 @@ export default function ResultViewer({
 
     let hit = null
     detections.forEach((det, i) => {
-      const obb = det.obb
-      if (!obb) return
+      if ([det.x1, det.y1, det.x2, det.y2].some(value => value == null)) return
       if (visibleSet && !visibleSet.has(i)) return
-      const dx = mx - obb.cx * scaleX
-      const dy = my - obb.cy * scaleY
-      const rad = -(obb.angle_deg * Math.PI) / 180
-      const lx = dx * Math.cos(rad) - dy * Math.sin(rad)
-      const ly = dx * Math.sin(rad) + dy * Math.cos(rad)
-      if (Math.abs(lx) < (obb.w / 2) * scaleX && Math.abs(ly) < (obb.h / 2) * scaleY) {
+      const x1 = det.x1 * scaleX, y1 = det.y1 * scaleY
+      const x2 = det.x2 * scaleX, y2 = det.y2 * scaleY
+      const dx = x2 - x1, dy = y2 - y1
+      const denom = dx * dx + dy * dy
+      const t = denom ? Math.max(0, Math.min(1, ((mx - x1) * dx + (my - y1) * dy) / denom)) : 0
+      const distance = Math.hypot(mx - (x1 + t * dx), my - (y1 + t * dy))
+      if (distance <= 8) {
         hit = { index: i, x: e.clientX, y: e.clientY, det }
       }
     })
@@ -368,8 +333,8 @@ export default function ResultViewer({
             {tooltip.det.streak_length_px != null && (
               <p>Length: <span className="font-mono">{tooltip.det.streak_length_px.toFixed(0)} px</span></p>
             )}
-            {tooltip.det.obb?.angle_deg != null && (
-              <p>Angle: <span className="font-mono">{tooltip.det.obb.angle_deg.toFixed(1)}° from horizontal</span></p>
+            {tooltip.det.angle_deg != null && (
+              <p>Angle: <span className="font-mono">{tooltip.det.angle_deg.toFixed(1)}° from horizontal</span></p>
             )}
             {tooltip.det.ra_tip1_deg != null && (
               <p>
@@ -410,10 +375,6 @@ export default function ResultViewer({
           <div className="flex items-center gap-2">
             <span className="inline-block w-6 border-t-2 border-lime-400" />
             <span className="text-lime-300">ViT-S Heatmap (Run 15)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-6 border-t-2 border-fuchsia-400" />
-            <span className="text-fuchsia-300">YOLO-OBB - GTImages</span>
           </div>
           <div className="flex items-center gap-2 mt-0.5 pt-1.5 border-t border-slate-700">
             <span className="inline-flex items-center justify-center w-3 h-3 rounded-full bg-cyan-400 text-[7px] font-bold text-black">1</span>

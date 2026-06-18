@@ -161,20 +161,27 @@ class TestObsToCOCOAnnotation:
 
     def test_horizontal_streak_angle(self):
         ann = _obs_to_coco_annotation(self._make_obs(x0=0, y0=50, x1=100, y1=50), 1, 1, 1, "SAT")
-        assert ann["obb"]["angle_deg"] == pytest.approx(0.0, abs=1e-6)
+        assert ann["x1"] == pytest.approx(0.0)
+        assert ann["y1"] == pytest.approx(50.0)
+        assert ann["x2"] == pytest.approx(100.0)
+        assert ann["y2"] == pytest.approx(50.0)
 
     def test_diagonal_streak_angle(self):
         ann = _obs_to_coco_annotation(self._make_obs(x0=0, y0=0, x1=100, y1=100), 1, 1, 1, "SAT")
-        assert ann["obb"]["angle_deg"] == pytest.approx(45.0, abs=1e-6)
+        assert ann["x1"] == pytest.approx(0.0)
+        assert ann["y1"] == pytest.approx(0.0)
+        assert ann["x2"] == pytest.approx(100.0)
+        assert ann["y2"] == pytest.approx(100.0)
 
-    def test_obb_centre_correct(self):
+    def test_endpoint_centre_correct(self):
         ann = _obs_to_coco_annotation(self._make_obs(x0=10, y0=20, x1=110, y1=60), 1, 1, 1, "SAT")
-        assert ann["obb"]["cx"] == pytest.approx(60.0)
-        assert ann["obb"]["cy"] == pytest.approx(40.0)
+        assert (ann["x1"] + ann["x2"]) / 2 == pytest.approx(60.0)
+        assert (ann["y1"] + ann["y2"]) / 2 == pytest.approx(40.0)
 
-    def test_obb_length_correct(self):
+    def test_endpoint_length_correct(self):
         ann = _obs_to_coco_annotation(self._make_obs(x0=0, y0=0, x1=100, y1=0), 1, 1, 1, "SAT")
-        assert ann["obb"]["w"] == pytest.approx(100.0)
+        length = math.hypot(ann["x2"] - ann["x1"], ann["y2"] - ann["y1"])
+        assert length == pytest.approx(100.0)
 
     def test_segmentation_has_eight_points(self):
         ann = _obs_to_coco_annotation(self._make_obs(), 1, 1, 1, "SAT")

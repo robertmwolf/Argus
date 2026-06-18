@@ -1,9 +1,10 @@
 # ARGUS model inference / worker requirements.
 #
 # Use this for environments that run detector inference, such as the GPU worker.
-# Install the platform-specific PyTorch + MMDetection stack first; see
-# agent_docs/dependencies.md. Those packages are not listed here because their
+# Install the platform-specific PyTorch stack first. Those packages are not listed here because their
 # wheel indexes differ across Mac, CUDA 12.1, and CUDA 12.8 WSL2/cloud.
 
 -r requirements-api.txt
 
+# Spatial backbone implementation. Keep this revision aligned with model code.
+dinov3 @ git+https://github.com/facebookresearch/dinov3.git@31703e4cbf1ccb7c4a72daa1350405f86754b6d1

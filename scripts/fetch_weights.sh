@@ -12,7 +12,7 @@
 #   weights/run_001/          — all checkpoints (best.pth, latest.pth, epochNN.pth)
 #   results/                  — benchmark JSON, confusion matrix PNG, per-image CSV
 #   eval/results/             — per-image prediction dumps
-#   training/logs/            — TensorBoard / MMDet log files
+#   training/logs/            — training log files
 #
 # The local weights/ directory is gitignored; results/ JSON files are committed.
 
@@ -91,7 +91,7 @@ echo "║    results/                   — benchmark JSON/PNG   ║"
 echo "║    training/logs/             — TensorBoard logs     ║"
 echo "║                                                      ║"
 echo "║  To run final evaluation locally:                    ║"
-echo "║    python -m eval.benchmark \\                        ║"
+echo "║    python -m eval.geometry_metrics \\                 ║"
 echo "║        --run-pipeline \\                              ║"
 echo "║        --annotations data/annotations/val.json \\    ║"
 echo "║        --output results/final_eval.json              ║"

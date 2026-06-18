@@ -13,7 +13,6 @@ const METHOD_LABELS = {
   opencv:                    'OpenCV Morphological',
   dinov3_vitb:               'DINOv3 ViT-Base',
   dinov3_heatmap_centerline: 'DINOv3 Heatmap Centerline',
-  streakmind_yolo:           'YOLO-OBB - GTImages',
   ml:                        'ML',
 }
 
