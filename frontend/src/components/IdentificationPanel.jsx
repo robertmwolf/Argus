@@ -5,6 +5,9 @@
  * Props:
  *   detections  — array of detection dicts from /api/result
  *   activeIndex — index of the selected detection (or null)
+ *
+ * Candidate rows document the confidence calculation as rotation fit ×
+ * lateral fit × TLE-age fit, with signed residuals shown in arcseconds.
  */
 export default function IdentificationPanel({ detections, activeIndex }) {
   if (!detections || detections.length === 0) return null
@@ -80,6 +83,27 @@ function CandidateRow({ id, rank }) {
     ? null
     : `${Math.abs(ageHours) >= 48 ? (Math.abs(ageHours) / 24).toFixed(1) + ' d' : Math.abs(ageHours).toFixed(0) + ' h'} TLE age`
 
+  const factors = [
+    {
+      label: 'Rotation fit',
+      score: id.rotation_score,
+      detail: formatSignedArcsec(id.atrk_arcsec),
+      title: 'Along-track difference: how far ahead or behind the TLE prediction the streak appears.',
+    },
+    {
+      label: 'Lateral fit',
+      score: id.lateral_score,
+      detail: formatSignedArcsec(id.xtrk_arcsec),
+      title: 'Cross-track difference: sideways displacement from the predicted orbital path.',
+    },
+    {
+      label: 'TLE age fit',
+      score: id.epoch_penalty,
+      detail: ageLabel,
+      title: 'Confidence retained after accounting for the age of the orbital elements.',
+    },
+  ]
+
   return (
     <div className={`px-4 py-3 flex items-center gap-4 ${isBest ? 'bg-yellow-950/20' : 'hover:bg-slate-800/30'} transition-colors`}>
       {/* Rank badge */}
@@ -115,8 +139,22 @@ function CandidateRow({ id, rank }) {
           {photoDate !== '—' && <span>Photo {photoDate}</span>}
           {tleEpoch !== '—' && <span>TLE {tleEpoch}</span>}
           {ageLabel && <span>{ageLabel}</span>}
-          {id.epoch_penalty != null && <span>Date penalty {(id.epoch_penalty * 100).toFixed(0)}%</span>}
         </div>
+        <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-1.5 max-w-2xl">
+          {factors.map((factor) => (
+            <ConfidenceFactor key={factor.label} {...factor} />
+          ))}
+        </div>
+        {id.confidence_method === 'rotation_x_lateral_x_tle_age' && (
+          <div className="mt-1.5 text-[10px] text-slate-600">
+            Match confidence = rotation fit × lateral fit × TLE age fit
+          </div>
+        )}
+        {id.confidence_method === 'position_x_tle_age' && (
+          <div className="mt-1.5 text-[10px] text-amber-500/80">
+            Clipped streak: rotation and lateral factors unavailable; visible-position fit × TLE age used.
+          </div>
+        )}
       </div>
 
       {/* Confidence */}
@@ -133,6 +171,30 @@ function CandidateRow({ id, rank }) {
       </div>
     </div>
   )
+}
+
+function ConfidenceFactor({ label, score, detail, title }) {
+  const colour = score == null
+    ? 'text-slate-600'
+    : score >= 0.8 ? 'text-green-400'
+    : score >= 0.5 ? 'text-yellow-400'
+    : 'text-red-400'
+  return (
+    <div title={title} className="rounded border border-slate-700/70 bg-slate-900/30 px-2 py-1">
+      <div className="flex items-center justify-between gap-2 text-[10px]">
+        <span className="text-slate-500">{label}</span>
+        <span className={`font-mono font-medium ${colour}`}>
+          {score == null ? '—' : `${(score * 100).toFixed(0)}%`}
+        </span>
+      </div>
+      {detail && <div className="mt-0.5 text-[10px] font-mono text-slate-500 truncate">{detail}</div>}
+    </div>
+  )
+}
+
+function formatSignedArcsec(value) {
+  if (value == null) return null
+  return `${value >= 0 ? '+' : ''}${value.toFixed(1)}″`
 }
 
 function formatDateTime(value) {

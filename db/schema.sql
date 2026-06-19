@@ -46,7 +46,12 @@ CREATE TABLE identifications (
     epoch_search_window_days INTEGER,
     epoch_drift_hours REAL,
     position_score REAL,
-    epoch_penalty  REAL
+    epoch_penalty  REAL,
+    atrk_arcsec REAL,
+    xtrk_arcsec REAL,
+    rotation_score REAL,
+    lateral_score REAL,
+    confidence_method TEXT
 );
 
 CREATE TABLE tracklets (

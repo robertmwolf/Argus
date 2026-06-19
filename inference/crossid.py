@@ -17,8 +17,9 @@ Enhancements adapted from SkyTrack (colleague's pipeline):
     propagating the top candidate at exposure-start time and assigning the
     tip closer to that position as tip1 (start).
   - Computes expected streak length in pixels from SGP4 and plate scale
-    derived from the detection geometry, used as an additional confidence
-    factor.
+    derived from the detection geometry as a diagnostic.
+  - Exposes confidence as three independent factors: along-track (rotation),
+    cross-track (lateral), and TLE age.
 
 TLE source routing:
   - inference reads the local tle_catalog first
@@ -590,11 +591,12 @@ def cross_identify(
     For each detection:
       1. Scores TLE candidates against the streak midpoint propagated at
          mid-exposure time (more accurate than scoring against either tip).
-      2. Computes along-track / cross-track residuals for the top-3 candidates.
+      2. Decomposes position confidence into along-track (rotation) and
+         cross-track (lateral) factors for unclipped streaks.
       3. When exposure_time is provided, disambiguates which tip is the start
          of the pass by propagating the top candidate at exposure-start time.
-      4. Computes expected streak length from SGP4 + plate scale and applies
-         a length-match confidence penalty to the top candidate.
+      4. Computes expected streak length from SGP4 + plate scale as a
+         diagnostic for the top candidate.
 
     Each detection dict is mutated in-place: an 'identifications' key is
     added containing up to 3 ranked candidate dicts.
@@ -793,6 +795,10 @@ def cross_identify(
             for k in ("ra_tip1_deg", "dec_tip1_deg", "ra_tip2_deg", "dec_tip2_deg")
         )
         edge_clipped = _is_edge_clipped(det)
+        has_track_direction = has_both_tips and _angular_separation_arcsec(
+            det["ra_tip1_deg"], det["dec_tip1_deg"],
+            det["ra_tip2_deg"], det["dec_tip2_deg"],
+        ) >= 1.0
 
         plate_scale = _plate_scale_from_det(det)
 
@@ -840,7 +846,30 @@ def cross_identify(
                 search_mode=entry.get("tle_search_mode"),
             )
 
-            candidates.append({
+            atrk_arcsec: float | None = None
+            xtrk_arcsec: float | None = None
+            rotation_score: float | None = None
+            lateral_score: float | None = None
+            if has_track_direction and not edge_clipped:
+                atrk_arcsec, xtrk_arcsec = _atrk_xtrk(
+                    mid_ra, mid_dec,
+                    pred_ra, pred_dec,
+                    det["ra_tip1_deg"], det["dec_tip1_deg"],
+                    det["ra_tip2_deg"], det["dec_tip2_deg"],
+                )
+                rotation_score = _gaussian_score(
+                    abs(atrk_arcsec), sigma=_POSITION_SIGMA_ARCSEC,
+                )
+                lateral_score = _gaussian_score(
+                    abs(xtrk_arcsec), sigma=_POSITION_SIGMA_ARCSEC,
+                )
+                # The tangent-plane components expose the positional Gaussian
+                # as two understandable multipliers.  Use their product so the
+                # displayed methodology exactly reconstructs confidence.
+                pos_score = rotation_score * lateral_score
+                confidence = pos_score * epoch_penalty
+
+            candidate = {
                 "satellite_name":    entry["name"],
                 "norad_id":          norad_id,
                 "confidence":        confidence,
@@ -864,23 +893,21 @@ def cross_identify(
                 "_line2":            entry["line2"],
                 "_pred_ra":          pred_ra,
                 "_pred_dec":         pred_dec,
-            })
+            }
+            if atrk_arcsec is not None and xtrk_arcsec is not None:
+                candidate.update({
+                    "atrk_arcsec": round(atrk_arcsec, 2),
+                    "xtrk_arcsec": round(xtrk_arcsec, 2),
+                    "rotation_score": round(rotation_score, 4),
+                    "lateral_score": round(lateral_score, 4),
+                    "confidence_method": "rotation_x_lateral_x_tle_age",
+                })
+            else:
+                candidate["confidence_method"] = "position_x_tle_age"
+            candidates.append(candidate)
 
         candidates.sort(key=lambda c: c["confidence"], reverse=True)
         top3 = candidates[:3]
-
-        # --- Atrk / Xtrk for all top-3 (no extra propagations needed) -------
-        # Source: SkyTrack (colleague) — ComputeOneResidual
-        if has_both_tips and not edge_clipped:
-            for cand in top3:
-                atrk, xtrk = _atrk_xtrk(
-                    mid_ra, mid_dec,
-                    cand["_pred_ra"], cand["_pred_dec"],
-                    det["ra_tip1_deg"], det["dec_tip1_deg"],
-                    det["ra_tip2_deg"], det["dec_tip2_deg"],
-                )
-                cand["atrk_arcsec"] = round(atrk, 2)
-                cand["xtrk_arcsec"] = round(xtrk, 2)
 
         # --- Top-1 only: direction disambiguation + expected length ----------
         # Source: SkyTrack (colleague) — StreakDirection, StreakExpectedPos
@@ -935,8 +962,6 @@ def cross_identify(
                             length_score = _gaussian_score(rel_err, sigma=_LENGTH_SIGMA_RELATIVE)
                             best["expected_length_px"] = round(exp_length_px, 1)
                             best["length_score"]       = round(length_score, 3)
-                            # Composite confidence: date-penalized position × length match
-                            best["confidence"] = round(best["confidence"] * length_score, 4)
                             logger.debug(
                                 "Expected length: %.0fpx  observed: %.0fpx  "
                                 "rel_err=%.2f  length_score=%.3f",

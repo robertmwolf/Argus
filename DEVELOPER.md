@@ -114,6 +114,10 @@ cd frontend && npm ci && npm run dev
 
 The UI is available at `http://localhost:5173`.
 
+See [`agent_docs/tle_confidence.md`](agent_docs/tle_confidence.md) for the TLE
+cross-identification confidence formula, `/api/result` fields, units, sign
+conventions, and how the factor breakdown is presented in the UI.
+
 ---
 
 ## Tests

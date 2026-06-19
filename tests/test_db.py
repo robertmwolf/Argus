@@ -160,6 +160,12 @@ async def test_identification_references_detection(session):
         confidence=0.91,
         separation_deg=0.003,
         rank=1,
+        atrk_arcsec=12.5,
+        xtrk_arcsec=-3.25,
+        rotation_score=0.98,
+        lateral_score=0.999,
+        epoch_penalty=0.91,
+        confidence_method="rotation_x_lateral_x_tle_age",
     )
     session.add(ident)
     await session.commit()
@@ -170,6 +176,12 @@ async def test_identification_references_detection(session):
     assert fetched.norad_id == 25544
     assert fetched.rank == 1
     assert fetched.confidence == pytest.approx(0.91)
+    assert fetched.atrk_arcsec == pytest.approx(12.5)
+    assert fetched.xtrk_arcsec == pytest.approx(-3.25)
+    assert fetched.rotation_score == pytest.approx(0.98)
+    assert fetched.lateral_score == pytest.approx(0.999)
+    assert fetched.epoch_penalty == pytest.approx(0.91)
+    assert fetched.confidence_method == "rotation_x_lateral_x_tle_age"
 
 
 @pytest.mark.asyncio

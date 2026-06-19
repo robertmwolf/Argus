@@ -137,6 +137,11 @@ class Identification(Base):
     epoch_drift_hours: Mapped[float | None] = mapped_column(Float)
     position_score: Mapped[float | None] = mapped_column(Float)
     epoch_penalty: Mapped[float | None] = mapped_column(Float)
+    atrk_arcsec: Mapped[float | None] = mapped_column(Float)
+    xtrk_arcsec: Mapped[float | None] = mapped_column(Float)
+    rotation_score: Mapped[float | None] = mapped_column(Float)
+    lateral_score: Mapped[float | None] = mapped_column(Float)
+    confidence_method: Mapped[str | None] = mapped_column(Text)
 
 
 class Tracklet(Base):
@@ -260,6 +265,11 @@ def _migrate_existing_tables(sync_conn) -> None:
         "epoch_drift_hours": "FLOAT",
         "position_score": "FLOAT",
         "epoch_penalty": "FLOAT",
+        "atrk_arcsec": "FLOAT",
+        "xtrk_arcsec": "FLOAT",
+        "rotation_score": "FLOAT",
+        "lateral_score": "FLOAT",
+        "confidence_method": "TEXT",
     }
     for name, ddl_type in ident_additions.items():
         if name not in ident_columns:

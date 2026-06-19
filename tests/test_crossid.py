@@ -210,6 +210,35 @@ class TestCrossIdentifyKnownTle:
             assert "confidence" in ident
             assert "rank" in ident
 
+    def test_confidence_exposes_rotation_lateral_and_tle_age_factors(self):
+        """An unclipped match exposes the three multipliers used by the UI."""
+        from inference.crossid import cross_identify, _propagate_to_radec
+
+        pred = _propagate_to_radec(
+            _TEST_TLE_NAME, _TEST_TLE_LINE1, _TEST_TLE_LINE2,
+            _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT,
+        )
+        if pred is None:
+            pytest.skip("skyfield propagation failed in this environment")
+
+        dets = [{
+            "ra_tip1_deg": pred["predicted_ra"] - 0.01,
+            "dec_tip1_deg": pred["predicted_dec"],
+            "ra_tip2_deg": pred["predicted_ra"] + 0.01,
+            "dec_tip2_deg": pred["predicted_dec"],
+        }]
+        with patch("inference.crossid._fetch_tle_catalog", return_value=_SAMPLE_CATALOG):
+            result = cross_identify(dets, _OBS_TIME, _OBS_LAT, _OBS_LON, _OBS_ALT)
+
+        best = result[0]["identifications"][0]
+        assert best["confidence_method"] == "rotation_x_lateral_x_tle_age"
+        assert "atrk_arcsec" in best
+        assert "xtrk_arcsec" in best
+        assert "rotation_score" in best
+        assert "lateral_score" in best
+        expected = best["rotation_score"] * best["lateral_score"] * best["epoch_penalty"]
+        assert best["confidence"] == pytest.approx(expected, abs=2e-4)
+
     def test_epoch_window_days_passed_to_fetch(self):
         """epoch_window_days is forwarded to _fetch_tle_catalog."""
         from inference.crossid import cross_identify
@@ -363,6 +392,9 @@ class TestCrossIdentifyKnownTle:
         assert best["direction_disambiguation_skipped"] is True
         assert "length_score" not in best
         assert "atrk_arcsec" not in best
+        assert best["confidence_method"] == "position_x_tle_age"
+        assert "rotation_score" not in best
+        assert "lateral_score" not in best
 
 
 # ---------------------------------------------------------------------------

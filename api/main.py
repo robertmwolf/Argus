@@ -406,6 +406,11 @@ async def _process_job(job_id: str, app: FastAPI) -> None:
                         epoch_drift_hours=ident_dict.get("epoch_drift_hours"),
                         position_score=ident_dict.get("position_score"),
                         epoch_penalty=ident_dict.get("epoch_penalty"),
+                        atrk_arcsec=ident_dict.get("atrk_arcsec"),
+                        xtrk_arcsec=ident_dict.get("xtrk_arcsec"),
+                        rotation_score=ident_dict.get("rotation_score"),
+                        lateral_score=ident_dict.get("lateral_score"),
+                        confidence_method=ident_dict.get("confidence_method"),
                     ))
 
             obs = await session.get(Observation, job_id)
@@ -841,6 +846,11 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
 
     Returns:
         dict with job_id, status, filename, obs_epoch, and detections list.
+        Each satellite identification exposes ``rotation_score`` with
+        ``atrk_arcsec``, ``lateral_score`` with ``xtrk_arcsec``, and the TLE-age
+        ``epoch_penalty``. For normal streaks, ``confidence_method`` is
+        ``rotation_x_lateral_x_tle_age`` and confidence is their product.
+        Edge-clipped streaks report ``position_x_tle_age`` instead.
 
     Raises:
         HTTPException 404: job_id not found in database.
@@ -926,6 +936,11 @@ async def result(job_id: str, request: Request) -> dict[str, Any]:
                         "epoch_drift_hours": i.epoch_drift_hours,
                         "position_score": i.position_score,
                         "epoch_penalty": i.epoch_penalty,
+                        "atrk_arcsec": i.atrk_arcsec,
+                        "xtrk_arcsec": i.xtrk_arcsec,
+                        "rotation_score": i.rotation_score,
+                        "lateral_score": i.lateral_score,
+                        "confidence_method": i.confidence_method,
                     }
                     for i in sorted(ident_rows, key=lambda x: x.rank or 99)
                 ],

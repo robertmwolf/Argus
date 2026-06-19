@@ -6,6 +6,9 @@
  *   highlightIndex — index of the row to highlight (synced with canvas hover)
  *   onRowClick(i)  — called when a row is clicked
  *   photoTakenAt   — observation DATE-OBS fallback from /api/result
+ *
+ * The ID Confidence column exposes the best TLE candidate's three score
+ * multipliers: along-track (Rotation), cross-track (Lateral), and TLE age.
  */
 
 const METHOD_CONFIG = {
@@ -98,6 +101,23 @@ function formatTleCurrency(best) {
   return `${epoch} (${unitValue.toFixed(absAge >= 48 ? 1 : 0)} ${unit})`
 }
 
+function ConfidenceFactor({ label, score, offset }) {
+  const colour = score == null
+    ? 'text-slate-600'
+    : score >= 0.8 ? 'text-green-400'
+    : score >= 0.5 ? 'text-yellow-400'
+    : 'text-red-400'
+  const offsetLabel = offset == null ? '' : ` (${offset >= 0 ? '+' : ''}${offset.toFixed(0)}″)`
+  return (
+    <div className="flex items-center justify-between gap-2 text-[10px] leading-tight whitespace-nowrap">
+      <span className="text-slate-500">{label}</span>
+      <span className={`font-mono ${colour}`}>
+        {score == null ? '—' : `${(score * 100).toFixed(0)}%${offsetLabel}`}
+      </span>
+    </div>
+  )
+}
+
 export default function DetectionTable({ detections, visibleSet, highlightIndex, onRowClick, onToggleStreak, photoTakenAt }) {
   if (!detections || detections.length === 0) {
     return (
@@ -135,7 +155,7 @@ export default function DetectionTable({ detections, visibleSet, highlightIndex,
                 { label: 'Photo Date' },
                 { label: 'Best Match', divider: true },
                 { label: 'TLE Data', sub: 'epoch age', divider: true },
-                { label: 'ID Confidence', sub: 'position × length', divider: true },
+                { label: 'ID Confidence', sub: 'rotation × lateral × TLE age', divider: true },
               ].map(({ label, sub, divider }) => (
                 <th
                   key={label || '_toggle'}
@@ -278,13 +298,19 @@ export default function DetectionTable({ detections, visibleSet, highlightIndex,
                   {/* ID confidence */}
                   <td className="px-4 py-2.5 border-l border-slate-600/60">
                     {best?.confidence != null ? (
-                      <span className={
-                        best.confidence >= 0.8 ? 'text-green-400' :
-                        best.confidence >= 0.5 ? 'text-yellow-400' :
-                        'text-red-400'
-                      }>
-                        {(best.confidence * 100).toFixed(0)}%
-                      </span>
+                      <div className="min-w-36">
+                        <div className={[
+                          'mb-1 font-semibold',
+                          best.confidence >= 0.8 ? 'text-green-400' :
+                          best.confidence >= 0.5 ? 'text-yellow-400' :
+                          'text-red-400',
+                        ].join(' ')}>
+                          {(best.confidence * 100).toFixed(0)}%
+                        </div>
+                        <ConfidenceFactor label="Rotation" score={best.rotation_score} offset={best.atrk_arcsec} />
+                        <ConfidenceFactor label="Lateral" score={best.lateral_score} offset={best.xtrk_arcsec} />
+                        <ConfidenceFactor label="TLE age" score={best.epoch_penalty} />
+                      </div>
                     ) : (
                       <span className="text-slate-600">—</span>
                     )}
