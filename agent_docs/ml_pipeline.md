@@ -8,7 +8,9 @@
 - Inference: `inference/vits_window_v9_detector.py`
 - API detector ID: `vits_heatmap_v9`
 - Env namespace: `VITS_V9_*` (see `.env`)
-- Eval: 0.979 recall / 0.918 precision on `val_balanced_v1.json` (t=0.70, pf=0.85)
+- Eval (current, 252 annotations): **0.877 recall / 0.880 precision** at t=0.85, pf=0.85
+  - With `--profile-peak-fraction 0.85`: 0.814 recall / 0.833 precision, **6.6 px endpoint error** (down from 21.2 px)
+  - Note: earlier figures (0.979 recall) were against the pre-reannotation 239-annotation val set; `val_balanced_v1.json` now has 252 annotations after a systematic review of 50 borderline cases
 
 ## Weight setup
 
@@ -45,18 +47,35 @@ they suppress false positives without hurting recall. See postmortem for details
 **Inference parameters:**
 - Native tile size: 400px (must match training)
 - Image normalization: zscore
-- Heatmap threshold: 0.70
+- Heatmap threshold: 0.85 (better recall+precision than 0.70 on current annotation set)
 - Peak floor: 0.85
+- Profile peak fraction: **0.85** (`--profile-peak-fraction 0.85`) — heatmap-profile endpoint refinement; reduces endpoint error from 21 px → 6.6 px
 - Do **not** enable Radon refinement — T2 raw OBB geometry is more accurate
+
+---
+
+## Dataset Curation Notes
+
+For data layout, integration workflow, and the satellite-train exclusion policy,
+see [`docs/data_strategy.md`](../docs/data_strategy.md) and
+[`agent_docs/datasets.md`](datasets.md).
+
+**Canonical annotation files (June 2026):**
+- Training source: `annotations/all_train_run17_merged_no_sattrains.json` (6052 images)
+- Eval set: `annotations/val_balanced_v1_no_sattrains.json` (241 images, 247 annotations)
+- Tile dataset: `train_atwood_synth_window_v10/` (2936 tiles) + `val_atwood_window_v10/` (218 tiles)
+- Exclusion manifest: `annotations/sat_train_excluded.json` (53 satellite-train frames)
 
 ---
 
 ## Training a New Model
 
 ```bash
-# 1. Build dataset
+# 1. Build dataset (run the sat-train exclusion check first — see docs/data_strategy.md)
 python scripts/build_atwood_window_dataset.py \
-  --version <N> --source data/annotations/all_train_run17_merged.json \
+  --version <N> \
+  --source /Volumes/External/TrainingData/annotations/all_train_run<M>_merged_no_sattrains.json \
+  --eval-frames-json /Volumes/External/TrainingData/annotations/val_balanced_v1_no_sattrains.json \
   --val-frac 0.08 --neg-frac 0.42 --bg-per-frame 3 --seed 42
 
 # 2. Cache ViT-S features (once)
@@ -88,7 +107,30 @@ Balcache (for eval) also goes there, deleted after eval. Never use `~/` for cach
 
 ## Evaluation
 
-Canonical eval: `val_balanced_v1.json`, threshold=0.70, peak_floor=0.85.
+Canonical eval: `val_balanced_v1.json` (252 annotations), threshold=0.85, peak_floor=0.85, profile_peak_fraction=0.85.
+
+Standard 3-step eval pipeline:
+```bash
+# 1. Cache heatmaps
+python scripts/cache_heatmap_maps.py \
+  --annotations /Volumes/External/TrainingData/annotations/val_balanced_v1.json \
+  --checkpoint weights/<tag>/best.pt --output-dir /Volumes/External/argus_caches/<tag>_bal \
+  --norm-mode zscore
+
+# 2. Threshold sweep + endpoint refinement
+python scripts/evaluate_dinov3_heatmap.py --tiled --stitch \
+  --heatmap-cache /Volumes/External/argus_caches/<tag>_bal \
+  --annotations /Volumes/External/TrainingData/annotations/val_balanced_v1.json \
+  --norm-mode zscore --threshold 0.05 --threshold-sweep 0.70 0.75 0.80 0.85 0.90 \
+  --peak-floor 0.85 --profile-peak-fraction 0.85 \
+  --output results/<tag>/pf85/metrics.json
+
+# 3. Geometry metrics
+python -m eval.geometry_metrics \
+  --predictions results/<tag>/pf85/predictions_t085.json \
+  --annotations /Volumes/External/TrainingData/annotations/val_balanced_v1.json \
+  --output results/<tag>/pf85/geometry_eval.json
+```
 
 ```bash
 python scripts/compare_geometry_evals.py        # plain table
@@ -98,15 +140,50 @@ python scripts/compare_geometry_evals.py --md   # markdown table
 Record only `geometry_eval.json` in git. Raw `predictions_t*.json` and
 `metrics_t*.json` files are regenerable and gitignored.
 
+### Endpoint Error Analysis
+
+```bash
+python scripts/analyze_endpoint_errors.py \
+  --predictions results/<tag>/pf85/predictions_t085.json \
+  --annotations /Volumes/External/TrainingData/annotations/val_balanced_v1.json \
+  --output results/<tag>/pf85/endpoint_error_analysis.json --top-n 20
+```
+
+Baseline v9 (no ppf): mean symmetric endpoint error = 21.2 px, 98% too long.
+With ppf=0.85: 6.6 px, 73% too long.
+
+---
+
+## Post-Processing: Heatmap Profile Endpoint Refinement
+
+The v9 model has a systematic "too long" endpoint bias of ~21 px (98% of predictions are too long). This arises because heatmap activation tapers off gradually past the true endpoints rather than dropping sharply, so the connected component bleeds slightly beyond the true endpoint.
+
+**Fix:** `--profile-peak-fraction 0.85` in `evaluate_dinov3_heatmap.py` (or `profile_peak_fraction=0.85` in `_component_to_segment()`). After PCA gives the major axis, the full score_map is projected along that axis within a 1.5-patch corridor. The endpoint is placed where activation drops below 85% of the component peak, rather than at the extreme binary-mask pixel.
+
+| Configuration | Recall | Prec | EndPx | %TooLong |
+|---|---|---|---|---|
+| Binary mask extremes (default) | 0.833 | 0.843 | 18.0 px | 98% |
+| ppf=0.70 | 0.814 | 0.833 | 8.2 px | 91% |
+| ppf=0.75 | 0.814 | 0.833 | 7.3 px | 86% |
+| ppf=0.80 | 0.814 | 0.833 | 6.9 px | 80% |
+| **ppf=0.85** | **0.814** | **0.833** | **6.6 px** | **73%** |
+| ppf=0.90 | 0.814 | 0.833 | 6.7 px | 59% |
+
+The 2-point recall cost is fixed (independent of ppf value); it comes from the tightened corridor excluding borderline components. ppf=0.85 is the sweet spot: minimum endpoint error, angle unchanged at 0.46°.
+
+**Endpoint taper (training-time, rejected):** We also tried baking endpoint taper directly into GT heatmap targets (ramp from 1.0 to 0.0 over the last N pixels at each endpoint) with taper sizes 4, 8, and 16 px. All three sizes produced identical recall regression (~0.82–0.84 vs 0.88 baseline) for modest endpoint improvement (~13–14 px). The model over-generalized "suppress near endpoints" and dropped borderline detections. Post-processing refinement is strictly better.
+
 ---
 
 ## Detector Lineage
 
 | Model | Status | Notes |
 |---|---|---|
-| `vits_v9_asl_cldice` | **Production** | ASL+clDice loss, best precision |
+| `vits_v10_no_sattrains_asl_cldice` | **In training** | Same as v9 but with 53 satellite-train frames removed; see `results/v10_no_sattrains/` |
+| `vits_v9_asl_cldice` | **Production** | ASL+clDice loss, best precision; use ppf=0.85 for endpoint accuracy |
 | `vits_window_v4` | Retired (kept in API for comparison) | focal+Dice baseline |
 | `vitb_window_v4` | Retired (kept in API for comparison) | ViT-B, no precision gain |
 | `vitb_v10_asl_cldice` | Retired | ViT-B+clDice; worse than ViT-S on all bands |
+| `vits_taper4/8/16_asl_cldice` | Archived | GT heatmap taper experiments; recall regression, superseded by ppf |
 | `vits_window_v3` and earlier | Archived | Superseded; detectors in `inference/archive/` |
 | Run 1–20 (DINO box / ConvNeXt) | Archived | Pre-window era; results in `results/archive/` |

@@ -118,11 +118,51 @@ def _letterbox(array: np.ndarray, size: int) -> tuple[np.ndarray, float, float, 
     return canvas, float(scale), float(pad_x), float(pad_y)
 
 
+def _refine_half_length_by_profile(
+    score_map: np.ndarray,
+    center: np.ndarray,
+    major: np.ndarray,
+    patch_size: int,
+    peak_fraction: float,
+) -> tuple[float, float]:
+    """Refine streak half-length from the heatmap activation profile.
+
+    Projects score_map values along the PCA major axis within a narrow
+    cross-track corridor, then finds the activation range that exceeds
+    ``peak_fraction * component_peak``.
+
+    Returns (half_length_px, along_centre_shift_px).  Both are 0.0 if the
+    profile is degenerate (too few active pixels or zero peak).
+    """
+    h, w = score_map.shape
+    ys, xs = np.mgrid[0:h, 0:w]
+    dx = (xs + 0.5) * patch_size - center[0]
+    dy = (ys + 0.5) * patch_size - center[1]
+    along  = dx * major[0] + dy * major[1]
+    across = np.abs(-dx * major[1] + dy * major[0])
+
+    corridor = across <= patch_size * 1.5
+    scores_c = score_map[corridor]
+    along_c  = along[corridor]
+
+    peak = float(scores_c.max()) if scores_c.size > 0 else 0.0
+    if peak == 0.0:
+        return 0.0, 0.0
+
+    active = along_c[scores_c >= peak * peak_fraction]
+    if active.size < 2:
+        return 0.0, 0.0
+
+    lo, hi = float(active.min()), float(active.max())
+    return (hi - lo) / 2.0, (lo + hi) / 2.0
+
+
 def _component_to_segment(
     mask: np.ndarray,
     score_map: np.ndarray,
     patch_size: int,
     image_size: int,
+    profile_peak_fraction: float | None = None,
 ) -> dict[str, Any] | None:
     """Fit a line segment to a connected heatmap component via PCA.
 
@@ -131,6 +171,10 @@ def _component_to_segment(
         score_map: Per-pixel probability map from the heatmap head.
         patch_size: Feature-map patch stride in source pixels.
         image_size: Square canvas side length (used to de-normalise geometry).
+        profile_peak_fraction: When set, refines endpoints by finding where the
+            heatmap activation along the major axis drops below this fraction of
+            the component peak, instead of using binary-mask extremes.  Values
+            in [0.75, 0.90] typically reduce the systematic too-long bias.
 
     Returns:
         Detection dict, or None if the component has fewer than 2 pixels.
@@ -145,9 +189,20 @@ def _component_to_segment(
     order = np.argsort(vals)[::-1]
     major = vecs[:, order[0]]
     rel = pts - center
-    length = max(float((rel @ major).ptp()) + patch_size, patch_size)
-    angle  = math.degrees(math.atan2(float(major[1]), float(major[0]))) % 180.0
 
+    if profile_peak_fraction is not None:
+        half, cshift = _refine_half_length_by_profile(
+            score_map, center, major, patch_size, profile_peak_fraction
+        )
+        if half > 0.0:
+            center = center + cshift * major
+            length = half * 2.0
+        else:
+            length = max(float((rel @ major).ptp()) + patch_size, patch_size)
+    else:
+        length = max(float((rel @ major).ptp()) + patch_size, patch_size)
+
+    angle  = math.degrees(math.atan2(float(major[1]), float(major[0]))) % 180.0
     half = length / 2.0
     x1 = float(center[0]) - half * float(major[0])
     y1 = float(center[1]) - half * float(major[1])

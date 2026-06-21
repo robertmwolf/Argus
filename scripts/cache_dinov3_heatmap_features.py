@@ -47,7 +47,11 @@ from models.plain_dinov3.streak_heatmap import (
     DINOv3StreakHeatmap,
     imagenet_normalize,
 )
-from training.dinov3_heatmap_dataset import StreakHeatmapDataset, collate_heatmap_batch
+from training.dinov3_heatmap_dataset import (
+    StreakHeatmapDataset,
+    collate_heatmap_batch,
+    rasterise_streak_heatmap,
+)
 from training.data_paths import resolve_source_path
 
 logger = logging.getLogger(__name__)
@@ -78,6 +82,7 @@ def _build_tile_targets(
     pad_x: float,
     pad_y: float,
     patch_size: int = 16,
+    endpoint_taper_px: float = 16.0,
 ) -> torch.Tensor:
     """Build an endpoint-centerline heatmap target for one tile.
 
@@ -85,6 +90,8 @@ def _build_tile_targets(
     ``tile_y0`` have already been subtracted before this call so all ``cx/cy``
     endpoints are in tile-local pixels.
     """
+    from training.annotation_endpoints import annotation_to_endpoints
+
     grid = image_size // patch_size
     target = np.zeros((grid, grid), dtype=np.float32)
 
@@ -93,7 +100,6 @@ def _build_tile_targets(
     py = (yy + 0.5) * patch_size
 
     for ann in anns:
-        from training.annotation_endpoints import annotation_to_endpoints
         x1, y1, x2, y2 = annotation_to_endpoints(ann)
         x1, y1 = x1 * scale + pad_x, y1 * scale + pad_y
         x2, y2 = x2 * scale + pad_x, y2 * scale + pad_y
@@ -102,11 +108,16 @@ def _build_tile_targets(
         angle = math.atan2(y2 - y1, x2 - x1)
         ux, uy = math.cos(angle), math.sin(angle)
 
-        dx = px - cx; dy = py - cy
-        along  = dx * ux + dy * uy
+        dx = px - cx
+        dy = py - cy
+        along_abs = np.abs(dx * ux + dy * uy)
         across = np.abs(-dx * uy + dy * ux)
-        mask = (np.abs(along) <= length / 2 + 8.0) & (across <= patch_size / 2 + 8.0)
-        target[mask] = 1.0
+        half_len = length / 2.0
+        across_mask = across <= patch_size / 2.0 + 8.0
+        values = rasterise_streak_heatmap(
+            along_abs, across, half_len, patch_size, endpoint_taper_px
+        )
+        target = np.maximum(target, np.where(across_mask, values, 0.0))
     return torch.from_numpy(target).unsqueeze(0)
 
 def _load_image_array(path: Path, loader: FITSLoader, norm_mode: str = "autostretch") -> np.ndarray | None:
@@ -159,6 +170,7 @@ def _cache_tiled(
     neg_tiles_per_image: int = 2,
     random_seed: int = 42,
     norm_mode: str = "autostretch",
+    endpoint_taper_px: float = 16.0,
 ) -> list[dict]:
     """Cache features by tiling each image, selecting only annotation-covered tiles.
 
@@ -253,7 +265,8 @@ def _cache_tiled(
                 ).cpu().to(torch.float16).squeeze(0)
 
             heatmap = _build_tile_targets(
-                tile_anns, image_size, scale, pad_x, pad_y
+                tile_anns, image_size, scale, pad_x, pad_y,
+                endpoint_taper_px=endpoint_taper_px,
             )
 
             sample_id = img_id * 10000 + tile_idx
@@ -334,6 +347,13 @@ def main() -> int:
                              "'autostretch' (default) removes sky background so streak "
                              "signal is consistent across tiles. 'zscore' clips at ±3σ. "
                              "Must match the mode used during training.")
+    parser.add_argument("--endpoint-taper-px", type=float, default=16.0,
+                        help="Length in pixels of the cosine taper applied to each "
+                             "endpoint of the GT centerline heatmap target. The GT "
+                             "heatmap transitions from 1.0 to 0.0 over this zone, "
+                             "discouraging the model from extending past true endpoints. "
+                             "Capped at 30%% of the streak half-length for short "
+                             "streaks. Default 16 (one patch width).")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -346,6 +366,7 @@ def main() -> int:
         args.annotations, image_size=args.image_size,
         max_samples=args.max_samples, norm_mode=args.norm_mode,
         data_root=args.data_root, scratch_root=args.scratch_root,
+        endpoint_taper_px=args.endpoint_taper_px,
     )
     loader = DataLoader(
         ds,
@@ -400,6 +421,7 @@ def main() -> int:
             min_area_fraction=args.min_area_fraction,
             neg_tiles_per_image=args.neg_tiles_per_image,
             norm_mode=args.norm_mode,
+            endpoint_taper_px=args.endpoint_taper_px,
         )
         metadata = {
             "annotations":    args.annotations,
@@ -410,9 +432,10 @@ def main() -> int:
             "image_size":     args.image_size,
             "native_tile_size": args.native_tile_size,
             "tile_overlap":   args.tile_overlap,
-            "norm_mode":      args.norm_mode,
-            "n_samples":      len(manifest),
-            "manifest":       manifest,
+            "norm_mode":         args.norm_mode,
+            "endpoint_taper_px": args.endpoint_taper_px,
+            "n_samples":         len(manifest),
+            "manifest":          manifest,
         }
         (out_dir / "manifest.json").write_text(json.dumps(metadata, indent=2))
         logger.info("wrote tiled cache manifest: %s (%d tiles)", out_dir / "manifest.json", len(manifest))

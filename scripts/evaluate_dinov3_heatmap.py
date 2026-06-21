@@ -44,6 +44,7 @@ def heatmap_to_detections(
     min_pixels: int,
     image_size: int,
     letterbox: tuple[float, float, float],
+    profile_peak_fraction: float | None = None,
 ) -> list[dict[str, Any]]:
     """Convert one heatmap to segment-based detection dicts (x1, y1, x2, y2)."""
     binary = probs >= threshold
@@ -54,7 +55,8 @@ def heatmap_to_detections(
         mask = labels == label_id
         if int(mask.sum()) < min_pixels:
             continue
-        det = _component_to_segment(mask, probs, patch_size, image_size)
+        det = _component_to_segment(mask, probs, patch_size, image_size,
+                                    profile_peak_fraction=profile_peak_fraction)
         if det is None:
             continue
         # Unscale from letterbox canvas to source-tile pixels
@@ -93,6 +95,7 @@ def _detections_from_feat_heatmap(
     min_pixels: int,
     image_id: int,
     patch_size: int = _HEATMAP_PATCH_SIZE,
+    profile_peak_fraction: float | None = None,
 ) -> list[dict[str, Any]]:
     """Convert a feature-resolution probability map to detection dicts.
 
@@ -104,6 +107,8 @@ def _detections_from_feat_heatmap(
         min_pixels: Minimum connected component size in feature-map pixels.
         image_id: COCO image id to stamp on each detection.
         patch_size: Feature stride in source pixels (default 16).
+        profile_peak_fraction: Passed to ``_component_to_segment`` for
+            heatmap-profile endpoint refinement (None = binary-mask extremes).
 
     Returns:
         Detection dicts with bbox/confidence/x1/y1/x2/y2/streak_length_px
@@ -119,7 +124,8 @@ def _detections_from_feat_heatmap(
         mask = labels == label_id
         if int(mask.sum()) < min_pixels:
             continue
-        det = _component_to_segment(mask, feat_probs, patch_size, feat_h * patch_size)
+        det = _component_to_segment(mask, feat_probs, patch_size, feat_h * patch_size,
+                                    profile_peak_fraction=profile_peak_fraction)
         if det is None:
             continue
         detections.append({
@@ -206,7 +212,8 @@ def _eval_from_heatmap_cache(args: "argparse.Namespace") -> int:
             if feat is None:
                 continue
             dets = _detections_from_feat_heatmap(
-                feat, threshold, args.min_pixels, image_id
+                feat, threshold, args.min_pixels, image_id,
+                profile_peak_fraction=getattr(args, "profile_peak_fraction", None),
             )
             # Peak-floor gate BEFORE stitch (drops noise components so they
             # cannot seed chains); top-K AFTER stitch (keep the K strongest
@@ -310,6 +317,11 @@ def main() -> int:
                              "model loading and GPU inference entirely — threshold sweeps run "
                              "from cached NPY probability maps in seconds.  The cache must have "
                              "been built with the same checkpoint and tiling params as this eval.")
+    parser.add_argument("--profile-peak-fraction", type=float, default=None, metavar="F",
+                        help="Heatmap-profile endpoint refinement: trim each endpoint to where "
+                             "the along-axis activation drops below F * component_peak instead "
+                             "of using binary-mask extremes.  Typical range 0.75–0.90.  Reduces "
+                             "the systematic too-long bias without retraining.")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 

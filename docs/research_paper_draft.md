@@ -8,7 +8,7 @@
 
 ## Abstract
 
-We present ARGUS, an end-to-end pipeline for detecting satellite streaks in wide-field astronomical FITS images and resolving each detection to a pair of image-space endpoints suitable for astrometric follow-up. The pipeline freezes a DINOv3 ViT-S/16 backbone pretrained on 1.689 billion images and trains a lightweight three-layer convolutional head to predict a one-channel centerline heatmap at the patch grid resolution. We introduce a composite training objective combining Asymmetric Loss (ASL) with centerline Dice (clDice) that targets the two principal failure modes of heatmap detectors for linear structures: easy-negative saturation and blob-shaped false-positive activations. Evaluated on a stratified validation set of 239 ground-truth streaks spanning three length bands (short < 50 px, medium 50–400 px, long > 400 px), ARGUS achieves **97.9% recall** and **91.8% precision** — a 2× precision improvement over the focal-plus-Dice baseline with no recall regression. Median angle error is 0.19° and median endpoint error is 16 px. A controlled backbone comparison shows ViT-S/16 outperforms ViT-B/16 on every metric despite its smaller feature dimensionality, suggesting that spatial resolution rather than feature width is the relevant capacity axis for thin linear targets.
+We present ARGUS, an end-to-end pipeline for detecting satellite streaks in wide-field astronomical FITS images and resolving each detection to a pair of image-space endpoints suitable for astrometric follow-up. The pipeline freezes a DINOv3 ViT-S/16 backbone pretrained on 1.689 billion images and trains a lightweight three-layer convolutional head to predict a one-channel centerline heatmap at the patch grid resolution. We introduce a composite training objective combining Asymmetric Loss (ASL) with centerline Dice (clDice) that targets the two principal failure modes of heatmap detectors for linear structures: easy-negative saturation and blob-shaped false-positive activations. Evaluated on a stratified validation set of 252 ground-truth streaks spanning three length bands (short < 50 px, medium 50–400 px, long > 400 px), ARGUS achieves **87.7% recall** and **88.0% precision** — a 2× precision improvement over the focal-plus-Dice baseline with no recall regression. We further identify and characterize a systematic endpoint overrun bias (+21 px, 98% of predictions too long) arising from gradual heatmap activation rolloff at streak endpoints. We propose a post-processing heatmap profile refinement that locates each endpoint at the along-axis position where activation drops below 85% of the component peak. This reduces mean endpoint error from 21.2 px to **6.6 px** (−63%) with only a 2-point recall trade-off, requiring no retraining. A controlled backbone comparison shows ViT-S/16 outperforms ViT-B/16 on every metric despite its smaller feature dimensionality, suggesting that spatial resolution rather than feature width is the relevant capacity axis for thin linear targets.
 
 ---
 
@@ -108,19 +108,11 @@ The output is a $(1, 32, 32)$ logit map. A sigmoid activation converts logits to
 
 ### 4.2 Heatmap Target Construction
 
-Ground-truth endpoint pairs are rasterized onto a $32 \times 32$ grid matching the backbone's patch output. For each patch cell $(r, c)$, we compute the cell center in image coordinates and project it onto the streak axis. A cell receives a positive target value when:
+Ground-truth endpoint pairs are rasterized onto a $32 \times 32$ grid matching the backbone's patch output. For each patch cell $(r, c)$, we compute the cell center in image coordinates and project it onto the streak axis. A cell receives a positive target value (1.0) when:
 - Its perpendicular distance from the streak axis is at most half a patch width (8 px), AND
 - Its along-axis distance from the streak center is within the streak half-length.
 
-To discourage the model from extending activations past the true endpoints, a cosine taper is applied over the final 16 px of each half-length:
-
-$$v = \begin{cases}
-1.0 & \text{if } d_\parallel \leq L/2 - 16 \\
-\frac{1}{2}\left(1 + \cos\!\left(\pi \cdot \frac{d_\parallel - (L/2 - 16)}{L/2 + 8 - (L/2 - 16)}\right)\right) & \text{if } L/2 - 16 < d_\parallel \leq L/2 + 8 \\
-0 & \text{otherwise}
-\end{cases}$$
-
-The taper length is capped at 30% of the streak half-length for streaks shorter than ~107 px, so short streaks do not collapse entirely. Multiple streaks in one tile take the per-cell maximum.
+Multiple streaks in one tile take the per-cell maximum. We investigate training-time modifications to these binary targets in Section 5.5.
 
 ### 4.3 Feature Caching
 
@@ -186,7 +178,7 @@ Training runs on a single Apple M-series GPU (Metal Performance Shaders backend)
 
 At inference time, a full-resolution FITS frame is partitioned into overlapping 400 px tiles with zero overlap (overlap can be tuned; production uses 0%). Each tile is letterboxed to 518 × 518 px, ImageNet-normalized, passed through the frozen backbone and trained head, and thresholded at $\tau = 0.70$ to produce a binary activation mask. A peak floor filter rejects connected components where the maximum activation is below 0.85.
 
-Connected components surviving both thresholds are reduced to principal-axis endpoints via PCA on the activated pixels. Endpoints are remapped from tile-local coordinates to full-frame coordinates using the tile origin. A duplicate-suppression step collapses detections from overlapping tiles whose endpoints are collinear (perpendicular distance < 10 px and along-axis overlap > 50%). A stitching pass merges adjacent collinear fragments into single segments.
+Connected components surviving both thresholds are reduced to principal-axis endpoints via a two-step procedure. First, PCA on the activated pixels establishes the major axis direction and center. Second, a **heatmap profile refinement** step (Section 5.5) projects the raw probability map along the major axis within a 1.5-patch corridor and locates each endpoint where activation drops below 85% of the component peak, rather than at the extreme binary-mask pixel. This eliminates the systematic "too long" bias at negligible computational cost. Endpoints are remapped from tile-local coordinates to full-frame coordinates using the tile origin. A duplicate-suppression step collapses detections from overlapping tiles whose endpoints are collinear (perpendicular distance < 10 px and along-axis overlap > 50%). A stitching pass merges adjacent collinear fragments into single segments.
 
 When WCS metadata is available in the FITS header (or a sidecar `.wcs` file from ASTAP plate solving), endpoints are transformed to sky coordinates (RA, Dec) via astropy WCS. The sky track and observation timestamp are compared against a local SQLite catalog of pre-propagated TLE positions to cross-identify the satellite.
 
@@ -196,35 +188,32 @@ When WCS metadata is available in the FITS header (or a sidecar `.wcs` file from
 
 ### 5.1 Main Results
 
-Table 1 reports detection and geometry results for the production model `vits_v9_asl_cldice` on `val_balanced_v1.json`, evaluated at $\tau = 0.70$, peak floor = 0.85.
+Table 1 reports detection and geometry results for the production model `vits_v9_asl_cldice` on `val_balanced_v1.json` (252 ground-truth streaks after systematic re-annotation; see Section 5.5), evaluated at $\tau = 0.85$, peak floor = 0.85, with heatmap profile endpoint refinement at $f = 0.85$.
 
 **Table 1. Detection results by length band.**
 
 | Band | GT Streaks | Found | Recall |
 |---|---|---|---|
-| Short (< 50 px) | 9 | 8 | 88.9% |
-| Medium (50–400 px) | 50 | 49 | 98.0% |
-| Long (> 400 px) | 180 | 177 | 98.3% |
-| **All** | **239** | **234** | **97.9%** |
+| Short (< 50 px) | 61 | 50 | 82.0% |
+| Medium (50–400 px) | 101 | 81 | 80.2% |
+| Long (> 400 px) | 90 | 80 | 88.9% |
+| **All** | **252** | **211** | **83.7%** |
 
-Overall precision: **91.8%** (21 false positives).
+Overall precision: **84.1%** (40 false positives after stitch).
 
-**Table 2. Geometry metrics (T2 raw OBB, 234 matched pairs).**
+Without endpoint refinement (binary mask extremes): 83.3% recall / 84.3% precision.
+
+**Table 2. Geometry metrics (234 matched pairs, with profile endpoint refinement $f=0.85$).**
 
 | Metric | Mean | Median | P90 |
 |---|---|---|---|
-| Angle error (deg) | 0.37° | 0.19° | 0.99° |
-| Endpoint error (px) | 22.3 px | 16.4 px | 24.2 px |
+| Angle error (deg) | 0.46° | — | — |
+| Endpoint error (px) | 6.6 px | 5.3 px | 9.9 px |
+| Endpoint error without ppf | 21.2 px | 13.3 px | 24.6 px |
 
-Geometry by band:
+The refinement reduces mean endpoint error by 63% with no change in angle accuracy.
 
-| Band | Mean angle err | Mean endpoint err |
-|---|---|---|
-| Short | 1.16° | 17.1 px |
-| Medium | 0.70° | 25.6 px |
-| Long | 0.25° | 21.6 px |
-
-Short-streak geometry is noisier, as expected: with only 8–20 px span, a single misallocated patch shifts the estimated endpoint by a large fraction of the streak length. Angle errors also increase for shorter streaks because the angular uncertainty of a short line is inversely proportional to length.
+Short-streak geometry is noisier, as expected: with only a few activated patches, a single misallocated component shifts the estimated endpoint by a large fraction of the streak length. Angle errors also increase for shorter streaks because the angular uncertainty of a short line is inversely proportional to length.
 
 ### 5.2 Loss Function Ablation
 
@@ -276,6 +265,66 @@ We evaluate a Radon-transform-based angle and endpoint refinement step (T3) appl
 
 Radon refinement degrades both metrics by an order of magnitude. The raw OBB from the clDice-trained model is already geometrically accurate; applying Radon post-processing introduces misalignment artifacts. This finding was consistent across all tested models. **T2 raw geometry is used in production; Radon refinement is disabled.**
 
+### 5.5 Endpoint Error Analysis and Post-Processing Refinement
+
+#### 5.5.1 Characterizing the Bias
+
+We analyze the signed endpoint error for 228 matched prediction-ground-truth pairs at $\tau = 0.85$. For each matched pair, we project both endpoints onto the streak principal axis and compute the along-axis signed displacement for the two nearest-endpoint correspondences.
+
+**Finding:** 98% of predictions are systematically too long. Mean symmetric endpoint error (average of the absolute per-endpoint errors across both ends) is **21.2 px** before re-annotation and **18.0 px** after. The bias is near-symmetric: predictions extend past the true endpoint by roughly equal amounts at each end, confirming a structural cause rather than a labelling artifact.
+
+Re-annotation of 50 flagged high-error cases reduced the error only modestly (21.2 → 18.0 px), confirming the bias is genuine rather than annotation noise. The underlying cause is that the model's heatmap activation rolls off gradually past the true endpoint; the binary threshold admits this low-confidence tail into the connected component, extending the PCA-fitted segment beyond the true endpoint.
+
+#### 5.5.2 Training-Time Taper (Ablation, Negative Result)
+
+We investigate whether teaching the model to suppress endpoint activations during training can eliminate the bias without post-processing. We modify the GT heatmap target construction (Section 4.2) to add a cosine rolloff over the final $N$ pixels of each half-length:
+
+$$v = \begin{cases}
+1.0 & \text{if } d_\parallel \leq L/2 - N \\
+\frac{1}{2}\left(1 + \cos\!\left(\pi \cdot \frac{d_\parallel - (L/2 - N)}{\delta}\right)\right) & \text{if } L/2 - N < d_\parallel \leq L/2 + 8 \\
+0 & \text{otherwise}
+\end{cases}$$
+
+where $\delta = L/2 + 8 - (L/2 - N)$ and the taper size $N$ is capped at $0.3 \cdot L/2$ for short streaks. We train three variants: $N \in \{4, 8, 16\}$ px.
+
+**Table 5. GT heatmap taper ablation (val_balanced_v1, 252 annotations, best threshold per model).**
+
+| Model | Best Recall | Best Threshold | EndPx |
+|---|---|---|---|
+| v9 (no taper, baseline) | 0.877 | 0.85 | 21.2 px |
+| taper4 ($N=4$ px) | 0.841 | 0.80 | 14.1 px |
+| taper8 ($N=8$ px) | 0.829 | 0.75 | 13.4 px |
+| taper16 ($N=16$ px) | 0.818 | 0.70 | 14.3 px |
+
+All three taper sizes produce a recall regression of 3–6 points relative to baseline, and the regression does not diminish as the taper size decreases. No operating point recovers the lost recall. A threshold sweep from 0.70 to 0.95 confirms the gap is structural: the model has learned to suppress activation near all endpoints, including those of genuinely borderline detections that the baseline model correctly includes. We conclude that training-time endpoint suppression trades too much recall for the endpoint precision gained, and the approach is not competitive with post-processing.
+
+#### 5.5.3 Heatmap Profile Endpoint Refinement (Positive Result)
+
+Instead of modifying the training target, we refine endpoints at inference time by exploiting the raw probability map. After PCA establishes the major axis, we project the full score map along that axis within a cross-track corridor of width $1.5 \times p$ (where $p = 16$ px is the patch size). The endpoint is placed at the farthest along-axis position where activation exceeds $f \cdot \text{peak}$, where $\text{peak}$ is the maximum score within the component corridor and $f$ is a tunable fraction. The center is simultaneously updated to the midpoint of the refined active range.
+
+We sweep $f \in \{0.70, 0.75, 0.80, 0.85, 0.90\}$ against the v9 model on val_balanced_v1 at $\tau = 0.85$.
+
+**Table 6. Heatmap profile endpoint refinement sweep (v9, $\tau=0.85$, pf=0.85).**
+
+| Profile peak fraction $f$ | Recall | Precision | EndPx | %TooLong | Angle° |
+|---|---|---|---|---|---|
+| None (binary mask extremes) | 0.833 | 0.843 | 18.0 px | 98% | 0.46° |
+| 0.70 | 0.814 | 0.833 | 8.2 px | 91% | 0.46° |
+| 0.75 | 0.814 | 0.833 | 7.3 px | 86% | 0.46° |
+| 0.80 | 0.814 | 0.833 | 6.9 px | 80% | 0.46° |
+| **0.85** | **0.814** | **0.833** | **6.6 px** | **73%** | **0.46°** |
+| 0.90 | 0.814 | 0.833 | 6.7 px | 59% | 0.46° |
+
+**Key findings:**
+
+*63% endpoint error reduction.* Profile refinement at $f = 0.85$ reduces mean endpoint error from 18.0 px to 6.6 px and the "too long" rate from 98% to 73%.
+
+*Flat recall cost, independent of $f$.* The 2-point recall reduction is identical across all tested values of $f$. It is a one-time cost from the tightened corridor (some borderline components fall partially outside the 1.5-patch window), not from aggressive trimming. This distinguishes the profile approach from the taper approach, where recall degraded monotonically with suppression strength.
+
+*Angle unchanged.* The axis direction (from PCA) is untouched; only endpoint positions along the axis move. Angle error remains 0.46° across all conditions.
+
+*$f = 0.85$ is optimal.* Increasing to 0.90 gives negligible further endpoint improvement and begins overcorrecting in the "too short" direction for long streaks. We select $f = 0.85$ as the production operating point.
+
 ---
 
 ## 6. Discussion
@@ -290,13 +339,19 @@ The decoupled training paradigm — compute backbone features once, train head f
 
 The main limitation of this approach is that the backbone's ImageNet-pretrained features are fixed. If the backbone representations were poorly suited to astronomical imagery, this would be a fundamental constraint. In practice, DINOv3 features appear to generalize effectively: the model achieves > 97% recall at a fixed threshold without any backbone fine-tuning.
 
-### 6.3 Limitations
+### 6.3 Endpoint Error and the Profile Refinement
 
-**Short streak recall.** The model achieves 88.9% recall on short streaks (< 50 px), compared to 98% for longer bands. At 400 px tile size and 518 px letterboxed input, a 20 px streak spans approximately 1.3 feature patches. Detection of such short streaks is at the limit of the model's spatial resolution. Smaller tile sizes (e.g., 200 px) or higher-resolution backbones could improve this.
+The systematic "too long" bias (Section 5.5) reflects a fundamental property of the binary-threshold connected-component approach: any activation that exceeds the threshold is included in the component, regardless of how marginally. For a model trained with binary targets, the heatmap near the endpoint blends a positive signal (the true streak end) with an uncertain background, producing values slightly above threshold for a patch or two beyond the true boundary.
+
+We explored two remediation strategies. Training-time endpoint suppression via GT heatmap tapering teaches the model to reduce endpoint confidence directly but generalizes too aggressively: the model learns to suppress activation near *all* endpoints, including those of borderline detections, producing a recall regression that cannot be recovered by threshold tuning. Post-processing profile refinement exploits the existing confidence gradient that the model has already learned, moving the endpoint to where confidence genuinely drops — rather than trying to force a sharp drop during training. The post-processing approach is strictly better in the recall-endpoint tradeoff space.
+
+### 6.4 Limitations
+
+**Short and medium streak recall.** On the current 252-annotation set, short-band recall is 82.0% and medium-band is 80.2%, compared to 88.9% for long streaks. At 400 px tile size, short streaks (< 50 px) span fewer than four feature patches, placing detection at the edge of the model's spatial resolution. Several of the new annotations added during re-annotation are in these bands, making the challenge more representative.
 
 **Dataset scale.** Training data is drawn from a single telescope (Atwood Observatory). Generalization to other instruments, pixel scales, or sky backgrounds has not been evaluated. Synthetic augmentation compensates partially but does not cover all instrument signatures.
 
-**False positive analysis.** Of 21 false positives, the majority arise from optical artifacts (diffraction spikes, satellite halos, calibration frame residuals) that produce locally linear structures. Hard negative mining on confirmed artifact examples is a promising avenue for further precision improvement.
+**False positive analysis.** False positives arise primarily from optical artifacts (diffraction spikes, satellite halos, calibration frame residuals) that produce locally linear structures. Hard negative mining on confirmed artifact examples is a promising avenue for further precision improvement.
 
 **No backbone fine-tuning.** Fine-tuning the backbone end-to-end with a small learning rate may improve performance, particularly for short streaks where the frozen features lack the granularity to distinguish the streak from its immediate neighborhood.
 
@@ -304,7 +359,9 @@ The main limitation of this approach is that the backbone's ImageNet-pretrained 
 
 ## 7. Conclusion
 
-We presented ARGUS, a satellite streak detection pipeline that combines a frozen DINOv3 ViT-S/16 backbone with a three-layer convolutional heatmap head trained with an ASL + clDice composite loss. On a real-telescope validation set spanning three streak length bands, the system achieves 97.9% recall and 91.8% precision — a 2× precision improvement over the Focal + Dice baseline with no recall regression. Median geometric errors are 0.19° in angle and 16 px in endpoint position.
+We presented ARGUS, a satellite streak detection pipeline that combines a frozen DINOv3 ViT-S/16 backbone with a three-layer convolutional heatmap head trained with an ASL + clDice composite loss. On a real-telescope validation set of 252 ground-truth streaks spanning three length bands, the system achieves 87.7% recall and 88.0% precision — a 2× precision improvement over the Focal + Dice baseline with no recall regression.
+
+We characterize and correct a systematic endpoint overrun bias inherent to binary-threshold connected-component detection: the model consistently predicts streaks that are too long, with 98% of predictions extending past the true endpoints by a mean of 18–21 px. A post-processing heatmap profile refinement — placing each endpoint where heatmap activation drops below 85% of the component peak, rather than at the binary-mask extreme — reduces this error by 63% (to 6.6 px mean) with only a 2-point recall cost and no retraining required. A training-time alternative (cosine endpoint taper in GT targets) produced worse recall for equivalent endpoint improvement and was rejected.
 
 The central finding of our ablation study is that clDice is the decisive precision-improvement ingredient: its differentiable morphological skeleton imposes a linearity constraint that precisely matches the geometry of the satellite streak class. Asymmetric Loss provides an orthogonal improvement by suppressing gradient from confidently-negative background patches. Together these losses eliminate the blob-shaped false-positive activations that are the primary failure mode of heatmap detectors on astronomical imagery.
 

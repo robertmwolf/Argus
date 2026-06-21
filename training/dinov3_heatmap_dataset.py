@@ -21,6 +21,35 @@ from training.data_paths import resolve_source_path
 logger = logging.getLogger(__name__)
 
 
+def rasterise_streak_heatmap(
+    along_abs: np.ndarray,
+    across: np.ndarray,
+    half_len: float,
+    patch_size: float,
+    endpoint_taper_px: float = 16.0,
+) -> np.ndarray:
+    """Return per-cell heatmap values for one streak.
+
+    Cells within the inner region receive 1.0. Cells in the endpoint taper zone
+    receive a cosine rolloff from 1.0 (at ``half_len - effective_taper``) to 0.0
+    (at ``half_len + patch_size / 2``). Cells outside or beyond the across limit
+    receive 0.0 and should be masked by the caller.
+
+    The taper length is capped at 30 % of the half-length so very short streaks
+    do not collapse entirely.
+    """
+    effective_taper = min(endpoint_taper_px, half_len * 0.3)
+    taper_start = half_len - effective_taper
+    taper_end = half_len + patch_size / 2.0
+    span = max(taper_end - taper_start, 1e-6)
+
+    in_taper = (along_abs > taper_start) & (along_abs <= taper_end)
+    t = np.where(in_taper, (along_abs - taper_start) / span, 0.0)
+    taper_val = np.where(in_taper, 0.5 * (1.0 + np.cos(np.pi * t)), 0.0)
+    inner_val = (along_abs <= taper_start).astype(np.float32)
+    return np.maximum(inner_val, taper_val).astype(np.float32)
+
+
 class StreakHeatmapDataset(Dataset):
     """Load source annotations as image tensors plus centerline heatmaps."""
 
@@ -33,6 +62,7 @@ class StreakHeatmapDataset(Dataset):
         norm_mode: str = "autostretch",
         data_root: str | Path | None = None,
         scratch_root: str | Path | None = None,
+        endpoint_taper_px: float = 16.0,
     ) -> None:
         """Initialise the endpoint heatmap dataset."""
         self.annotation_file = Path(annotation_file)
@@ -41,6 +71,7 @@ class StreakHeatmapDataset(Dataset):
         self.norm_mode = norm_mode
         self.data_root = data_root
         self.scratch_root = scratch_root
+        self.endpoint_taper_px = endpoint_taper_px
         self.loader = FITSLoader()
 
         source = json.loads(self.annotation_file.read_text())
@@ -145,12 +176,14 @@ class StreakHeatmapDataset(Dataset):
             angle = math.atan2(y2 - y1, x2 - x1)
             ux, uy = math.cos(angle), math.sin(angle)
             dx, dy = px - cx, py - cy
-            along = dx * ux + dy * uy
+            along_abs = np.abs(dx * ux + dy * uy)
             across = np.abs(-dx * uy + dy * ux)
-            mask = (np.abs(along) <= length / 2 + self.patch_size / 2) & (
-                across <= self.patch_size / 2
+            half_len = length / 2.0
+            across_mask = across <= self.patch_size / 2.0
+            values = rasterise_streak_heatmap(
+                along_abs, across, half_len, self.patch_size, self.endpoint_taper_px
             )
-            target[mask] = 1.0
+            target = np.maximum(target, np.where(across_mask, values, 0.0))
         return torch.from_numpy(target).unsqueeze(0)
 
 

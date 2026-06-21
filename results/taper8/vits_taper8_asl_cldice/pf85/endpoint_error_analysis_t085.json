@@ -1,0 +1,6349 @@
+{
+  "aggregate": {
+    "n_matched_pairs": 235,
+    "n_gt": 252,
+    "symmetric_endpoint_err_px": {
+      "n": 235,
+      "mean": 20.212,
+      "std": 73.725,
+      "p25": 6.809,
+      "median": 10.539,
+      "p75": 15.872,
+      "p90": 23.48,
+      "p95": 31.934,
+      "p99": 299.108,
+      "max": 982.097
+    },
+    "signed_length_err_px": {
+      "mean_signed": -8.467,
+      "median_signed": 7.665,
+      "std": 149.712,
+      "pct_too_long": 72.3,
+      "pct_too_short": 27.7,
+      "interpretation": "model predicts too SHORT on average"
+    },
+    "pooled_endpoint_signed_err_px": {
+      "mean_signed": -1.585,
+      "median_signed": -3.557,
+      "std": 103.15,
+      "pct_too_long": 39.6,
+      "pct_too_short": 60.4,
+      "interpretation": "model length bias is approximately neutral (< 2 px)"
+    },
+    "per_band": {
+      "short": {
+        "n": 59,
+        "symmetric_endpoint_err_px": {
+          "n": 59,
+          "mean": 10.1,
+          "std": 5.222,
+          "p25": 6.276,
+          "median": 9.04,
+          "p75": 12.172,
+          "p90": 16.974,
+          "p95": 19.168,
+          "p99": 25.705,
+          "max": 31.904
+        },
+        "signed_length_err_px": {
+          "mean_signed": 11.275,
+          "median_signed": 11.989,
+          "std": 13.404,
+          "pct_too_long": 91.5,
+          "pct_too_short": 8.5,
+          "interpretation": "model predicts too LONG on average"
+        }
+      },
+      "medium": {
+        "n": 100,
+        "symmetric_endpoint_err_px": {
+          "n": 100,
+          "mean": 12.582,
+          "std": 9.027,
+          "p25": 7.077,
+          "median": 10.912,
+          "p75": 15.992,
+          "p90": 21.572,
+          "p95": 24.412,
+          "p99": 31.407,
+          "max": 75.771
+        },
+        "signed_length_err_px": {
+          "mean_signed": 9.899,
+          "median_signed": 9.522,
+          "std": 9.479,
+          "pct_too_long": 83.0,
+          "pct_too_short": 17.0,
+          "interpretation": "model predicts too LONG on average"
+        }
+      },
+      "long": {
+        "n": 76,
+        "symmetric_endpoint_err_px": {
+          "n": 76,
+          "mean": 38.101,
+          "std": 127.288,
+          "p25": 6.719,
+          "median": 12.117,
+          "p75": 19.825,
+          "p90": 38.1,
+          "p95": 47.837,
+          "p99": 563.843,
+          "max": 982.097
+        },
+        "signed_length_err_px": {
+          "mean_signed": -47.958,
+          "median_signed": -1.5,
+          "std": 258.345,
+          "pct_too_long": 43.4,
+          "pct_too_short": 56.6,
+          "interpretation": "model predicts too SHORT on average"
+        }
+      }
+    }
+  },
+  "top_n_worst": [
+    {
+      "image_id": 65,
+      "annotation_id": 247,
+      "gt_length_px": 4551.38,
+      "pred_length_px": 2594.05,
+      "signed_length_err_px": -1957.335,
+      "symmetric_endpoint_err_px": 982.097,
+      "endpoint1_signed_err_px": 1960.766,
+      "endpoint2_signed_err_px": 3.428,
+      "angle_err_deg": 0.0844,
+      "perp_offset_px": 2.686,
+      "pred_endpoints": {
+        "x1": 1284.022846364906,
+        "y1": 1797.221139450796,
+        "x2": 255.9245572101695,
+        "y2": 4178.836149467617
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 4176.0,
+        "x2": 2068.0,
+        "y2": 4.547473508864641e-13
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Geo_20260520_Atwood/Streak_42934_222545.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 62,
+      "annotation_id": 62,
+      "gt_length_px": 1093.58,
+      "pred_length_px": 245.08,
+      "signed_length_err_px": -848.498,
+      "symmetric_endpoint_err_px": 424.425,
+      "endpoint1_signed_err_px": 32.754,
+      "endpoint2_signed_err_px": -816.097,
+      "angle_err_deg": 3.0738,
+      "perp_offset_px": 3.084,
+      "pred_endpoints": {
+        "x1": 538.3268671212625,
+        "y1": 283.52059727160884,
+        "x2": 485.67313287873753,
+        "y2": 522.8794271424537
+      },
+      "gt_endpoints": {
+        "x1": 550.429338740488,
+        "y1": 252.8855299478056,
+        "x2": 258.5506612595116,
+        "y2": 1306.7944700521944
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_38043_005537.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 24,
+      "annotation_id": 24,
+      "gt_length_px": 1077.25,
+      "pred_length_px": 248.95,
+      "signed_length_err_px": -828.295,
+      "symmetric_endpoint_err_px": 414.16,
+      "endpoint1_signed_err_px": 509.57,
+      "endpoint2_signed_err_px": -318.75,
+      "angle_err_deg": 0.8184,
+      "perp_offset_px": 0.177,
+      "pred_endpoints": {
+        "x1": 415.93305463336213,
+        "y1": 741.560155443269,
+        "x2": 349.60539751507537,
+        "y2": 981.516748853606
+      },
+      "gt_endpoints": {
+        "x1": 258.42660216046056,
+        "y1": 1286.9542090975392,
+        "x2": 560.2333978395393,
+        "y2": 252.84579090246098
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_38775_003032.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 70,
+      "annotation_id": 277,
+      "gt_length_px": 967.7,
+      "pred_length_px": 968.56,
+      "signed_length_err_px": 0.857,
+      "symmetric_endpoint_err_px": 75.771,
+      "endpoint1_signed_err_px": -76.197,
+      "endpoint2_signed_err_px": -75.346,
+      "angle_err_deg": 0.209,
+      "perp_offset_px": 2.288,
+      "pred_endpoints": {
+        "x1": 381.3353080950772,
+        "y1": 203.5682577709153,
+        "x2": 263.7846870221103,
+        "y2": 1164.9650674243971
+      },
+      "gt_endpoints": {
+        "x1": 375.83491764878113,
+        "y1": 279.6741627941879,
+        "x2": 254.8850823512189,
+        "y2": 1239.7858372058122
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_58463_230519.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 20,
+      "annotation_id": 281,
+      "gt_length_px": 1074.3,
+      "pred_length_px": 1071.43,
+      "signed_length_err_px": -2.869,
+      "symmetric_endpoint_err_px": 53.025,
+      "endpoint1_signed_err_px": -54.462,
+      "endpoint2_signed_err_px": -51.588,
+      "angle_err_deg": 0.1782,
+      "perp_offset_px": 2.862,
+      "pred_endpoints": {
+        "x1": 1252.4969854888368,
+        "y1": 495.19615479107836,
+        "x2": 209.8542108002257,
+        "y2": 248.4984863222029
+      },
+      "gt_endpoints": {
+        "x1": 1304.4003803733692,
+        "y1": 512.3040152549447,
+        "x2": 259.7396196266309,
+        "y2": 261.69598474505534
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222840.fits",
+      "band": "long"
+    }
+  ],
+  "per_pair": [
+    {
+      "image_id": 1,
+      "annotation_id": 1,
+      "gt_length_px": 1291.25,
+      "pred_length_px": 1308.43,
+      "signed_length_err_px": 17.181,
+      "symmetric_endpoint_err_px": 23.336,
+      "endpoint1_signed_err_px": 14.752,
+      "endpoint2_signed_err_px": 31.919,
+      "angle_err_deg": 0.2639,
+      "perp_offset_px": 4.672,
+      "pred_endpoints": {
+        "x1": 915.7529690530546,
+        "y1": 263.58480705950547,
+        "x2": 238.94832489225792,
+        "y2": 1383.376252510807
+      },
+      "gt_endpoints": {
+        "x1": 930.0,
+        "y1": 254.9999999999999,
+        "x2": 257.0,
+        "y2": 1357.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_48381_215519.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 2,
+      "annotation_id": 2,
+      "gt_length_px": 1128.96,
+      "pred_length_px": 1125.4,
+      "signed_length_err_px": -3.563,
+      "symmetric_endpoint_err_px": 10.727,
+      "endpoint1_signed_err_px": -12.509,
+      "endpoint2_signed_err_px": -8.946,
+      "angle_err_deg": 0.0352,
+      "perp_offset_px": 0.659,
+      "pred_endpoints": {
+        "x1": 1278.1284234989755,
+        "y1": 704.2731419851059,
+        "x2": 245.7211858760245,
+        "y2": 256.32835947973786
+      },
+      "gt_endpoints": {
+        "x1": 254.0541547488716,
+        "y1": 259.5971373502751,
+        "x2": 1290.005845251128,
+        "y2": 708.322862649725
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222449.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 3,
+      "annotation_id": 3,
+      "gt_length_px": 1044.35,
+      "pred_length_px": 1069.74,
+      "signed_length_err_px": 25.388,
+      "symmetric_endpoint_err_px": 12.691,
+      "endpoint1_signed_err_px": 25.183,
+      "endpoint2_signed_err_px": -0.199,
+      "angle_err_deg": 0.1981,
+      "perp_offset_px": 1.421,
+      "pred_endpoints": {
+        "x1": 1183.9677889182312,
+        "y1": 782.9907260365665,
+        "x2": 251.73948647239365,
+        "y2": 258.31005521343354
+      },
+      "gt_endpoints": {
+        "x1": 253.52649868911743,
+        "y1": 255.56366993563694,
+        "x2": 1161.8535013108826,
+        "y2": 770.9363300643631
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_42961_230855.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 4,
+      "annotation_id": 4,
+      "gt_length_px": 1034.02,
+      "pred_length_px": 1034.55,
+      "signed_length_err_px": 0.529,
+      "symmetric_endpoint_err_px": 19.359,
+      "endpoint1_signed_err_px": -19.618,
+      "endpoint2_signed_err_px": -19.099,
+      "angle_err_deg": 0.2514,
+      "perp_offset_px": 2.411,
+      "pred_endpoints": {
+        "x1": 623.4609839889898,
+        "y1": 233.1920183075772,
+        "x2": 265.7476341750727,
+        "y2": 1203.9302961455478
+      },
+      "gt_endpoints": {
+        "x1": 259.1983345738677,
+        "y1": 1221.87206117225,
+        "x2": 620.9816654261326,
+        "y2": 253.20793882774996
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_67061_233624.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 5,
+      "annotation_id": 5,
+      "gt_length_px": 1130.27,
+      "pred_length_px": 1137.36,
+      "signed_length_err_px": 7.087,
+      "symmetric_endpoint_err_px": 15.001,
+      "endpoint1_signed_err_px": 11.478,
+      "endpoint2_signed_err_px": 18.525,
+      "angle_err_deg": 0.4791,
+      "perp_offset_px": 3.879,
+      "pred_endpoints": {
+        "x1": 512.5767660786378,
+        "y1": 261.5029908386458,
+        "x2": 253.42323392136223,
+        "y2": 1368.9414671691666
+      },
+      "gt_endpoints": {
+        "x1": 256.94366733535514,
+        "y1": 1350.7330051054796,
+        "x2": 523.6763326646447,
+        "y2": 252.38699489452017
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_64750_223235.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 6,
+      "annotation_id": 6,
+      "gt_length_px": 1155.41,
+      "pred_length_px": 1136.8,
+      "signed_length_err_px": -18.612,
+      "symmetric_endpoint_err_px": 9.306,
+      "endpoint1_signed_err_px": 5.393,
+      "endpoint2_signed_err_px": -13.219,
+      "angle_err_deg": 0.0128,
+      "perp_offset_px": 4.711,
+      "pred_endpoints": {
+        "x1": 265.05786501932647,
+        "y1": 255.62807574881356,
+        "x2": 290.7068444533298,
+        "y2": 1392.1365726886866
+      },
+      "gt_endpoints": {
+        "x1": 286.1649800648088,
+        "y1": 1405.4608439935373,
+        "x2": 260.35501993519165,
+        "y2": 250.33915600646299
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_68131_235136.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 7,
+      "annotation_id": 7,
+      "gt_length_px": 1065.63,
+      "pred_length_px": 1075.77,
+      "signed_length_err_px": 10.138,
+      "symmetric_endpoint_err_px": 5.069,
+      "endpoint1_signed_err_px": -4.365,
+      "endpoint2_signed_err_px": 5.773,
+      "angle_err_deg": 0.0333,
+      "perp_offset_px": 0.619,
+      "pred_endpoints": {
+        "x1": 1199.2855695544338,
+        "y1": 257.79616526392687,
+        "x2": 250.17426931275372,
+        "y2": 764.2184221384168
+      },
+      "gt_endpoints": {
+        "x1": 254.8307470468177,
+        "y1": 760.6819385119426,
+        "x2": 1195.2892529531823,
+        "y2": 259.57806148805764
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65618_231124.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 8,
+      "annotation_id": 8,
+      "gt_length_px": 1391.81,
+      "pred_length_px": 1399.4,
+      "signed_length_err_px": 7.598,
+      "symmetric_endpoint_err_px": 9.331,
+      "endpoint1_signed_err_px": -13.13,
+      "endpoint2_signed_err_px": -5.532,
+      "angle_err_deg": 0.0169,
+      "perp_offset_px": 3.899,
+      "pred_endpoints": {
+        "x1": 252.71329952392128,
+        "y1": 238.29952153462364,
+        "x2": 380.8186218627975,
+        "y2": 1631.8281640122514
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 251.0,
+        "x2": 385.0,
+        "y2": 1637.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_59486_211937.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 9,
+      "annotation_id": 9,
+      "gt_length_px": 1067.88,
+      "pred_length_px": 1071.15,
+      "signed_length_err_px": 3.268,
+      "symmetric_endpoint_err_px": 1.978,
+      "endpoint1_signed_err_px": -3.61,
+      "endpoint2_signed_err_px": -0.346,
+      "angle_err_deg": 0.1448,
+      "perp_offset_px": 1.607,
+      "pred_endpoints": {
+        "x1": 955.4332499129541,
+        "y1": 253.16968166598508,
+        "x2": 254.88938192298332,
+        "y2": 1063.4754599355774
+      },
+      "gt_endpoints": {
+        "x1": 256.9085782588005,
+        "y1": 1065.6682474693744,
+        "x2": 953.2714217411998,
+        "y2": 256.0717525306255
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_66039_233100.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 10,
+      "annotation_id": 10,
+      "gt_length_px": 1195.09,
+      "pred_length_px": 1182.68,
+      "signed_length_err_px": -12.412,
+      "symmetric_endpoint_err_px": 6.208,
+      "endpoint1_signed_err_px": 2.393,
+      "endpoint2_signed_err_px": -10.023,
+      "angle_err_deg": 0.1596,
+      "perp_offset_px": 0.803,
+      "pred_endpoints": {
+        "x1": 259.3417447117213,
+        "y1": 254.09957748824866,
+        "x2": 765.5231234523412,
+        "y2": 1322.9814771992515
+      },
+      "gt_endpoints": {
+        "x1": 256.10024665768714,
+        "y1": 252.99467626316255,
+        "x2": 770.5997533423126,
+        "y2": 1331.6653237368373
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43909_225041.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 11,
+      "annotation_id": 11,
+      "gt_length_px": 1020.33,
+      "pred_length_px": 1018.16,
+      "signed_length_err_px": -2.165,
+      "symmetric_endpoint_err_px": 2.487,
+      "endpoint1_signed_err_px": -1.395,
+      "endpoint2_signed_err_px": -3.579,
+      "angle_err_deg": 0.3443,
+      "perp_offset_px": 2.191,
+      "pred_endpoints": {
+        "x1": 256.5980393759132,
+        "y1": 251.15398975114516,
+        "x2": 659.0942824014305,
+        "y2": 1186.3844623972923
+      },
+      "gt_endpoints": {
+        "x1": 256.3611833804407,
+        "y1": 252.78081409329525,
+        "x2": 665.3388166195591,
+        "y2": 1187.559185906705
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_59321_225526.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 12,
+      "annotation_id": 12,
+      "gt_length_px": 1058.34,
+      "pred_length_px": 1059.44,
+      "signed_length_err_px": 1.095,
+      "symmetric_endpoint_err_px": 19.793,
+      "endpoint1_signed_err_px": -20.327,
+      "endpoint2_signed_err_px": -19.259,
+      "angle_err_deg": 0.4128,
+      "perp_offset_px": 1.106,
+      "pred_endpoints": {
+        "x1": 885.9412268483027,
+        "y1": 235.65195676134402,
+        "x2": 270.4957848704474,
+        "y2": 1097.9951379652184
+      },
+      "gt_endpoints": {
+        "x1": 257.0,
+        "y1": 1112.0,
+        "x2": 878.0,
+        "y2": 255.00000000000006
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_68357_233201.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 13,
+      "annotation_id": 13,
+      "gt_length_px": 1267.21,
+      "pred_length_px": 1276.29,
+      "signed_length_err_px": 9.081,
+      "symmetric_endpoint_err_px": 4.537,
+      "endpoint1_signed_err_px": -0.565,
+      "endpoint2_signed_err_px": 8.509,
+      "angle_err_deg": 0.1915,
+      "perp_offset_px": 1.032,
+      "pred_endpoints": {
+        "x1": 859.4872962855309,
+        "y1": 251.99496315127556,
+        "x2": 254.91272812853168,
+        "y2": 1376.0050368487246
+      },
+      "gt_endpoints": {
+        "x1": 861.9999999999999,
+        "y1": 253.9999999999999,
+        "x2": 258.0000000000001,
+        "y2": 1368.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_51137_210049.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 14,
+      "annotation_id": 14,
+      "gt_length_px": 1103.84,
+      "pred_length_px": 1100.15,
+      "signed_length_err_px": -3.689,
+      "symmetric_endpoint_err_px": 10.947,
+      "endpoint1_signed_err_px": -9.102,
+      "endpoint2_signed_err_px": -12.791,
+      "angle_err_deg": 0.0266,
+      "perp_offset_px": 1.369,
+      "pred_endpoints": {
+        "x1": 1297.2781390987207,
+        "y1": 255.2884380964169,
+        "x2": 265.23614312784196,
+        "y2": 636.3687274309268
+      },
+      "gt_endpoints": {
+        "x1": 253.62010492719946,
+        "y1": 641.8385489391572,
+        "x2": 1289.2998950728006,
+        "y2": 259.96145106084293
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_231459.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 15,
+      "annotation_id": 15,
+      "gt_length_px": 1173.06,
+      "pred_length_px": 1171.73,
+      "signed_length_err_px": -1.326,
+      "symmetric_endpoint_err_px": 2.088,
+      "endpoint1_signed_err_px": 1.424,
+      "endpoint2_signed_err_px": 2.751,
+      "angle_err_deg": 0.0254,
+      "perp_offset_px": 0.494,
+      "pred_endpoints": {
+        "x1": 1346.5075442630357,
+        "y1": 690.5260344065429,
+        "x2": 256.1966793697768,
+        "y2": 261.36129469501964
+      },
+      "gt_endpoints": {
+        "x1": 253.722243693657,
+        "y1": 260.1370707510058,
+        "x2": 1345.4577563063433,
+        "y2": 689.3029292489938
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222701.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 16,
+      "annotation_id": 16,
+      "gt_length_px": 1038.09,
+      "pred_length_px": 1044.42,
+      "signed_length_err_px": 6.33,
+      "symmetric_endpoint_err_px": 40.216,
+      "endpoint1_signed_err_px": -43.374,
+      "endpoint2_signed_err_px": -37.058,
+      "angle_err_deg": 0.2952,
+      "perp_offset_px": 4.006,
+      "pred_endpoints": {
+        "x1": 1299.6620149368628,
+        "y1": 245.8627003980649,
+        "x2": 287.19980146938724,
+        "y2": 502.23483378162257
+      },
+      "gt_endpoints": {
+        "x1": 1258.0,
+        "y1": 258.0000000000003,
+        "x2": 252.99999999999994,
+        "y2": 517.9999999999998
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_58932_212240.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 17,
+      "annotation_id": 271,
+      "gt_length_px": 1118.81,
+      "pred_length_px": 1125.61,
+      "signed_length_err_px": 6.795,
+      "symmetric_endpoint_err_px": 3.398,
+      "endpoint1_signed_err_px": -2.334,
+      "endpoint2_signed_err_px": 4.461,
+      "angle_err_deg": 0.0003,
+      "perp_offset_px": 0.366,
+      "pred_endpoints": {
+        "x1": 260.6903399245536,
+        "y1": 259.86302539197686,
+        "x2": 1014.7382489426338,
+        "y2": 1095.5655634752106
+      },
+      "gt_endpoints": {
+        "x1": 1011.4801413760897,
+        "y1": 1092.496721465885,
+        "x2": 261.9798586239103,
+        "y2": 261.84327853411503
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001108.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 18,
+      "annotation_id": 18,
+      "gt_length_px": 1077.32,
+      "pred_length_px": 1095.61,
+      "signed_length_err_px": 18.29,
+      "symmetric_endpoint_err_px": 14.183,
+      "endpoint1_signed_err_px": 5.039,
+      "endpoint2_signed_err_px": 23.328,
+      "angle_err_deg": 0.0698,
+      "perp_offset_px": 3.081,
+      "pred_endpoints": {
+        "x1": 935.5501422386792,
+        "y1": 257.0614261940446,
+        "x2": 239.8345013160083,
+        "y2": 1103.430883376268
+      },
+      "gt_endpoints": {
+        "x1": 256.532654524018,
+        "y1": 1086.9630919544002,
+        "x2": 941.6473454759823,
+        "y2": 255.55690804559976
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_67061_233401.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 19,
+      "annotation_id": 19,
+      "gt_length_px": 1099.88,
+      "pred_length_px": 1091.2,
+      "signed_length_err_px": -8.676,
+      "symmetric_endpoint_err_px": 18.614,
+      "endpoint1_signed_err_px": 22.952,
+      "endpoint2_signed_err_px": 14.276,
+      "angle_err_deg": 0.0162,
+      "perp_offset_px": 2.461,
+      "pred_endpoints": {
+        "x1": 900.993814992289,
+        "y1": 272.4815743223778,
+        "x2": 246.821614695211,
+        "y2": 1145.8569266541847
+      },
+      "gt_endpoints": {
+        "x1": 257.22880617552534,
+        "y1": 1135.8165631788843,
+        "x2": 916.8511938244746,
+        "y2": 255.68343682111578
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_232129.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 20,
+      "annotation_id": 281,
+      "gt_length_px": 1074.3,
+      "pred_length_px": 1071.43,
+      "signed_length_err_px": -2.869,
+      "symmetric_endpoint_err_px": 53.025,
+      "endpoint1_signed_err_px": -54.462,
+      "endpoint2_signed_err_px": -51.588,
+      "angle_err_deg": 0.1782,
+      "perp_offset_px": 2.862,
+      "pred_endpoints": {
+        "x1": 1252.4969854888368,
+        "y1": 495.19615479107836,
+        "x2": 209.8542108002257,
+        "y2": 248.4984863222029
+      },
+      "gt_endpoints": {
+        "x1": 1304.4003803733692,
+        "y1": 512.3040152549447,
+        "x2": 259.7396196266309,
+        "y2": 261.69598474505534
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222840.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 21,
+      "annotation_id": 21,
+      "gt_length_px": 1060.68,
+      "pred_length_px": 1040.94,
+      "signed_length_err_px": -19.744,
+      "symmetric_endpoint_err_px": 19.923,
+      "endpoint1_signed_err_px": -29.796,
+      "endpoint2_signed_err_px": -10.051,
+      "angle_err_deg": 0.0342,
+      "perp_offset_px": 0.689,
+      "pred_endpoints": {
+        "x1": 1280.8937414334969,
+        "y1": 296.0285311712845,
+        "x2": 240.35625856650302,
+        "y2": 267.2214688287155
+      },
+      "gt_endpoints": {
+        "x1": 250.4319728407629,
+        "y1": 266.5069876190533,
+        "x2": 1310.688027159237,
+        "y2": 296.4930123809467
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222950.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 22,
+      "annotation_id": 22,
+      "gt_length_px": 1039.31,
+      "pred_length_px": 1060.39,
+      "signed_length_err_px": 21.079,
+      "symmetric_endpoint_err_px": 10.538,
+      "endpoint1_signed_err_px": -12.263,
+      "endpoint2_signed_err_px": 8.812,
+      "angle_err_deg": 0.1498,
+      "perp_offset_px": 4.475,
+      "pred_endpoints": {
+        "x1": 1298.5102671043521,
+        "y1": 253.18060573099405,
+        "x2": 241.87193504408538,
+        "y2": 342.28436008931845
+      },
+      "gt_endpoints": {
+        "x1": 251.15880085738922,
+        "y1": 347.3598559671476,
+        "x2": 1286.561199142611,
+        "y2": 257.3201440328522
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_64283_215821.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 23,
+      "annotation_id": 276,
+      "gt_length_px": 1073.0,
+      "pred_length_px": 1071.44,
+      "signed_length_err_px": -1.564,
+      "symmetric_endpoint_err_px": 46.108,
+      "endpoint1_signed_err_px": -45.325,
+      "endpoint2_signed_err_px": -46.892,
+      "angle_err_deg": 0.107,
+      "perp_offset_px": 2.775,
+      "pred_endpoints": {
+        "x1": 248.9024083420991,
+        "y1": 213.0710517299376,
+        "x2": 495.9865076735259,
+        "y2": 1255.627312527875
+      },
+      "gt_endpoints": {
+        "x1": 510.5570708223171,
+        "y1": 1300.357330849552,
+        "x2": 261.16292917768294,
+        "y2": 256.7426691504478
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234402.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 24,
+      "annotation_id": 24,
+      "gt_length_px": 1077.25,
+      "pred_length_px": 248.95,
+      "signed_length_err_px": -828.295,
+      "symmetric_endpoint_err_px": 414.16,
+      "endpoint1_signed_err_px": 509.57,
+      "endpoint2_signed_err_px": -318.75,
+      "angle_err_deg": 0.8184,
+      "perp_offset_px": 0.177,
+      "pred_endpoints": {
+        "x1": 415.93305463336213,
+        "y1": 741.560155443269,
+        "x2": 349.60539751507537,
+        "y2": 981.516748853606
+      },
+      "gt_endpoints": {
+        "x1": 258.42660216046056,
+        "y1": 1286.9542090975392,
+        "x2": 560.2333978395393,
+        "y2": 252.84579090246098
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_38775_003032.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 25,
+      "annotation_id": 25,
+      "gt_length_px": 1419.66,
+      "pred_length_px": 1410.23,
+      "signed_length_err_px": -9.435,
+      "symmetric_endpoint_err_px": 8.215,
+      "endpoint1_signed_err_px": -3.496,
+      "endpoint2_signed_err_px": -12.934,
+      "angle_err_deg": 0.1275,
+      "perp_offset_px": 0.096,
+      "pred_endpoints": {
+        "x1": 323.94290932977583,
+        "y1": 247.2121536452837,
+        "x2": 257.3287581506929,
+        "y2": 1655.8630416672163
+      },
+      "gt_endpoints": {
+        "x1": 258.21751443595696,
+        "y1": 1668.8504762773428,
+        "x2": 322.1224855640432,
+        "y2": 250.62952372265738
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_67066_001403.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 26,
+      "annotation_id": 272,
+      "gt_length_px": 1114.41,
+      "pred_length_px": 1118.12,
+      "signed_length_err_px": 3.71,
+      "symmetric_endpoint_err_px": 6.314,
+      "endpoint1_signed_err_px": 8.168,
+      "endpoint2_signed_err_px": 4.46,
+      "angle_err_deg": 0.0846,
+      "perp_offset_px": 1.278,
+      "pred_endpoints": {
+        "x1": 1120.5910656855858,
+        "y1": 986.7054896832356,
+        "x2": 265.0089099003516,
+        "y2": 266.86482281676444
+      },
+      "gt_endpoints": {
+        "x1": 1112.9919470386449,
+        "y1": 983.0450447222581,
+        "x2": 261.30805296135514,
+        "y2": 264.33495527774204
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001217.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 27,
+      "annotation_id": 27,
+      "gt_length_px": 1072.15,
+      "pred_length_px": 1077.85,
+      "signed_length_err_px": 5.702,
+      "symmetric_endpoint_err_px": 15.358,
+      "endpoint1_signed_err_px": -18.207,
+      "endpoint2_signed_err_px": -12.508,
+      "angle_err_deg": 0.1223,
+      "perp_offset_px": 2.228,
+      "pred_endpoints": {
+        "x1": 252.51590693499364,
+        "y1": 233.64078968635795,
+        "x2": 353.8057483384439,
+        "y2": 1306.7228577745796
+      },
+      "gt_endpoints": {
+        "x1": 257.5519322963739,
+        "y1": 251.46102825653702,
+        "x2": 356.02806770362605,
+        "y2": 1319.078971743463
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234036.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 28,
+      "annotation_id": 28,
+      "gt_length_px": 1044.36,
+      "pred_length_px": 1022.98,
+      "signed_length_err_px": -21.377,
+      "symmetric_endpoint_err_px": 10.691,
+      "endpoint1_signed_err_px": 3.802,
+      "endpoint2_signed_err_px": -17.579,
+      "angle_err_deg": 0.171,
+      "perp_offset_px": 0.83,
+      "pred_endpoints": {
+        "x1": 269.2209286013887,
+        "y1": 265.2871936633169,
+        "x2": 984.9522891720487,
+        "y2": 996.1931530163706
+      },
+      "gt_endpoints": {
+        "x1": 264.87444607877836,
+        "y1": 264.2323126412066,
+        "x2": 997.7855539212214,
+        "y2": 1008.2276873587934
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53548_231357.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 29,
+      "annotation_id": 29,
+      "gt_length_px": 1004.11,
+      "pred_length_px": 1002.19,
+      "signed_length_err_px": -1.923,
+      "symmetric_endpoint_err_px": 8.059,
+      "endpoint1_signed_err_px": -7.09,
+      "endpoint2_signed_err_px": -9.029,
+      "angle_err_deg": 0.3257,
+      "perp_offset_px": 5.339,
+      "pred_endpoints": {
+        "x1": 254.54315325748618,
+        "y1": 244.12165891189375,
+        "x2": 373.2807603167326,
+        "y2": 1239.2494348381063
+      },
+      "gt_endpoints": {
+        "x1": 257.89440947478516,
+        "y1": 250.8473490018809,
+        "x2": 382.5255905252149,
+        "y2": 1247.192650998119
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234050.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 30,
+      "annotation_id": 30,
+      "gt_length_px": 1027.55,
+      "pred_length_px": 1036.31,
+      "signed_length_err_px": 8.759,
+      "symmetric_endpoint_err_px": 21.322,
+      "endpoint1_signed_err_px": -25.7,
+      "endpoint2_signed_err_px": -16.944,
+      "angle_err_deg": 0.1252,
+      "perp_offset_px": 1.185,
+      "pred_endpoints": {
+        "x1": 241.13779034264974,
+        "y1": 236.96660764353646,
+        "x2": 908.5764430557878,
+        "y2": 1029.722479270526
+      },
+      "gt_endpoints": {
+        "x1": 257.7730165175786,
+        "y1": 256.556476518953,
+        "x2": 921.286983482421,
+        "y2": 1041.1635234810474
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53228_223443.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 32,
+      "annotation_id": 32,
+      "gt_length_px": 1375.1,
+      "pred_length_px": 1388.09,
+      "signed_length_err_px": 12.985,
+      "symmetric_endpoint_err_px": 6.493,
+      "endpoint1_signed_err_px": -2.927,
+      "endpoint2_signed_err_px": 10.058,
+      "angle_err_deg": 0.0279,
+      "perp_offset_px": 1.721,
+      "pred_endpoints": {
+        "x1": 1427.0998208047263,
+        "y1": 253.00671415020662,
+        "x2": 244.22220067964872,
+        "y2": 979.3548581154184
+      },
+      "gt_endpoints": {
+        "x1": 253.86942537402786,
+        "y1": 975.8420730489793,
+        "x2": 1425.330574625972,
+        "y2": 255.71792695102067
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_37154_003602.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 33,
+      "annotation_id": 33,
+      "gt_length_px": 1360.89,
+      "pred_length_px": 1381.74,
+      "signed_length_err_px": 20.847,
+      "symmetric_endpoint_err_px": 14.469,
+      "endpoint1_signed_err_px": 4.052,
+      "endpoint2_signed_err_px": 24.886,
+      "angle_err_deg": 0.2474,
+      "perp_offset_px": 4.239,
+      "pred_endpoints": {
+        "x1": 258.1683058807804,
+        "y1": 256.43034889599676,
+        "x2": 554.9372239043759,
+        "y2": 1605.9214577446282
+      },
+      "gt_endpoints": {
+        "x1": 556.53392094676,
+        "y1": 1580.0578947213116,
+        "x2": 258.50607905324,
+        "y2": 252.2021052786887
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_67066_001524.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 34,
+      "annotation_id": 34,
+      "gt_length_px": 1449.28,
+      "pred_length_px": 1458.16,
+      "signed_length_err_px": 8.881,
+      "symmetric_endpoint_err_px": 4.435,
+      "endpoint1_signed_err_px": 8.689,
+      "endpoint2_signed_err_px": -0.182,
+      "angle_err_deg": 0.2127,
+      "perp_offset_px": 1.942,
+      "pred_endpoints": {
+        "x1": 1647.05379798776,
+        "y1": 682.6101431196744,
+        "x2": 251.92007896536506,
+        "y2": 258.5417123490756
+      },
+      "gt_endpoints": {
+        "x1": 252.31856859202117,
+        "y1": 257.8648666596392,
+        "x2": 1637.3814314079787,
+        "y2": 684.495133340361
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_66044_000741.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 35,
+      "annotation_id": 35,
+      "gt_length_px": 1395.65,
+      "pred_length_px": 1396.39,
+      "signed_length_err_px": 0.739,
+      "symmetric_endpoint_err_px": 10.182,
+      "endpoint1_signed_err_px": -9.813,
+      "endpoint2_signed_err_px": -10.552,
+      "angle_err_deg": 0.0004,
+      "perp_offset_px": 1.179,
+      "pred_endpoints": {
+        "x1": 1438.2039820714951,
+        "y1": 975.3846975352999,
+        "x2": 245.54906968631735,
+        "y2": 249.1090768787626
+      },
+      "gt_endpoints": {
+        "x1": 253.95050822368648,
+        "y1": 255.6003942176813,
+        "x2": 1445.9694917763136,
+        "y2": 981.4996057823187
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_45152_235624.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 36,
+      "annotation_id": 36,
+      "gt_length_px": 1105.68,
+      "pred_length_px": 1099.87,
+      "signed_length_err_px": -5.812,
+      "symmetric_endpoint_err_px": 3.219,
+      "endpoint1_signed_err_px": 6.125,
+      "endpoint2_signed_err_px": 0.313,
+      "angle_err_deg": 0.0325,
+      "perp_offset_px": 5.102,
+      "pred_endpoints": {
+        "x1": 263.2195277630837,
+        "y1": 256.46921604022174,
+        "x2": 834.6627964556662,
+        "y2": 1196.2367165769658
+      },
+      "gt_endpoints": {
+        "x1": 255.94643062379265,
+        "y1": 253.72066180937856,
+        "x2": 829.8735693762071,
+        "y2": 1198.7793381906215
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39058_001814.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 37,
+      "annotation_id": 37,
+      "gt_length_px": 1163.28,
+      "pred_length_px": 1168.0,
+      "signed_length_err_px": 4.724,
+      "symmetric_endpoint_err_px": 15.03,
+      "endpoint1_signed_err_px": 12.668,
+      "endpoint2_signed_err_px": 17.392,
+      "angle_err_deg": 0.0216,
+      "perp_offset_px": 1.467,
+      "pred_endpoints": {
+        "x1": 733.4470313204765,
+        "y1": 265.2286718475567,
+        "x2": 251.28026360139842,
+        "y2": 1329.0650293243184
+      },
+      "gt_endpoints": {
+        "x1": 259.9917913727611,
+        "y1": 1313.9176611065175,
+        "x2": 739.8082086272391,
+        "y2": 254.20233889348242
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67439_235957.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 38,
+      "annotation_id": 38,
+      "gt_length_px": 1068.0,
+      "pred_length_px": 1067.71,
+      "signed_length_err_px": -0.291,
+      "symmetric_endpoint_err_px": 3.094,
+      "endpoint1_signed_err_px": 3.243,
+      "endpoint2_signed_err_px": 2.945,
+      "angle_err_deg": 0.2125,
+      "perp_offset_px": 0.87,
+      "pred_endpoints": {
+        "x1": 258.3624472756769,
+        "y1": 256.3931997010929,
+        "x2": 835.2990517477606,
+        "y2": 1154.806751470782
+      },
+      "gt_endpoints": {
+        "x1": 255.6683552805291,
+        "y1": 254.27426800182513,
+        "x2": 836.0916447194711,
+        "y2": 1150.785731998175
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_39058_001853.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 39,
+      "annotation_id": 39,
+      "gt_length_px": 1332.18,
+      "pred_length_px": 1314.09,
+      "signed_length_err_px": -18.085,
+      "symmetric_endpoint_err_px": 12.956,
+      "endpoint1_signed_err_px": 22.005,
+      "endpoint2_signed_err_px": 3.907,
+      "angle_err_deg": 0.2526,
+      "perp_offset_px": 1.968,
+      "pred_endpoints": {
+        "x1": 308.2152288215279,
+        "y1": 272.7808225459977,
+        "x2": 258.76346990894086,
+        "y2": 1585.9425661258774
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 1582.0,
+        "x2": 314.0,
+        "y2": 251.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_67625_225529.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 40,
+      "annotation_id": 40,
+      "gt_length_px": 1124.1,
+      "pred_length_px": 1136.53,
+      "signed_length_err_px": 12.427,
+      "symmetric_endpoint_err_px": 10.954,
+      "endpoint1_signed_err_px": 4.758,
+      "endpoint2_signed_err_px": 17.15,
+      "angle_err_deg": 0.4498,
+      "perp_offset_px": 0.107,
+      "pred_endpoints": {
+        "x1": 255.98489390064566,
+        "y1": 262.449652196246,
+        "x2": 1027.9262389118544,
+        "y2": 1096.6022276865665
+      },
+      "gt_endpoints": {
+        "x1": 256.0,
+        "y1": 256.0,
+        "x2": 1013.0,
+        "y2": 1087.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_49445_213956.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 41,
+      "annotation_id": 41,
+      "gt_length_px": 1101.04,
+      "pred_length_px": 1088.95,
+      "signed_length_err_px": -12.086,
+      "symmetric_endpoint_err_px": 6.072,
+      "endpoint1_signed_err_px": 12.072,
+      "endpoint2_signed_err_px": -0.073,
+      "angle_err_deg": 0.594,
+      "perp_offset_px": 0.057,
+      "pred_endpoints": {
+        "x1": 267.0575796288854,
+        "y1": 262.18697470816403,
+        "x2": 299.4776376562709,
+        "y2": 1350.6581180652734
+      },
+      "gt_endpoints": {
+        "x1": 305.0633544250245,
+        "y1": 1350.5064983984046,
+        "x2": 260.8766455749751,
+        "y2": 250.3535016015951
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_68131_235241.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 42,
+      "annotation_id": 42,
+      "gt_length_px": 1167.42,
+      "pred_length_px": 1158.4,
+      "signed_length_err_px": -9.016,
+      "symmetric_endpoint_err_px": 4.508,
+      "endpoint1_signed_err_px": 2.208,
+      "endpoint2_signed_err_px": -6.809,
+      "angle_err_deg": 0.0891,
+      "perp_offset_px": 3.949,
+      "pred_endpoints": {
+        "x1": 956.9019249145624,
+        "y1": 257.6031435821554,
+        "x2": 259.4484168823126,
+        "y2": 1182.5136777069072
+      },
+      "gt_endpoints": {
+        "x1": 259.2343508327745,
+        "y1": 1190.870361689971,
+        "x2": 960.6656491672252,
+        "y2": 257.669638310029
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65617_232103.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 43,
+      "annotation_id": 282,
+      "gt_length_px": 1386.75,
+      "pred_length_px": 1405.31,
+      "signed_length_err_px": 18.558,
+      "symmetric_endpoint_err_px": 29.728,
+      "endpoint1_signed_err_px": -39.005,
+      "endpoint2_signed_err_px": -20.452,
+      "angle_err_deg": 0.1597,
+      "perp_offset_px": 3.556,
+      "pred_endpoints": {
+        "x1": 1511.3166357613622,
+        "y1": 241.90081668447095,
+        "x2": 277.48341306676264,
+        "y2": 914.6168835108415
+      },
+      "gt_endpoints": {
+        "x1": 1477.892197274353,
+        "y1": 262.06831879311176,
+        "x2": 262.20780272564684,
+        "y2": 929.2916812068881
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_32265_234318.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 44,
+      "annotation_id": 44,
+      "gt_length_px": 1054.93,
+      "pred_length_px": 1026.01,
+      "signed_length_err_px": -28.915,
+      "symmetric_endpoint_err_px": 17.071,
+      "endpoint1_signed_err_px": -2.604,
+      "endpoint2_signed_err_px": -31.538,
+      "angle_err_deg": 0.3536,
+      "perp_offset_px": 1.997,
+      "pred_endpoints": {
+        "x1": 251.30016726515066,
+        "y1": 252.84091602880284,
+        "x2": 921.9030798051618,
+        "y2": 1029.370509752447
+      },
+      "gt_endpoints": {
+        "x1": 253.87898056617104,
+        "y1": 254.06341234309076,
+        "x2": 938.4410194338286,
+        "y2": 1056.7165876569095
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_64948_220833.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 45,
+      "annotation_id": 45,
+      "gt_length_px": 1110.1,
+      "pred_length_px": 1108.66,
+      "signed_length_err_px": -1.436,
+      "symmetric_endpoint_err_px": 13.972,
+      "endpoint1_signed_err_px": 14.689,
+      "endpoint2_signed_err_px": 13.254,
+      "angle_err_deg": 0.001,
+      "perp_offset_px": 1.433,
+      "pred_endpoints": {
+        "x1": 572.7026537723689,
+        "y1": 266.84065538850473,
+        "x2": 255.20976077841237,
+        "y2": 1329.0716981271203
+      },
+      "gt_endpoints": {
+        "x1": 260.38736226343815,
+        "y1": 1316.7861116697927,
+        "x2": 578.2726377365617,
+        "y2": 253.17388833020732
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67439_000048.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 46,
+      "annotation_id": 280,
+      "gt_length_px": 1076.47,
+      "pred_length_px": 1072.4,
+      "signed_length_err_px": -4.071,
+      "symmetric_endpoint_err_px": 23.639,
+      "endpoint1_signed_err_px": 25.708,
+      "endpoint2_signed_err_px": 21.569,
+      "angle_err_deg": 0.6418,
+      "perp_offset_px": 8.303,
+      "pred_endpoints": {
+        "x1": 536.8678169972039,
+        "y1": 305.352711772376,
+        "x2": 243.40251142633025,
+        "y2": 1336.8166226304293
+      },
+      "gt_endpoints": {
+        "x1": 545.841971698236,
+        "y1": 281.1529935872427,
+        "x2": 262.87802830176406,
+        "y2": 1319.7670064127574
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67236_005159.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 47,
+      "annotation_id": 47,
+      "gt_length_px": 1041.17,
+      "pred_length_px": 1027.61,
+      "signed_length_err_px": -13.559,
+      "symmetric_endpoint_err_px": 6.794,
+      "endpoint1_signed_err_px": 6.128,
+      "endpoint2_signed_err_px": -7.46,
+      "angle_err_deg": 0.431,
+      "perp_offset_px": 2.47,
+      "pred_endpoints": {
+        "x1": 1240.9226437381708,
+        "y1": 261.3809390941623,
+        "x2": 258.2078494258918,
+        "y2": 561.8074764331815
+      },
+      "gt_endpoints": {
+        "x1": 252.988378512822,
+        "y1": 570.0862340890264,
+        "x2": 1246.3516214871781,
+        "y2": 258.21376591097373
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_66039_233314.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 50,
+      "annotation_id": 50,
+      "gt_length_px": 1136.45,
+      "pred_length_px": 1136.11,
+      "signed_length_err_px": -0.337,
+      "symmetric_endpoint_err_px": 11.554,
+      "endpoint1_signed_err_px": 11.385,
+      "endpoint2_signed_err_px": 11.722,
+      "angle_err_deg": 0.043,
+      "perp_offset_px": 1.607,
+      "pred_endpoints": {
+        "x1": 1079.157774381247,
+        "y1": 1057.2132119454059,
+        "x2": 266.6450820640655,
+        "y2": 263.12480074990674
+      },
+      "gt_endpoints": {
+        "x1": 256.8354963911949,
+        "y1": 256.39297443596666,
+        "x2": 1070.1845036088055,
+        "y2": 1050.1070255640334
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_31574_001149.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 51,
+      "annotation_id": 51,
+      "gt_length_px": 1134.89,
+      "pred_length_px": 1132.34,
+      "signed_length_err_px": -2.554,
+      "symmetric_endpoint_err_px": 2.65,
+      "endpoint1_signed_err_px": -3.928,
+      "endpoint2_signed_err_px": -1.373,
+      "angle_err_deg": 0.0048,
+      "perp_offset_px": 0.377,
+      "pred_endpoints": {
+        "x1": 1258.6125389083188,
+        "y1": 773.4775036684415,
+        "x2": 251.62854995886863,
+        "y2": 255.628819573746
+      },
+      "gt_endpoints": {
+        "x1": 253.00040373384945,
+        "y1": 255.9639848584958,
+        "x2": 1262.2995962661507,
+        "y2": 774.8960151415039
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43926_223330.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 52,
+      "annotation_id": 52,
+      "gt_length_px": 1263.67,
+      "pred_length_px": 1286.4,
+      "signed_length_err_px": 22.733,
+      "symmetric_endpoint_err_px": 15.149,
+      "endpoint1_signed_err_px": 3.783,
+      "endpoint2_signed_err_px": 26.516,
+      "angle_err_deg": 0.0203,
+      "perp_offset_px": 2.025,
+      "pred_endpoints": {
+        "x1": 369.3930231417095,
+        "y1": 255.0897570040911,
+        "x2": 252.34812676063427,
+        "y2": 1536.157313308409
+      },
+      "gt_endpoints": {
+        "x1": 371.5248363092647,
+        "y1": 251.48538100047813,
+        "x2": 256.99516369073575,
+        "y2": 1509.9546189995215
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_43719_225538.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 53,
+      "annotation_id": 53,
+      "gt_length_px": 1147.04,
+      "pred_length_px": 1136.01,
+      "signed_length_err_px": -11.027,
+      "symmetric_endpoint_err_px": 32.005,
+      "endpoint1_signed_err_px": -37.521,
+      "endpoint2_signed_err_px": -26.49,
+      "angle_err_deg": 0.1424,
+      "perp_offset_px": 0.219,
+      "pred_endpoints": {
+        "x1": 1290.3949224575722,
+        "y1": 656.9776578904368,
+        "x2": 230.0655267611777,
+        "y2": 249.26697101581323
+      },
+      "gt_endpoints": {
+        "x1": 254.3893492438284,
+        "y1": 259.82713786053574,
+        "x2": 1326.0306507561718,
+        "y2": 668.8328621394642
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222714.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 54,
+      "annotation_id": 54,
+      "gt_length_px": 1333.1,
+      "pred_length_px": 1329.11,
+      "signed_length_err_px": -3.99,
+      "symmetric_endpoint_err_px": 9.25,
+      "endpoint1_signed_err_px": 11.249,
+      "endpoint2_signed_err_px": 7.251,
+      "angle_err_deg": 0.1844,
+      "perp_offset_px": 1.926,
+      "pred_endpoints": {
+        "x1": 1146.3084841552834,
+        "y1": 264.76488138343194,
+        "x2": 248.8134640869041,
+        "y2": 1245.0887563118806
+      },
+      "gt_endpoints": {
+        "x1": 256.6995608773583,
+        "y1": 1242.459393706546,
+        "x2": 1153.720439122642,
+        "y2": 256.3006062934541
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_61565_004145.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 55,
+      "annotation_id": 279,
+      "gt_length_px": 1087.08,
+      "pred_length_px": 1086.61,
+      "signed_length_err_px": -0.468,
+      "symmetric_endpoint_err_px": 4.14,
+      "endpoint1_signed_err_px": -3.888,
+      "endpoint2_signed_err_px": -4.392,
+      "angle_err_deg": 0.4694,
+      "perp_offset_px": 7.24,
+      "pred_endpoints": {
+        "x1": 1324.0559393988303,
+        "y1": 262.42822392521225,
+        "x2": 261.98666314023217,
+        "y2": 492.06823603572525
+      },
+      "gt_endpoints": {
+        "x1": 1320.8745408725463,
+        "y1": 266.00244453958214,
+        "x2": 260.2654591274537,
+        "y2": 504.4375554604179
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65618_230935.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 56,
+      "annotation_id": 274,
+      "gt_length_px": 1024.14,
+      "pred_length_px": 1020.74,
+      "signed_length_err_px": -3.403,
+      "symmetric_endpoint_err_px": 36.38,
+      "endpoint1_signed_err_px": -34.668,
+      "endpoint2_signed_err_px": -38.092,
+      "angle_err_deg": 0.3702,
+      "perp_offset_px": 3.08,
+      "pred_endpoints": {
+        "x1": 254.61375636679296,
+        "y1": 226.55033740063976,
+        "x2": 472.5800302543008,
+        "y2": 1223.7442182634227
+      },
+      "gt_endpoints": {
+        "x1": 487.1766458629575,
+        "y1": 1259.501973918355,
+        "x2": 262.02335413704253,
+        "y2": 260.4180260816452
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234255.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 57,
+      "annotation_id": 57,
+      "gt_length_px": 1071.28,
+      "pred_length_px": 1060.85,
+      "signed_length_err_px": -10.434,
+      "symmetric_endpoint_err_px": 35.921,
+      "endpoint1_signed_err_px": -30.7,
+      "endpoint2_signed_err_px": -41.143,
+      "angle_err_deg": 0.2259,
+      "perp_offset_px": 2.406,
+      "pred_endpoints": {
+        "x1": 1254.619108096317,
+        "y1": 241.58075988449932,
+        "x2": 291.187288388058,
+        "y2": 685.6450701936257
+      },
+      "gt_endpoints": {
+        "x1": 253.88591126271984,
+        "y1": 703.0064137241186,
+        "x2": 1228.5540887372806,
+        "y2": 258.41358627588147
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_48294_224625.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 58,
+      "annotation_id": 58,
+      "gt_length_px": 1100.11,
+      "pred_length_px": 1096.34,
+      "signed_length_err_px": -3.765,
+      "symmetric_endpoint_err_px": 19.272,
+      "endpoint1_signed_err_px": -17.389,
+      "endpoint2_signed_err_px": -21.155,
+      "angle_err_deg": 0.0635,
+      "perp_offset_px": 1.844,
+      "pred_endpoints": {
+        "x1": 1274.3694670536797,
+        "y1": 250.03811835979369,
+        "x2": 272.78202220413283,
+        "y2": 695.9012737300501
+      },
+      "gt_endpoints": {
+        "x1": 254.4643156956297,
+        "y1": 706.7636184663752,
+        "x2": 1258.9956843043703,
+        "y2": 258.25638153362485
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65618_231057.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 59,
+      "annotation_id": 59,
+      "gt_length_px": 1116.76,
+      "pred_length_px": 1099.81,
+      "signed_length_err_px": -16.949,
+      "symmetric_endpoint_err_px": 8.475,
+      "endpoint1_signed_err_px": -11.013,
+      "endpoint2_signed_err_px": 5.937,
+      "angle_err_deg": 0.0664,
+      "perp_offset_px": 0.579,
+      "pred_endpoints": {
+        "x1": 1207.6551941105217,
+        "y1": 817.271066464225,
+        "x2": 259.89363401447827,
+        "y2": 259.30034466858746
+      },
+      "gt_endpoints": {
+        "x1": 254.1582784715527,
+        "y1": 257.342770270158,
+        "x2": 1217.1817215284475,
+        "y2": 822.7972297298423
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_62384_224156.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 60,
+      "annotation_id": 60,
+      "gt_length_px": 1222.99,
+      "pred_length_px": 1247.46,
+      "signed_length_err_px": 24.475,
+      "symmetric_endpoint_err_px": 12.233,
+      "endpoint1_signed_err_px": -3.63,
+      "endpoint2_signed_err_px": 20.837,
+      "angle_err_deg": 0.2111,
+      "perp_offset_px": 4.065,
+      "pred_endpoints": {
+        "x1": 755.8638475938412,
+        "y1": 249.96520719803038,
+        "x2": 243.70371832412746,
+        "y2": 1387.4401883097821
+      },
+      "gt_endpoints": {
+        "x1": 756.0000000000001,
+        "y1": 254.0,
+        "x2": 257.9999999999999,
+        "y2": 1371.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_50193_205849.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 61,
+      "annotation_id": 61,
+      "gt_length_px": 1097.93,
+      "pred_length_px": 1086.96,
+      "signed_length_err_px": -10.975,
+      "symmetric_endpoint_err_px": 6.983,
+      "endpoint1_signed_err_px": 12.47,
+      "endpoint2_signed_err_px": 1.495,
+      "angle_err_deg": 0.03,
+      "perp_offset_px": 0.9,
+      "pred_endpoints": {
+        "x1": 505.04650947008093,
+        "y1": 264.63059997528273,
+        "x2": 258.87072685804407,
+        "y2": 1323.3418121340924
+      },
+      "gt_endpoints": {
+        "x1": 259.80973451604143,
+        "y1": 1322.0252522617802,
+        "x2": 509.0302654839587,
+        "y2": 252.75474773821986
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_5730_222235.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 62,
+      "annotation_id": 62,
+      "gt_length_px": 1093.58,
+      "pred_length_px": 245.08,
+      "signed_length_err_px": -848.498,
+      "symmetric_endpoint_err_px": 424.425,
+      "endpoint1_signed_err_px": 32.754,
+      "endpoint2_signed_err_px": -816.097,
+      "angle_err_deg": 3.0738,
+      "perp_offset_px": 3.084,
+      "pred_endpoints": {
+        "x1": 538.3268671212625,
+        "y1": 283.52059727160884,
+        "x2": 485.67313287873753,
+        "y2": 522.8794271424537
+      },
+      "gt_endpoints": {
+        "x1": 550.429338740488,
+        "y1": 252.8855299478056,
+        "x2": 258.5506612595116,
+        "y2": 1306.7944700521944
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_38043_005537.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 63,
+      "annotation_id": 63,
+      "gt_length_px": 1160.34,
+      "pred_length_px": 1158.4,
+      "signed_length_err_px": -1.936,
+      "symmetric_endpoint_err_px": 12.528,
+      "endpoint1_signed_err_px": -11.56,
+      "endpoint2_signed_err_px": -13.496,
+      "angle_err_deg": 0.0168,
+      "perp_offset_px": 0.334,
+      "pred_endpoints": {
+        "x1": 253.91032666022272,
+        "y1": 248.54711475560612,
+        "x2": 952.0752690429023,
+        "y2": 1172.9205366115814
+      },
+      "gt_endpoints": {
+        "x1": 260.4783677982788,
+        "y1": 258.07360001290715,
+        "x2": 960.0816322017216,
+        "y2": 1183.7863999870924
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_65619_222341.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 64,
+      "annotation_id": 64,
+      "gt_length_px": 1158.25,
+      "pred_length_px": 1136.84,
+      "signed_length_err_px": -21.408,
+      "symmetric_endpoint_err_px": 13.309,
+      "endpoint1_signed_err_px": -2.59,
+      "endpoint2_signed_err_px": -24.028,
+      "angle_err_deg": 0.4193,
+      "perp_offset_px": 1.371,
+      "pred_endpoints": {
+        "x1": 1411.4296577046716,
+        "y1": 263.3213568898678,
+        "x2": 274.9317924906409,
+        "y2": 291.2810601023197
+      },
+      "gt_endpoints": {
+        "x1": 250.8114483357282,
+        "y1": 286.16606373868063,
+        "x2": 1408.8885516642717,
+        "y2": 266.1539362613191
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_223003.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 65,
+      "annotation_id": 247,
+      "gt_length_px": 4551.38,
+      "pred_length_px": 2594.05,
+      "signed_length_err_px": -1957.335,
+      "symmetric_endpoint_err_px": 982.097,
+      "endpoint1_signed_err_px": 1960.766,
+      "endpoint2_signed_err_px": 3.428,
+      "angle_err_deg": 0.0844,
+      "perp_offset_px": 2.686,
+      "pred_endpoints": {
+        "x1": 1284.022846364906,
+        "y1": 1797.221139450796,
+        "x2": 255.9245572101695,
+        "y2": 4178.836149467617
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 4176.0,
+        "x2": 2068.0,
+        "y2": 4.547473508864641e-13
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Geo_20260520_Atwood/Streak_42934_222545.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 66,
+      "annotation_id": 66,
+      "gt_length_px": 1054.87,
+      "pred_length_px": 1059.85,
+      "signed_length_err_px": 4.976,
+      "symmetric_endpoint_err_px": 2.431,
+      "endpoint1_signed_err_px": -3.735,
+      "endpoint2_signed_err_px": 1.127,
+      "angle_err_deg": 0.8411,
+      "perp_offset_px": 6.735,
+      "pred_endpoints": {
+        "x1": 513.2029896316466,
+        "y1": 245.15474491036343,
+        "x2": 257.53986925507223,
+        "y2": 1273.7024328240116
+      },
+      "gt_endpoints": {
+        "x1": 256.8189666631365,
+        "y1": 1272.346493968593,
+        "x2": 526.2810333368639,
+        "y2": 252.4735060314071
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_65619_221943.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 67,
+      "annotation_id": 67,
+      "gt_length_px": 1039.99,
+      "pred_length_px": 1055.93,
+      "signed_length_err_px": 15.94,
+      "symmetric_endpoint_err_px": 17.566,
+      "endpoint1_signed_err_px": -25.534,
+      "endpoint2_signed_err_px": -9.597,
+      "angle_err_deg": 0.1536,
+      "perp_offset_px": 2.957,
+      "pred_endpoints": {
+        "x1": 1239.571909911974,
+        "y1": 246.79218220669372,
+        "x2": 260.22948168958845,
+        "y2": 641.604973555025
+      },
+      "gt_endpoints": {
+        "x1": 252.9838966304049,
+        "y1": 649.2688209936493,
+        "x2": 1216.4961033695947,
+        "y2": 257.83117900635057
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44314_225900.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 68,
+      "annotation_id": 68,
+      "gt_length_px": 1380.69,
+      "pred_length_px": 1368.54,
+      "signed_length_err_px": -12.152,
+      "symmetric_endpoint_err_px": 6.081,
+      "endpoint1_signed_err_px": 10.437,
+      "endpoint2_signed_err_px": -1.725,
+      "angle_err_deg": 0.2214,
+      "perp_offset_px": 0.621,
+      "pred_endpoints": {
+        "x1": 896.3653840517143,
+        "y1": 262.4884315039865,
+        "x2": 261.29916672953567,
+        "y2": 1474.7537559960135
+      },
+      "gt_endpoints": {
+        "x1": 257.60648592043424,
+        "y1": 1474.7522399514974,
+        "x2": 903.0335140795661,
+        "y2": 254.2077600485028
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_32265_234521.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 69,
+      "annotation_id": 69,
+      "gt_length_px": 1289.2,
+      "pred_length_px": 1292.08,
+      "signed_length_err_px": 2.882,
+      "symmetric_endpoint_err_px": 6.906,
+      "endpoint1_signed_err_px": 5.467,
+      "endpoint2_signed_err_px": 8.346,
+      "angle_err_deg": 0.138,
+      "perp_offset_px": 2.324,
+      "pred_endpoints": {
+        "x1": 904.8826825536662,
+        "y1": 257.74299122959746,
+        "x2": 252.10437799320874,
+        "y2": 1372.8024189266525
+      },
+      "gt_endpoints": {
+        "x1": 911.0,
+        "y1": 255.0,
+        "x2": 257.0,
+        "y2": 1366.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_54068_222736.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 70,
+      "annotation_id": 277,
+      "gt_length_px": 967.7,
+      "pred_length_px": 968.56,
+      "signed_length_err_px": 0.857,
+      "symmetric_endpoint_err_px": 75.771,
+      "endpoint1_signed_err_px": -76.197,
+      "endpoint2_signed_err_px": -75.346,
+      "angle_err_deg": 0.209,
+      "perp_offset_px": 2.288,
+      "pred_endpoints": {
+        "x1": 381.3353080950772,
+        "y1": 203.5682577709153,
+        "x2": 263.7846870221103,
+        "y2": 1164.9650674243971
+      },
+      "gt_endpoints": {
+        "x1": 375.83491764878113,
+        "y1": 279.6741627941879,
+        "x2": 254.8850823512189,
+        "y2": 1239.7858372058122
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_58463_230519.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 71,
+      "annotation_id": 71,
+      "gt_length_px": 1181.47,
+      "pred_length_px": 1173.54,
+      "signed_length_err_px": -7.928,
+      "symmetric_endpoint_err_px": 10.969,
+      "endpoint1_signed_err_px": -7.004,
+      "endpoint2_signed_err_px": -14.934,
+      "angle_err_deg": 0.1109,
+      "perp_offset_px": 0.534,
+      "pred_endpoints": {
+        "x1": 253.62350124775725,
+        "y1": 254.2564182282885,
+        "x2": 1016.2588229709927,
+        "y2": 1146.214162826399
+      },
+      "gt_endpoints": {
+        "x1": 259.4358802514113,
+        "y1": 258.50634113531265,
+        "x2": 1025.484119748589,
+        "y2": 1157.973658864687
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_65619_222421.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 72,
+      "annotation_id": 72,
+      "gt_length_px": 1099.45,
+      "pred_length_px": 1089.0,
+      "signed_length_err_px": -10.449,
+      "symmetric_endpoint_err_px": 20.173,
+      "endpoint1_signed_err_px": -14.946,
+      "endpoint2_signed_err_px": -25.4,
+      "angle_err_deg": 0.1843,
+      "perp_offset_px": 4.204,
+      "pred_endpoints": {
+        "x1": 1364.6996405184004,
+        "y1": 255.83410824342914,
+        "x2": 276.2945001065997,
+        "y2": 291.8582135339146
+      },
+      "gt_endpoints": {
+        "x1": 251.12720062934545,
+        "y1": 298.7322001954239,
+        "x2": 1349.852799370654,
+        "y2": 258.8277998045765
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67524_221235.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 73,
+      "annotation_id": 73,
+      "gt_length_px": 1107.59,
+      "pred_length_px": 1104.25,
+      "signed_length_err_px": -3.341,
+      "symmetric_endpoint_err_px": 12.002,
+      "endpoint1_signed_err_px": 10.323,
+      "endpoint2_signed_err_px": 13.68,
+      "angle_err_deg": 0.3023,
+      "perp_offset_px": 1.679,
+      "pred_endpoints": {
+        "x1": 1282.293921388613,
+        "y1": 699.9770471208116,
+        "x2": 266.94350536919944,
+        "y2": 265.89343627762594
+      },
+      "gt_endpoints": {
+        "x1": 254.88420313431942,
+        "y1": 259.3180377250018,
+        "x2": 1270.9957968656797,
+        "y2": 700.0819622749979
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67437_222436.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 74,
+      "annotation_id": 74,
+      "gt_length_px": 1029.24,
+      "pred_length_px": 1024.99,
+      "signed_length_err_px": -4.24,
+      "symmetric_endpoint_err_px": 2.159,
+      "endpoint1_signed_err_px": 0.287,
+      "endpoint2_signed_err_px": -4.031,
+      "angle_err_deg": 0.7049,
+      "perp_offset_px": 5.803,
+      "pred_endpoints": {
+        "x1": 513.2324411497088,
+        "y1": 250.13649998058207,
+        "x2": 259.5309255495099,
+        "y2": 1243.2375234569179
+      },
+      "gt_endpoints": {
+        "x1": 525.0,
+        "y1": 253.0,
+        "x2": 258.0,
+        "y2": 1247.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_57973_213747.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 75,
+      "annotation_id": 75,
+      "gt_length_px": 1267.25,
+      "pred_length_px": 1268.65,
+      "signed_length_err_px": 1.401,
+      "symmetric_endpoint_err_px": 31.862,
+      "endpoint1_signed_err_px": 31.164,
+      "endpoint2_signed_err_px": 32.56,
+      "angle_err_deg": 0.151,
+      "perp_offset_px": 2.858,
+      "pred_endpoints": {
+        "x1": 830.4590946815508,
+        "y1": 279.4547068421764,
+        "x2": 241.76624711532418,
+        "y2": 1403.249516790636
+      },
+      "gt_endpoints": {
+        "x1": 258.00000000000006,
+        "y1": 1375.0,
+        "x2": 849.0,
+        "y2": 254.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_48663_223158.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 76,
+      "annotation_id": 76,
+      "gt_length_px": 1403.74,
+      "pred_length_px": 1405.42,
+      "signed_length_err_px": 1.677,
+      "symmetric_endpoint_err_px": 28.176,
+      "endpoint1_signed_err_px": 27.337,
+      "endpoint2_signed_err_px": 29.014,
+      "angle_err_deg": 0.0223,
+      "perp_offset_px": 0.806,
+      "pred_endpoints": {
+        "x1": 1378.0782679482627,
+        "y1": 272.38574764173626,
+        "x2": 231.3803502157997,
+        "y2": 1084.9622748192012
+      },
+      "gt_endpoints": {
+        "x1": 255.3675096504379,
+        "y1": 1068.6309308260509,
+        "x2": 1401.012490349562,
+        "y2": 257.4690691739491
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_32265_234407.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 77,
+      "annotation_id": 77,
+      "gt_length_px": 1027.91,
+      "pred_length_px": 1013.36,
+      "signed_length_err_px": -14.548,
+      "symmetric_endpoint_err_px": 39.821,
+      "endpoint1_signed_err_px": -32.536,
+      "endpoint2_signed_err_px": -47.106,
+      "angle_err_deg": 0.3776,
+      "perp_offset_px": 3.202,
+      "pred_endpoints": {
+        "x1": 251.80807147642645,
+        "y1": 221.06898696715183,
+        "x2": 499.40506328919855,
+        "y2": 1203.717878267223
+      },
+      "gt_endpoints": {
+        "x1": 517.5477368343765,
+        "y1": 1247.679370987787,
+        "x2": 259.83226316562366,
+        "y2": 252.60062901221323
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_66036_000245.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 78,
+      "annotation_id": 275,
+      "gt_length_px": 1040.88,
+      "pred_length_px": 1055.75,
+      "signed_length_err_px": 14.872,
+      "symmetric_endpoint_err_px": 44.39,
+      "endpoint1_signed_err_px": -51.82,
+      "endpoint2_signed_err_px": -36.961,
+      "angle_err_deg": 0.2907,
+      "perp_offset_px": 2.72,
+      "pred_endpoints": {
+        "x1": 249.06775446736765,
+        "y1": 204.43592071279977,
+        "x2": 486.5482733646636,
+        "y2": 1233.1320724512627
+      },
+      "gt_endpoints": {
+        "x1": 500.2986857514936,
+        "y1": 1267.8621011522612,
+        "x2": 261.0213142485064,
+        "y2": 254.8578988477388
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_45159_234336.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 79,
+      "annotation_id": 267,
+      "gt_length_px": 1356.04,
+      "pred_length_px": 1363.37,
+      "signed_length_err_px": 7.331,
+      "symmetric_endpoint_err_px": 7.431,
+      "endpoint1_signed_err_px": -11.097,
+      "endpoint2_signed_err_px": -3.766,
+      "angle_err_deg": 0.0416,
+      "perp_offset_px": 3.196,
+      "pred_endpoints": {
+        "x1": 255.91465717729855,
+        "y1": 244.25871211839717,
+        "x2": 341.0084385258264,
+        "y2": 1604.9720007722278
+      },
+      "gt_endpoints": {
+        "x1": 344.92943205930465,
+        "y1": 1608.497180323355,
+        "x2": 259.31056794069536,
+        "y2": 255.16281967664509
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_62895_212703.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 80,
+      "annotation_id": 80,
+      "gt_length_px": 1446.93,
+      "pred_length_px": 1449.27,
+      "signed_length_err_px": 2.336,
+      "symmetric_endpoint_err_px": 13.708,
+      "endpoint1_signed_err_px": -14.874,
+      "endpoint2_signed_err_px": -12.542,
+      "angle_err_deg": 0.1349,
+      "perp_offset_px": 1.244,
+      "pred_endpoints": {
+        "x1": 249.90947052178586,
+        "y1": 242.18353125222495,
+        "x2": 1025.5056906110267,
+        "y2": 1466.4480605446502
+      },
+      "gt_endpoints": {
+        "x1": 257.50903850867167,
+        "y1": 254.97797295308612,
+        "x2": 1034.7309614913281,
+        "y2": 1475.442027046914
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260528_Atwood/Streak_32265_234640.fits",
+      "band": "long"
+    },
+    {
+      "image_id": 81,
+      "annotation_id": 81,
+      "gt_length_px": 611.85,
+      "pred_length_px": 609.53,
+      "signed_length_err_px": -2.315,
+      "symmetric_endpoint_err_px": 6.824,
+      "endpoint1_signed_err_px": 8.002,
+      "endpoint2_signed_err_px": 5.647,
+      "angle_err_deg": 0.6457,
+      "perp_offset_px": 3.543,
+      "pred_endpoints": {
+        "x1": 514.237561001798,
+        "y1": 258.1722297174468,
+        "x2": 255.44664309976446,
+        "y2": 810.0383415716158
+      },
+      "gt_endpoints": {
+        "x1": 524.0,
+        "y1": 254.0,
+        "x2": 258.0,
+        "y2": 805.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_49445_213812.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 82,
+      "annotation_id": 82,
+      "gt_length_px": 546.29,
+      "pred_length_px": 563.65,
+      "signed_length_err_px": 17.355,
+      "symmetric_endpoint_err_px": 9.593,
+      "endpoint1_signed_err_px": -18.266,
+      "endpoint2_signed_err_px": -0.921,
+      "angle_err_deg": 0.3451,
+      "perp_offset_px": 1.672,
+      "pred_endpoints": {
+        "x1": 252.9729485105835,
+        "y1": 233.1191584996219,
+        "x2": 307.9413581300415,
+        "y2": 794.0807926722531
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 251.0,
+        "x2": 308.0,
+        "y2": 795.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_42954_212321.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 83,
+      "annotation_id": 83,
+      "gt_length_px": 438.99,
+      "pred_length_px": 465.98,
+      "signed_length_err_px": 26.989,
+      "symmetric_endpoint_err_px": 13.489,
+      "endpoint1_signed_err_px": -16.098,
+      "endpoint2_signed_err_px": 10.88,
+      "angle_err_deg": 0.389,
+      "perp_offset_px": 5.096,
+      "pred_endpoints": {
+        "x1": 692.7734209138807,
+        "y1": 250.7027098993351,
+        "x2": 239.82930125408797,
+        "y2": 360.14659429988365
+      },
+      "gt_endpoints": {
+        "x1": 252.0,
+        "y1": 364.0,
+        "x2": 678.0,
+        "y2": 258.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_65582_234405.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 84,
+      "annotation_id": 84,
+      "gt_length_px": 870.17,
+      "pred_length_px": 865.17,
+      "signed_length_err_px": -4.998,
+      "symmetric_endpoint_err_px": 2.499,
+      "endpoint1_signed_err_px": 2.211,
+      "endpoint2_signed_err_px": -2.788,
+      "angle_err_deg": 0.0805,
+      "perp_offset_px": 1.896,
+      "pred_endpoints": {
+        "x1": 898.3433380023405,
+        "y1": 255.97648958488992,
+        "x2": 257.32328797422207,
+        "y2": 837.0235104151101
+      },
+      "gt_endpoints": {
+        "x1": 256.11835610245146,
+        "y1": 839.8489042321737,
+        "x2": 901.6616438975483,
+        "y2": 256.35109576782605
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233222.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 85,
+      "annotation_id": 85,
+      "gt_length_px": 987.34,
+      "pred_length_px": 976.12,
+      "signed_length_err_px": -11.221,
+      "symmetric_endpoint_err_px": 12.12,
+      "endpoint1_signed_err_px": 17.81,
+      "endpoint2_signed_err_px": 6.43,
+      "angle_err_deg": 1.0372,
+      "perp_offset_px": 1.779,
+      "pred_endpoints": {
+        "x1": 650.2448750936736,
+        "y1": 267.33361825933514,
+        "x2": 265.03069863679514,
+        "y2": 1164.2254637719147
+      },
+      "gt_endpoints": {
+        "x1": 664.0000000000001,
+        "y1": 254.0,
+        "x2": 257.9999999999999,
+        "y2": 1154.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_55463_213919.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 86,
+      "annotation_id": 86,
+      "gt_length_px": 652.91,
+      "pred_length_px": 660.6,
+      "signed_length_err_px": 7.693,
+      "symmetric_endpoint_err_px": 8.386,
+      "endpoint1_signed_err_px": 4.549,
+      "endpoint2_signed_err_px": 12.223,
+      "angle_err_deg": 0.4388,
+      "perp_offset_px": 0.063,
+      "pred_endpoints": {
+        "x1": 595.8539682350486,
+        "y1": 260.23431278013385,
+        "x2": 248.5460561790139,
+        "y2": 822.1657116339286
+      },
+      "gt_endpoints": {
+        "x1": 596.0,
+        "y1": 255.0,
+        "x2": 257.00000000000006,
+        "y2": 813.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_57973_213702.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 87,
+      "annotation_id": 87,
+      "gt_length_px": 993.91,
+      "pred_length_px": 992.9,
+      "signed_length_err_px": -1.011,
+      "symmetric_endpoint_err_px": 0.51,
+      "endpoint1_signed_err_px": 0.285,
+      "endpoint2_signed_err_px": -0.736,
+      "angle_err_deg": 0.2562,
+      "perp_offset_px": 0.898,
+      "pred_endpoints": {
+        "x1": 259.1750842453911,
+        "y1": 252.60465393033468,
+        "x2": 774.3208874342964,
+        "y2": 1101.4115814212278
+      },
+      "gt_endpoints": {
+        "x1": 256.3677759737353,
+        "y1": 253.99153249501785,
+        "x2": 775.8322240262645,
+        "y2": 1101.3484675049822
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67059_233745.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 88,
+      "annotation_id": 88,
+      "gt_length_px": 442.2,
+      "pred_length_px": 451.14,
+      "signed_length_err_px": 8.942,
+      "symmetric_endpoint_err_px": 19.22,
+      "endpoint1_signed_err_px": -23.683,
+      "endpoint2_signed_err_px": -14.756,
+      "angle_err_deg": 0.4662,
+      "perp_offset_px": 1.821,
+      "pred_endpoints": {
+        "x1": 239.88033797948444,
+        "y1": 238.23153631188504,
+        "x2": 513.168856356453,
+        "y2": 597.1783147623337
+      },
+      "gt_endpoints": {
+        "x1": 257.0,
+        "y1": 255.0,
+        "x2": 522.0,
+        "y2": 609.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_44768_212003.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 89,
+      "annotation_id": 89,
+      "gt_length_px": 412.61,
+      "pred_length_px": 413.41,
+      "signed_length_err_px": 0.799,
+      "symmetric_endpoint_err_px": 11.356,
+      "endpoint1_signed_err_px": 11.021,
+      "endpoint2_signed_err_px": 11.691,
+      "angle_err_deg": 1.4325,
+      "perp_offset_px": 8.891,
+      "pred_endpoints": {
+        "x1": 509.1577421373647,
+        "y1": 255.13447105886564,
+        "x2": 246.53457963997903,
+        "y2": 574.4039810895719
+      },
+      "gt_endpoints": {
+        "x1": 527.0,
+        "y1": 255.99999999999997,
+        "x2": 257.0,
+        "y2": 568.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_59504_214937.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 90,
+      "annotation_id": 90,
+      "gt_length_px": 925.32,
+      "pred_length_px": 929.96,
+      "signed_length_err_px": 4.64,
+      "symmetric_endpoint_err_px": 15.122,
+      "endpoint1_signed_err_px": -17.441,
+      "endpoint2_signed_err_px": -12.802,
+      "angle_err_deg": 0.0792,
+      "perp_offset_px": 1.4,
+      "pred_endpoints": {
+        "x1": 248.67051117843462,
+        "y1": 240.24613598053406,
+        "x2": 733.6151943879717,
+        "y2": 1033.753864019466
+      },
+      "gt_endpoints": {
+        "x1": 258.43196754637404,
+        "y1": 254.7196990152928,
+        "x2": 742.0480324536255,
+        "y2": 1043.6003009847068
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_49748_230057.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 91,
+      "annotation_id": 91,
+      "gt_length_px": 897.95,
+      "pred_length_px": 917.08,
+      "signed_length_err_px": 19.125,
+      "symmetric_endpoint_err_px": 9.562,
+      "endpoint1_signed_err_px": -4.014,
+      "endpoint2_signed_err_px": 15.109,
+      "angle_err_deg": 0.1055,
+      "perp_offset_px": 3.278,
+      "pred_endpoints": {
+        "x1": 341.03827786315185,
+        "y1": 246.69487485191883,
+        "x2": 253.21172213684815,
+        "y2": 1159.555125148081
+      },
+      "gt_endpoints": {
+        "x1": 258.73573382251715,
+        "y1": 1144.8998006637187,
+        "x2": 343.08426617748256,
+        "y2": 250.92019933628148
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_67522_234307.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 92,
+      "annotation_id": 92,
+      "gt_length_px": 714.54,
+      "pred_length_px": 728.72,
+      "signed_length_err_px": 14.186,
+      "symmetric_endpoint_err_px": 7.091,
+      "endpoint1_signed_err_px": 10.646,
+      "endpoint2_signed_err_px": -3.535,
+      "angle_err_deg": 0.1955,
+      "perp_offset_px": 2.151,
+      "pred_endpoints": {
+        "x1": 787.0854912372347,
+        "y1": 749.8109975295663,
+        "x2": 254.04390329401537,
+        "y2": 252.91843362277748
+      },
+      "gt_endpoints": {
+        "x1": 256.0,
+        "y1": 256.0,
+        "x2": 777.0,
+        "y2": 745.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_51771_223817.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 93,
+      "annotation_id": 93,
+      "gt_length_px": 903.96,
+      "pred_length_px": 892.2,
+      "signed_length_err_px": -11.761,
+      "symmetric_endpoint_err_px": 14.295,
+      "endpoint1_signed_err_px": 20.176,
+      "endpoint2_signed_err_px": 8.414,
+      "angle_err_deg": 0.0455,
+      "perp_offset_px": 4.262,
+      "pred_endpoints": {
+        "x1": 553.4485331306486,
+        "y1": 270.63957117821826,
+        "x2": 249.68189899825765,
+        "y2": 1109.5343790170941
+      },
+      "gt_endpoints": {
+        "x1": 256.88198834984206,
+        "y1": 1103.1887279659668,
+        "x2": 563.9780116501577,
+        "y2": 252.99127203403316
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_61006_224533.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 94,
+      "annotation_id": 94,
+      "gt_length_px": 857.79,
+      "pred_length_px": 872.53,
+      "signed_length_err_px": 14.745,
+      "symmetric_endpoint_err_px": 7.514,
+      "endpoint1_signed_err_px": -14.884,
+      "endpoint2_signed_err_px": -0.144,
+      "angle_err_deg": 0.1874,
+      "perp_offset_px": 1.817,
+      "pred_endpoints": {
+        "x1": 734.0987130822554,
+        "y1": 239.65294015720895,
+        "x2": 255.78806670290092,
+        "y2": 969.403700467791
+      },
+      "gt_endpoints": {
+        "x1": 256.0341144899761,
+        "y1": 969.7384043850893,
+        "x2": 728.6058855100242,
+        "y2": 253.86159561491058
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65179_223657.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 95,
+      "annotation_id": 95,
+      "gt_length_px": 874.53,
+      "pred_length_px": 882.01,
+      "signed_length_err_px": 7.477,
+      "symmetric_endpoint_err_px": 3.737,
+      "endpoint1_signed_err_px": -3.063,
+      "endpoint2_signed_err_px": 4.411,
+      "angle_err_deg": 0.1585,
+      "perp_offset_px": 4.369,
+      "pred_endpoints": {
+        "x1": 1051.49060515145,
+        "y1": 251.645819055765,
+        "x2": 248.6833450438627,
+        "y2": 616.9454895379849
+      },
+      "gt_endpoints": {
+        "x1": 1051.0,
+        "y1": 258.0,
+        "x2": 254.00000000000006,
+        "y2": 618.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_48390_212223.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 96,
+      "annotation_id": 96,
+      "gt_length_px": 948.32,
+      "pred_length_px": 947.78,
+      "signed_length_err_px": -0.538,
+      "symmetric_endpoint_err_px": 19.033,
+      "endpoint1_signed_err_px": -18.764,
+      "endpoint2_signed_err_px": -19.303,
+      "angle_err_deg": 0.0866,
+      "perp_offset_px": 1.25,
+      "pred_endpoints": {
+        "x1": 788.058925387228,
+        "y1": 238.62704278502662,
+        "x2": 267.7969095737095,
+        "y2": 1030.850374207161
+      },
+      "gt_endpoints": {
+        "x1": 257.6222464080027,
+        "y1": 1047.2625504802347,
+        "x2": 779.3777535919974,
+        "y2": 255.37744951976555
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233420.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 97,
+      "annotation_id": 97,
+      "gt_length_px": 885.3,
+      "pred_length_px": 865.2,
+      "signed_length_err_px": -20.104,
+      "symmetric_endpoint_err_px": 10.052,
+      "endpoint1_signed_err_px": -14.358,
+      "endpoint2_signed_err_px": 5.747,
+      "angle_err_deg": 0.0515,
+      "perp_offset_px": 1.738,
+      "pred_endpoints": {
+        "x1": 896.7922741001119,
+        "y1": 843.3647385913976,
+        "x2": 258.1029895717631,
+        "y2": 259.7209547679775
+      },
+      "gt_endpoints": {
+        "x1": 254.76650454938402,
+        "y1": 254.85124157451935,
+        "x2": 908.8334954506163,
+        "y2": 851.4687584254808
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_14699_232115.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 98,
+      "annotation_id": 98,
+      "gt_length_px": 601.3,
+      "pred_length_px": 601.69,
+      "signed_length_err_px": 0.392,
+      "symmetric_endpoint_err_px": 1.72,
+      "endpoint1_signed_err_px": -1.916,
+      "endpoint2_signed_err_px": -1.524,
+      "angle_err_deg": 0.0221,
+      "perp_offset_px": 4.006,
+      "pred_endpoints": {
+        "x1": 585.8070871848086,
+        "y1": 251.25920712629568,
+        "x2": 254.39805197534764,
+        "y2": 753.4587494166731
+      },
+      "gt_endpoints": {
+        "x1": 588.0,
+        "y1": 255.0,
+        "x2": 257.0,
+        "y2": 757.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_58354_223322.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 99,
+      "annotation_id": 99,
+      "gt_length_px": 583.65,
+      "pred_length_px": 595.49,
+      "signed_length_err_px": 11.839,
+      "symmetric_endpoint_err_px": 21.178,
+      "endpoint1_signed_err_px": 15.263,
+      "endpoint2_signed_err_px": 27.093,
+      "angle_err_deg": 0.3096,
+      "perp_offset_px": 1.98,
+      "pred_endpoints": {
+        "x1": 505.99742801037075,
+        "y1": 267.56739347174147,
+        "x2": 242.93409054431677,
+        "y2": 801.8024795751335
+      },
+      "gt_endpoints": {
+        "x1": 513.0,
+        "y1": 253.99999999999994,
+        "x2": 258.0,
+        "y2": 779.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_48093_210348.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 100,
+      "annotation_id": 100,
+      "gt_length_px": 571.37,
+      "pred_length_px": 593.11,
+      "signed_length_err_px": 21.735,
+      "symmetric_endpoint_err_px": 16.508,
+      "endpoint1_signed_err_px": 5.645,
+      "endpoint2_signed_err_px": 27.371,
+      "angle_err_deg": 0.3279,
+      "perp_offset_px": 4.846,
+      "pred_endpoints": {
+        "x1": 657.7640326188287,
+        "y1": 257.703415974227,
+        "x2": 231.87451718585885,
+        "y2": 670.4893330492105
+      },
+      "gt_endpoints": {
+        "x1": 664.0,
+        "y1": 256.0,
+        "x2": 255.99999999999994,
+        "y2": 656.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_40339_211820.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 101,
+      "annotation_id": 101,
+      "gt_length_px": 945.55,
+      "pred_length_px": 960.42,
+      "signed_length_err_px": 14.869,
+      "symmetric_endpoint_err_px": 15.171,
+      "endpoint1_signed_err_px": -22.597,
+      "endpoint2_signed_err_px": -7.744,
+      "angle_err_deg": 0.3391,
+      "perp_offset_px": 1.537,
+      "pred_endpoints": {
+        "x1": 671.7999761076217,
+        "y1": 231.72547537243332,
+        "x2": 262.5193598298783,
+        "y2": 1100.5770148619417
+      },
+      "gt_endpoints": {
+        "x1": 666.0000000000001,
+        "y1": 254.00000000000006,
+        "x2": 257.9999999999999,
+        "y2": 1107.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_59542_214232.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 102,
+      "annotation_id": 102,
+      "gt_length_px": 928.12,
+      "pred_length_px": 932.82,
+      "signed_length_err_px": 4.698,
+      "symmetric_endpoint_err_px": 4.017,
+      "endpoint1_signed_err_px": 6.365,
+      "endpoint2_signed_err_px": 1.668,
+      "angle_err_deg": 0.1076,
+      "perp_offset_px": 0.808,
+      "pred_endpoints": {
+        "x1": 1075.6844135098129,
+        "y1": 701.0506339590515,
+        "x2": 255.81143609956212,
+        "y2": 256.1258186776672
+      },
+      "gt_endpoints": {
+        "x1": 253.54326297076983,
+        "y1": 256.81433505478356,
+        "x2": 1070.11673702923,
+        "y2": 697.9656649452162
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000218.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 103,
+      "annotation_id": 103,
+      "gt_length_px": 980.33,
+      "pred_length_px": 993.15,
+      "signed_length_err_px": 12.819,
+      "symmetric_endpoint_err_px": 9.373,
+      "endpoint1_signed_err_px": -15.781,
+      "endpoint2_signed_err_px": -2.965,
+      "angle_err_deg": 0.146,
+      "perp_offset_px": 0.551,
+      "pred_endpoints": {
+        "x1": 1028.105044410176,
+        "y1": 245.641841483672,
+        "x2": 258.7521333241988,
+        "y2": 873.6859173053905
+      },
+      "gt_endpoints": {
+        "x1": 1017.0,
+        "y1": 256.99999999999994,
+        "x2": 256.00000000000006,
+        "y2": 875.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_50193_205800.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 104,
+      "annotation_id": 104,
+      "gt_length_px": 992.59,
+      "pred_length_px": 1010.65,
+      "signed_length_err_px": 18.056,
+      "symmetric_endpoint_err_px": 12.405,
+      "endpoint1_signed_err_px": 3.382,
+      "endpoint2_signed_err_px": 21.429,
+      "angle_err_deg": 0.2432,
+      "perp_offset_px": 3.945,
+      "pred_endpoints": {
+        "x1": 1147.1726657047247,
+        "y1": 257.82068713987917,
+        "x2": 232.02728546715014,
+        "y2": 686.6716224304333
+      },
+      "gt_endpoints": {
+        "x1": 254.0,
+        "y1": 683.0,
+        "x2": 1151.0,
+        "y2": 258.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_52286_232909.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 105,
+      "annotation_id": 105,
+      "gt_length_px": 938.6,
+      "pred_length_px": 940.7,
+      "signed_length_err_px": 2.102,
+      "symmetric_endpoint_err_px": 7.863,
+      "endpoint1_signed_err_px": -8.914,
+      "endpoint2_signed_err_px": -6.812,
+      "angle_err_deg": 0.0167,
+      "perp_offset_px": 1.522,
+      "pred_endpoints": {
+        "x1": 249.1922443158188,
+        "y1": 248.30108687121316,
+        "x2": 806.6733562701187,
+        "y2": 1006.0182490662869
+      },
+      "gt_endpoints": {
+        "x1": 255.59229429841508,
+        "y1": 254.6590092357706,
+        "x2": 812.0477057015853,
+        "y2": 1010.5209907642297
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_49748_230122.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 106,
+      "annotation_id": 266,
+      "gt_length_px": 894.85,
+      "pred_length_px": 916.42,
+      "signed_length_err_px": 21.571,
+      "symmetric_endpoint_err_px": 23.576,
+      "endpoint1_signed_err_px": -34.361,
+      "endpoint2_signed_err_px": -12.79,
+      "angle_err_deg": 0.0525,
+      "perp_offset_px": 2.604,
+      "pred_endpoints": {
+        "x1": 1165.9123472929086,
+        "y1": 253.33445381091155,
+        "x2": 265.9565491914663,
+        "y2": 426.27211357190095
+      },
+      "gt_endpoints": {
+        "x1": 253.9714828082836,
+        "y1": 431.666061600097,
+        "x2": 1132.5885171917164,
+        "y2": 261.99393839990296
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_51771_223638.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 107,
+      "annotation_id": 107,
+      "gt_length_px": 752.85,
+      "pred_length_px": 776.51,
+      "signed_length_err_px": 23.652,
+      "symmetric_endpoint_err_px": 24.278,
+      "endpoint1_signed_err_px": -36.104,
+      "endpoint2_signed_err_px": -12.452,
+      "angle_err_deg": 0.0272,
+      "perp_offset_px": 1.889,
+      "pred_endpoints": {
+        "x1": 243.0223542592719,
+        "y1": 220.0836935235247,
+        "x2": 523.9109953501031,
+        "y2": 944.0051736639753
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 253.00000000000006,
+        "x2": 530.0,
+        "y2": 955.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_59504_215232.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 108,
+      "annotation_id": 108,
+      "gt_length_px": 967.12,
+      "pred_length_px": 990.55,
+      "signed_length_err_px": 23.439,
+      "symmetric_endpoint_err_px": 19.575,
+      "endpoint1_signed_err_px": 7.86,
+      "endpoint2_signed_err_px": 31.29,
+      "angle_err_deg": 0.2453,
+      "perp_offset_px": 2.96,
+      "pred_endpoints": {
+        "x1": 260.1798440547665,
+        "y1": 261.5984080884103,
+        "x2": 629.0701559452335,
+        "y2": 1180.9015919115898
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 254.0,
+        "x2": 622.0,
+        "y2": 1150.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_67571_224027.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 109,
+      "annotation_id": 109,
+      "gt_length_px": 921.7,
+      "pred_length_px": 931.22,
+      "signed_length_err_px": 9.522,
+      "symmetric_endpoint_err_px": 10.76,
+      "endpoint1_signed_err_px": 6.0,
+      "endpoint2_signed_err_px": 15.521,
+      "angle_err_deg": 0.1201,
+      "perp_offset_px": 7.031,
+      "pred_endpoints": {
+        "x1": 307.59158145673536,
+        "y1": 256.6214371210798,
+        "x2": 249.06515682451464,
+        "y2": 1186.0053939336076
+      },
+      "gt_endpoints": {
+        "x1": 313.99999999999994,
+        "y1": 251.0,
+        "x2": 258.00000000000006,
+        "y2": 1171.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_54068_222813.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 110,
+      "annotation_id": 110,
+      "gt_length_px": 755.08,
+      "pred_length_px": 765.92,
+      "signed_length_err_px": 10.84,
+      "symmetric_endpoint_err_px": 5.404,
+      "endpoint1_signed_err_px": -9.879,
+      "endpoint2_signed_err_px": 0.929,
+      "angle_err_deg": 0.5173,
+      "perp_offset_px": 0.652,
+      "pred_endpoints": {
+        "x1": 249.31185252613355,
+        "y1": 248.1909147677436,
+        "x2": 667.9628667121477,
+        "y2": 889.5673860135064
+      },
+      "gt_endpoints": {
+        "x1": 257.0,
+        "y1": 255.0,
+        "x2": 664.0,
+        "y2": 891.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_54062_225032.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 111,
+      "annotation_id": 111,
+      "gt_length_px": 842.04,
+      "pred_length_px": 864.44,
+      "signed_length_err_px": 22.405,
+      "symmetric_endpoint_err_px": 15.401,
+      "endpoint1_signed_err_px": 4.215,
+      "endpoint2_signed_err_px": 26.587,
+      "angle_err_deg": 0.5017,
+      "perp_offset_px": 0.642,
+      "pred_endpoints": {
+        "x1": 254.89724322290053,
+        "y1": 255.24451819066815,
+        "x2": 270.67850140600575,
+        "y2": 1119.5433236062067
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 250.99999999999994,
+        "x2": 266.0,
+        "y2": 1093.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_50193_205924.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 112,
+      "annotation_id": 112,
+      "gt_length_px": 962.09,
+      "pred_length_px": 980.88,
+      "signed_length_err_px": 18.781,
+      "symmetric_endpoint_err_px": 20.935,
+      "endpoint1_signed_err_px": 11.545,
+      "endpoint2_signed_err_px": 30.326,
+      "angle_err_deg": 0.0196,
+      "perp_offset_px": 2.174,
+      "pred_endpoints": {
+        "x1": 876.9345587772998,
+        "y1": 263.42414211088186,
+        "x2": 235.40162286332526,
+        "y2": 1005.4161899203682
+      },
+      "gt_endpoints": {
+        "x1": 257.00000000000006,
+        "y1": 984.0,
+        "x2": 886.0,
+        "y2": 256.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_63089_232616.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 113,
+      "annotation_id": 113,
+      "gt_length_px": 930.17,
+      "pred_length_px": 954.84,
+      "signed_length_err_px": 24.668,
+      "symmetric_endpoint_err_px": 12.332,
+      "endpoint1_signed_err_px": -17.89,
+      "endpoint2_signed_err_px": 6.775,
+      "angle_err_deg": 0.1517,
+      "perp_offset_px": 5.145,
+      "pred_endpoints": {
+        "x1": 377.0128625100234,
+        "y1": 233.4196399798135,
+        "x2": 253.2574011618516,
+        "y2": 1180.2019420514366
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 1174.0,
+        "x2": 381.0,
+        "y2": 252.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_62382_230636.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 114,
+      "annotation_id": 270,
+      "gt_length_px": 970.85,
+      "pred_length_px": 976.13,
+      "signed_length_err_px": 5.275,
+      "symmetric_endpoint_err_px": 24.41,
+      "endpoint1_signed_err_px": -27.039,
+      "endpoint2_signed_err_px": -21.78,
+      "angle_err_deg": 0.3331,
+      "perp_offset_px": 2.174,
+      "pred_endpoints": {
+        "x1": 253.04054083932053,
+        "y1": 230.52160426042713,
+        "x2": 265.35948357474194,
+        "y2": 1206.5693381223855
+      },
+      "gt_endpoints": {
+        "x1": 258.2358423516313,
+        "y1": 257.52624538726275,
+        "x2": 264.84415764836876,
+        "y2": 1228.3537546127372
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_57943_232435.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 115,
+      "annotation_id": 115,
+      "gt_length_px": 912.57,
+      "pred_length_px": 934.79,
+      "signed_length_err_px": 22.219,
+      "symmetric_endpoint_err_px": 11.109,
+      "endpoint1_signed_err_px": -12.424,
+      "endpoint2_signed_err_px": 9.794,
+      "angle_err_deg": 0.0781,
+      "perp_offset_px": 1.678,
+      "pred_endpoints": {
+        "x1": 251.86935731523647,
+        "y1": 243.45046170168234,
+        "x2": 780.4065215910135,
+        "y2": 1014.4805685717552
+      },
+      "gt_endpoints": {
+        "x1": 257.0,
+        "y1": 255.0,
+        "x2": 774.0,
+        "y2": 1007.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_52331_211411.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 116,
+      "annotation_id": 116,
+      "gt_length_px": 521.95,
+      "pred_length_px": 540.7,
+      "signed_length_err_px": 18.756,
+      "symmetric_endpoint_err_px": 9.361,
+      "endpoint1_signed_err_px": -17.844,
+      "endpoint2_signed_err_px": 0.878,
+      "angle_err_deg": 0.6413,
+      "perp_offset_px": 0.567,
+      "pred_endpoints": {
+        "x1": 592.9743270130521,
+        "y1": 242.50495199680304,
+        "x2": 253.63437660022913,
+        "y2": 663.4660563039782
+      },
+      "gt_endpoints": {
+        "x1": 580.0,
+        "y1": 254.99999999999994,
+        "x2": 257.0,
+        "y2": 665.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_59486_211750.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 117,
+      "annotation_id": 117,
+      "gt_length_px": 503.36,
+      "pred_length_px": 509.93,
+      "signed_length_err_px": 6.57,
+      "symmetric_endpoint_err_px": 9.136,
+      "endpoint1_signed_err_px": -12.421,
+      "endpoint2_signed_err_px": -5.851,
+      "angle_err_deg": 0.0603,
+      "perp_offset_px": 2.04,
+      "pred_endpoints": {
+        "x1": 721.5341597182337,
+        "y1": 251.18479573063036,
+        "x2": 258.3446244614538,
+        "y2": 464.45155680843214
+      },
+      "gt_endpoints": {
+        "x1": 711.0,
+        "y1": 257.99999999999994,
+        "x2": 254.00000000000003,
+        "y2": 469.00000000000006
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_41188_213316.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 118,
+      "annotation_id": 118,
+      "gt_length_px": 932.21,
+      "pred_length_px": 943.43,
+      "signed_length_err_px": 11.22,
+      "symmetric_endpoint_err_px": 26.412,
+      "endpoint1_signed_err_px": 20.817,
+      "endpoint2_signed_err_px": 32.006,
+      "angle_err_deg": 0.4575,
+      "perp_offset_px": 4.117,
+      "pred_endpoints": {
+        "x1": 477.2427908711402,
+        "y1": 270.31085248413945,
+        "x2": 249.9252389140161,
+        "y2": 1185.945128961173
+      },
+      "gt_endpoints": {
+        "x1": 490.05559985697454,
+        "y1": 252.10854568213955,
+        "x2": 258.2244001430252,
+        "y2": 1155.0314543178608
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233553.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 119,
+      "annotation_id": 119,
+      "gt_length_px": 906.1,
+      "pred_length_px": 921.8,
+      "signed_length_err_px": 15.699,
+      "symmetric_endpoint_err_px": 24.444,
+      "endpoint1_signed_err_px": -32.294,
+      "endpoint2_signed_err_px": -16.595,
+      "angle_err_deg": 0.0114,
+      "perp_offset_px": 0.902,
+      "pred_endpoints": {
+        "x1": 1147.4935912950423,
+        "y1": 247.32299387560846,
+        "x2": 268.5797729627703,
+        "y2": 525.2274821986102
+      },
+      "gt_endpoints": {
+        "x1": 1117.0,
+        "y1": 258.0000000000001,
+        "x2": 253.0,
+        "y2": 530.9999999999999
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_54062_224852.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 120,
+      "annotation_id": 120,
+      "gt_length_px": 413.43,
+      "pred_length_px": 425.98,
+      "signed_length_err_px": 12.553,
+      "symmetric_endpoint_err_px": 6.26,
+      "endpoint1_signed_err_px": -5.696,
+      "endpoint2_signed_err_px": 6.825,
+      "angle_err_deg": 0.6999,
+      "perp_offset_px": 5.381,
+      "pred_endpoints": {
+        "x1": 392.418423502566,
+        "y1": 244.93739520621273,
+        "x2": 253.0741302083715,
+        "y2": 647.480512508631
+      },
+      "gt_endpoints": {
+        "x1": 398.0,
+        "y1": 253.0,
+        "x2": 258.0,
+        "y2": 642.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_66221_214403.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 121,
+      "annotation_id": 121,
+      "gt_length_px": 501.04,
+      "pred_length_px": 518.22,
+      "signed_length_err_px": 17.177,
+      "symmetric_endpoint_err_px": 21.826,
+      "endpoint1_signed_err_px": -30.402,
+      "endpoint2_signed_err_px": -13.25,
+      "angle_err_deg": 0.5722,
+      "perp_offset_px": 6.816,
+      "pred_endpoints": {
+        "x1": 242.98496713441037,
+        "y1": 227.69231529459114,
+        "x2": 545.0785094280897,
+        "y2": 648.7521427132214
+      },
+      "gt_endpoints": {
+        "x1": 257.0,
+        "y1": 255.0,
+        "x2": 545.0,
+        "y2": 665.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_60418_212847.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 122,
+      "annotation_id": 122,
+      "gt_length_px": 999.41,
+      "pred_length_px": 1004.28,
+      "signed_length_err_px": 4.867,
+      "symmetric_endpoint_err_px": 5.389,
+      "endpoint1_signed_err_px": -2.956,
+      "endpoint2_signed_err_px": -7.822,
+      "angle_err_deg": 0.0847,
+      "perp_offset_px": 1.198,
+      "pred_endpoints": {
+        "x1": 1133.5389361920825,
+        "y1": 735.5309818713789,
+        "x2": 248.6759075579174,
+        "y2": 260.56820025752734
+      },
+      "gt_endpoints": {
+        "x1": 256.48241835723996,
+        "y1": 262.568964296044,
+        "x2": 1136.3575816427601,
+        "y2": 736.5310357039564
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_53228_223338.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 123,
+      "annotation_id": 123,
+      "gt_length_px": 624.55,
+      "pred_length_px": 619.03,
+      "signed_length_err_px": -5.517,
+      "symmetric_endpoint_err_px": 21.544,
+      "endpoint1_signed_err_px": -18.781,
+      "endpoint2_signed_err_px": -24.306,
+      "angle_err_deg": 0.2785,
+      "perp_offset_px": 2.435,
+      "pred_endpoints": {
+        "x1": 250.39483558232973,
+        "y1": 235.80206599467846,
+        "x2": 469.60516441767027,
+        "y2": 814.7243011928215
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 253.00000000000006,
+        "x2": 482.0,
+        "y2": 836.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_62895_212802.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 124,
+      "annotation_id": 124,
+      "gt_length_px": 848.29,
+      "pred_length_px": 847.99,
+      "signed_length_err_px": -0.296,
+      "symmetric_endpoint_err_px": 4.411,
+      "endpoint1_signed_err_px": -4.251,
+      "endpoint2_signed_err_px": -4.572,
+      "angle_err_deg": 0.4438,
+      "perp_offset_px": 1.236,
+      "pred_endpoints": {
+        "x1": 583.7689983266455,
+        "y1": 247.3972873398336,
+        "x2": 260.5386798960108,
+        "y2": 1031.3719997695414
+      },
+      "gt_endpoints": {
+        "x1": 256.8760491614158,
+        "y1": 1034.7900639655595,
+        "x2": 586.2839508385841,
+        "y2": 253.06993603444062
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_58958_002138.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 125,
+      "annotation_id": 125,
+      "gt_length_px": 533.02,
+      "pred_length_px": 552.28,
+      "signed_length_err_px": 19.258,
+      "symmetric_endpoint_err_px": 9.626,
+      "endpoint1_signed_err_px": 6.034,
+      "endpoint2_signed_err_px": -13.218,
+      "angle_err_deg": 0.2896,
+      "perp_offset_px": 2.816,
+      "pred_endpoints": {
+        "x1": 786.1713161919863,
+        "y1": 330.4193767638342,
+        "x2": 239.48383517520114,
+        "y2": 252.0173908142908
+      },
+      "gt_endpoints": {
+        "x1": 251.99999999999994,
+        "y1": 258.0,
+        "x2": 780.0,
+        "y2": 331.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_66097_233637.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 126,
+      "annotation_id": 126,
+      "gt_length_px": 493.57,
+      "pred_length_px": 501.81,
+      "signed_length_err_px": 8.239,
+      "symmetric_endpoint_err_px": 4.119,
+      "endpoint1_signed_err_px": -2.71,
+      "endpoint2_signed_err_px": 5.529,
+      "angle_err_deg": 0.0822,
+      "perp_offset_px": 1.329,
+      "pred_endpoints": {
+        "x1": 398.8454663508312,
+        "y1": 236.12569252153386,
+        "x2": 254.80156734057505,
+        "y2": 716.8154695878411
+      },
+      "gt_endpoints": {
+        "x1": 399.00000000000006,
+        "y1": 239.0,
+        "x2": 257.99999999999994,
+        "y2": 712.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_44311_205614.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 127,
+      "annotation_id": 127,
+      "gt_length_px": 925.67,
+      "pred_length_px": 932.8,
+      "signed_length_err_px": 7.129,
+      "symmetric_endpoint_err_px": 3.876,
+      "endpoint1_signed_err_px": 7.437,
+      "endpoint2_signed_err_px": 0.315,
+      "angle_err_deg": 0.2263,
+      "perp_offset_px": 0.523,
+      "pred_endpoints": {
+        "x1": 1073.8663506260075,
+        "y1": 702.1156478925636,
+        "x2": 253.35947945211745,
+        "y2": 258.4004653886864
+      },
+      "gt_endpoints": {
+        "x1": 253.71481137354027,
+        "y1": 257.09191405693184,
+        "x2": 1066.2051886264599,
+        "y2": 700.6280859430684
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000101.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 128,
+      "annotation_id": 269,
+      "gt_length_px": 907.15,
+      "pred_length_px": 911.48,
+      "signed_length_err_px": 4.325,
+      "symmetric_endpoint_err_px": 18.099,
+      "endpoint1_signed_err_px": -20.262,
+      "endpoint2_signed_err_px": -15.937,
+      "angle_err_deg": 0.0115,
+      "perp_offset_px": 0.537,
+      "pred_endpoints": {
+        "x1": 245.18105382918856,
+        "y1": 244.59529109810177,
+        "x2": 857.6552498817489,
+        "y2": 919.6228485503357
+      },
+      "gt_endpoints": {
+        "x1": 259.1284408126797,
+        "y1": 259.29912909736305,
+        "x2": 868.8315591873204,
+        "y2": 931.000870902637
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_55628_230057.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 129,
+      "annotation_id": 129,
+      "gt_length_px": 640.45,
+      "pred_length_px": 660.36,
+      "signed_length_err_px": 19.903,
+      "symmetric_endpoint_err_px": 9.943,
+      "endpoint1_signed_err_px": -11.549,
+      "endpoint2_signed_err_px": 8.336,
+      "angle_err_deg": 0.4133,
+      "perp_offset_px": 1.018,
+      "pred_endpoints": {
+        "x1": 311.6228436440164,
+        "y1": 239.19763798034353,
+        "x2": 258.6295977622336,
+        "y2": 897.4236999102815
+      },
+      "gt_endpoints": {
+        "x1": 313.99999999999994,
+        "y1": 251.0,
+        "x2": 258.00000000000006,
+        "y2": 889.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_52331_211216.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 130,
+      "annotation_id": 130,
+      "gt_length_px": 984.1,
+      "pred_length_px": 983.43,
+      "signed_length_err_px": -0.668,
+      "symmetric_endpoint_err_px": 5.267,
+      "endpoint1_signed_err_px": 5.606,
+      "endpoint2_signed_err_px": 4.929,
+      "angle_err_deg": 0.2433,
+      "perp_offset_px": 1.948,
+      "pred_endpoints": {
+        "x1": 261.0423552815775,
+        "y1": 259.9289374660991,
+        "x2": 811.2076447184224,
+        "y2": 1075.0710625339009
+      },
+      "gt_endpoints": {
+        "x1": 257.77085290609006,
+        "y1": 255.37485321912493,
+        "x2": 811.7691470939099,
+        "y2": 1068.7251467808755
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_49748_230109.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 131,
+      "annotation_id": 131,
+      "gt_length_px": 607.2,
+      "pred_length_px": 624.15,
+      "signed_length_err_px": 16.945,
+      "symmetric_endpoint_err_px": 13.242,
+      "endpoint1_signed_err_px": -21.695,
+      "endpoint2_signed_err_px": -4.788,
+      "angle_err_deg": 0.6304,
+      "perp_offset_px": 2.671,
+      "pred_endpoints": {
+        "x1": 629.1196364172397,
+        "y1": 233.97547439014028,
+        "x2": 260.4803391686978,
+        "y2": 737.6245011957972
+      },
+      "gt_endpoints": {
+        "x1": 621.0,
+        "y1": 255.0,
+        "x2": 257.0,
+        "y2": 741.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_59486_211803.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 132,
+      "annotation_id": 264,
+      "gt_length_px": 977.4,
+      "pred_length_px": 988.83,
+      "signed_length_err_px": 11.426,
+      "symmetric_endpoint_err_px": 7.036,
+      "endpoint1_signed_err_px": -12.748,
+      "endpoint2_signed_err_px": -1.323,
+      "angle_err_deg": 0.0996,
+      "perp_offset_px": 2.868,
+      "pred_endpoints": {
+        "x1": 1047.01081252809,
+        "y1": 247.76094181957882,
+        "x2": 253.8295195031602,
+        "y2": 838.2222124772961
+      },
+      "gt_endpoints": {
+        "x1": 1038.0,
+        "y1": 257.00000000000017,
+        "x2": 254.9999999999999,
+        "y2": 841.9999999999998
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_51137_210005.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 133,
+      "annotation_id": 133,
+      "gt_length_px": 907.13,
+      "pred_length_px": 901.48,
+      "signed_length_err_px": -5.653,
+      "symmetric_endpoint_err_px": 11.885,
+      "endpoint1_signed_err_px": 14.749,
+      "endpoint2_signed_err_px": 9.02,
+      "angle_err_deg": 0.7455,
+      "perp_offset_px": 2.696,
+      "pred_endpoints": {
+        "x1": 495.7060124497059,
+        "y1": 264.8189612026539,
+        "x2": 258.5594904799816,
+        "y2": 1134.543831766096
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 1125.0,
+        "x2": 508.0,
+        "y2": 253.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_48663_223228.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 134,
+      "annotation_id": 134,
+      "gt_length_px": 601.71,
+      "pred_length_px": 618.29,
+      "signed_length_err_px": 16.581,
+      "symmetric_endpoint_err_px": 19.977,
+      "endpoint1_signed_err_px": -28.265,
+      "endpoint2_signed_err_px": -11.689,
+      "angle_err_deg": 0.2458,
+      "perp_offset_px": 1.647,
+      "pred_endpoints": {
+        "x1": 250.13398758575488,
+        "y1": 225.84990462675609,
+        "x2": 431.4659880001826,
+        "y2": 816.9501442013689
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 252.99999999999994,
+        "x2": 432.0,
+        "y2": 829.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_47772_214627.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 135,
+      "annotation_id": 135,
+      "gt_length_px": 550.53,
+      "pred_length_px": 559.98,
+      "signed_length_err_px": 9.456,
+      "symmetric_endpoint_err_px": 4.658,
+      "endpoint1_signed_err_px": -2.105,
+      "endpoint2_signed_err_px": 7.212,
+      "angle_err_deg": 1.277,
+      "perp_offset_px": 5.317,
+      "pred_endpoints": {
+        "x1": 514.8985908590671,
+        "y1": 246.5731795172322,
+        "x2": 255.32363814483915,
+        "y2": 742.760133471049
+      },
+      "gt_endpoints": {
+        "x1": 524.0,
+        "y1": 253.99999999999997,
+        "x2": 258.0,
+        "y2": 736.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_48104_205508.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 136,
+      "annotation_id": 136,
+      "gt_length_px": 513.52,
+      "pred_length_px": 521.96,
+      "signed_length_err_px": 8.439,
+      "symmetric_endpoint_err_px": 6.082,
+      "endpoint1_signed_err_px": -9.891,
+      "endpoint2_signed_err_px": -2.272,
+      "angle_err_deg": 3.2118,
+      "perp_offset_px": 6.828,
+      "pred_endpoints": {
+        "x1": 563.2306482118131,
+        "y1": 233.97688764963354,
+        "x2": 264.53406126084315,
+        "y2": 662.0231123503664
+      },
+      "gt_endpoints": {
+        "x1": 574.0,
+        "y1": 255.0,
+        "x2": 257.0,
+        "y2": 659.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_58354_223309.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 137,
+      "annotation_id": 137,
+      "gt_length_px": 893.82,
+      "pred_length_px": 914.15,
+      "signed_length_err_px": 20.331,
+      "symmetric_endpoint_err_px": 10.144,
+      "endpoint1_signed_err_px": -8.258,
+      "endpoint2_signed_err_px": 12.031,
+      "angle_err_deg": 0.5544,
+      "perp_offset_px": 5.704,
+      "pred_endpoints": {
+        "x1": 256.19401411127126,
+        "y1": 242.84087613903625,
+        "x2": 305.66108842779124,
+        "y2": 1155.6519217125262
+      },
+      "gt_endpoints": {
+        "x1": 315.0,
+        "y1": 1143.0,
+        "x2": 258.0,
+        "y2": 250.99999999999994
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_67608_224815.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 138,
+      "annotation_id": 138,
+      "gt_length_px": 873.33,
+      "pred_length_px": 881.73,
+      "signed_length_err_px": 8.399,
+      "symmetric_endpoint_err_px": 9.893,
+      "endpoint1_signed_err_px": 5.694,
+      "endpoint2_signed_err_px": 14.093,
+      "angle_err_deg": 0.0493,
+      "perp_offset_px": 5.311,
+      "pred_endpoints": {
+        "x1": 599.2075820635673,
+        "y1": 3.2573519332685237,
+        "x2": 247.16528170596388,
+        "y2": 811.6579312698565
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 801.0,
+        "x2": 606.0,
+        "y2": 5.684341886080802e-14
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_60131_231953.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 139,
+      "annotation_id": 139,
+      "gt_length_px": 414.48,
+      "pred_length_px": 431.91,
+      "signed_length_err_px": 17.43,
+      "symmetric_endpoint_err_px": 8.715,
+      "endpoint1_signed_err_px": -9.898,
+      "endpoint2_signed_err_px": 7.531,
+      "angle_err_deg": 0.0899,
+      "perp_offset_px": 5.524,
+      "pred_endpoints": {
+        "x1": 407.77729049567006,
+        "y1": 241.89284853836676,
+        "x2": 249.7965010082362,
+        "y2": 643.8776592741333
+      },
+      "gt_endpoints": {
+        "x1": 409.0,
+        "y1": 253.0,
+        "x2": 258.0,
+        "y2": 639.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_60418_212524.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 140,
+      "annotation_id": 140,
+      "gt_length_px": 834.7,
+      "pred_length_px": 841.98,
+      "signed_length_err_px": 7.275,
+      "symmetric_endpoint_err_px": 9.973,
+      "endpoint1_signed_err_px": -13.602,
+      "endpoint2_signed_err_px": -6.344,
+      "angle_err_deg": 0.3635,
+      "perp_offset_px": 2.046,
+      "pred_endpoints": {
+        "x1": 253.52806368995704,
+        "y1": 240.13892962130132,
+        "x2": 561.264416778793,
+        "y2": 1023.8610703786987
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 253.0,
+        "x2": 568.0,
+        "y2": 1028.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_52339_212944.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 141,
+      "annotation_id": 141,
+      "gt_length_px": 929.55,
+      "pred_length_px": 946.83,
+      "signed_length_err_px": 17.279,
+      "symmetric_endpoint_err_px": 15.242,
+      "endpoint1_signed_err_px": -23.872,
+      "endpoint2_signed_err_px": -6.613,
+      "angle_err_deg": 0.3717,
+      "perp_offset_px": 3.425,
+      "pred_endpoints": {
+        "x1": 706.3258539906692,
+        "y1": 230.63983311249024,
+        "x2": 260.3838017710495,
+        "y2": 1065.8762801687599
+      },
+      "gt_endpoints": {
+        "x1": 257.5424326746551,
+        "y1": 1071.858286808797,
+        "x2": 700.6575673253446,
+        "y2": 254.7217131912031
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_37189_233447.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 142,
+      "annotation_id": 142,
+      "gt_length_px": 560.81,
+      "pred_length_px": 559.58,
+      "signed_length_err_px": -1.233,
+      "symmetric_endpoint_err_px": 16.113,
+      "endpoint1_signed_err_px": -15.489,
+      "endpoint2_signed_err_px": -16.737,
+      "angle_err_deg": 0.4209,
+      "perp_offset_px": 5.343,
+      "pred_endpoints": {
+        "x1": 769.4381022193058,
+        "y1": 248.2016808840224,
+        "x2": 265.73999836663165,
+        "y2": 491.96268679175887
+      },
+      "gt_endpoints": {
+        "x1": 757.0,
+        "y1": 258.0,
+        "x2": 254.0,
+        "y2": 506.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_41188_213328.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 143,
+      "annotation_id": 143,
+      "gt_length_px": 547.73,
+      "pred_length_px": 550.74,
+      "signed_length_err_px": 3.018,
+      "symmetric_endpoint_err_px": 10.899,
+      "endpoint1_signed_err_px": -12.379,
+      "endpoint2_signed_err_px": -9.42,
+      "angle_err_deg": 0.838,
+      "perp_offset_px": 1.837,
+      "pred_endpoints": {
+        "x1": 692.1217060625324,
+        "y1": 244.74657869219294,
+        "x2": 263.76403612496756,
+        "y2": 590.9105868351508
+      },
+      "gt_endpoints": {
+        "x1": 686.0,
+        "y1": 257.0,
+        "x2": 255.0,
+        "y2": 595.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_40339_211716.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 144,
+      "annotation_id": 144,
+      "gt_length_px": 623.01,
+      "pred_length_px": 631.48,
+      "signed_length_err_px": 8.471,
+      "symmetric_endpoint_err_px": 14.723,
+      "endpoint1_signed_err_px": -18.958,
+      "endpoint2_signed_err_px": -10.487,
+      "angle_err_deg": 0.0686,
+      "perp_offset_px": 3.153,
+      "pred_endpoints": {
+        "x1": 823.5884153271772,
+        "y1": 246.8597773412449,
+        "x2": 261.7102907275103,
+        "y2": 535.0622807642238
+      },
+      "gt_endpoints": {
+        "x1": 254.0,
+        "y1": 543.0,
+        "x2": 808.0,
+        "y2": 258.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_60131_231917.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 145,
+      "annotation_id": 145,
+      "gt_length_px": 663.4,
+      "pred_length_px": 668.57,
+      "signed_length_err_px": 5.173,
+      "symmetric_endpoint_err_px": 9.321,
+      "endpoint1_signed_err_px": -6.736,
+      "endpoint2_signed_err_px": -11.907,
+      "angle_err_deg": 0.1359,
+      "perp_offset_px": 5.583,
+      "pred_endpoints": {
+        "x1": 899.2145265595568,
+        "y1": 369.09710150260094,
+        "x2": 241.40400371388068,
+        "y2": 249.62457818489906
+      },
+      "gt_endpoints": {
+        "x1": 252.0,
+        "y1": 258.0,
+        "x2": 905.0,
+        "y2": 375.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_43071_220308.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 146,
+      "annotation_id": 146,
+      "gt_length_px": 911.02,
+      "pred_length_px": 916.48,
+      "signed_length_err_px": 5.461,
+      "symmetric_endpoint_err_px": 2.721,
+      "endpoint1_signed_err_px": -3.32,
+      "endpoint2_signed_err_px": 2.122,
+      "angle_err_deg": 0.3647,
+      "perp_offset_px": 3.564,
+      "pred_endpoints": {
+        "x1": 1121.1764922926045,
+        "y1": 259.6715398628653,
+        "x2": 250.02345887927055,
+        "y2": 544.3284601371347
+      },
+      "gt_endpoints": {
+        "x1": 254.08829231853457,
+        "y1": 549.8038362563459,
+        "x2": 1118.2317076814652,
+        "y2": 261.336163743654
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65179_223907.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 147,
+      "annotation_id": 147,
+      "gt_length_px": 710.94,
+      "pred_length_px": 722.24,
+      "signed_length_err_px": 11.295,
+      "symmetric_endpoint_err_px": 20.426,
+      "endpoint1_signed_err_px": -26.07,
+      "endpoint2_signed_err_px": -14.782,
+      "angle_err_deg": 0.2628,
+      "perp_offset_px": 0.994,
+      "pred_endpoints": {
+        "x1": 250.08813654748008,
+        "y1": 227.01900585784887,
+        "x2": 400.6335431400199,
+        "y2": 933.3933476577761
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 252.0,
+        "x2": 403.0,
+        "y2": 948.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_51137_210142.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 148,
+      "annotation_id": 148,
+      "gt_length_px": 531.5,
+      "pred_length_px": 536.99,
+      "signed_length_err_px": 5.492,
+      "symmetric_endpoint_err_px": 18.278,
+      "endpoint1_signed_err_px": -21.019,
+      "endpoint2_signed_err_px": -15.537,
+      "angle_err_deg": 0.3502,
+      "perp_offset_px": 3.62,
+      "pred_endpoints": {
+        "x1": 250.054755657667,
+        "y1": 233.44071126590643,
+        "x2": 401.4895558657705,
+        "y2": 748.6352164684686
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 253.0,
+        "x2": 411.0,
+        "y2": 762.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_54068_222857.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 149,
+      "annotation_id": 149,
+      "gt_length_px": 462.13,
+      "pred_length_px": 483.21,
+      "signed_length_err_px": 21.079,
+      "symmetric_endpoint_err_px": 10.539,
+      "endpoint1_signed_err_px": -16.468,
+      "endpoint2_signed_err_px": 4.609,
+      "angle_err_deg": 0.1568,
+      "perp_offset_px": 1.03,
+      "pred_endpoints": {
+        "x1": 626.7281699100536,
+        "y1": 245.31652825776519,
+        "x2": 252.18711329307138,
+        "y2": 550.6156616836411
+      },
+      "gt_endpoints": {
+        "x1": 615.0,
+        "y1": 257.0,
+        "x2": 256.0,
+        "y2": 548.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_59397_215732.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 150,
+      "annotation_id": 150,
+      "gt_length_px": 907.65,
+      "pred_length_px": 936.93,
+      "signed_length_err_px": 29.285,
+      "symmetric_endpoint_err_px": 15.952,
+      "endpoint1_signed_err_px": -30.594,
+      "endpoint2_signed_err_px": -1.31,
+      "angle_err_deg": 0.1152,
+      "perp_offset_px": 0.159,
+      "pred_endpoints": {
+        "x1": 254.56251824231987,
+        "y1": 221.5900398043534,
+        "x2": 381.72886359361763,
+        "y2": 1149.853685781584
+      },
+      "gt_endpoints": {
+        "x1": 383.00000000000006,
+        "y1": 1151.0,
+        "x2": 257.99999999999994,
+        "y2": 252.00000000000006
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_67625_225558.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 151,
+      "annotation_id": 278,
+      "gt_length_px": 793.14,
+      "pred_length_px": 811.53,
+      "signed_length_err_px": 18.39,
+      "symmetric_endpoint_err_px": 25.597,
+      "endpoint1_signed_err_px": -34.78,
+      "endpoint2_signed_err_px": -16.414,
+      "angle_err_deg": 0.444,
+      "perp_offset_px": 1.972,
+      "pred_endpoints": {
+        "x1": 247.30510595846573,
+        "y1": 214.83178833384267,
+        "x2": 444.813729490753,
+        "y2": 1001.9603259239698
+      },
+      "gt_endpoints": {
+        "x1": 254.8957857833248,
+        "y1": 248.79373267931766,
+        "x2": 453.88421421667516,
+        "y2": 1016.5662673206823
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_60330_230913.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 152,
+      "annotation_id": 152,
+      "gt_length_px": 654.0,
+      "pred_length_px": 655.95,
+      "signed_length_err_px": 1.95,
+      "symmetric_endpoint_err_px": 10.926,
+      "endpoint1_signed_err_px": -11.888,
+      "endpoint2_signed_err_px": -9.964,
+      "angle_err_deg": 0.5172,
+      "perp_offset_px": 0.853,
+      "pred_endpoints": {
+        "x1": 248.1561694395844,
+        "y1": 246.78153388973362,
+        "x2": 648.0413403260407,
+        "y2": 766.7493498993289
+      },
+      "gt_endpoints": {
+        "x1": 257.0,
+        "y1": 255.0,
+        "x2": 651.0,
+        "y2": 777.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_44768_211935.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 153,
+      "annotation_id": 153,
+      "gt_length_px": 891.91,
+      "pred_length_px": 891.32,
+      "signed_length_err_px": -0.589,
+      "symmetric_endpoint_err_px": 8.679,
+      "endpoint1_signed_err_px": -8.976,
+      "endpoint2_signed_err_px": -8.383,
+      "angle_err_deg": 0.1706,
+      "perp_offset_px": 3.365,
+      "pred_endpoints": {
+        "x1": 1015.7795861149812,
+        "y1": 709.1143884523171,
+        "x2": 247.6386267756439,
+        "y2": 256.99468137190166
+      },
+      "gt_endpoints": {
+        "x1": 255.90371241101883,
+        "y1": 259.46618556573253,
+        "x2": 1025.8962875889813,
+        "y2": 709.5938144342674
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_55162_232854.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 154,
+      "annotation_id": 154,
+      "gt_length_px": 946.14,
+      "pred_length_px": 960.13,
+      "signed_length_err_px": 13.996,
+      "symmetric_endpoint_err_px": 10.471,
+      "endpoint1_signed_err_px": -17.467,
+      "endpoint2_signed_err_px": -3.476,
+      "angle_err_deg": 0.1825,
+      "perp_offset_px": 1.075,
+      "pred_endpoints": {
+        "x1": 257.2506245986828,
+        "y1": 233.5433289578301,
+        "x2": 276.5446634872547,
+        "y2": 1193.480352682795
+      },
+      "gt_endpoints": {
+        "x1": 258.00000000000006,
+        "y1": 251.0,
+        "x2": 273.99999999999994,
+        "y2": 1197.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_48093_210430.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 155,
+      "annotation_id": 155,
+      "gt_length_px": 611.57,
+      "pred_length_px": 619.6,
+      "signed_length_err_px": 8.029,
+      "symmetric_endpoint_err_px": 6.171,
+      "endpoint1_signed_err_px": 2.157,
+      "endpoint2_signed_err_px": 10.186,
+      "angle_err_deg": 0.0652,
+      "perp_offset_px": 1.674,
+      "pred_endpoints": {
+        "x1": 590.7106578494707,
+        "y1": 256.0764886215562,
+        "x2": 249.71042369349797,
+        "y2": 773.3971441909438
+      },
+      "gt_endpoints": {
+        "x1": 257.0,
+        "y1": 766.0,
+        "x2": 593.0,
+        "y2": 255.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_67625_225352.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 156,
+      "annotation_id": 156,
+      "gt_length_px": 615.96,
+      "pred_length_px": 626.81,
+      "signed_length_err_px": 10.848,
+      "symmetric_endpoint_err_px": 5.418,
+      "endpoint1_signed_err_px": -8.39,
+      "endpoint2_signed_err_px": 2.447,
+      "angle_err_deg": 0.3444,
+      "perp_offset_px": 3.727,
+      "pred_endpoints": {
+        "x1": 248.83437219421236,
+        "y1": 251.26323199558405,
+        "x2": 682.6778348370376,
+        "y2": 703.6635868520722
+      },
+      "gt_endpoints": {
+        "x1": 256.0,
+        "y1": 255.99999999999997,
+        "x2": 685.0,
+        "y2": 698.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_48093_210624.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 157,
+      "annotation_id": 157,
+      "gt_length_px": 723.67,
+      "pred_length_px": 741.46,
+      "signed_length_err_px": 17.784,
+      "symmetric_endpoint_err_px": 15.512,
+      "endpoint1_signed_err_px": 6.62,
+      "endpoint2_signed_err_px": 24.404,
+      "angle_err_deg": 0.0087,
+      "perp_offset_px": 1.836,
+      "pred_endpoints": {
+        "x1": 734.2499550278839,
+        "y1": 259.73134930670136,
+        "x2": 238.27177348774117,
+        "y2": 810.8772932714237
+      },
+      "gt_endpoints": {
+        "x1": 740.0000000000002,
+        "y1": 256.0000000000001,
+        "x2": 255.9999999999998,
+        "y2": 793.9999999999999
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_53923_211119.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 158,
+      "annotation_id": 158,
+      "gt_length_px": 694.03,
+      "pred_length_px": 708.13,
+      "signed_length_err_px": 14.095,
+      "symmetric_endpoint_err_px": 12.79,
+      "endpoint1_signed_err_px": -5.744,
+      "endpoint2_signed_err_px": -19.836,
+      "angle_err_deg": 0.1612,
+      "perp_offset_px": 1.943,
+      "pred_endpoints": {
+        "x1": 835.7545442452771,
+        "y1": 626.4230350855958,
+        "x2": 238.8201627859729,
+        "y2": 245.48498493393555
+      },
+      "gt_endpoints": {
+        "x1": 255.0,
+        "y1": 257.0,
+        "x2": 839.0,
+        "y2": 632.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_42954_212044.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 159,
+      "annotation_id": 273,
+      "gt_length_px": 923.47,
+      "pred_length_px": 946.83,
+      "signed_length_err_px": 23.365,
+      "symmetric_endpoint_err_px": 18.464,
+      "endpoint1_signed_err_px": -6.786,
+      "endpoint2_signed_err_px": -30.141,
+      "angle_err_deg": 0.262,
+      "perp_offset_px": 0.024,
+      "pred_endpoints": {
+        "x1": 1067.3563605055579,
+        "y1": 690.8181587176882,
+        "x2": 232.37691586162953,
+        "y2": 244.381853489343
+      },
+      "gt_endpoints": {
+        "x1": 1074.3785957948628,
+        "y1": 692.0558805720739,
+        "x2": 258.02140420513723,
+        "y2": 260.364119427926
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_44850_000803.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 160,
+      "annotation_id": 160,
+      "gt_length_px": 553.31,
+      "pred_length_px": 548.64,
+      "signed_length_err_px": -4.675,
+      "symmetric_endpoint_err_px": 13.103,
+      "endpoint1_signed_err_px": -15.441,
+      "endpoint2_signed_err_px": -10.766,
+      "angle_err_deg": 0.0741,
+      "perp_offset_px": 4.442,
+      "pred_endpoints": {
+        "x1": 646.9130294344388,
+        "y1": 625.4711276139011,
+        "x2": 244.85168003821735,
+        "y2": 252.17590607750512
+      },
+      "gt_endpoints": {
+        "x1": 256.0,
+        "y1": 256.0,
+        "x2": 661.0,
+        "y2": 633.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_54062_225100.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 161,
+      "annotation_id": 161,
+      "gt_length_px": 781.4,
+      "pred_length_px": 788.15,
+      "signed_length_err_px": 6.75,
+      "symmetric_endpoint_err_px": 17.738,
+      "endpoint1_signed_err_px": 14.404,
+      "endpoint2_signed_err_px": 21.072,
+      "angle_err_deg": 0.8278,
+      "perp_offset_px": 0.673,
+      "pred_endpoints": {
+        "x1": 889.7640352068852,
+        "y1": 270.42291340776194,
+        "x2": 234.80737592592726,
+        "y2": 708.8424064164568
+      },
+      "gt_endpoints": {
+        "x1": 898.0000000000002,
+        "y1": 257.0000000000002,
+        "x2": 254.99999999999983,
+        "y2": 700.9999999999998
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_50193_205733.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 162,
+      "annotation_id": 162,
+      "gt_length_px": 622.4,
+      "pred_length_px": 631.46,
+      "signed_length_err_px": 9.061,
+      "symmetric_endpoint_err_px": 4.99,
+      "endpoint1_signed_err_px": 0.46,
+      "endpoint2_signed_err_px": 9.519,
+      "angle_err_deg": 0.1412,
+      "perp_offset_px": 2.955,
+      "pred_endpoints": {
+        "x1": 867.2336240994367,
+        "y1": 255.9110176468313,
+        "x2": 242.04469621306328,
+        "y2": 344.66631389613747
+      },
+      "gt_endpoints": {
+        "x1": 868.0,
+        "y1": 258.0,
+        "x2": 252.0,
+        "y2": 347.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_51771_223556.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 163,
+      "annotation_id": 163,
+      "gt_length_px": 491.62,
+      "pred_length_px": 516.6,
+      "signed_length_err_px": 24.977,
+      "symmetric_endpoint_err_px": 12.488,
+      "endpoint1_signed_err_px": -18.54,
+      "endpoint2_signed_err_px": 6.437,
+      "angle_err_deg": 0.036,
+      "perp_offset_px": 3.514,
+      "pred_endpoints": {
+        "x1": 378.23609390863254,
+        "y1": 233.20007424506184,
+        "x2": 252.87499007574246,
+        "y2": 734.3554677471257
+      },
+      "gt_endpoints": {
+        "x1": 377.0,
+        "y1": 252.0,
+        "x2": 258.0,
+        "y2": 729.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_52331_211150.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 164,
+      "annotation_id": 164,
+      "gt_length_px": 556.56,
+      "pred_length_px": 567.67,
+      "signed_length_err_px": 11.119,
+      "symmetric_endpoint_err_px": 5.549,
+      "endpoint1_signed_err_px": -0.416,
+      "endpoint2_signed_err_px": 10.683,
+      "angle_err_deg": 0.4874,
+      "perp_offset_px": 2.726,
+      "pred_endpoints": {
+        "x1": 525.7239887312035,
+        "y1": 251.11628438976186,
+        "x2": 251.48810843676523,
+        "y2": 748.1564206883631
+      },
+      "gt_endpoints": {
+        "x1": 257.0,
+        "y1": 739.0,
+        "x2": 530.0,
+        "y2": 254.00000000000003
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_57059_222610.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 165,
+      "annotation_id": 165,
+      "gt_length_px": 675.41,
+      "pred_length_px": 678.4,
+      "signed_length_err_px": 2.994,
+      "symmetric_endpoint_err_px": 11.988,
+      "endpoint1_signed_err_px": 10.493,
+      "endpoint2_signed_err_px": 13.482,
+      "angle_err_deg": 0.2391,
+      "perp_offset_px": 1.452,
+      "pred_endpoints": {
+        "x1": 653.7094009381346,
+        "y1": 263.3988624430095,
+        "x2": 246.6542465228028,
+        "y2": 806.1076072835531
+      },
+      "gt_endpoints": {
+        "x1": 257.0,
+        "y1": 797.0,
+        "x2": 660.0,
+        "y2": 255.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_57943_232358.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 166,
+      "annotation_id": 166,
+      "gt_length_px": 917.46,
+      "pred_length_px": 944.12,
+      "signed_length_err_px": 26.66,
+      "symmetric_endpoint_err_px": 13.315,
+      "endpoint1_signed_err_px": 18.688,
+      "endpoint2_signed_err_px": -7.942,
+      "angle_err_deg": 0.4555,
+      "perp_offset_px": 0.019,
+      "pred_endpoints": {
+        "x1": 1019.152632580831,
+        "y1": 797.790938494324,
+        "x2": 250.66560472385652,
+        "y2": 249.3495644353635
+      },
+      "gt_endpoints": {
+        "x1": 255.0,
+        "y1": 257.0,
+        "x2": 1006.0,
+        "y2": 784.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_42954_212123.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 167,
+      "annotation_id": 167,
+      "gt_length_px": 705.94,
+      "pred_length_px": 715.46,
+      "signed_length_err_px": 9.522,
+      "symmetric_endpoint_err_px": 4.753,
+      "endpoint1_signed_err_px": -7.683,
+      "endpoint2_signed_err_px": 1.824,
+      "angle_err_deg": 0.381,
+      "perp_offset_px": 0.373,
+      "pred_endpoints": {
+        "x1": 956.9037861021218,
+        "y1": 258.76089886631325,
+        "x2": 249.76283987444077,
+        "y2": 367.572414121968
+      },
+      "gt_endpoints": {
+        "x1": 949.0,
+        "y1": 258.00000000000006,
+        "x2": 252.0,
+        "y2": 369.99999999999994
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_51771_223608.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 168,
+      "annotation_id": 168,
+      "gt_length_px": 444.93,
+      "pred_length_px": 441.66,
+      "signed_length_err_px": -3.268,
+      "symmetric_endpoint_err_px": 1.664,
+      "endpoint1_signed_err_px": 0.804,
+      "endpoint2_signed_err_px": -2.525,
+      "angle_err_deg": 0.9501,
+      "perp_offset_px": 8.678,
+      "pred_endpoints": {
+        "x1": 690.5672196467324,
+        "y1": 245.87609858610523,
+        "x2": 253.8378706852988,
+        "y2": 311.693542527176
+      },
+      "gt_endpoints": {
+        "x1": 693.0,
+        "y1": 258.0000000000001,
+        "x2": 251.99999999999997,
+        "y2": 316.9999999999999
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_40358_213158.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 169,
+      "annotation_id": 169,
+      "gt_length_px": 481.15,
+      "pred_length_px": 497.17,
+      "signed_length_err_px": 16.02,
+      "symmetric_endpoint_err_px": 13.91,
+      "endpoint1_signed_err_px": -21.918,
+      "endpoint2_signed_err_px": -5.901,
+      "angle_err_deg": 0.1984,
+      "perp_offset_px": 3.106,
+      "pred_endpoints": {
+        "x1": 268.3014572677995,
+        "y1": 229.03270829761433,
+        "x2": 254.18133081813798,
+        "y2": 726.0017765656669
+      },
+      "gt_endpoints": {
+        "x1": 270.0,
+        "y1": 251.0,
+        "x2": 258.0,
+        "y2": 732.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_42954_212333.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 170,
+      "annotation_id": 170,
+      "gt_length_px": 611.74,
+      "pred_length_px": 617.43,
+      "signed_length_err_px": 5.692,
+      "symmetric_endpoint_err_px": 12.634,
+      "endpoint1_signed_err_px": -15.414,
+      "endpoint2_signed_err_px": -9.853,
+      "angle_err_deg": 1.1837,
+      "perp_offset_px": 2.319,
+      "pred_endpoints": {
+        "x1": 559.0463535799445,
+        "y1": 236.30194251862383,
+        "x2": 265.393221615368,
+        "y2": 779.4343245712199
+      },
+      "gt_endpoints": {
+        "x1": 559.0,
+        "y1": 253.99999999999994,
+        "x2": 257.00000000000006,
+        "y2": 786.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_45081_214403.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 171,
+      "annotation_id": 171,
+      "gt_length_px": 467.51,
+      "pred_length_px": 476.46,
+      "signed_length_err_px": 8.956,
+      "symmetric_endpoint_err_px": 4.543,
+      "endpoint1_signed_err_px": 0.115,
+      "endpoint2_signed_err_px": 8.971,
+      "angle_err_deg": 1.1749,
+      "perp_offset_px": 1.556,
+      "pred_endpoints": {
+        "x1": 409.8990542301943,
+        "y1": 250.93185995634272,
+        "x2": 258.1009457698057,
+        "y2": 702.5681400436573
+      },
+      "gt_endpoints": {
+        "x1": 416.0,
+        "y1": 253.0,
+        "x2": 258.0,
+        "y2": 693.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_60418_212535.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 172,
+      "annotation_id": 172,
+      "gt_length_px": 770.96,
+      "pred_length_px": 782.1,
+      "signed_length_err_px": 11.144,
+      "symmetric_endpoint_err_px": 8.487,
+      "endpoint1_signed_err_px": 2.928,
+      "endpoint2_signed_err_px": 14.046,
+      "angle_err_deg": 0.4653,
+      "perp_offset_px": 4.627,
+      "pred_endpoints": {
+        "x1": 616.7448472611286,
+        "y1": 252.86039128707677,
+        "x2": 250.03774551230893,
+        "y2": 943.6613372285483
+      },
+      "gt_endpoints": {
+        "x1": 625.0000000000001,
+        "y1": 254.0,
+        "x2": 257.9999999999999,
+        "y2": 932.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_57973_213716.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 173,
+      "annotation_id": 173,
+      "gt_length_px": 537.21,
+      "pred_length_px": 560.82,
+      "signed_length_err_px": 23.614,
+      "symmetric_endpoint_err_px": 11.793,
+      "endpoint1_signed_err_px": -14.333,
+      "endpoint2_signed_err_px": 9.252,
+      "angle_err_deg": 0.578,
+      "perp_offset_px": 0.628,
+      "pred_endpoints": {
+        "x1": 802.2661166717496,
+        "y1": 255.39997781355817,
+        "x2": 241.84814114075039,
+        "y2": 276.71427999894183
+      },
+      "gt_endpoints": {
+        "x1": 788.0,
+        "y1": 257.99999999999994,
+        "x2": 251.0,
+        "y2": 273.00000000000006
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_65582_234440.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 174,
+      "annotation_id": 174,
+      "gt_length_px": 986.06,
+      "pred_length_px": 999.37,
+      "signed_length_err_px": 13.302,
+      "symmetric_endpoint_err_px": 7.508,
+      "endpoint1_signed_err_px": 0.859,
+      "endpoint2_signed_err_px": 14.157,
+      "angle_err_deg": 0.17,
+      "perp_offset_px": 3.115,
+      "pred_endpoints": {
+        "x1": 1169.604152645442,
+        "y1": 256.79432598788367,
+        "x2": 238.14181903424554,
+        "y2": 618.8882301644601
+      },
+      "gt_endpoints": {
+        "x1": 253.0,
+        "y1": 618.0,
+        "x2": 1171.0,
+        "y2": 258.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_52284_234033.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 175,
+      "annotation_id": 175,
+      "gt_length_px": 555.7,
+      "pred_length_px": 555.22,
+      "signed_length_err_px": -0.475,
+      "symmetric_endpoint_err_px": 2.879,
+      "endpoint1_signed_err_px": -2.629,
+      "endpoint2_signed_err_px": -3.128,
+      "angle_err_deg": 0.5379,
+      "perp_offset_px": 0.658,
+      "pred_endpoints": {
+        "x1": 803.2956019998502,
+        "y1": 255.66878739994323,
+        "x2": 255.5959995626498,
+        "y2": 346.74088056880674
+      },
+      "gt_endpoints": {
+        "x1": 801.0,
+        "y1": 258.0,
+        "x2": 252.0,
+        "y2": 344.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_40358_213236.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 176,
+      "annotation_id": 176,
+      "gt_length_px": 866.98,
+      "pred_length_px": 860.7,
+      "signed_length_err_px": -6.277,
+      "symmetric_endpoint_err_px": 21.85,
+      "endpoint1_signed_err_px": 24.99,
+      "endpoint2_signed_err_px": 18.711,
+      "angle_err_deg": 0.1259,
+      "perp_offset_px": 2.131,
+      "pred_endpoints": {
+        "x1": 915.262234689555,
+        "y1": 268.97070445175893,
+        "x2": 239.57882976357,
+        "y2": 802.1320787513661
+      },
+      "gt_endpoints": {
+        "x1": 255.02508655053458,
+        "y1": 791.50647037087,
+        "x2": 936.8149134494656,
+        "y2": 255.95352962913
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260527_Atwood/Streak_65179_223726.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 177,
+      "annotation_id": 177,
+      "gt_length_px": 466.57,
+      "pred_length_px": 480.93,
+      "signed_length_err_px": 14.365,
+      "symmetric_endpoint_err_px": 9.051,
+      "endpoint1_signed_err_px": -1.875,
+      "endpoint2_signed_err_px": -16.227,
+      "angle_err_deg": 0.4285,
+      "perp_offset_px": 2.207,
+      "pred_endpoints": {
+        "x1": 715.324251882011,
+        "y1": 276.9067319709883,
+        "x2": 234.81271100861397,
+        "y2": 256.7918764274492
+      },
+      "gt_endpoints": {
+        "x1": 250.99999999999997,
+        "y1": 258.0,
+        "x2": 717.0,
+        "y2": 281.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_39012_210847.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 178,
+      "annotation_id": 268,
+      "gt_length_px": 891.66,
+      "pred_length_px": 901.75,
+      "signed_length_err_px": 10.09,
+      "symmetric_endpoint_err_px": 30.959,
+      "endpoint1_signed_err_px": -36.002,
+      "endpoint2_signed_err_px": -25.917,
+      "angle_err_deg": 0.2117,
+      "perp_offset_px": 4.328,
+      "pred_endpoints": {
+        "x1": 1144.0621192436847,
+        "y1": 250.37518457968423,
+        "x2": 278.10926747506517,
+        "y2": 501.929563955472
+      },
+      "gt_endpoints": {
+        "x1": 1110.2789731977953,
+        "y1": 263.09906406086765,
+        "x2": 254.9410268022047,
+        "y2": 515.0009359391324
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_65437_213132.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 179,
+      "annotation_id": 179,
+      "gt_length_px": 808.48,
+      "pred_length_px": 815.99,
+      "signed_length_err_px": 7.517,
+      "symmetric_endpoint_err_px": 17.208,
+      "endpoint1_signed_err_px": -20.945,
+      "endpoint2_signed_err_px": -13.471,
+      "angle_err_deg": 0.5862,
+      "perp_offset_px": 1.415,
+      "pred_endpoints": {
+        "x1": 759.3733882838196,
+        "y1": 235.0045452014475,
+        "x2": 267.4155521458679,
+        "y2": 886.022920618865
+      },
+      "gt_endpoints": {
+        "x1": 751.0,
+        "y1": 255.0,
+        "x2": 257.0,
+        "y2": 895.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_52334_210948.fits",
+      "band": "medium"
+    },
+    {
+      "image_id": 181,
+      "annotation_id": 181,
+      "gt_length_px": 316.32,
+      "pred_length_px": 323.55,
+      "signed_length_err_px": 7.23,
+      "symmetric_endpoint_err_px": 10.018,
+      "endpoint1_signed_err_px": -13.613,
+      "endpoint2_signed_err_px": -6.422,
+      "angle_err_deg": 0.8837,
+      "perp_offset_px": 6.038,
+      "pred_endpoints": {
+        "x1": 393.5096980042854,
+        "y1": 240.15891448735292,
+        "x2": 252.95838060899587,
+        "y2": 531.5857754540533
+      },
+      "gt_endpoints": {
+        "x1": 391.0,
+        "y1": 254.0,
+        "x2": 258.0,
+        "y2": 541.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_52331_211103.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 182,
+      "annotation_id": 182,
+      "gt_length_px": 307.59,
+      "pred_length_px": 305.17,
+      "signed_length_err_px": -2.416,
+      "symmetric_endpoint_err_px": 8.68,
+      "endpoint1_signed_err_px": -9.907,
+      "endpoint2_signed_err_px": -7.453,
+      "angle_err_deg": 0.8932,
+      "perp_offset_px": 0.167,
+      "pred_endpoints": {
+        "x1": 548.248599503817,
+        "y1": 274.18056435527836,
+        "x2": 243.40356114071426,
+        "y2": 260.08029990253414
+      },
+      "gt_endpoints": {
+        "x1": 251.0,
+        "y1": 258.0,
+        "x2": 558.0,
+        "y2": 277.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_43071_220121.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 183,
+      "annotation_id": 183,
+      "gt_length_px": 380.94,
+      "pred_length_px": 395.29,
+      "signed_length_err_px": 14.35,
+      "symmetric_endpoint_err_px": 16.706,
+      "endpoint1_signed_err_px": -23.858,
+      "endpoint2_signed_err_px": -9.554,
+      "angle_err_deg": 0.8751,
+      "perp_offset_px": 1.845,
+      "pred_endpoints": {
+        "x1": 246.43908176811607,
+        "y1": 232.57460791712708,
+        "x2": 433.1080984076652,
+        "y2": 581.0102919852167
+      },
+      "gt_endpoints": {
+        "x1": 257.0,
+        "y1": 254.0,
+        "x2": 442.0,
+        "y2": 587.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_51137_210234.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 184,
+      "annotation_id": 184,
+      "gt_length_px": 396.89,
+      "pred_length_px": 406.36,
+      "signed_length_err_px": 9.469,
+      "symmetric_endpoint_err_px": 4.7,
+      "endpoint1_signed_err_px": -5.715,
+      "endpoint2_signed_err_px": 3.686,
+      "angle_err_deg": 1.0528,
+      "perp_offset_px": 3.654,
+      "pred_endpoints": {
+        "x1": 476.07294458213687,
+        "y1": 246.13089445486358,
+        "x2": 255.00395971473813,
+        "y2": 587.0998794709177
+      },
+      "gt_endpoints": {
+        "x1": 479.0,
+        "y1": 254.99999999999997,
+        "x2": 257.0,
+        "y2": 584.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_55489_220510.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 185,
+      "annotation_id": 185,
+      "gt_length_px": 348.05,
+      "pred_length_px": 349.89,
+      "signed_length_err_px": 1.841,
+      "symmetric_endpoint_err_px": 6.263,
+      "endpoint1_signed_err_px": -7.182,
+      "endpoint2_signed_err_px": -5.344,
+      "angle_err_deg": 0.2433,
+      "perp_offset_px": 1.471,
+      "pred_endpoints": {
+        "x1": 595.4003184602329,
+        "y1": 254.06073801673313,
+        "x2": 256.99183241867325,
+        "y2": 342.9588542684231
+      },
+      "gt_endpoints": {
+        "x1": 589.0,
+        "y1": 257.99999999999994,
+        "x2": 252.0,
+        "y2": 345.00000000000006
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_65437_213303.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 186,
+      "annotation_id": 186,
+      "gt_length_px": 396.34,
+      "pred_length_px": 411.1,
+      "signed_length_err_px": 14.762,
+      "symmetric_endpoint_err_px": 7.372,
+      "endpoint1_signed_err_px": -7.916,
+      "endpoint2_signed_err_px": 6.828,
+      "angle_err_deg": 0.5335,
+      "perp_offset_px": 3.244,
+      "pred_endpoints": {
+        "x1": 631.705966424599,
+        "y1": 250.4691497101882,
+        "x2": 246.12453894649474,
+        "y2": 393.0563019499681
+      },
+      "gt_endpoints": {
+        "x1": 626.0,
+        "y1": 258.0,
+        "x2": 253.0,
+        "y2": 392.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_46146_212100.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 187,
+      "annotation_id": 187,
+      "gt_length_px": 378.91,
+      "pred_length_px": 408.24,
+      "signed_length_err_px": 29.338,
+      "symmetric_endpoint_err_px": 14.669,
+      "endpoint1_signed_err_px": -16.021,
+      "endpoint2_signed_err_px": 13.316,
+      "angle_err_deg": 0.1285,
+      "perp_offset_px": 1.496,
+      "pred_endpoints": {
+        "x1": 340.16900331622475,
+        "y1": 236.7105745760233,
+        "x2": 256.31097715252525,
+        "y2": 636.249447396633
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 623.0,
+        "x2": 335.0,
+        "y2": 251.99999999999997
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_68357_233215.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 188,
+      "annotation_id": 188,
+      "gt_length_px": 244.88,
+      "pred_length_px": 265.87,
+      "signed_length_err_px": 20.983,
+      "symmetric_endpoint_err_px": 10.491,
+      "endpoint1_signed_err_px": -10.681,
+      "endpoint2_signed_err_px": 10.302,
+      "angle_err_deg": 0.1708,
+      "perp_offset_px": 5.717,
+      "pred_endpoints": {
+        "x1": 451.5794398286101,
+        "y1": 245.57744799001458,
+        "x2": 243.62057237842117,
+        "y2": 411.2225398029542
+      },
+      "gt_endpoints": {
+        "x1": 255.0,
+        "y1": 409.0,
+        "x2": 447.0,
+        "y2": 257.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_62368_232117.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 189,
+      "annotation_id": 189,
+      "gt_length_px": 347.54,
+      "pred_length_px": 359.53,
+      "signed_length_err_px": 11.989,
+      "symmetric_endpoint_err_px": 18.303,
+      "endpoint1_signed_err_px": -24.292,
+      "endpoint2_signed_err_px": -12.313,
+      "angle_err_deg": 0.4285,
+      "perp_offset_px": 0.475,
+      "pred_endpoints": {
+        "x1": 245.13387474342846,
+        "y1": 233.31453276797012,
+        "x2": 414.0661374636028,
+        "y2": 550.6854672320299
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 254.0,
+        "x2": 419.0,
+        "y2": 562.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_65582_234330.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 190,
+      "annotation_id": 190,
+      "gt_length_px": 361.42,
+      "pred_length_px": 368.18,
+      "signed_length_err_px": 6.754,
+      "symmetric_endpoint_err_px": 12.731,
+      "endpoint1_signed_err_px": -16.107,
+      "endpoint2_signed_err_px": -9.355,
+      "angle_err_deg": 0.1427,
+      "perp_offset_px": 6.71,
+      "pred_endpoints": {
+        "x1": 500.9016623906344,
+        "y1": 239.7610521481288,
+        "x2": 257.76502462108436,
+        "y2": 516.2389478518712
+      },
+      "gt_endpoints": {
+        "x1": 495.0,
+        "y1": 256.0,
+        "x2": 257.0,
+        "y2": 528.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_59504_214925.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 193,
+      "annotation_id": 193,
+      "gt_length_px": 363.82,
+      "pred_length_px": 376.21,
+      "signed_length_err_px": 12.398,
+      "symmetric_endpoint_err_px": 8.805,
+      "endpoint1_signed_err_px": 2.608,
+      "endpoint2_signed_err_px": 15.003,
+      "angle_err_deg": 0.253,
+      "perp_offset_px": 4.376,
+      "pred_endpoints": {
+        "x1": 607.851632508537,
+        "y1": 254.92492378694354,
+        "x2": 236.351736632088,
+        "y2": 314.29541312711893
+      },
+      "gt_endpoints": {
+        "x1": 252.0,
+        "y1": 317.0,
+        "x2": 611.0,
+        "y2": 258.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_52284_233827.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 194,
+      "annotation_id": 194,
+      "gt_length_px": 378.94,
+      "pred_length_px": 387.91,
+      "signed_length_err_px": 8.967,
+      "symmetric_endpoint_err_px": 7.4,
+      "endpoint1_signed_err_px": 2.929,
+      "endpoint2_signed_err_px": 11.871,
+      "angle_err_deg": 0.6622,
+      "perp_offset_px": 0.005,
+      "pred_endpoints": {
+        "x1": 433.63624542926584,
+        "y1": 255.52066690735555,
+        "x2": 254.36375457073413,
+        "y2": 599.5193111199882
+      },
+      "gt_endpoints": {
+        "x1": 437.0,
+        "y1": 254.00000000000003,
+        "x2": 258.0,
+        "y2": 588.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_44768_211629.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 195,
+      "annotation_id": 195,
+      "gt_length_px": 369.43,
+      "pred_length_px": 380.42,
+      "signed_length_err_px": 10.983,
+      "symmetric_endpoint_err_px": 5.492,
+      "endpoint1_signed_err_px": -5.202,
+      "endpoint2_signed_err_px": 5.781,
+      "angle_err_deg": 0.032,
+      "perp_offset_px": 5.401,
+      "pred_endpoints": {
+        "x1": 497.2193239662229,
+        "y1": 248.464059961798,
+        "x2": 249.21542945174585,
+        "y2": 536.9272364249207
+      },
+      "gt_endpoints": {
+        "x1": 498.0,
+        "y1": 255.99999999999997,
+        "x2": 257.0,
+        "y2": 536.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_63594_211626.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 196,
+      "annotation_id": 196,
+      "gt_length_px": 348.77,
+      "pred_length_px": 366.87,
+      "signed_length_err_px": 18.094,
+      "symmetric_endpoint_err_px": 9.04,
+      "endpoint1_signed_err_px": -4.712,
+      "endpoint2_signed_err_px": 13.368,
+      "angle_err_deg": 0.4976,
+      "perp_offset_px": 1.325,
+      "pred_endpoints": {
+        "x1": 398.23599485158906,
+        "y1": 248.51065358257685,
+        "x2": 252.84090944528594,
+        "y2": 585.3354767885169
+      },
+      "gt_endpoints": {
+        "x1": 399.0,
+        "y1": 254.0,
+        "x2": 258.0,
+        "y2": 573.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_52331_211114.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 198,
+      "annotation_id": 198,
+      "gt_length_px": 349.29,
+      "pred_length_px": 337.97,
+      "signed_length_err_px": -11.323,
+      "symmetric_endpoint_err_px": 19.41,
+      "endpoint1_signed_err_px": -13.748,
+      "endpoint2_signed_err_px": -25.072,
+      "angle_err_deg": 0.1248,
+      "perp_offset_px": 3.453,
+      "pred_endpoints": {
+        "x1": 249.2045264757804,
+        "y1": 242.99257226301,
+        "x2": 396.5827049695321,
+        "y2": 547.1351132838649
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 254.0,
+        "x2": 411.0,
+        "y2": 568.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_65528_232247.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 199,
+      "annotation_id": 199,
+      "gt_length_px": 394.51,
+      "pred_length_px": 401.18,
+      "signed_length_err_px": 6.678,
+      "symmetric_endpoint_err_px": 8.63,
+      "endpoint1_signed_err_px": -11.966,
+      "endpoint2_signed_err_px": -5.293,
+      "angle_err_deg": 0.2799,
+      "perp_offset_px": 5.333,
+      "pred_endpoints": {
+        "x1": 274.2589077223571,
+        "y1": 238.82865621980727,
+        "x2": 251.96332128154916,
+        "y2": 639.393572784099
+      },
+      "gt_endpoints": {
+        "x1": 278.0,
+        "y1": 251.00000000000003,
+        "x2": 258.0,
+        "y2": 645.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_53923_211414.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 200,
+      "annotation_id": 200,
+      "gt_length_px": 323.26,
+      "pred_length_px": 336.25,
+      "signed_length_err_px": 12.985,
+      "symmetric_endpoint_err_px": 6.85,
+      "endpoint1_signed_err_px": -0.395,
+      "endpoint2_signed_err_px": -13.305,
+      "angle_err_deg": 1.2126,
+      "perp_offset_px": 6.478,
+      "pred_endpoints": {
+        "x1": 573.4882302647977,
+        "y1": 273.90222793832703,
+        "x2": 237.30248018442106,
+        "y2": 267.4930967687042
+      },
+      "gt_endpoints": {
+        "x1": 251.0,
+        "y1": 258.0,
+        "x2": 574.0,
+        "y2": 271.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_43071_220132.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 202,
+      "annotation_id": 202,
+      "gt_length_px": 280.35,
+      "pred_length_px": 289.7,
+      "signed_length_err_px": 9.355,
+      "symmetric_endpoint_err_px": 6.288,
+      "endpoint1_signed_err_px": -1.684,
+      "endpoint2_signed_err_px": -10.892,
+      "angle_err_deg": 1.8224,
+      "perp_offset_px": 0.686,
+      "pred_endpoints": {
+        "x1": 529.0541872376527,
+        "y1": 277.2020198154929,
+        "x2": 240.31721168812857,
+        "y2": 253.54083907122586
+      },
+      "gt_endpoints": {
+        "x1": 251.0,
+        "y1": 258.0,
+        "x2": 531.0,
+        "y2": 272.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_43071_220110.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 203,
+      "annotation_id": 203,
+      "gt_length_px": 299.82,
+      "pred_length_px": 304.35,
+      "signed_length_err_px": 4.536,
+      "symmetric_endpoint_err_px": 5.497,
+      "endpoint1_signed_err_px": -7.705,
+      "endpoint2_signed_err_px": -3.288,
+      "angle_err_deg": 1.604,
+      "perp_offset_px": 8.142,
+      "pred_endpoints": {
+        "x1": 417.99230173162755,
+        "y1": 241.69335109888254,
+        "x2": 255.60767385430995,
+        "y2": 499.1066366940862
+      },
+      "gt_endpoints": {
+        "x1": 424.0,
+        "y1": 255.0,
+        "x2": 257.0,
+        "y2": 504.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_44768_211607.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 204,
+      "annotation_id": 204,
+      "gt_length_px": 352.01,
+      "pred_length_px": 373.63,
+      "signed_length_err_px": 21.617,
+      "symmetric_endpoint_err_px": 13.34,
+      "endpoint1_signed_err_px": -2.541,
+      "endpoint2_signed_err_px": -24.139,
+      "angle_err_deg": 0.5872,
+      "perp_offset_px": 7.111,
+      "pred_endpoints": {
+        "x1": 566.1542201638264,
+        "y1": 415.21793465947536,
+        "x2": 236.7845615744549,
+        "y2": 238.8228978600559
+      },
+      "gt_endpoints": {
+        "x1": 254.0,
+        "y1": 258.0,
+        "x2": 566.0,
+        "y2": 421.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_57166_221626.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 205,
+      "annotation_id": 205,
+      "gt_length_px": 361.34,
+      "pred_length_px": 373.72,
+      "signed_length_err_px": 12.379,
+      "symmetric_endpoint_err_px": 6.124,
+      "endpoint1_signed_err_px": -3.199,
+      "endpoint2_signed_err_px": 9.05,
+      "angle_err_deg": 1.516,
+      "perp_offset_px": 2.143,
+      "pred_endpoints": {
+        "x1": 612.7893666621684,
+        "y1": 254.79132530658916,
+        "x2": 243.99493509564408,
+        "y2": 315.2479202988796
+      },
+      "gt_endpoints": {
+        "x1": 610.0,
+        "y1": 257.99999999999994,
+        "x2": 252.00000000000003,
+        "y2": 307.00000000000006
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_40358_213123.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 207,
+      "annotation_id": 207,
+      "gt_length_px": 363.21,
+      "pred_length_px": 366.91,
+      "signed_length_err_px": 3.698,
+      "symmetric_endpoint_err_px": 1.82,
+      "endpoint1_signed_err_px": -1.945,
+      "endpoint2_signed_err_px": 1.694,
+      "angle_err_deg": 1.0232,
+      "perp_offset_px": 4.731,
+      "pred_endpoints": {
+        "x1": 407.60487198700406,
+        "y1": 248.80429441772912,
+        "x2": 255.9587876809647,
+        "y2": 582.9048120275834
+      },
+      "gt_endpoints": {
+        "x1": 258.0,
+        "y1": 582.0,
+        "x2": 414.0,
+        "y2": 254.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_66814_230450.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 208,
+      "annotation_id": 208,
+      "gt_length_px": 264.92,
+      "pred_length_px": 257.58,
+      "signed_length_err_px": -7.332,
+      "symmetric_endpoint_err_px": 21.216,
+      "endpoint1_signed_err_px": -24.902,
+      "endpoint2_signed_err_px": -17.531,
+      "angle_err_deg": 0.9993,
+      "perp_offset_px": 0.573,
+      "pred_endpoints": {
+        "x1": 490.4184385668753,
+        "y1": 275.1221718865027,
+        "x2": 233.39107071046845,
+        "y2": 258.21114110177854
+      },
+      "gt_endpoints": {
+        "x1": 251.0,
+        "y1": 258.0,
+        "x2": 515.0,
+        "y2": 280.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_43071_220059.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 209,
+      "annotation_id": 209,
+      "gt_length_px": 239.62,
+      "pred_length_px": 255.92,
+      "signed_length_err_px": 16.3,
+      "symmetric_endpoint_err_px": 8.136,
+      "endpoint1_signed_err_px": -2.226,
+      "endpoint2_signed_err_px": 14.046,
+      "angle_err_deg": 0.8449,
+      "perp_offset_px": 2.156,
+      "pred_endpoints": {
+        "x1": 444.301703843998,
+        "y1": 252.43852408333788,
+        "x2": 243.69829615600202,
+        "y2": 411.3452893932246
+      },
+      "gt_endpoints": {
+        "x1": 255.0,
+        "y1": 403.0,
+        "x2": 445.0,
+        "y2": 257.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_62368_232108.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 210,
+      "annotation_id": 210,
+      "gt_length_px": 242.35,
+      "pred_length_px": 257.9,
+      "signed_length_err_px": 15.549,
+      "symmetric_endpoint_err_px": 7.692,
+      "endpoint1_signed_err_px": 3.564,
+      "endpoint2_signed_err_px": -11.821,
+      "angle_err_deg": 2.0434,
+      "perp_offset_px": 2.282,
+      "pred_endpoints": {
+        "x1": 496.4347485617724,
+        "y1": 273.50378020204624,
+        "x2": 239.56525143822765,
+        "y2": 250.49621979795378
+      },
+      "gt_endpoints": {
+        "x1": 251.0,
+        "y1": 258.0,
+        "x2": 493.0,
+        "y2": 271.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_43071_220049.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 211,
+      "annotation_id": 211,
+      "gt_length_px": 357.47,
+      "pred_length_px": 367.26,
+      "signed_length_err_px": 9.793,
+      "symmetric_endpoint_err_px": 6.044,
+      "endpoint1_signed_err_px": -10.94,
+      "endpoint2_signed_err_px": -1.149,
+      "angle_err_deg": 0.2262,
+      "perp_offset_px": 3.833,
+      "pred_endpoints": {
+        "x1": 571.9395110124316,
+        "y1": 248.8579290789095,
+        "x2": 252.7271759992872,
+        "y2": 430.47538390937177
+      },
+      "gt_endpoints": {
+        "x1": 564.0,
+        "y1": 257.0,
+        "x2": 254.0,
+        "y2": 435.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260412_Atwood/Streak_47799_214913.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 212,
+      "annotation_id": 212,
+      "gt_length_px": 384.9,
+      "pred_length_px": 393.59,
+      "signed_length_err_px": 8.693,
+      "symmetric_endpoint_err_px": 4.346,
+      "endpoint1_signed_err_px": -3.819,
+      "endpoint2_signed_err_px": 4.872,
+      "angle_err_deg": 0.1382,
+      "perp_offset_px": 3.695,
+      "pred_endpoints": {
+        "x1": 480.6040414320445,
+        "y1": 250.0200153793917,
+        "x2": 250.77376618514302,
+        "y2": 569.5355266127958
+      },
+      "gt_endpoints": {
+        "x1": 257.0,
+        "y1": 568.0,
+        "x2": 481.0,
+        "y2": 255.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_56097_223358.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 215,
+      "annotation_id": 215,
+      "gt_length_px": 329.26,
+      "pred_length_px": 326.6,
+      "signed_length_err_px": -2.663,
+      "symmetric_endpoint_err_px": 19.141,
+      "endpoint1_signed_err_px": -17.801,
+      "endpoint2_signed_err_px": -20.482,
+      "angle_err_deg": 0.6074,
+      "perp_offset_px": 2.089,
+      "pred_endpoints": {
+        "x1": 244.1631997488954,
+        "y1": 242.08999554428132,
+        "x2": 423.62628999719834,
+        "y2": 514.9626167604061
+      },
+      "gt_endpoints": {
+        "x1": 257.0,
+        "y1": 255.0,
+        "x2": 435.0,
+        "y2": 532.0
+      },
+      "file_name": "/Volumes/External/TrainingData/raw/BrentImages/Img_20260515_Atwood/Streak_65528_232235.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 216,
+      "annotation_id": 216,
+      "gt_length_px": 203.43,
+      "pred_length_px": 207.71,
+      "signed_length_err_px": 4.285,
+      "symmetric_endpoint_err_px": 4.474,
+      "endpoint1_signed_err_px": 2.358,
+      "endpoint2_signed_err_px": 6.59,
+      "angle_err_deg": 1.284,
+      "perp_offset_px": 1.645,
+      "pred_endpoints": {
+        "x1": 395.06139886160105,
+        "y1": 46.30216553440445,
+        "x2": 516.938601138399,
+        "y2": 214.4978222585643
+      },
+      "gt_endpoints": {
+        "x1": 396.9888005790428,
+        "y1": 42.10445784655937,
+        "x2": 512.6308202914953,
+        "y2": 209.4639545417051
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_000.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 217,
+      "annotation_id": 217,
+      "gt_length_px": 262.81,
+      "pred_length_px": 272.74,
+      "signed_length_err_px": 9.935,
+      "symmetric_endpoint_err_px": 7.587,
+      "endpoint1_signed_err_px": -12.488,
+      "endpoint2_signed_err_px": -2.687,
+      "angle_err_deg": 1.7949,
+      "perp_offset_px": 4.633,
+      "pred_endpoints": {
+        "x1": 603.4765845750363,
+        "y1": 380.2352347338133,
+        "x2": 330.8264549757449,
+        "y2": 387.2799019849367
+      },
+      "gt_endpoints": {
+        "x1": 591.0296620564188,
+        "y1": 381.3093700851726,
+        "x2": 328.6525213290894,
+        "y2": 396.322755308113
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_001.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 218,
+      "annotation_id": 218,
+      "gt_length_px": 290.62,
+      "pred_length_px": 307.65,
+      "signed_length_err_px": 17.023,
+      "symmetric_endpoint_err_px": 10.134,
+      "endpoint1_signed_err_px": -18.645,
+      "endpoint2_signed_err_px": -1.623,
+      "angle_err_deg": 0.1283,
+      "perp_offset_px": 0.463,
+      "pred_endpoints": {
+        "x1": 695.2429860974296,
+        "y1": 553.3788425027174,
+        "x2": 389.73003636350785,
+        "y2": 589.5401028097826
+      },
+      "gt_endpoints": {
+        "x1": 676.7087461794613,
+        "y1": 555.4112214085926,
+        "x2": 388.0249034110293,
+        "y2": 588.9253138823719
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_002.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 219,
+      "annotation_id": 219,
+      "gt_length_px": 200.83,
+      "pred_length_px": 216.2,
+      "signed_length_err_px": 15.367,
+      "symmetric_endpoint_err_px": 7.68,
+      "endpoint1_signed_err_px": -13.913,
+      "endpoint2_signed_err_px": 1.448,
+      "angle_err_deg": 0.4397,
+      "perp_offset_px": 1.597,
+      "pred_endpoints": {
+        "x1": 504.39755426135406,
+        "y1": 549.8401754950155,
+        "x2": 466.86172308239594,
+        "y2": 762.752475872172
+      },
+      "gt_endpoints": {
+        "x1": 502.84424401669514,
+        "y1": 563.6872331584905,
+        "x2": 469.4951427094047,
+        "y2": 761.7273230425849
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_003.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 220,
+      "annotation_id": 220,
+      "gt_length_px": 294.8,
+      "pred_length_px": 298.97,
+      "signed_length_err_px": 4.167,
+      "symmetric_endpoint_err_px": 11.77,
+      "endpoint1_signed_err_px": 9.7,
+      "endpoint2_signed_err_px": 13.84,
+      "angle_err_deg": 0.7621,
+      "perp_offset_px": 0.683,
+      "pred_endpoints": {
+        "x1": 426.87599358678096,
+        "y1": 128.5734882589232,
+        "x2": 212.69157233118776,
+        "y2": 337.1562480692018
+      },
+      "gt_endpoints": {
+        "x1": 432.8111956156948,
+        "y1": 120.7913147601541,
+        "x2": 224.36610615424559,
+        "y2": 329.2579656884681
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_004.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 221,
+      "annotation_id": 221,
+      "gt_length_px": 216.7,
+      "pred_length_px": 240.56,
+      "signed_length_err_px": 23.854,
+      "symmetric_endpoint_err_px": 11.846,
+      "endpoint1_signed_err_px": -9.464,
+      "endpoint2_signed_err_px": 14.229,
+      "angle_err_deg": 2.0966,
+      "perp_offset_px": 4.246,
+      "pred_endpoints": {
+        "x1": 498.6571843380507,
+        "y1": 654.1457950040713,
+        "x2": 258.90806224398057,
+        "y2": 673.8542049959287
+      },
+      "gt_endpoints": {
+        "x1": 489.2103961638852,
+        "y1": 654.730021949203,
+        "x2": 272.73003576080134,
+        "y2": 664.5708231462532
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_005.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 222,
+      "annotation_id": 222,
+      "gt_length_px": 87.14,
+      "pred_length_px": 97.36,
+      "signed_length_err_px": 10.213,
+      "symmetric_endpoint_err_px": 5.042,
+      "endpoint1_signed_err_px": -3.664,
+      "endpoint2_signed_err_px": 6.419,
+      "angle_err_deg": 2.965,
+      "perp_offset_px": 5.072,
+      "pred_endpoints": {
+        "x1": 613.947608609711,
+        "y1": 639.6869470434848,
+        "x2": 602.052391390289,
+        "y2": 736.3130529565152
+      },
+      "gt_endpoints": {
+        "x1": 610.7966819498946,
+        "y1": 642.8524737252831,
+        "x2": 595.6899053809697,
+        "y2": 728.6752131101048
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_006.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 223,
+      "annotation_id": 223,
+      "gt_length_px": 75.58,
+      "pred_length_px": 87.45,
+      "signed_length_err_px": 11.863,
+      "symmetric_endpoint_err_px": 5.838,
+      "endpoint1_signed_err_px": 11.331,
+      "endpoint2_signed_err_px": -0.344,
+      "angle_err_deg": 3.753,
+      "perp_offset_px": 1.055,
+      "pred_endpoints": {
+        "x1": 564.9200598104717,
+        "y1": 566.1812873334057,
+        "x2": 484.6799157754658,
+        "y2": 531.4186882525318
+      },
+      "gt_endpoints": {
+        "x1": 484.39575304827554,
+        "y1": 533.2361310461637,
+        "x2": 555.5683726515617,
+        "y2": 558.6787208341901
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_007.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 224,
+      "annotation_id": 224,
+      "gt_length_px": 296.62,
+      "pred_length_px": 304.28,
+      "signed_length_err_px": 7.665,
+      "symmetric_endpoint_err_px": 3.831,
+      "endpoint1_signed_err_px": -7.244,
+      "endpoint2_signed_err_px": 0.418,
+      "angle_err_deg": 0.2379,
+      "perp_offset_px": 1.495,
+      "pred_endpoints": {
+        "x1": 316.5871368420193,
+        "y1": 185.20139111857435,
+        "x2": 69.19063415407447,
+        "y2": 362.35415087361315
+      },
+      "gt_endpoints": {
+        "x1": 311.220711288302,
+        "y1": 190.14338862428056,
+        "x2": 70.7751553484936,
+        "y2": 363.8333826579128
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_008.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 225,
+      "annotation_id": 225,
+      "gt_length_px": 61.44,
+      "pred_length_px": 79.82,
+      "signed_length_err_px": 18.379,
+      "symmetric_endpoint_err_px": 9.173,
+      "endpoint1_signed_err_px": -10.892,
+      "endpoint2_signed_err_px": 7.453,
+      "angle_err_deg": 1.6745,
+      "perp_offset_px": 0.647,
+      "pred_endpoints": {
+        "x1": 527.5692163869185,
+        "y1": 29.91743965324298,
+        "x2": 521.5736058787065,
+        "y2": 109.51113395515546
+      },
+      "gt_endpoints": {
+        "x1": 525.2572563436925,
+        "y1": 40.71490548077584,
+        "x2": 522.4345008801488,
+        "y2": 102.09006791984343
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_009.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 226,
+      "annotation_id": 226,
+      "gt_length_px": 274.92,
+      "pred_length_px": 276.43,
+      "signed_length_err_px": 1.516,
+      "symmetric_endpoint_err_px": 16.419,
+      "endpoint1_signed_err_px": -15.688,
+      "endpoint2_signed_err_px": -17.151,
+      "angle_err_deg": 1.1205,
+      "perp_offset_px": 1.359,
+      "pred_endpoints": {
+        "x1": 663.2648534700181,
+        "y1": 406.0032088632154,
+        "x2": 456.7351465299819,
+        "y2": 222.2634537344409
+      },
+      "gt_endpoints": {
+        "x1": 470.23634059538404,
+        "y1": 232.92565688584108,
+        "x2": 672.0205526438974,
+        "y2": 419.6393231398071
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_010.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 227,
+      "annotation_id": 227,
+      "gt_length_px": 248.9,
+      "pred_length_px": 274.01,
+      "signed_length_err_px": 25.111,
+      "symmetric_endpoint_err_px": 12.742,
+      "endpoint1_signed_err_px": -25.297,
+      "endpoint2_signed_err_px": -0.188,
+      "angle_err_deg": 0.2221,
+      "perp_offset_px": 1.418,
+      "pred_endpoints": {
+        "x1": 236.43091406280593,
+        "y1": 455.8833750832415,
+        "x2": 322.5993593746941,
+        "y2": 715.995409096446
+      },
+      "gt_endpoints": {
+        "x1": 245.3200847947246,
+        "y1": 479.5836062516413,
+        "x2": 324.50719908212545,
+        "y2": 715.5536162564468
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_011.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 228,
+      "annotation_id": 228,
+      "gt_length_px": 169.42,
+      "pred_length_px": 175.94,
+      "signed_length_err_px": 6.528,
+      "symmetric_endpoint_err_px": 3.255,
+      "endpoint1_signed_err_px": -3.67,
+      "endpoint2_signed_err_px": 2.841,
+      "angle_err_deg": 0.7953,
+      "perp_offset_px": 2.805,
+      "pred_endpoints": {
+        "x1": 638.6193703782234,
+        "y1": 627.0374248965821,
+        "x2": 529.3806296217766,
+        "y2": 764.9625751034179
+      },
+      "gt_endpoints": {
+        "x1": 635.0735366614703,
+        "y1": 628.8819962974593,
+        "x2": 528.0544570853909,
+        "y2": 760.2170938620121
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_012.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 229,
+      "annotation_id": 229,
+      "gt_length_px": 103.78,
+      "pred_length_px": 132.2,
+      "signed_length_err_px": 28.416,
+      "symmetric_endpoint_err_px": 14.185,
+      "endpoint1_signed_err_px": -16.822,
+      "endpoint2_signed_err_px": 11.547,
+      "angle_err_deg": 1.5259,
+      "perp_offset_px": 4.415,
+      "pred_endpoints": {
+        "x1": 745.1161579205861,
+        "y1": 465.61900667816985,
+        "x2": 717.7410198137889,
+        "y2": 594.9524044546426
+      },
+      "gt_endpoints": {
+        "x1": 738.6140798092566,
+        "y1": 481.3590614993516,
+        "x2": 714.4270689218091,
+        "y2": 582.2840828861522
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_013.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 230,
+      "annotation_id": 230,
+      "gt_length_px": 352.9,
+      "pred_length_px": 368.28,
+      "signed_length_err_px": 15.387,
+      "symmetric_endpoint_err_px": 7.675,
+      "endpoint1_signed_err_px": -4.113,
+      "endpoint2_signed_err_px": 11.236,
+      "angle_err_deg": 0.8183,
+      "perp_offset_px": 2.998,
+      "pred_endpoints": {
+        "x1": 249.76856527415703,
+        "y1": 164.6389787031032,
+        "x2": 258.5950821867805,
+        "y2": 532.8155501054905
+      },
+      "gt_endpoints": {
+        "x1": 249.4399751790825,
+        "y1": 168.7554571742947,
+        "x2": 252.8583504761224,
+        "y2": 521.6345037790966
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_014.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 231,
+      "annotation_id": 231,
+      "gt_length_px": 65.65,
+      "pred_length_px": 97.55,
+      "signed_length_err_px": 31.896,
+      "symmetric_endpoint_err_px": 15.793,
+      "endpoint1_signed_err_px": -21.208,
+      "endpoint2_signed_err_px": 10.378,
+      "angle_err_deg": 4.5671,
+      "perp_offset_px": 2.188,
+      "pred_endpoints": {
+        "x1": 479.5089208126209,
+        "y1": 238.62457914152267,
+        "x2": 501.4141748905041,
+        "y2": 333.68309908113355
+      },
+      "gt_endpoints": {
+        "x1": 488.6165755060924,
+        "y1": 258.7167070601786,
+        "x2": 498.2184114410774,
+        "y2": 323.6647922147803
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_015.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 232,
+      "annotation_id": 232,
+      "gt_length_px": 300.63,
+      "pred_length_px": 323.36,
+      "signed_length_err_px": 22.734,
+      "symmetric_endpoint_err_px": 11.324,
+      "endpoint1_signed_err_px": -19.704,
+      "endpoint2_signed_err_px": 2.945,
+      "angle_err_deg": 1.3172,
+      "perp_offset_px": 2.69,
+      "pred_endpoints": {
+        "x1": 316.4327976052338,
+        "y1": 412.9298223952256,
+        "x2": 282.42431909398493,
+        "y2": 734.498766471962
+      },
+      "gt_endpoints": {
+        "x1": 320.26477331277107,
+        "y1": 433.2915471239056,
+        "x2": 281.78353416231954,
+        "y2": 731.4467218395099
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_016.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 233,
+      "annotation_id": 233,
+      "gt_length_px": 350.9,
+      "pred_length_px": 387.05,
+      "signed_length_err_px": 36.154,
+      "symmetric_endpoint_err_px": 18.044,
+      "endpoint1_signed_err_px": -21.494,
+      "endpoint2_signed_err_px": 14.593,
+      "angle_err_deg": 1.0644,
+      "perp_offset_px": 1.613,
+      "pred_endpoints": {
+        "x1": 519.3579165033901,
+        "y1": 241.21025854722825,
+        "x2": 476.3344052739536,
+        "y2": 625.8666457496468
+      },
+      "gt_endpoints": {
+        "x1": 515.3921191010045,
+        "y1": 262.42833904421093,
+        "x2": 482.8720681840014,
+        "y2": 611.8189171266088
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_017.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 234,
+      "annotation_id": 234,
+      "gt_length_px": 137.24,
+      "pred_length_px": 73.51,
+      "signed_length_err_px": -63.725,
+      "symmetric_endpoint_err_px": 31.904,
+      "endpoint1_signed_err_px": 0.528,
+      "endpoint2_signed_err_px": -63.28,
+      "angle_err_deg": 2.7188,
+      "perp_offset_px": 2.178,
+      "pred_endpoints": {
+        "x1": 152.7160782506421,
+        "y1": 573.2573819576612,
+        "x2": 188.61726525521726,
+        "y2": 637.4092440189013
+      },
+      "gt_endpoints": {
+        "x1": 149.10905038415515,
+        "y1": 574.8848670880833,
+        "x2": 221.73587855058364,
+        "y2": 691.3318650891475
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_018.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 235,
+      "annotation_id": 235,
+      "gt_length_px": 313.43,
+      "pred_length_px": 333.39,
+      "signed_length_err_px": 19.958,
+      "symmetric_endpoint_err_px": 9.979,
+      "endpoint1_signed_err_px": -11.283,
+      "endpoint2_signed_err_px": 8.675,
+      "angle_err_deg": 0.037,
+      "perp_offset_px": 1.478,
+      "pred_endpoints": {
+        "x1": 502.3469099597095,
+        "y1": 282.8078133048268,
+        "x2": 242.79597334107177,
+        "y2": 492.0493033943919
+      },
+      "gt_endpoints": {
+        "x1": 494.42831467890045,
+        "y1": 290.9606498577835,
+        "x2": 250.54221209966926,
+        "y2": 487.8338889689682
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_019.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 236,
+      "annotation_id": 236,
+      "gt_length_px": 348.82,
+      "pred_length_px": 368.33,
+      "signed_length_err_px": 19.509,
+      "symmetric_endpoint_err_px": 9.75,
+      "endpoint1_signed_err_px": -19.23,
+      "endpoint2_signed_err_px": 0.27,
+      "angle_err_deg": 0.4117,
+      "perp_offset_px": 1.465,
+      "pred_endpoints": {
+        "x1": 420.92691582707454,
+        "y1": 303.5352083201208,
+        "x2": 133.2549079033942,
+        "y2": 533.5556730275355
+      },
+      "gt_endpoints": {
+        "x1": 407.54770595798357,
+        "y1": 317.62686140267505,
+        "x2": 133.55466133179905,
+        "y2": 533.5002026272907
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_020.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 237,
+      "annotation_id": 237,
+      "gt_length_px": 365.71,
+      "pred_length_px": 368.73,
+      "signed_length_err_px": 3.015,
+      "symmetric_endpoint_err_px": 9.82,
+      "endpoint1_signed_err_px": -11.311,
+      "endpoint2_signed_err_px": -8.329,
+      "angle_err_deg": 0.7661,
+      "perp_offset_px": 3.407,
+      "pred_endpoints": {
+        "x1": 375.4687119243556,
+        "y1": 22.74174396668252,
+        "x2": 365.6512831928319,
+        "y2": 391.3382426055831
+      },
+      "gt_endpoints": {
+        "x1": 380.8839419582894,
+        "y1": 34.278630945796095,
+        "x2": 366.25975004802984,
+        "y2": 399.69793273363905
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_021.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 238,
+      "annotation_id": 238,
+      "gt_length_px": 138.74,
+      "pred_length_px": 163.38,
+      "signed_length_err_px": 24.637,
+      "symmetric_endpoint_err_px": 12.282,
+      "endpoint1_signed_err_px": 11.143,
+      "endpoint2_signed_err_px": -13.42,
+      "angle_err_deg": 1.7148,
+      "perp_offset_px": 2.708,
+      "pred_endpoints": {
+        "x1": 451.9834917051239,
+        "y1": 421.4094935787992,
+        "x2": 291.1275922792511,
+        "y2": 392.81273542510706
+      },
+      "gt_endpoints": {
+        "x1": 304.21077575272653,
+        "y1": 395.81401981402985,
+        "x2": 440.0223639019925,
+        "y2": 424.17535267110986
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_022.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 239,
+      "annotation_id": 239,
+      "gt_length_px": 95.71,
+      "pred_length_px": 117.19,
+      "signed_length_err_px": 21.478,
+      "symmetric_endpoint_err_px": 11.866,
+      "endpoint1_signed_err_px": -22.571,
+      "endpoint2_signed_err_px": -1.16,
+      "angle_err_deg": 1.953,
+      "perp_offset_px": 1.584,
+      "pred_endpoints": {
+        "x1": 86.41508228366494,
+        "y1": 464.54283302969856,
+        "x2": 124.25158946926474,
+        "y2": 575.4571669703015
+      },
+      "gt_endpoints": {
+        "x1": 91.07877931483296,
+        "y1": 486.9147614855785,
+        "x2": 125.04997134492032,
+        "y2": 576.3953046970812
+      },
+      "file_name": "data/synthetic_eval/balanced_v1/synth_short_023.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 240,
+      "annotation_id": 265,
+      "gt_length_px": 266.12,
+      "pred_length_px": 272.74,
+      "signed_length_err_px": 6.621,
+      "symmetric_endpoint_err_px": 7.296,
+      "endpoint1_signed_err_px": -10.529,
+      "endpoint2_signed_err_px": -4.063,
+      "angle_err_deg": 1.9299,
+      "perp_offset_px": 6.25,
+      "pred_endpoints": {
+        "x1": 603.4765845750363,
+        "y1": 380.2352347338133,
+        "x2": 330.8264549757449,
+        "y2": 387.2799019849367
+      },
+      "gt_endpoints": {
+        "x1": 327.41558781224103,
+        "y1": 398.34448842164136,
+        "x2": 593.064412187759,
+        "y2": 382.51551157835866
+      },
+      "file_name": "/Users/robert/Argus/data/synthetic_eval/balanced_v1/synth_short_001.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 241,
+      "annotation_id": 241,
+      "gt_length_px": 295.41,
+      "pred_length_px": 307.65,
+      "signed_length_err_px": 12.236,
+      "symmetric_endpoint_err_px": 10.352,
+      "endpoint1_signed_err_px": -16.469,
+      "endpoint2_signed_err_px": -4.234,
+      "angle_err_deg": 0.1203,
+      "perp_offset_px": 1.093,
+      "pred_endpoints": {
+        "x1": 695.2429860974296,
+        "y1": 553.3788425027174,
+        "x2": 389.73003636350785,
+        "y2": 589.5401028097826
+      },
+      "gt_endpoints": {
+        "x1": 385.61278479689406,
+        "y1": 590.7936151019509,
+        "x2": 679.047215203106,
+        "y2": 556.6863848980491
+      },
+      "file_name": "/Users/robert/Argus/data/synthetic_eval/balanced_v1/synth_short_002.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 242,
+      "annotation_id": 242,
+      "gt_length_px": 204.69,
+      "pred_length_px": 216.2,
+      "signed_length_err_px": 11.506,
+      "symmetric_endpoint_err_px": 6.974,
+      "endpoint1_signed_err_px": -12.725,
+      "endpoint2_signed_err_px": -1.224,
+      "angle_err_deg": 0.3783,
+      "perp_offset_px": 2.318,
+      "pred_endpoints": {
+        "x1": 504.39755426135406,
+        "y1": 549.8401754950155,
+        "x2": 466.86172308239594,
+        "y2": 762.752475872172
+      },
+      "gt_endpoints": {
+        "x1": 503.85317119296576,
+        "y1": 562.654199571362,
+        "x2": 469.64682880703424,
+        "y2": 764.4658004286379
+      },
+      "file_name": "/Users/robert/Argus/data/synthetic_eval/balanced_v1/synth_short_003.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 243,
+      "annotation_id": 243,
+      "gt_length_px": 81.47,
+      "pred_length_px": 87.45,
+      "signed_length_err_px": 5.977,
+      "symmetric_endpoint_err_px": 5.293,
+      "endpoint1_signed_err_px": 8.168,
+      "endpoint2_signed_err_px": 2.418,
+      "angle_err_deg": 4.1238,
+      "perp_offset_px": 1.198,
+      "pred_endpoints": {
+        "x1": 564.9200598104717,
+        "y1": 566.1812873334057,
+        "x2": 484.6799157754658,
+        "y2": 531.4186882525318
+      },
+      "gt_endpoints": {
+        "x1": 481.7542682372572,
+        "y1": 532.4564962128268,
+        "x2": 558.6457317627429,
+        "y2": 559.3835037871731
+      },
+      "file_name": "/Users/robert/Argus/data/synthetic_eval/balanced_v1/synth_short_007.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 244,
+      "annotation_id": 244,
+      "gt_length_px": 356.0,
+      "pred_length_px": 368.28,
+      "signed_length_err_px": 12.282,
+      "symmetric_endpoint_err_px": 6.123,
+      "endpoint1_signed_err_px": -4.55,
+      "endpoint2_signed_err_px": 7.696,
+      "angle_err_deg": 0.8033,
+      "perp_offset_px": 2.576,
+      "pred_endpoints": {
+        "x1": 249.76856527415703,
+        "y1": 164.6389787031032,
+        "x2": 258.5950821867805,
+        "y2": 532.8155501054905
+      },
+      "gt_endpoints": {
+        "x1": 249.81921815036938,
+        "y1": 169.18880827512555,
+        "x2": 253.36078184963063,
+        "y2": 525.1711917248745
+      },
+      "file_name": "/Users/robert/Argus/data/synthetic_eval/balanced_v1/synth_short_014.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 245,
+      "annotation_id": 245,
+      "gt_length_px": 142.91,
+      "pred_length_px": 163.38,
+      "signed_length_err_px": 20.468,
+      "symmetric_endpoint_err_px": 10.196,
+      "endpoint1_signed_err_px": 8.151,
+      "endpoint2_signed_err_px": -12.241,
+      "angle_err_deg": 1.7493,
+      "perp_offset_px": 3.351,
+      "pred_endpoints": {
+        "x1": 451.9834917051239,
+        "y1": 421.4094935787992,
+        "x2": 291.1275922792511,
+        "y2": 392.81273542510706
+      },
+      "gt_endpoints": {
+        "x1": 302.9326912878532,
+        "y1": 396.1611135200701,
+        "x2": 442.80730871214683,
+        "y2": 425.4588864799299
+      },
+      "file_name": "/Users/robert/Argus/data/synthetic_eval/balanced_v1/synth_short_022.fits",
+      "band": "short"
+    },
+    {
+      "image_id": 246,
+      "annotation_id": 246,
+      "gt_length_px": 101.41,
+      "pred_length_px": 117.19,
+      "signed_length_err_px": 15.78,
+      "symmetric_endpoint_err_px": 12.063,
+      "endpoint1_signed_err_px": -19.921,
+      "endpoint2_signed_err_px": -4.205,
+      "angle_err_deg": 1.8938,
+      "perp_offset_px": 1.351,
+      "pred_endpoints": {
+        "x1": 86.41508228366494,
+        "y1": 464.54283302969856,
+        "x2": 124.25158946926474,
+        "y2": 575.4571669703015
+      },
+      "gt_endpoints": {
+        "x1": 90.3922253295553,
+        "y1": 484.3377013486383,
+        "x2": 126.2877746704447,
+        "y2": 579.1822986513617
+      },
+      "file_name": "/Users/robert/Argus/data/synthetic_eval/balanced_v1/synth_short_023.fits",
+      "band": "short"
+    }
+  ]
+}

@@ -47,32 +47,23 @@ angle, perpendicular offset, along-track overlap, and endpoint error.
 
 ## Data and naming
 
-- Full-frame annotations use source image coordinates.
-- Materialized crops and tiles use local coordinates.
-- Never pair full-frame pixels with crop-local endpoints.
+- Full-frame annotations use source image coordinates; materialized crops use
+  local coordinates. Never pair full-frame pixels with crop-local endpoints.
 - Keep train, validation, and test splits deterministic and leakage-free.
 - Keep raw FITS, annotations, derived datasets, and feature caches outside the
   repository. Do not create dataset symlinks under `data/`.
-- `ARGUS_DATA_ROOT` identifies the durable dataset tree, which may be on an
-  external drive. Annotation `file_name` values must be relative to this root;
-  legacy absolute paths are supported only when they are beneath it.
-- `ARGUS_SCRATCH_ROOT` identifies a disposable local mirror, normally under
-  `/tmp`. Active training, validation, feature caching, and heatmap evaluation
-  resolve files from scratch first and then fall back to the durable root.
-- Use `scripts/stage_dataset_files.py` with all train and validation manifests
-  to copy only referenced source files into scratch while preserving paths.
-  Never swap symlinks or rewrite manifests to point at temporary files.
-- Cached-feature training uses explicit `--train-cache` and `--val-cache`
-  directories. Copy durable feature caches to local scratch before training
-  when local I/O is required; do not place caches in the repository.
+- `ARGUS_DATA_ROOT` = `/Volumes/External/TrainingData` (durable, external drive).
+  `ARGUS_SCRATCH_ROOT` = disposable local mirror under `/tmp`.
 - Never hard-code `/Volumes/...`, `/tmp/...`, or `data/annotations/...` in new
-  training and evaluation code. Accept `--data-root`/`--scratch-root`, or use
-  the corresponding environment configuration.
-- Treat the configured durable data root and generated `results/` as user data;
-  never delete or rewrite them unless explicitly requested. Scratch copies are
-  disposable only when the user or owning workflow explicitly authorizes cleanup.
+  training and evaluation code.
+- Canonical training source: `annotations/all_train_run17_merged_no_sattrains.json`
+- Canonical eval set: `annotations/val_balanced_v1_no_sattrains.json`
+- Satellite-train frames (≥2 near-parallel streaks, angle_diff < 5°, perp_dist
+  < 30 px) are excluded from both training and evaluation. Exclusion manifest:
+  `annotations/sat_train_excluded.json`.
 
-See `agent_docs/datasets.md` for the path-resolution and staging contract.
+See `agent_docs/datasets.md` for the path-resolution contract and current drive
+layout. See `docs/data_strategy.md` for the data integration workflow.
 
 ## Environment and tests
 
