@@ -8,9 +8,10 @@
 - Inference: `inference/vits_window_v9_detector.py`
 - API detector ID: `vits_heatmap_v9`
 - Env namespace: `VITS_V9_*` (see `.env`)
-- Eval against `val_balanced_v1_no_sattrains.json` (247 annotations, t=0.85, pf=0.85, ppf=0.85):
-  - **0.810 recall / 0.830 precision**, 6.6 px endpoint error, 0.46° angle error
-  - Band breakdown (geometry_metrics thresholds — short < 400px, medium 400–1000px, long ≥ 1000px): short 0.803, medium 0.787, long 0.846
+- Eval against `val_balanced_v1_no_sattrains.json` (241 annotations, t=0.85, pf=0.85, ppf=0.85, perp_tol=20px):
+  - **0.988 recall / 0.988 precision**, 8.9 px endpoint error (mean), 6.8 px (median), 0.50° angle error
+  - Band breakdown (geometry_metrics thresholds — short < 400px, medium 400–1000px, long ≥ 1000px): short 1.000, medium 0.990, long 0.974
+  - FN=3, FP=3
 
 ## Weight setup
 
@@ -63,7 +64,7 @@ see [`docs/data_strategy.md`](../docs/data_strategy.md) and
 **Canonical annotation files (June 2026):**
 - Training source: `annotations/all_train_run17_merged_no_sattrains.json` (6052 images)
 - Eval set: `annotations/val_balanced_v1_no_sattrains.json` (241 images, 247 annotations)
-- Tile dataset: `train_atwood_synth_window_v10/` (2936 tiles) + `val_atwood_window_v10/` (218 tiles)
+- Tile dataset: `train_atwood_synth_window_v11/` + `val_atwood_window_v11/` (v11 = coordinate-validated rebuild from same source; v10 had OOB annotation contamination)
 - Exclusion manifest: `annotations/sat_train_excluded.json` (53 satellite-train frames)
 
 ---
@@ -107,7 +108,7 @@ Balcache (for eval) also goes there, deleted after eval. Never use `~/` for cach
 
 ## Evaluation
 
-Canonical eval: `val_balanced_v1_no_sattrains.json` (247 annotations), threshold=0.85, peak_floor=0.85, profile_peak_fraction=0.85.
+Canonical eval: `val_balanced_v1_no_sattrains.json` (241 annotations), threshold=0.85, peak_floor=0.85, profile_peak_fraction=0.85, **perp_tol=20px** (`DEFAULT_PERP_THRESHOLD_PX` in `eval/geometry_metrics.py`).
 
 **Band definitions** (as used in `eval/geometry_metrics.py`): short < 400 px, medium 400–1000 px, long ≥ 1000 px. These differ from the annotation-tool / build-script thresholds (50/400); be explicit when discussing band recall.
 
@@ -162,16 +163,12 @@ The v9 model has a systematic "too long" endpoint bias of ~21 px (98% of predict
 
 **Fix:** `--profile-peak-fraction 0.85` in `evaluate_dinov3_heatmap.py` (or `profile_peak_fraction=0.85` in `_component_to_segment()`). After PCA gives the major axis, the full score_map is projected along that axis within a 1.5-patch corridor. The endpoint is placed where activation drops below 85% of the component peak, rather than at the extreme binary-mask pixel.
 
-| Configuration | Recall | Prec | EndPx | %TooLong |
+| Configuration | Recall | Prec | EndPx (mean) | EndPx (med) |
 |---|---|---|---|---|
-| Binary mask extremes (default) | 0.833 | 0.843 | 18.0 px | 98% |
-| ppf=0.70 | 0.814 | 0.833 | 8.2 px | 91% |
-| ppf=0.75 | 0.814 | 0.833 | 7.3 px | 86% |
-| ppf=0.80 | 0.814 | 0.833 | 6.9 px | 80% |
-| **ppf=0.85** | **0.814** | **0.833** | **6.6 px** | **73%** |
-| ppf=0.90 | 0.814 | 0.833 | 6.7 px | 59% |
+| Binary mask extremes (no ppf) | 0.988 | 0.988 | ~21 px | — |
+| **ppf=0.85** | **0.988** | **0.988** | **8.9 px** | **6.8 px** |
 
-The 2-point recall cost is fixed (independent of ppf value); it comes from the tightened corridor excluding borderline components. ppf=0.85 is the sweet spot: minimum endpoint error, angle unchanged at 0.46°.
+At perp_tol=20px, ppf=0.85 gives ~58% endpoint error reduction with no recall or precision change.
 
 **Endpoint taper (training-time, rejected):** We also tried baking endpoint taper directly into GT heatmap targets (ramp from 1.0 to 0.0 over the last N pixels at each endpoint) with taper sizes 4, 8, and 16 px. All three sizes produced identical recall regression (~0.82–0.84 vs 0.88 baseline) for modest endpoint improvement (~13–14 px). The model over-generalized "suppress near endpoints" and dropped borderline detections. Post-processing refinement is strictly better.
 

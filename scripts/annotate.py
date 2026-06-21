@@ -1122,6 +1122,53 @@ class AnnotationApp(tk.Tk):
 
     # ---- annotation actions --------------------------------------------------
 
+    def _persist_tile_local_obbs(self, img_id: int) -> None:
+        """Translate any full-frame OBB coordinates to tile-local in the stored annotations.
+
+        Annotations seeded from .strk files carry full-frame pixel coordinates.
+        When the image has a tile_origin (i.e. it's a crop of a larger FITS
+        frame), those coordinates must be shifted by subtracting tile_origin so
+        they are relative to the crop rather than the full frame.  This is done
+        once at confirm-time so the saved JSON is always in tile-local space.
+        """
+        if self._tile_origin is None:
+            return
+        ox, oy = self._tile_origin
+        coco_img = next((i for i in self.coco["images"] if i["id"] == img_id), None)
+        if coco_img is None:
+            return
+        tile_w = int(coco_img.get("width", 0))
+        tile_h = int(coco_img.get("height", 0))
+        if tile_w == 0 or tile_h == 0:
+            return
+        for ann in self.coco["annotations"]:
+            if ann["image_id"] != img_id:
+                continue
+            obb = ann["obb"]
+            cx, cy = float(obb.get("cx", 0.0)), float(obb.get("cy", 0.0))
+            if 0.0 <= cx <= tile_w and 0.0 <= cy <= tile_h:
+                continue  # already tile-local
+            ncx, ncy = cx - ox, cy - oy
+            if not (0.0 <= ncx <= tile_w and 0.0 <= ncy <= tile_h):
+                log.warning(
+                    "Ann id=%s img_id=%d: OBB center (%.0f,%.0f) → (%.0f,%.0f) "
+                    "still OOB in %dx%d tile — leaving unchanged",
+                    ann.get("id"), img_id, cx, cy, ncx, ncy, tile_w, tile_h,
+                )
+                continue
+            log.warning(
+                "Ann id=%s: translated OBB from full-frame (%.0f,%.0f) to tile-local (%.0f,%.0f)",
+                ann.get("id"), cx, cy, ncx, ncy,
+            )
+            new_obb = dict(obb)
+            new_obb["cx"] = round(ncx, 2)
+            new_obb["cy"] = round(ncy, 2)
+            ann["obb"] = new_obb
+            ann["bbox"] = obb_to_bbox(new_obb)
+            ann["segmentation"] = [
+                [coord for corner in obb_corners(**new_obb) for coord in corner]
+            ]
+
     def _clear_needs_review(self, img_id: int) -> None:
         """Clear the needs_review flag from an image and all its annotations."""
         for img in self.coco["images"]:
@@ -1139,6 +1186,8 @@ class AnnotationApp(tk.Tk):
             return
         entry = self.images[self.idx]
         img_id = self._get_or_create_image_id(entry)
+        # Translate any full-frame OBB coordinates to tile-local before saving.
+        self._persist_tile_local_obbs(img_id)
         self._clear_needs_review(img_id)
         self._autosave()
         self._redraw()

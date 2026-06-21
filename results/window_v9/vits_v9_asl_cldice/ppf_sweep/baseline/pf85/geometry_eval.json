@@ -1,0 +1,41 @@
+{
+  "perp_threshold_px": 5.0,
+  "tier1_detection": {
+    "n_gt": 252,
+    "n_found": 210,
+    "n_false_positives": 39,
+    "detection_recall": 0.8333,
+    "detection_precision": 0.8434,
+    "per_band": {
+      "short": {
+        "n_gt": 61,
+        "n_found": 50,
+        "recall": 0.8197
+      },
+      "medium": {
+        "n_gt": 111,
+        "n_found": 89,
+        "recall": 0.8018
+      },
+      "long": {
+        "n_gt": 80,
+        "n_found": 71,
+        "recall": 0.8875
+      }
+    }
+  },
+  "tier2_raw_geometry": {
+    "n_pairs": 210,
+    "angle_err_deg": {
+      "mean": 0.464,
+      "median": 0.238,
+      "p90": 1.134
+    },
+    "endpoint_err_px": {
+      "mean": 19.331,
+      "median": 14.23,
+      "p90": 26.137
+    }
+  },
+  "tier3_refined_geometry": null
+}

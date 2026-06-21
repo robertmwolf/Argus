@@ -37,6 +37,75 @@ def _load(path: str | Path) -> dict:
     return json.loads(Path(path).read_text())
 
 
+def _normalize_to_tile_local(ann: dict, img: dict) -> dict | None:
+    """Translate annotation OBB to tile-local coordinates if needed.
+
+    Annotations must be in tile-local space (cx/cy relative to the crop window,
+    not the full FITS frame). If an annotation's center lies outside the tile
+    bounds but subtracting tile_origin brings it in-bounds, it was saved in
+    full-frame space and is fixed in-place. If it remains out-of-bounds after
+    translation it is genuinely wrong and dropped (returns None).
+
+    Images without tile_origin or with unknown dimensions (width/height == 0)
+    are assumed to be full-frame annotations and pass through unchanged.
+    """
+    import math
+
+    tile_origin = img.get("tile_origin")
+    tile_w = int(img.get("width", 0))
+    tile_h = int(img.get("height", 0))
+
+    if not tile_origin or tile_w == 0 or tile_h == 0:
+        return ann
+
+    ox, oy = int(tile_origin[0]), int(tile_origin[1])
+    obb = ann.get("obb", {})
+    cx, cy = float(obb.get("cx", 0.0)), float(obb.get("cy", 0.0))
+
+    if 0.0 <= cx <= tile_w and 0.0 <= cy <= tile_h:
+        return ann  # already tile-local
+
+    ncx, ncy = cx - ox, cy - oy
+    if not (0.0 <= ncx <= tile_w and 0.0 <= ncy <= tile_h):
+        logger.warning(
+            "Dropping ann id=%s for %s: center (%.0f,%.0f) → (%.0f,%.0f) "
+            "still OOB in %dx%d tile (origin %d,%d)",
+            ann.get("id"), img.get("file_name"),
+            cx, cy, ncx, ncy, tile_w, tile_h, ox, oy,
+        )
+        return None
+
+    logger.warning(
+        "Ann id=%s for %s: translated OBB from full-frame (%.0f,%.0f) to tile-local (%.0f,%.0f)",
+        ann.get("id"), img.get("file_name"), cx, cy, ncx, ncy,
+    )
+    ann = dict(ann)
+    new_obb = dict(obb)
+    new_obb["cx"] = round(ncx, 2)
+    new_obb["cy"] = round(ncy, 2)
+    ann["obb"] = new_obb
+
+    # Recompute derived endpoint fields.
+    wl, hl = float(new_obb.get("w", 0)), float(new_obb.get("h", 0))
+    ang = math.radians(float(new_obb.get("angle_deg", 0)))
+    hx, hy = wl / 2 * math.cos(ang), wl / 2 * math.sin(ang)
+    x1, y1, x2, y2 = ncx - hx, ncy - hy, ncx + hx, ncy + hy
+    ann["x1"] = round(x1, 2); ann["y1"] = round(y1, 2)
+    ann["x2"] = round(x2, 2); ann["y2"] = round(y2, 2)
+    ann["bbox"] = [round(min(x1, x2), 2), round(min(y1, y2), 2),
+                   round(abs(x2 - x1) + hl, 2), round(abs(y2 - y1) + hl, 2)]
+    # Recompute segmentation (4 corners of the OBB).
+    hx2, hy2 = hl / 2 * math.sin(ang), hl / 2 * math.cos(ang)
+    corners = [
+        (ncx - hx + hy2, ncy - hy - hx2),
+        (ncx + hx + hy2, ncy + hy - hx2),
+        (ncx + hx - hy2, ncy + hy + hx2),
+        (ncx - hx - hy2, ncy - hy + hx2),
+    ]
+    ann["segmentation"] = [[coord for corner in corners for coord in corner]]
+    return ann
+
+
 def merge(
     base_path: str | Path,
     add_path: str | Path,
@@ -105,14 +174,22 @@ def merge(
         batch_id_map[int(img["id"])] = new_id
         all_imgs.append({**img, "id": new_id})
 
-    # Pass 3: annotations — remap image_id, assign new ann IDs
+    # Pass 3: annotations — remap image_id, validate tile-local coords, assign new IDs
+    img_by_new_id: dict[int, dict] = {img["id"]: img for img in all_imgs}
     ann_id_counter = 1
+    n_oob_dropped = 0
     for ann in base.get("annotations", []):
         old_img_id = int(ann["image_id"])
         new_img_id = base_id_map.get(old_img_id)
         if new_img_id is None:
             continue  # image was somehow absent from base — skip
-        all_anns.append({**ann, "id": ann_id_counter, "image_id": new_img_id})
+        ann = _normalize_to_tile_local({**ann, "id": ann_id_counter, "image_id": new_img_id},
+                                       img_by_new_id[new_img_id])
+        if ann is None:
+            n_oob_dropped += 1
+            continue
+        ann["id"] = ann_id_counter
+        all_anns.append(ann)
         ann_id_counter += 1
 
     for ann in batch_anns_filtered:
@@ -120,8 +197,17 @@ def merge(
         new_img_id = batch_id_map.get(old_img_id)
         if new_img_id is None:
             continue
-        all_anns.append({**ann, "id": ann_id_counter, "image_id": new_img_id})
+        ann = _normalize_to_tile_local({**ann, "id": ann_id_counter, "image_id": new_img_id},
+                                       img_by_new_id[new_img_id])
+        if ann is None:
+            n_oob_dropped += 1
+            continue
+        ann["id"] = ann_id_counter
+        all_anns.append(ann)
         ann_id_counter += 1
+
+    if n_oob_dropped:
+        logger.warning("Dropped %d annotations with OOB coordinates during merge", n_oob_dropped)
 
     out = {
         "images": all_imgs,
@@ -140,6 +226,7 @@ def merge(
             "skipped_duplicate": skip_dup,
             "total_images": len(all_imgs),
             "total_annotations": len(all_anns),
+            "dropped_oob_annotations": n_oob_dropped,
         },
     }
 

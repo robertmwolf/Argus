@@ -103,6 +103,40 @@ def _band(L: float) -> str:
     return "long"
 
 
+def _to_tile_local(obb: dict, x0: int, y0: int, tile_w: int, tile_h: int, label: str) -> dict | None:
+    """Validate and translate an OBB to tile-local coordinates.
+
+    Returns the original obb if it is already within bounds, a translated copy
+    if it was in full-frame space (detectable when tile_origin is non-zero and
+    subtracting it brings the center in-bounds), or None if the annotation is
+    hopelessly outside the tile and should be dropped.
+
+    If tile_w or tile_h is 0 (unknown dimensions), the obb is returned as-is
+    because bounds checking is not possible.
+    """
+    if tile_w == 0 or tile_h == 0:
+        return obb
+    cx, cy = float(obb.get("cx", 0.0)), float(obb.get("cy", 0.0))
+    if 0.0 <= cx <= tile_w and 0.0 <= cy <= tile_h:
+        return obb  # already tile-local
+    # Try subtracting tile_origin.
+    ncx, ncy = cx - x0, cy - y0
+    if not (0.0 <= ncx <= tile_w and 0.0 <= ncy <= tile_h):
+        logger.warning(
+            "%s: OBB center (%.0f,%.0f) → (%.0f,%.0f) still OOB in %dx%d tile — dropping",
+            label, cx, cy, ncx, ncy, tile_w, tile_h,
+        )
+        return None
+    logger.warning(
+        "%s: OBB was in full-frame space (%.0f,%.0f); translated to tile-local (%.0f,%.0f)",
+        label, cx, cy, ncx, ncy,
+    )
+    obb = dict(obb)
+    obb["cx"] = round(ncx, 2)
+    obb["cy"] = round(ncy, 2)
+    return obb
+
+
 def _coco_ann(ann_id, img_id, obb):
     w, h, ang = obb["w"], obb["h"], math.radians(obb["angle_deg"])
     hx, hy = w / 2 * math.cos(ang), w / 2 * math.sin(ang)
@@ -191,22 +225,34 @@ def main() -> None:
     for a in merged["annotations"]:
         anns_by_img[a["image_id"]].append(a)
 
-    # Collect positive real-FITS windows (non-eval, streaks >=50px). obb stays
-    # WINDOW-LOCAL; tile_origin/width/height describe the crop to materialise.
+    # Collect positive real-FITS windows (non-eval, streaks >=50px).
+    # OBBs must be window-local (cx/cy relative to the crop, not the full frame).
+    # _to_tile_local() detects and fixes annotations that were saved in full-frame
+    # space and drops any that are irreparably outside the crop window.
     windows = []
+    n_oob_dropped = 0
     for im in merged["images"]:
         fn = im["file_name"]
         if not fn.lower().endswith(".fits") or fn in eval_frames:
             continue
-        keep = [a for a in anns_by_img[im["id"]]
-                if max(a["obb"]["w"], a["obb"]["h"]) >= MIN_LEN]
+        x0 = int(im.get("tile_origin", [0, 0])[0])
+        y0 = int(im.get("tile_origin", [0, 0])[1])
+        w = int(im.get("width", 0))
+        h = int(im.get("height", 0))
+        raw_keep = [a for a in anns_by_img[im["id"]]
+                    if max(a["obb"]["w"], a["obb"]["h"]) >= MIN_LEN]
+        keep = []
+        for a in raw_keep:
+            obb = _to_tile_local(a["obb"], x0, y0, w, h, fn)
+            if obb is None:
+                n_oob_dropped += 1
+            else:
+                keep.append({"obb": obb, "len": max(obb["w"], obb["h"])})
         if not keep:
             continue
-        windows.append({"frame": fn, "x0": int(im.get("tile_origin", [0, 0])[0]),
-                        "y0": int(im.get("tile_origin", [0, 0])[1]),
-                        "w": int(im["width"]), "h": int(im["height"]),
-                        "anns": [{"obb": a["obb"], "len": max(a["obb"]["w"], a["obb"]["h"])}
-                                 for a in keep]})
+        windows.append({"frame": fn, "x0": x0, "y0": y0, "w": w, "h": h, "anns": keep})
+    if n_oob_dropped:
+        logger.warning("Dropped %d OOB annotations during window collection", n_oob_dropped)
     if args.limit:
         windows = windows[:args.limit]
     logger.info("Positive real-FITS windows: %d", len(windows))
