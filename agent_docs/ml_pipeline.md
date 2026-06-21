@@ -8,9 +8,9 @@
 - Inference: `inference/vits_window_v9_detector.py`
 - API detector ID: `vits_heatmap_v9`
 - Env namespace: `VITS_V9_*` (see `.env`)
-- Eval (current, 252 annotations): **0.877 recall / 0.880 precision** at t=0.85, pf=0.85
-  - With `--profile-peak-fraction 0.85`: 0.814 recall / 0.833 precision, **6.6 px endpoint error** (down from 21.2 px)
-  - Note: earlier figures (0.979 recall) were against the pre-reannotation 239-annotation val set; `val_balanced_v1.json` now has 252 annotations after a systematic review of 50 borderline cases
+- Eval against `val_balanced_v1_no_sattrains.json` (247 annotations, t=0.85, pf=0.85, ppf=0.85):
+  - **0.810 recall / 0.830 precision**, 6.6 px endpoint error, 0.46° angle error
+  - Band breakdown (geometry_metrics thresholds — short < 400px, medium 400–1000px, long ≥ 1000px): short 0.803, medium 0.787, long 0.846
 
 ## Weight setup
 
@@ -96,7 +96,7 @@ python training/train_dinov3_heatmap_cached.py \
 # 4. Eval
 python -m eval.geometry_metrics \
   --predictions results/<tag>/pf85/predictions_t070.json \
-  --annotations /Volumes/External/TrainingData/annotations/val_balanced_v1.json \
+  --annotations /Volumes/External/TrainingData/annotations/val_balanced_v1_no_sattrains.json \
   --output results/<tag>/pf85/geometry_eval.json
 ```
 
@@ -107,20 +107,22 @@ Balcache (for eval) also goes there, deleted after eval. Never use `~/` for cach
 
 ## Evaluation
 
-Canonical eval: `val_balanced_v1.json` (252 annotations), threshold=0.85, peak_floor=0.85, profile_peak_fraction=0.85.
+Canonical eval: `val_balanced_v1_no_sattrains.json` (247 annotations), threshold=0.85, peak_floor=0.85, profile_peak_fraction=0.85.
+
+**Band definitions** (as used in `eval/geometry_metrics.py`): short < 400 px, medium 400–1000 px, long ≥ 1000 px. These differ from the annotation-tool / build-script thresholds (50/400); be explicit when discussing band recall.
 
 Standard 3-step eval pipeline:
 ```bash
 # 1. Cache heatmaps
 python scripts/cache_heatmap_maps.py \
-  --annotations /Volumes/External/TrainingData/annotations/val_balanced_v1.json \
+  --annotations /Volumes/External/TrainingData/annotations/val_balanced_v1_no_sattrains.json \
   --checkpoint weights/<tag>/best.pt --output-dir /Volumes/External/argus_caches/<tag>_bal \
   --norm-mode zscore
 
 # 2. Threshold sweep + endpoint refinement
 python scripts/evaluate_dinov3_heatmap.py --tiled --stitch \
   --heatmap-cache /Volumes/External/argus_caches/<tag>_bal \
-  --annotations /Volumes/External/TrainingData/annotations/val_balanced_v1.json \
+  --annotations /Volumes/External/TrainingData/annotations/val_balanced_v1_no_sattrains.json \
   --norm-mode zscore --threshold 0.05 --threshold-sweep 0.70 0.75 0.80 0.85 0.90 \
   --peak-floor 0.85 --profile-peak-fraction 0.85 \
   --output results/<tag>/pf85/metrics.json
@@ -128,7 +130,7 @@ python scripts/evaluate_dinov3_heatmap.py --tiled --stitch \
 # 3. Geometry metrics
 python -m eval.geometry_metrics \
   --predictions results/<tag>/pf85/predictions_t085.json \
-  --annotations /Volumes/External/TrainingData/annotations/val_balanced_v1.json \
+  --annotations /Volumes/External/TrainingData/annotations/val_balanced_v1_no_sattrains.json \
   --output results/<tag>/pf85/geometry_eval.json
 ```
 
@@ -145,7 +147,7 @@ Record only `geometry_eval.json` in git. Raw `predictions_t*.json` and
 ```bash
 python scripts/analyze_endpoint_errors.py \
   --predictions results/<tag>/pf85/predictions_t085.json \
-  --annotations /Volumes/External/TrainingData/annotations/val_balanced_v1.json \
+  --annotations /Volumes/External/TrainingData/annotations/val_balanced_v1_no_sattrains.json \
   --output results/<tag>/pf85/endpoint_error_analysis.json --top-n 20
 ```
 
@@ -179,7 +181,7 @@ The 2-point recall cost is fixed (independent of ppf value); it comes from the t
 
 | Model | Status | Notes |
 |---|---|---|
-| `vits_v10_no_sattrains_asl_cldice` | **In training** | Same as v9 but with 53 satellite-train frames removed; see `results/v10_no_sattrains/` |
+| `vits_v10_no_sattrains_asl_cldice` | Evaluated, not promoted | 0.802 recall / 0.818 prec — sat-train exclusion slightly hurt (long identical, short/medium each ~1.5 pts lower); revert training exclusion for next run |
 | `vits_v9_asl_cldice` | **Production** | ASL+clDice loss, best precision; use ppf=0.85 for endpoint accuracy |
 | `vits_window_v4` | Retired (kept in API for comparison) | focal+Dice baseline |
 | `vitb_window_v4` | Retired (kept in API for comparison) | ViT-B, no precision gain |
