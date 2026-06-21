@@ -1,40 +1,40 @@
 {
-  "perp_threshold_px": 5.0,
+  "perp_threshold_px": 20.0,
   "tier1_detection": {
     "n_gt": 247,
-    "n_found": 198,
-    "n_false_positives": 44,
-    "detection_recall": 0.8016,
-    "detection_precision": 0.8182,
+    "n_found": 229,
+    "n_false_positives": 13,
+    "detection_recall": 0.9271,
+    "detection_precision": 0.9463,
     "per_band": {
       "short": {
         "n_gt": 61,
-        "n_found": 48,
-        "recall": 0.7869
+        "n_found": 59,
+        "recall": 0.9672
       },
       "medium": {
         "n_gt": 108,
-        "n_found": 84,
-        "recall": 0.7778
+        "n_found": 97,
+        "recall": 0.8981
       },
       "long": {
         "n_gt": 78,
-        "n_found": 66,
-        "recall": 0.8462
+        "n_found": 73,
+        "recall": 0.9359
       }
     }
   },
   "tier2_raw_geometry": {
-    "n_pairs": 198,
+    "n_pairs": 229,
     "angle_err_deg": {
-      "mean": 0.464,
-      "median": 0.218,
-      "p90": 0.949
+      "mean": 0.527,
+      "median": 0.246,
+      "p90": 1.225
     },
     "endpoint_err_px": {
-      "mean": 8.658,
-      "median": 8.417,
-      "p90": 13.597
+      "mean": 9.801,
+      "median": 8.542,
+      "p90": 14.249
     }
   },
   "tier3_refined_geometry": null

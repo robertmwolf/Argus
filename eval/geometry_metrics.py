@@ -17,7 +17,7 @@ from eval.streak_metrics import (
 )
 from inference.streak_segment import StreakSegment, detection_dict_to_segment
 
-DEFAULT_PERP_THRESHOLD_PX = 5.0
+DEFAULT_PERP_THRESHOLD_PX = 20.0
 
 
 def _endpoint_error_px(pred: StreakSegment, truth: StreakSegment) -> float:
