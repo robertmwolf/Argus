@@ -52,6 +52,53 @@ frame's WCS solution. The resulting sky track and observation timestamp are
 compared against pre-propagated TLE positions stored in a local SQLite catalog.
 No live catalog query is required at inference time.
 
+For each detected streak, every object in the TLE catalog is propagated forward
+using SGP4 to its predicted topocentric position at the **mid-exposure instant**
+(the physically correct moment — the satellite is at the streak midpoint exactly
+halfway through the exposure). The angular separation between the predicted
+position and the observed streak midpoint feeds a Gaussian confidence score. That
+score is multiplied by a second factor that penalises orbital elements that have
+drifted far from the observation epoch, so a geometrically close match against a
+stale TLE is automatically discounted.
+
+For unclipped streaks, the total positional residual is further decomposed into
+**along-track** (timing offset) and **cross-track** (orbital-plane offset)
+components. A large along-track residual implies the TLE epoch is off; a large
+cross-track residual implies the wrong satellite. The final confidence score is
+the product of both Gaussian factors times the TLE-age penalty.
+
+The top candidate's TLE is then propagated at the **exposure-start time** to
+determine which detected tip is the beginning of the pass and which is the end.
+The expected streak length in pixels is also computed from the SGP4 angular
+velocity and the frame's plate scale, providing an independent sanity check
+against the measured length.
+
+The API returns the top three ranked candidates per detection — each with its
+NORAD ID, satellite name, separation in arcseconds, along-track/cross-track
+residuals, and the composite confidence score — so the UI can present both a
+primary identification and the uncertainty around it.
+
+### API and UI
+
+The **FastAPI backend** wraps the full pipeline behind a REST interface. A FITS
+file (or PNG/JPEG) is `POST`ed to `/api/upload`; the server enqueues it and
+returns a job ID immediately. A background worker runs the heatmap detector,
+applies WCS, propagates the TLE catalog via SGP4, scores all candidates, and
+writes the results to SQLite. The client polls `GET /api/result/{job_id}` until
+the job completes, at which point it receives the full detection list — each
+entry containing image-space endpoints, RA/Dec sky coordinates, streak quality
+flags, and the ranked identification candidates with their confidence breakdowns.
+A rendered PNG overlay (detection segments drawn on the source image) is
+available at `GET /api/image/{job_id}`.
+
+The **React frontend** provides a drag-and-drop upload panel, a live job-status
+indicator, and a results view that displays the processed image with detections
+overlaid. For each streak the UI shows the primary satellite identification
+(name and NORAD ID), the composite match confidence, and the top alternative
+candidates — giving operators an immediate probabilistic answer to "what object
+caused this streak?" alongside the residuals that explain how certain that answer
+is.
+
 ## Tech Stack and Architecture
 
 ```
