@@ -69,18 +69,19 @@ layout. See `docs/data_strategy.md` for the data integration workflow.
 
 The usual local environment is `/Users/robert/miniconda3/envs/satid`.
 
-After creating the environment, retrieve the published Hugging Face weights:
+The `weights/vits_v11_asl_cldice/` production head is committed to this
+repository — no download step required after cloning.
+
+DINOv3 pretrained backbones are not committed (Meta's property). Download them
+from https://github.com/facebookresearch/dinov3 and place in `weights/`.
+Never commit DINOv3 backbone files.
+
+Annotation JSONs are not committed (external drive data). On a fresh machine,
+download them from HuggingFace into `$ARGUS_DATA_ROOT/annotations/`:
 
 ```bash
-python scripts/sync_hf.py --download --weights-only --weights-dir weights
+python scripts/sync_hf.py --download --annotations-dir $ARGUS_DATA_ROOT/annotations
 ```
-
-The public bundle requires no token under normal conditions. If authentication
-is required, use `hf auth login` or `HF_TOKEN`. The bundle contains the
-`vits_v11_asl_cldice` head. DINOv3 pretrained backbones are not in the bundle —
-they must be downloaded separately from Meta Research at
-https://github.com/facebookresearch/dinov3 and placed in `weights/`.
-Never commit downloaded weights.
 
 ```bash
 /Users/robert/miniconda3/envs/satid/bin/python -m pytest tests/ -q

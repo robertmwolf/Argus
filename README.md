@@ -222,7 +222,7 @@ src/                 — classical astrometry and satellite matching components
 docs/                — postmortems and experiment notes
 agent_docs/          — developer and assistant reference guides
 results/             — per-run geometry_eval.json files (committed)
-weights/             — model checkpoints (gitignored)
+weights/             — trained model checkpoints (committed; DINOv3 backbones excluded)
 ```
 
 ## Acknowledgements and Citations

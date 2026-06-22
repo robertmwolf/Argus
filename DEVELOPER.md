@@ -30,28 +30,20 @@ cp .env.example .env
 
 ## Model Weights
 
-Weights are stored under the gitignored `weights/` directory and come from two
-separate sources.
+Trained ARGUS heads are committed to this repository under `weights/`. DINOv3
+pretrained backbones are Meta's property and must be obtained separately.
 
-### 1. ARGUS trained heads (Hugging Face)
+### 1. ARGUS trained heads (this repository)
 
-Download from [`lonewolfman22/argus-weights`](https://huggingface.co/lonewolfman22/argus-weights):
+`weights/vits_v11_asl_cldice/` is committed and available after cloning:
 
-```bash
-python scripts/sync_hf.py --download --weights-only --weights-dir weights
-```
+- `best.pt` — production checkpoint (ViT-S, v11 dataset, ASL + clDice, 400 px tiles)
+- `latest.pt` — final training epoch checkpoint
+- `history.json` — per-epoch training metrics
 
-The public repository requires no Hugging Face token under normal conditions.
-If authentication is required:
-
-```bash
-hf auth login       # interactive
-# or
-export HF_TOKEN=<token>
-```
-
-The download includes:
-- `weights/vits_v11_asl_cldice/` — production ViT-S head (v11 dataset, ASL + clDice, 400 px tiles)
+No download step is required. A mirror is also published at
+[`lonewolfman22/argus-weights`](https://huggingface.co/lonewolfman22/argus-weights)
+for users who prefer to fetch weights via `scripts/sync_hf.py`.
 
 ### 2. DINOv3 pretrained backbones (Meta Research)
 
@@ -73,7 +65,7 @@ Download the following files and place them in `weights/`:
 The DINOv3 repository README lists the exact download URLs for each checkpoint.
 ARGUS uses these weights frozen (no fine-tuning of the backbone).
 
-Never commit weights to the repository.
+Never commit DINOv3 backbone files to the repository.
 
 ---
 
@@ -98,10 +90,20 @@ evaluation script:
 export ARGUS_DATA_ROOT=/Volumes/External/TrainingData
 ```
 
-The canonical validation annotation is:
+On a fresh machine, download the canonical annotation JSONs from
+[`lonewolfman22/argus-dataset`](https://huggingface.co/datasets/lonewolfman22/argus-dataset)
+into `$ARGUS_DATA_ROOT/annotations/`:
+
+```bash
+python scripts/sync_hf.py --download --annotations-dir $ARGUS_DATA_ROOT/annotations
+```
+
+The canonical annotations are:
 
 ```
-$ARGUS_DATA_ROOT/annotations/val_balanced_v1.json
+$ARGUS_DATA_ROOT/annotations/all_train_run17_merged_no_sattrains.json  — training set
+$ARGUS_DATA_ROOT/annotations/val_balanced_v1_no_sattrains.json         — eval set
+$ARGUS_DATA_ROOT/annotations/sat_train_excluded.json                   — exclusion manifest
 ```
 
 See [`agent_docs/datasets.md`](agent_docs/datasets.md) for the full data layout,
