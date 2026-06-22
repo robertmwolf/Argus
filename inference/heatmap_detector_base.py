@@ -1,7 +1,7 @@
 """Shared utilities for DINOv3 heatmap detectors.
 
 Provides model loading, tile runners, and detection helpers used by
-``vits_window_v9_detector`` and ``vitb_window_v10_detector``.
+``vits_window_v11_detector``.
 """
 
 from __future__ import annotations

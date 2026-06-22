@@ -213,7 +213,7 @@ def main():
     all_img_ids = fn_img_ids | fp_img_ids
 
     print(f"\nGenerating heatmaps for {len(all_img_ids)} images...")
-    from inference.vits_window_v9_detector import run_vits_v9_heatmap_detector_and_heatmap
+    from inference.vits_window_v11_detector import run_vits_v11_heatmap_detector_and_heatmap
 
     ckpt = Path(args.checkpoint)
     heatmaps: dict[int, np.ndarray | None] = {}
@@ -233,7 +233,7 @@ def main():
 
         disp_arr = zscore_to_display(gray)
         rgb = np.stack([disp_arr] * 3, axis=2)
-        _, hmap = run_vits_v9_heatmap_detector_and_heatmap(rgb, checkpoint=ckpt)
+        _, hmap = run_vits_v11_heatmap_detector_and_heatmap(rgb, checkpoint=ckpt)
         heatmaps[img_id] = hmap
 
     # Build display dicts by image
