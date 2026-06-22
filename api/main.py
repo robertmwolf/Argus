@@ -1061,12 +1061,8 @@ async def heatmap(
     if model is not None:
         png = await request.app.state.storage.load_heatmap(job_id, model_id=model)
     else:
-        # Prefer named model files; fall back to legacy heatmap.png
-        png = None
-        for try_id in ["vits_heatmap_v9", "vitb_heatmap_v10"]:
-            png = await request.app.state.storage.load_heatmap(job_id, model_id=try_id)
-            if png is not None:
-                break
+        # Prefer named model file; fall back to legacy heatmap.png
+        png = await request.app.state.storage.load_heatmap(job_id, model_id="vits_heatmap_v11")
         if png is None:
             png = await request.app.state.storage.load_heatmap(job_id)
 
