@@ -76,10 +76,10 @@ python scripts/sync_hf.py --download --weights-only --weights-dir weights
 ```
 
 The public bundle requires no token under normal conditions. If authentication
-is required, use `hf auth login` or `HF_TOKEN`. The current bundle contains the
-DINOv3 backbones plus the `run15_vits` and `run17_vitb` heads, but not
-`weights/vits_v9_asl_cldice/best.pt`. Do not claim production-v9 readiness unless
-that checkpoint is supplied separately through `VITS_V9_HEATMAP_CHECKPOINT`.
+is required, use `hf auth login` or `HF_TOKEN`. The bundle contains the
+`vits_v9_asl_cldice` and `vitb_v10_asl_cldice` heads. DINOv3 pretrained
+backbones are not in the bundle — they must be downloaded separately from Meta
+Research at https://github.com/facebookresearch/dinov3 and placed in `weights/`.
 Never commit downloaded weights.
 
 ```bash

@@ -197,8 +197,6 @@ ARGUS builds on the following research and prior work:
 - The training objective implements **Asymmetric Loss** from
   [Ridnik et al. (2021)](https://arxiv.org/abs/2009.14119) and **clDice** from
   [Shit et al. (2021)](https://arxiv.org/abs/2003.07311).
-- The FITS display stretch is a NumPy adaptation of the **PixInsight AutoSTF**
-  algorithm by Juan Conejero / Pleiades Astrophoto.
 - The endpoint representation, segment-matching methodology, and optional
   Radon angle-refinement approach were informed by **StreakMind**.
 - Cross-identification refinements, including midpoint scoring,

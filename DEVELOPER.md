@@ -30,8 +30,12 @@ cp .env.example .env
 
 ## Model Weights
 
-Weights are stored under the gitignored `weights/` directory. Download the
-published bundle from [`lonewolfman22/argus-weights`](https://huggingface.co/lonewolfman22/argus-weights):
+Weights are stored under the gitignored `weights/` directory and come from two
+separate sources.
+
+### 1. ARGUS trained heads (Hugging Face)
+
+Download from [`lonewolfman22/argus-weights`](https://huggingface.co/lonewolfman22/argus-weights):
 
 ```bash
 python scripts/sync_hf.py --download --weights-only --weights-dir weights
@@ -47,16 +51,29 @@ export HF_TOKEN=<token>
 ```
 
 The download includes:
-- `weights/dinov3_vits16_lvd1689m.pth` — frozen ViT-S/16 backbone
-- `weights/dinov3_vitb16_lvd1689m.pth` — frozen ViT-B/16 backbone
-- `weights/run15_vits/` and `weights/run17_vitb/` — older published heads
+- `weights/vits_v11_asl_cldice/` — production ViT-S head (ASL + clDice, 400 px tiles, coordinate-validated v11 dataset)
+- `weights/vits_v9_asl_cldice/` — prior production head (superseded by v11)
+- `weights/vitb_v10_asl_cldice/` — ViT-B backbone-comparison head
 
-**The production head `weights/vits_v9_asl_cldice/best.pt` is not in the public
-bundle.** Supply it separately and set in `.env`:
+### 2. DINOv3 pretrained backbones (Meta Research)
+
+The frozen DINOv3 backbone weights are **not** hosted in this repository.
+Obtain them directly from Meta Research:
 
 ```
-VITS_V9_HEATMAP_CHECKPOINT=weights/vits_v9_asl_cldice/best.pt
+https://github.com/facebookresearch/dinov3
 ```
+
+Download the following files and place them in `weights/`:
+
+| File | Backbone | Used by |
+|---|---|---|
+| `dinov3_vits16_lvd1689m.pth` | ViT-S/16 | `vits_v11_asl_cldice` (production) |
+| `dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth` | ViT-B/16 | `vitb_v10_asl_cldice` |
+| `dinov3_vitl16_lvd1689m.pth` | ViT-L/16 | reserved for future experiments |
+
+The DINOv3 repository README lists the exact download URLs for each checkpoint.
+ARGUS uses these weights frozen (no fine-tuning of the backbone).
 
 Never commit weights to the repository.
 

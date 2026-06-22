@@ -2,16 +2,15 @@
 
 ## Current Production Model
 
-**`vits_v9_asl_cldice`** — DINOv3 ViT-S/16 backbone with ASL + clDice loss.
+**`vits_v11_asl_cldice`** — DINOv3 ViT-S/16 backbone with ASL + clDice loss, trained on the coordinate-validated v11 dataset.
 
-- Weights: `weights/vits_v9_asl_cldice/best.pt`
-- Inference: `inference/vits_window_v9_detector.py`
-- API detector ID: `vits_heatmap_v9`
-- Env namespace: `VITS_V9_*` (see `.env`)
+- Weights: `weights/vits_v11_asl_cldice/best.pt`
 - Eval against `val_balanced_v1_no_sattrains.json` (241 annotations, t=0.85, pf=0.85, ppf=0.85, perp_tol=20px):
-  - **0.988 recall / 0.988 precision**, 8.9 px endpoint error (mean), 6.8 px (median), 0.50° angle error
+  - **0.988 recall / 0.992 precision**, 10.8 px endpoint error (mean), 9.1 px (median), P90=15.4 px, 0.52° angle error
   - Band breakdown (geometry_metrics thresholds — short < 400px, medium 400–1000px, long ≥ 1000px): short 1.000, medium 0.990, long 0.974
-  - FN=3, FP=3
+  - FN=3, FP=2
+- Geometry eval: `results/window_v11/vits_v11_asl_cldice/pf85/geometry_eval.json`
+- **What changed from v9:** training data rebuilt as v11 — coordinate-validated; 1,341 OOB annotations dropped from the 7,590 windowed annotation pool (11% had centroids in full-frame space rather than tile-local space). Precision improved from 98.8% → 99.2% (3 FP → 2 FP); recall and band breakdown unchanged.
 
 ## Weight setup
 
@@ -22,11 +21,13 @@ python scripts/sync_hf.py --download --weights-only --weights-dir weights
 ```
 
 The public `lonewolfman22/argus-weights` repository currently provides the
-DINOv3 backbone files and the `run15_vits` and `run17_vitb` heads. It does not
-provide `vits_v9_asl_cldice/best.pt`; production-v9 inference additionally
-requires a separately supplied checkpoint configured with
-`VITS_V9_HEATMAP_CHECKPOINT`. Use `hf auth login` or `HF_TOKEN` only when Hub
-authentication is required.
+DINOv3 backbone files and the `run15_vits` and `run17_vitb` heads. The production
+`vits_v11_asl_cldice/best.pt` checkpoint must be supplied separately (configured
+via `VITS_V9_HEATMAP_CHECKPOINT` or equivalent env var). Use `hf auth login` or
+`HF_TOKEN` only when Hub authentication is required.
+
+To reproduce the model from scratch, see Section 3.4 of `docs/White_Paper_Draft.md`
+and run `scripts/train_window_v11_pipeline.sh`.
 
 See `docs/loss_ablation_v9_v10_postmortem.md` for full methodology and conclusions.
 
@@ -152,8 +153,8 @@ python scripts/analyze_endpoint_errors.py \
   --output results/<tag>/pf85/endpoint_error_analysis.json --top-n 20
 ```
 
-Baseline v9 (no ppf): mean symmetric endpoint error = 21.2 px, 98% too long.
-With ppf=0.85: 6.6 px, 73% too long.
+Baseline (no ppf): mean symmetric endpoint error ≈ 21 px, 98% too long (characterized on v9).
+v11 with ppf=0.85: 10.8 px mean, 9.1 px median.
 
 ---
 
@@ -163,12 +164,12 @@ The v9 model has a systematic "too long" endpoint bias of ~21 px (98% of predict
 
 **Fix:** `--profile-peak-fraction 0.85` in `evaluate_dinov3_heatmap.py` (or `profile_peak_fraction=0.85` in `_component_to_segment()`). After PCA gives the major axis, the full score_map is projected along that axis within a 1.5-patch corridor. The endpoint is placed where activation drops below 85% of the component peak, rather than at the extreme binary-mask pixel.
 
-| Configuration | Recall | Prec | EndPx (mean) | EndPx (med) |
-|---|---|---|---|---|
-| Binary mask extremes (no ppf) | 0.988 | 0.988 | ~21 px | — |
-| **ppf=0.85** | **0.988** | **0.988** | **8.9 px** | **6.8 px** |
+| Configuration | Model | Recall | Prec | EndPx (mean) | EndPx (med) |
+|---|---|---|---|---|---|
+| Binary mask extremes (no ppf) | v9 characterization | 0.988 | 0.988 | ~21 px | — |
+| **ppf=0.85 (production)** | **vits_v11_asl_cldice** | **0.988** | **0.992** | **10.8 px** | **9.1 px** |
 
-At perp_tol=20px, ppf=0.85 gives ~58% endpoint error reduction with no recall or precision change.
+At perp_tol=20px, ppf=0.85 gives ~49% endpoint error reduction with no recall or precision change (v11). The PPF method was characterized with a full sweep on v9, showing 58% reduction; v11 achieves a slightly different absolute endpoint level due to the cleaned training data.
 
 **Endpoint taper (training-time, rejected):** We also tried baking endpoint taper directly into GT heatmap targets (ramp from 1.0 to 0.0 over the last N pixels at each endpoint) with taper sizes 4, 8, and 16 px. All three sizes produced identical recall regression (~0.82–0.84 vs 0.88 baseline) for modest endpoint improvement (~13–14 px). The model over-generalized "suppress near endpoints" and dropped borderline detections. Post-processing refinement is strictly better.
 
@@ -178,8 +179,9 @@ At perp_tol=20px, ppf=0.85 gives ~58% endpoint error reduction with no recall or
 
 | Model | Status | Notes |
 |---|---|---|
-| `vits_v10_no_sattrains_asl_cldice` | Evaluated, not promoted | 0.802 recall / 0.818 prec — sat-train exclusion slightly hurt (long identical, short/medium each ~1.5 pts lower); revert training exclusion for next run |
-| `vits_v9_asl_cldice` | **Production** | ASL+clDice loss, best precision; use ppf=0.85 for endpoint accuracy |
+| `vits_v11_asl_cldice` | **Production** | Canonical final model; coordinate-validated v11 dataset; 0.988 recall / 0.992 prec; 2 FP |
+| `vits_v9_asl_cldice` | Evaluated, superseded | 0.988 recall / 0.988 prec (3 FP); same architecture as v11 but trained on v9 data with 11% OOB annotation contamination |
+| `vits_v10_no_sattrains_asl_cldice` | Evaluated, not promoted | 0.802 recall / 0.818 prec — sat-train exclusion slightly hurt (long identical, short/medium each ~1.5 pts lower) |
 | `vits_window_v4` | Retired (kept in API for comparison) | focal+Dice baseline |
 | `vitb_window_v4` | Retired (kept in API for comparison) | ViT-B, no precision gain |
 | `vitb_v10_asl_cldice` | Retired | ViT-B+clDice; worse than ViT-S on all bands |

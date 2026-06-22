@@ -1,14 +1,17 @@
+# DRAFT COPY - NOT TO BE DISTRIBUTED
+
 # ARGUS: Endpoint-Based Satellite Streak Detection via Frozen DINOv3 Features and Topology-Aware Loss
 
-**[Author Name], [Author Name], [Author Name]**  
-[University / Department]  
-[Contact email]
+** Robert Wolf **  
+
+Robert.M.Wolf@gmail.com
 
 ---
 
 ## Abstract
 
-We present ARGUS, an end-to-end pipeline for detecting satellite streaks in wide-field astronomical FITS images and resolving each detection to a pair of image-space endpoints suitable for astrometric follow-up. The pipeline freezes a DINOv3 ViT-S/16 backbone pretrained on 1.689 billion images and trains a lightweight three-layer convolutional head to predict a one-channel centerline heatmap at the patch grid resolution. We introduce a composite training objective combining Asymmetric Loss (ASL) with centerline Dice (clDice) that targets the two principal failure modes of heatmap detectors for linear structures: easy-negative saturation and blob-shaped false-positive activations. Evaluated on a stratified validation set of 241 ground-truth streaks spanning three length bands (short < 400 px, medium 400–1000 px, long ≥ 1000 px), ARGUS achieves **98.8% recall** and **98.8% precision** with 3 false negatives and 3 false positives across 241 ground-truth detections — a 2× precision improvement over the focal-plus-Dice baseline with no recall regression. We further identify and characterize a systematic endpoint overrun bias (+21 px, 98% of predictions too long) arising from gradual heatmap activation rolloff at streak endpoints. We propose a post-processing heatmap profile refinement that locates each endpoint at the along-axis position where activation drops below 85% of the component peak. This reduces mean endpoint error from 21 px to **8.9 px** (−58%) with only a 2-point recall trade-off, requiring no retraining. A controlled backbone comparison shows ViT-S/16 outperforms ViT-B/16 on every metric despite its smaller feature dimensionality, suggesting that spatial resolution rather than feature width is the relevant capacity axis for thin linear targets.
+
+We present ARGUS, an end-to-end pipeline for detecting satellite streaks in wide-field astronomical FITS images and resolving each detection to a pair of image-space endpoints suitable for astrometric follow-up. The pipeline freezes a DINOv3 ViT-S/16 backbone pretrained on 1.689 billion images and trains a lightweight three-layer convolutional head to predict a one-channel centerline heatmap at the patch grid resolution. We introduce a composite training objective combining Asymmetric Loss (ASL) with centerline Dice (clDice) that targets the two principal failure modes of heatmap detectors for linear structures: easy-negative saturation and blob-shaped false-positive activations. Evaluated on a stratified validation set of 241 ground-truth streaks spanning three length bands (short < 400 px, medium 400–1000 px, long ≥ 1000 px), ARGUS achieves **98.8% recall** and **99.2% precision** with 3 false negatives and 2 false positives across 241 ground-truth detections — a 2× precision improvement over the focal-plus-Dice baseline with no recall regression. We further identify and characterize a systematic endpoint overrun bias (+21 px, 98% of predictions too long) arising from gradual heatmap activation rolloff at streak endpoints. We propose a post-processing heatmap profile refinement that locates each endpoint at the along-axis position where activation drops below 85% of the component peak. This reduces mean endpoint error from approximately 21 px to **10.8 px** (−49%) with no recall or precision penalty, requiring no retraining. A controlled backbone comparison shows ViT-S/16 outperforms ViT-B/16 on every metric despite its smaller feature dimensionality, suggesting that spatial resolution rather than feature width is the relevant capacity axis for thin linear targets.
 
 ---
 
@@ -83,7 +86,35 @@ Negative tiles are drawn from two sources: frames with no annotations (pure back
 
 The validation split is a fixed **8%** random sample of source images (seeded at 42), drawn before tiling so no source image appears in both train and val. The canonical validation annotation set `val_balanced_v1_no_sattrains.json` is held constant across all reported experiments; no hyperparameter tuning decisions are made using test-set data. The set contains 241 ground-truth streaks after removing 6 annotations found to have irrecoverable coordinate errors (5 streak centers outside the tile boundary, 1 duplicate) and correcting 14 annotations whose coordinates were stored in full-frame rather than tile-local space.
 
+**Annotation coordinate validation.** Windowed images carry a `tile_origin` field $(x_0, y_0)$ identifying the pixel offset of the tile crop within the full FITS frame. A latent annotation error was discovered in which oriented bounding box centroids $(c_x, c_y)$ were sometimes stored in full-frame space rather than tile-local space, causing heatmap targets to be placed on blank sky in incorrect tiles. Inspection of the merged annotation pool revealed that 843 of 7,590 windowed annotations (11%) had OBB centroids outside their tile bounds. Of these, a subset could be recovered by subtracting $(x_0, y_0)$; the remainder (centroid still outside the tile after translation) were irretrievably misassociated and dropped. A total of 1,341 annotations were dropped during the v11 dataset build. The dataset builder (`build_atwood_window_dataset.py`) now enforces a coordinate validation gate for every OBB: centroids in tile-local space pass through unchanged; full-frame centroids are translated and re-validated; still-OOB centroids are dropped with a warning. The same check is applied at annotation-merge time (`merge_brentimages_batch.py`) and at annotation-confirm time (`annotate.py`) to prevent future contamination.
+
 **Length bands** for reporting (as used in `eval/geometry_metrics.py`): short < 400 px, medium 400–1000 px, long ≥ 1000 px. These differ from the annotation-tool thresholds used during dataset construction (short < 50 px, medium 50–400 px); all quantitative results in this paper use the geometry-metrics definitions.
+
+### 3.4 Dataset Build Parameters and Reproducibility
+
+The production tile dataset (`train_atwood_synth_window_v11` / `val_atwood_window_v11`) is built from the coordinate-validated annotation pool using fixed, deterministic parameters. The complete pipeline — dataset build, feature caching, training, and evaluation — is encoded in `scripts/train_window_v11_pipeline.sh`. Key parameters:
+
+| Parameter | Value |
+|---|---|
+| Source annotation | `all_train_run17_merged_no_sattrains.json` |
+| Eval hold-out | `val_balanced_v1_no_sattrains.json` |
+| Negative tile fraction | 0.42 (`--neg-frac 0.42`) |
+| Validation fraction | 0.08 (`--val-frac 0.08`) |
+| Background tiles per source frame | 3 (`--bg-per-frame 3`) |
+| Synthetic short-streak tiles | 400 (`--n-synth-short 400`) |
+| Random seed | 42 (`--seed 42`) |
+| Coverage gate | ≥ 25% streak length retained in tile |
+| OBB coordinate validation | Enabled (translates full-frame coords; drops irrecoverable OOB) |
+
+To reproduce the production dataset and model from scratch:
+
+```bash
+# Requires: /Volumes/External/TrainingData/ with the annotation JSONs and FITS files
+# and weights/dinov3_vits16_lvd1689m.pth
+bash scripts/train_window_v11_pipeline.sh 2>&1 | tee /tmp/v11_repro_$(date +%Y%m%d).log
+```
+
+The script runs all six stages sequentially: dataset build → ViT-S feature cache (train) → ViT-S feature cache (val) → training (40 epochs, cosine LR) → evaluation → geometry metrics. Expected wall-clock time on Apple M-series hardware: approximately 3–4 hours (dominated by feature caching; training itself takes 10–15 minutes).
 
 ### 3.4 Image Normalization
 
@@ -188,7 +219,7 @@ When WCS metadata is available in the FITS header (or a sidecar `.wcs` file from
 
 ### 5.1 Main Results
 
-Table 1 reports detection and geometry results for the production model `vits_v9_asl_cldice` on `val_balanced_v1_no_sattrains.json` (241 ground-truth streaks; see Section 3.3), evaluated at $\tau = 0.85$, peak floor = 0.85, with heatmap profile endpoint refinement at $f = 0.85$. Matching uses a perpendicular tolerance of 20 px and length-IoU ≥ 0.3; this threshold reflects the natural plateau identified in a sensitivity sweep (Section 5.5.3), below which true matches are incorrectly excluded.
+Table 1 reports detection and geometry results for the production model `vits_v11_asl_cldice` on `val_balanced_v1_no_sattrains.json` (241 ground-truth streaks; see Section 3.3), evaluated at $\tau = 0.85$, peak floor = 0.85, with heatmap profile endpoint refinement at $f = 0.85$. Matching uses a perpendicular tolerance of 20 px and length-IoU ≥ 0.3; this threshold reflects the natural plateau identified in a sensitivity sweep (Section 5.5.3), below which true matches are incorrectly excluded. The v11 model was trained on the coordinate-validated dataset (Section 3.3–3.4); loss function and backbone choices were determined by the ablation studies in Sections 5.2–5.4, which were conducted on the v9 dataset configuration.
 
 **Table 1. Detection results by length band.**
 
@@ -199,14 +230,14 @@ Table 1 reports detection and geometry results for the production model `vits_v9
 | Long (≥ 1000 px) | 77 | 75 | 97.4% |
 | **All** | **241** | **238** | **98.8%** |
 
-Overall precision: **98.8%** (3 false positives after stitch).
+Overall precision: **99.2%** (2 false positives after stitch).
 
-**Table 2. Geometry metrics (238 matched pairs, with profile endpoint refinement $f=0.85$).**
+**Table 2. Geometry metrics (238 matched pairs, `vits_v11_asl_cldice`, with profile endpoint refinement $f=0.85$).**
 
 | Metric | Mean | Median | P90 |
 |---|---|---|---|
-| Angle error (deg) | 0.50° | 0.26° | 1.32° |
-| Endpoint error (px) | 8.9 px | 6.8 px | 10.9 px |
+| Angle error (deg) | 0.52° | 0.26° | 1.29° |
+| Endpoint error (px) | 10.8 px | 9.1 px | 15.4 px |
 
 Short-streak geometry is noisier, as expected: with only a few activated patches, a single misallocated component shifts the estimated endpoint by a large fraction of the streak length. Angle errors also increase for shorter streaks because the angular uncertainty of a short line is inversely proportional to length.
 
@@ -299,14 +330,14 @@ Instead of modifying the training target, we refine endpoints at inference time 
 
 We sweep $f \in \{0.70, 0.75, 0.80, 0.85, 0.90\}$ against the v9 model on `val_balanced_v1_no_sattrains` at $\tau = 0.85$, 20-px perpendicular matching tolerance.
 
-**Table 6. Heatmap profile endpoint refinement sweep (v9, $\tau=0.85$, pf=0.85, perp_tol=20 px).**
+**Table 6. Heatmap profile endpoint refinement sweep (`vits_v9_asl_cldice`, $\tau=0.85$, pf=0.85, perp_tol=20 px).** The PPF sweep was conducted on the v9 model to characterize the method. The production model (`vits_v11_asl_cldice`) uses the same $f=0.85$ operating point; its endpoint numbers are reported in Table 2.
 
 | Profile peak fraction $f$ | Recall | Precision | EndPx (mean) | EndPx (med) | Angle° |
 |---|---|---|---|---|---|
 | None (binary mask extremes) | 0.988 | 0.988 | ~21 px | — | 0.50° |
 | **0.85** | **0.988** | **0.988** | **8.9 px** | **6.8 px** | **0.50°** |
 
-*58% endpoint error reduction.* Profile refinement at $f = 0.85$ reduces mean endpoint error from approximately 21 px to 8.9 px with no change to recall or precision — all 3 false negatives and 3 false positives are present both with and without the refinement step. The corridor tightening that caused a 2-point recall cost under the original 5-px matching protocol no longer applies at the 20-px tolerance; the same borderline components are now correctly matched in both conditions.
+*~49–58% endpoint error reduction.* Profile refinement at $f = 0.85$ reduces mean endpoint error from approximately 21 px to 8.9 px on v9 and 10.8 px on v11, with no change to recall or precision in either case. The corridor tightening that caused a 2-point recall cost under the original 5-px matching protocol no longer applies at the 20-px tolerance; the same borderline components are now correctly matched in both conditions.
 
 *Angle unchanged.* The axis direction (from PCA) is untouched; only endpoint positions along the axis move. Angle error remains 0.50° across all conditions.
 
@@ -346,9 +377,9 @@ We explored two remediation strategies. Training-time endpoint suppression via G
 
 ## 7. Conclusion
 
-We presented ARGUS, a satellite streak detection pipeline that combines a frozen DINOv3 ViT-S/16 backbone with a three-layer convolutional heatmap head trained with an ASL + clDice composite loss. On a real-telescope validation set of 241 ground-truth streaks spanning three length bands, the system achieves **98.8% recall and 98.8% precision** (3 false negatives and 3 false positives) — a 2× precision improvement over the Focal + Dice baseline with no recall regression. Short-band recall is 100%; medium and long bands show 99.0% and 97.4% recall respectively.
+We presented ARGUS, a satellite streak detection pipeline that combines a frozen DINOv3 ViT-S/16 backbone with a three-layer convolutional heatmap head trained with an ASL + clDice composite loss. On a real-telescope validation set of 241 ground-truth streaks spanning three length bands, the production model `vits_v11_asl_cldice` (trained on the coordinate-validated v11 dataset) achieves **98.8% recall and 99.2% precision** (3 false negatives and 2 false positives) — a 2× precision improvement over the Focal + Dice baseline with no recall regression. Short-band recall is 100%; medium and long bands show 99.0% and 97.4% recall respectively.
 
-We characterize and correct a systematic endpoint overrun bias inherent to binary-threshold connected-component detection: the model consistently predicts streaks that are too long, with 98% of predictions extending past the true endpoints by a mean of approximately 21 px. A post-processing heatmap profile refinement — placing each endpoint where heatmap activation drops below 85% of the component peak, rather than at the binary-mask extreme — reduces this error by 58% (to 8.9 px mean) with no recall or precision penalty at the production 20-px matching tolerance. A training-time alternative (cosine endpoint taper in GT targets) produced worse recall for equivalent endpoint improvement and was rejected.
+We characterize and correct a systematic endpoint overrun bias inherent to binary-threshold connected-component detection: the model consistently predicts streaks that are too long, with 98% of predictions extending past the true endpoints by a mean of approximately 21 px. A post-processing heatmap profile refinement — placing each endpoint where heatmap activation drops below 85% of the component peak, rather than at the binary-mask extreme — reduces this error by approximately 49% (to 10.8 px mean on v11) with no recall or precision penalty at the production 20-px matching tolerance. A training-time alternative (cosine endpoint taper in GT targets) produced worse recall for equivalent endpoint improvement and was rejected.
 
 The central finding of our ablation study is that clDice is the decisive precision-improvement ingredient: its differentiable morphological skeleton imposes a linearity constraint that precisely matches the geometry of the satellite streak class. Asymmetric Loss provides an orthogonal improvement by suppressing gradient from confidently-negative background patches. Together these losses eliminate the blob-shaped false-positive activations that are the primary failure mode of heatmap detectors on astronomical imagery.
 
