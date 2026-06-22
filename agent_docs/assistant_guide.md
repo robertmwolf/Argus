@@ -77,9 +77,9 @@ python scripts/sync_hf.py --download --weights-only --weights-dir weights
 
 The public bundle requires no token under normal conditions. If authentication
 is required, use `hf auth login` or `HF_TOKEN`. The bundle contains the
-`vits_v9_asl_cldice` and `vitb_v10_asl_cldice` heads. DINOv3 pretrained
-backbones are not in the bundle — they must be downloaded separately from Meta
-Research at https://github.com/facebookresearch/dinov3 and placed in `weights/`.
+`vits_v11_asl_cldice` head. DINOv3 pretrained backbones are not in the bundle —
+they must be downloaded separately from Meta Research at
+https://github.com/facebookresearch/dinov3 and placed in `weights/`.
 Never commit downloaded weights.
 
 ```bash

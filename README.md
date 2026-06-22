@@ -134,41 +134,33 @@ See [`DEVELOPER.md`](DEVELOPER.md) for the full commands.
 
 ## Results
 
-**Model: `vits_v9_asl_cldice`** — DINOv3 ViT-S/16, ASL + clDice loss, 400 px
-tiles, evaluated on `val_balanced_v1.json` at threshold = 0.70, peak floor = 0.85.
+**Model: `vits_v11_asl_cldice`** — DINOv3 ViT-S/16, ASL + clDice loss, 400 px
+tiles, v11 coord-validated dataset, evaluated on `val_balanced_v1.json` at
+threshold = 0.70, peak floor = 0.85.
 
 ### Detection
 
 | Metric | Value |
 |---|---|
-| Recall | **97.9%** (234 / 239) |
-| Precision | **91.8%** |
-| False positives | 21 |
+| Recall | **98.8%** (238 / 241) |
+| Precision | **99.2%** |
+| False positives | 2 |
 
 | Band | GT | Found | Recall |
 |---|---|---|---|
-| Short (< 50 px) | 9 | 8 | 88.9% |
-| Medium (50–400 px) | 50 | 49 | 98.0% |
-| Long (> 400 px) | 180 | 177 | 98.3% |
+| Short (< 50 px) | 61 | 61 | 100.0% |
+| Medium (50–400 px) | 103 | 102 | 99.0% |
+| Long (> 400 px) | 77 | 75 | 97.4% |
 
 ### Geometry (T2 raw OBB — production configuration)
 
 | Metric | Mean | Median | P90 |
 |---|---|---|---|
-| Angle error | 0.37° | 0.19° | 0.99° |
-| Endpoint error | 22 px | 16 px | 24 px |
+| Angle error | 0.52° | 0.26° | 1.29° |
+| Endpoint error | 11 px | 9 px | 15 px |
 
 Radon-based angle refinement (T3) was evaluated and found to degrade both
-metrics significantly (angle error 0.37° → 10°). T2 raw geometry is used in
-production.
-
-### Backbone Comparison
-
-ViT-B/16 was tested on identical data and hyperparameters (`vitb_v10_asl_cldice`).
-ViT-S outperformed it on every metric. Both backbones use 16×16 patches and
-produce a 32×32 spatial feature grid at 518 px input; ViT-B's wider feature
-vectors do not translate to higher spatial resolution, and the same conv head
-compresses them more aggressively. ViT-S is the production backbone.
+metrics significantly. T2 raw geometry is used in production.
 
 ## Repository Structure
 

@@ -50,12 +50,9 @@ EXTERNAL_ANNOTATIONS = Path("/Volumes/External/TrainingData/annotations")
 # DINOv3 pretrained backbones are NOT hosted here; see DEVELOPER.md for how
 # to obtain them from Meta Research (github.com/facebookresearch/dinov3).
 WEIGHTS_INCLUDE = [
-    # Production heatmap detector (ViT-S, ASL + clDice, 400 px tiles)
-    "vits_v9_asl_cldice/best.pt",
-    "vits_v9_asl_cldice/history.json",
-    # Backbone comparison (ViT-B, same loss/data as v9 — ViT-S wins)
-    "vitb_v10_asl_cldice/best.pt",
-    "vitb_v10_asl_cldice/history.json",
+    # Production heatmap detector (ViT-S, v11 dataset, ASL + clDice, 400 px tiles)
+    "vits_v11_asl_cldice/best.pt",
+    "vits_v11_asl_cldice/history.json",
 ]
 
 # Files present in the HF model repo that are no longer current.
@@ -66,6 +63,12 @@ WEIGHTS_STALE = [
     "run17_vitb/best.pt",
     "run17_vitb/history.json",
     "run5_vits_mmdet/best_coco_bbox_mAP_epoch_15.pth",
+    # Superseded by vits_v11_asl_cldice
+    "vits_v9_asl_cldice/best.pt",
+    "vits_v9_asl_cldice/history.json",
+    # Backbone comparison experiment — ViT-S wins; retired
+    "vitb_v10_asl_cldice/best.pt",
+    "vitb_v10_asl_cldice/history.json",
     # DINOv3 pretrained backbones — redistributed from Meta Research; removed
     # from this repo. Users must download directly from facebookresearch/dinov3.
     "dinov3_vits16_lvd1689m.pth",

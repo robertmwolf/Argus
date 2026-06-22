@@ -51,9 +51,7 @@ export HF_TOKEN=<token>
 ```
 
 The download includes:
-- `weights/vits_v11_asl_cldice/` — production ViT-S head (ASL + clDice, 400 px tiles, coordinate-validated v11 dataset)
-- `weights/vits_v9_asl_cldice/` — prior production head (superseded by v11)
-- `weights/vitb_v10_asl_cldice/` — ViT-B backbone-comparison head
+- `weights/vits_v11_asl_cldice/` — production ViT-S head (v11 dataset, ASL + clDice, 400 px tiles)
 
 ### 2. DINOv3 pretrained backbones (Meta Research)
 
@@ -69,7 +67,7 @@ Download the following files and place them in `weights/`:
 | File | Backbone | Used by |
 |---|---|---|
 | `dinov3_vits16_lvd1689m.pth` | ViT-S/16 | `vits_v11_asl_cldice` (production) |
-| `dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth` | ViT-B/16 | `vitb_v10_asl_cldice` |
+| `dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth` | ViT-B/16 | future experiments |
 | `dinov3_vitl16_lvd1689m.pth` | ViT-L/16 | reserved for future experiments |
 
 The DINOv3 repository README lists the exact download URLs for each checkpoint.
