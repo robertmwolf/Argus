@@ -299,7 +299,7 @@ async def test_upload_detector_selection_is_passed_to_pipeline(client):
     response = await client.post(
         "/api/upload",
         files={"file": ("image.jpg", _make_jpeg_bytes(), "image/jpeg")},
-        data={"enabled_detectors": '["vits_heatmap_v9"]'},
+        data={"enabled_detectors": '["vits_heatmap_v11"]'},
     )
     assert response.status_code == 200
     job_id = response.json()["job_id"]
@@ -318,5 +318,5 @@ async def test_upload_detector_selection_is_passed_to_pipeline(client):
     assert queued_id == job_id
     mock_load_model.assert_not_called()
     _, kwargs = mock_run.call_args
-    assert kwargs["enabled_detectors"] == {"vits_heatmap_v9"}
+    assert kwargs["enabled_detectors"] == {"vits_heatmap_v11"}
     assert kwargs["models"] == []

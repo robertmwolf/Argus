@@ -14,9 +14,9 @@ Output: JSON list of {"frame": path, "x0": int, "y0": int, "w": 400, "h": 400}.
 
 Usage:
     python scripts/mine_hard_negatives.py \\
-        --checkpoint weights/vits_window_v4/best.pt \\
-        --annotations data/annotations/all_train_run17_merged.json \\
-        --output data/annotations/hard_negatives_vits_window_v4.json \\
+        --checkpoint weights/vits_v11_asl_cldice/best.pt \\
+        --annotations /Volumes/External/TrainingData/annotations/all_train_run17_merged_no_sattrains.json \\
+        --output /Volumes/External/TrainingData/annotations/hard_negatives_v11.json \\
         [--peak-threshold 0.85] [--margin 400] [--tile-size 400] [--limit 10]
 """
 
@@ -129,9 +129,9 @@ def mine_frame(
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--checkpoint", default="weights/vits_window_v4/best.pt",
-                    help="path to vits_window_v4 best.pt")
-    ap.add_argument("--annotations", default="data/annotations/all_train_run17_merged.json",
+    ap.add_argument("--checkpoint", default="weights/vits_v11_asl_cldice/best.pt",
+                    help="path to heatmap detector best.pt")
+    ap.add_argument("--annotations", default="/Volumes/External/TrainingData/annotations/all_train_run17_merged_no_sattrains.json",
                     help="merged training annotation JSON")
     ap.add_argument("--output", required=True,
                     help="output JSON file for mined hard negative tile specs")

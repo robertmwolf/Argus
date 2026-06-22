@@ -46,6 +46,8 @@ MODELS: list[tuple[str, str]] = [
     ("v9_tversky",       "results/window_v9/vits_v9_tversky/pf85/geometry_eval.json"),
     ("v9_asl_cldice",    "results/window_v9/vits_v9_asl_cldice/pf85/geometry_eval.json"),
     ("vitb_v10_asl_cldice", "results/window_v10/vitb_v10_asl_cldice/pf85/geometry_eval.json"),
+    # v11: coordinate-validated dataset — canonical production model
+    ("vits_v11_asl_cldice", "results/window_v11/vits_v11_asl_cldice/pf85/geometry_eval.json"),
 ]
 
 

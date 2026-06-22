@@ -15,10 +15,10 @@ Produces one PNG per missed annotation and one per false-positive image:
 
 Usage:
     PYTHONPATH=/Users/robert/Argus python scripts/visualize_fn_fp.py \\
-        --predictions results/window_v9/vits_v9_asl_cldice/pf85_no_sattrains/predictions_t085.json \\
+        --predictions results/window_v11/vits_v11_asl_cldice/pf85/predictions_t085.json \\
         --annotations /Volumes/External/TrainingData/annotations/val_balanced_v1_no_sattrains.json \\
-        --checkpoint weights/vits_v9_asl_cldice/best.pt \\
-        --output-dir results/window_v9/vits_v9_asl_cldice/pf85_no_sattrains/viz
+        --checkpoint weights/vits_v11_asl_cldice/best.pt \\
+        --output-dir results/window_v11/vits_v11_asl_cldice/pf85/viz
 """
 
 from __future__ import annotations
@@ -34,10 +34,10 @@ from matplotlib.lines import Line2D
 from astropy.io import fits
 
 os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
-os.environ.setdefault("VITS_V9_HEATMAP_THRESHOLD", "0.85")
-os.environ.setdefault("VITS_V9_HEATMAP_NATIVE_TILE_SIZE", "400")
-os.environ.setdefault("VITS_V9_HEATMAP_TILE_OVERLAP", "0.0")
-os.environ.setdefault("VITS_V9_HEATMAP_PEAK_FLOOR", "0.85")
+os.environ.setdefault("VITS_V11_HEATMAP_THRESHOLD", "0.85")
+os.environ.setdefault("VITS_V11_HEATMAP_NATIVE_TILE_SIZE", "400")
+os.environ.setdefault("VITS_V11_HEATMAP_TILE_OVERLAP", "0.0")
+os.environ.setdefault("VITS_V11_HEATMAP_PEAK_FLOOR", "0.85")
 
 
 # Match geometry_metrics.py band definitions exactly
@@ -147,9 +147,9 @@ def main():
                     help="predictions_t085.json from evaluate_dinov3_heatmap.py")
     ap.add_argument("--annotations",
                     default="/Volumes/External/TrainingData/annotations/val_balanced_v1_no_sattrains.json")
-    ap.add_argument("--checkpoint", default="weights/vits_v9_asl_cldice/best.pt")
+    ap.add_argument("--checkpoint", default="weights/vits_v11_asl_cldice/best.pt")
     ap.add_argument("--output-dir",
-                    default="results/window_v9/vits_v9_asl_cldice/pf85_no_sattrains/viz")
+                    default="results/window_v11/vits_v11_asl_cldice/pf85/viz")
     ap.add_argument("--perp-tol", type=float, default=20.0,
                     help="Perpendicular match tolerance in px (matches geometry_metrics default)")
     args = ap.parse_args()
