@@ -84,7 +84,46 @@ should not be used for new training runs.
 ```
 Follow the existing `Img_YYYYMMDD_Atwood` naming convention.
 
-### 2. Annotate
+### 2. Apply dark calibration
+
+Subtract the master dark before annotating or feeding frames into any pipeline
+step. The master dark lives at:
+
+```
+/Volumes/External/TrainingData/raw/BrentImages/masterDark_0.50s.fit
+```
+
+It was created from the ZWO ASI2600MM Pro at 0.50 s exposure (6248 × 4176,
+`int16` raw). Apply it to every science frame whose `EXPTIME` header matches
+0.50 s; flag or skip frames with a different exposure time until a matching dark
+is available.
+
+```python
+from astropy.io import fits
+import numpy as np, pathlib
+
+DARK_PATH = "/Volumes/External/TrainingData/raw/BrentImages/masterDark_0.50s.fit"
+dark_data = fits.getdata(DARK_PATH).astype(np.float32)
+
+def calibrate_frame(fits_path: str | pathlib.Path) -> np.ndarray:
+    """Return dark-subtracted float32 array, clipped to ≥ 0."""
+    with fits.open(fits_path) as hdul:
+        exptime = float(hdul[0].header.get("EXPTIME", 0))
+        if abs(exptime - 0.50) > 0.01:
+            raise ValueError(f"{fits_path}: EXPTIME={exptime} does not match dark (0.50 s)")
+        science = hdul[0].data.astype(np.float32)
+    return np.clip(science - dark_data, 0, None)
+```
+
+Write calibrated arrays to a `calibrated/` sub-directory inside the batch
+folder, or apply on-the-fly during annotation review — whichever fits the
+workflow. **Never overwrite the raw `.fit` files.**
+
+If the batch contains frames from a different setup (different exposure, binning,
+or sensor temperature range), note the mismatch in the batch README and hold
+those frames out until a matched dark is produced.
+
+### 3. Annotate
 Review each frame. For each positive frame, record the streak endpoints as a COCO
 annotation JSON inside the batch directory. Negative frames should also be listed
 as images with an empty annotations array so they can contribute background tiles
@@ -92,7 +131,7 @@ during training.
 
 Use `scripts/annotate.py` for the annotation workflow.
 
-### 3. Check for satellite trains
+### 4. Check for satellite trains
 Run the exclusion check against the new batch's annotation file:
 
 ```bash
@@ -149,7 +188,7 @@ PYEOF
 Any flagged frames must be added to `sat_train_excluded.json` and excluded from
 the merge in step 5.
 
-### 4. Merge into the source annotation
+### 5. Merge into the source annotation
 
 ```bash
 python scripts/merge_brentimages_batch.py \
@@ -163,7 +202,7 @@ The script re-assigns image and annotation IDs to avoid collisions, skips any
 frame whose `file_name` appears in the exclusion manifest, skips exact duplicates,
 and writes a `provenance` block into the output JSON recording every source used.
 
-### 5. Rebuild the tile dataset
+### 6. Rebuild the tile dataset
 ```bash
 python scripts/build_atwood_window_dataset.py \
   --version <N+1> \
@@ -178,12 +217,12 @@ train_atwood_synth_window_v<N+1>/
 val_atwood_window_v<N+1>/
 ```
 
-### 6. Train
+### 7. Train
 Follow the standard pipeline in `agent_docs/ml_pipeline.md`, pointing
 `TRAIN_ANN` and `VAL_ANN` at the new v<N+1> annotation files. Use a fresh
 `TAG` so weights and results land in a uniquely named directory.
 
-### 7. Evaluate and compare
+### 8. Evaluate and compare
 Run geometry metrics at `t=0.85, pf=0.85, ppf=0.85` against
 `val_balanced_v1_no_sattrains.json` and compare against the previous production
 model using `scripts/compare_geometry_evals.py --md`.

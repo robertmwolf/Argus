@@ -10,10 +10,17 @@ Robert.M.Wolf@gmail.com
 
 ## Abstract
 
-
-We present ARGUS, an end-to-end pipeline for detecting satellite streaks in wide-field astronomical FITS images and resolving each detection to a pair of image-space endpoints suitable for astrometric follow-up. The pipeline freezes a DINOv3 ViT-S/16 backbone pretrained on 1.689 billion images and trains a lightweight three-layer convolutional head to predict a one-channel centerline heatmap at the patch grid resolution. We introduce a composite training objective combining Asymmetric Loss (ASL) with centerline Dice (clDice) that targets the two principal failure modes of heatmap detectors for linear structures: easy-negative saturation and blob-shaped false-positive activations. Evaluated on a stratified validation set of 241 ground-truth streaks spanning three length bands (short < 400 px, medium 400–1000 px, long ≥ 1000 px), ARGUS achieves **98.8% recall** and **99.2% precision** with 3 false negatives and 2 false positives across 241 ground-truth detections — a 2× precision improvement over the focal-plus-Dice baseline with no recall regression. We further identify and characterize a systematic endpoint overrun bias (+21 px, 98% of predictions too long) arising from gradual heatmap activation rolloff at streak endpoints. We propose a post-processing heatmap profile refinement that locates each endpoint at the along-axis position where activation drops below 85% of the component peak. This reduces mean endpoint error from approximately 21 px to **10.8 px** (−49%) with no recall or precision penalty, requiring no retraining. A controlled backbone comparison shows ViT-S/16 outperforms ViT-B/16 on every metric despite its smaller feature dimensionality, suggesting that spatial resolution rather than feature width is the relevant capacity axis for thin linear targets.
+This project, titled ARGUS (Automated Recognition and Grading of Unidentified Streaks), is an imagery analysis system that will detect and analyze satellite streaks in earth-bound astronomical telescope images It uses a machine learning vision model to analyze the streak geometry and resolve it to the endpoints. 
+Additionaly, it cross-references with data available from NORAD Space Detection and Tracking System and makes a probabilistic determination which object caused the streak in the image. 
+To accomplish this, I use a frozen DINOv3 ViT/S backbone trained on 1.689 billion images and provided for use by Meta Labs. I have trained a lightweight convolutional three-layer head to predict a centerline heatmap of the streak, built using a composite training objective combining Asymmetric Loss (ASL) and centerline Dice (clDice). It is designed to solve the two targets the two principal failure modes of heatmap detectors for linear structures: easy-negative saturation and blob-shaped false-positive activations. The system is trained on a stratified dataset of 6,105 annotated frames (12,647 streaks) taken by amateur astronomers and augmented with synthetic image data containing further streaks, then evaluated on a held-out validation set of 241 streaks. 
+As inputs, the system accepts full-resolution FITS image frames and produces predictions of streaks in the form of endpoint pairs (x1, y1, x2, y2) in image coordinates. It is designed to be run on endpoints that amateur astronomers have access to (consumer grade laptops), as well as be capable of re-training or fine-tuning the model on that same hardware using more annotated images. It uses a variety of caching and tiling strategies to manage local storage and optimize compute efficiency. 
+It is designed to overcome the limitation of heatmap overrun on streaks by including a post-processing step that refines the predicted endpoints by locating each endpoint at the along-axis position where activation drops below 85% of the component peak. This reduces mean endpoint error from approximately 21 px to 10.8 px (−49%) with no recall or precision penalty.
+The results achieved are a 98.8% recall and 99.2% precision, with a median endpoint error of 9.1 px (90th percentile 15.4 px) and a median angular error of 0.26° (90th percentile 1.29°).  While these results are impressive, the system fails to identify the faintest of streaks in the validation data set, which remains the primary gap in performance. 
 
 ---
+
+
+NOTE: The below is AI generated and not to be represented as human authored. It is a draft copy of a white paper describing the ARGUS system and is not to be distributed or cited. It is intended for internal review and feedback only.
 
 ## 1. Introduction
 
@@ -424,3 +431,6 @@ A ground-truth streak is considered matched if the nearest predicted segment has
 ## Appendix B: Hyperparameter Sensitivity
 
 The evaluation threshold $\tau = 0.70$ and peak floor $= 0.85$ were chosen via a sweep on the validation set over the range $\tau \in \{0.50, 0.60, 0.70, 0.80\}$ and peak floor $\in \{0.70, 0.80, 0.85, 0.90\}$. The selected values represent the operating point that maximizes F1 score. All reported results use these fixed parameters; no per-experiment tuning was performed.
+
+
+

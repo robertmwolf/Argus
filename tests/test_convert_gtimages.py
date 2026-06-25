@@ -9,8 +9,8 @@ import numpy as np
 import pytest
 from astropy.io import fits
 
-# Make scripts/ importable without installing
-sys.path.insert(0, str(pathlib.Path(__file__).parent.parent / "scripts"))
+# Make scripts/archive/ importable without installing
+sys.path.insert(0, str(pathlib.Path(__file__).parent.parent / "scripts" / "archive"))
 from convert_gtimages import (
     _fits_dimensions,
     _obs_to_coco_annotation,
